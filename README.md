@@ -56,14 +56,14 @@ for i in range(0, 12) {
 //      x = elt;
 // }
 // x = elt; // Last computation made
-//
 x = for elt in array -> int {
     do_stuff(elt);
 
     elt
 }
 
-x = for i in range(0, n) -> int {
+// There's type inference
+x = for i in range(0, n) {
     i
 } // x now equals n
 
