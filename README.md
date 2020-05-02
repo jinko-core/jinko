@@ -1,5 +1,5 @@
 # broccoli
-`broccoli` is a small and safe interpreted language using the `stir` intermediate representation
+`broccoli` is a small and safe interpreted language using the [`stir`](https://github.com/cohenarthur/stir) intermediate representation
 
 # Requirements
 
