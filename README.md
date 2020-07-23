@@ -30,6 +30,9 @@ if boolean_condition {
 
 x = if bool { value0 } elif other_bool { value1 } else { value2 }
 
+/* Ternaries work too */
+x = bool ? value0 : value1;
+
 while boolean_condition {
     do_stuff();
 }
@@ -42,7 +45,7 @@ for elt in array {
     do_stuff(elt);
 }
 
-for i in range(0, 12) {
+for i in range(0, 12)/0..12 {
     do_stuff(i);
 }
 
