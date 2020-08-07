@@ -1,7 +1,7 @@
 # Syntax
 
 The syntax of `broccoli` is strongly inspired by rust's. The aim is to provide a simpler,
-slower, interpreter scripting language. Ultimately, prototyping in `broccoli` and
+slower, interpreted scripting language. Ultimately, prototyping in `broccoli` and
 `transpiling` to a rust application should be possible.
 
 ## Function declaration
