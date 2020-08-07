@@ -11,7 +11,7 @@ or `{}`, such as a variable assignation:
 ```rust
 x = 12; // Returns "void"
 
-fn void_func() { // Returns nothing
+func void_func() { // Returns nothing
 }
 
 void_func(); // Thus a statement as well
@@ -21,12 +21,12 @@ And those returning any other type, which must not be ignored. For example, cons
 expressions or non-void function calls:
 
 ```rust
-fn return_x(int: x) -> int {
+func return_x(int: x) -> int {
     x // Returns an integer. Notice the lack of semicolon
 }
 
-fn return_fn(int: x) -> fn(int) -> int {
-    l = fn lambda(int: x) -> int {
+func return_func(int: x) -> func(int) -> int {
+    l = func lambda(int: x) -> int {
         x + 1
     };
 
@@ -78,7 +78,7 @@ mock something() {
 }
 ```
 
-## Choosing between fn and func
+## Choosing between func and func
 
 broccoli uses three keywords to define "functions":
 * `test` which are unit tests
@@ -87,5 +87,5 @@ broccoli uses three keywords to define "functions":
 
 (Procedures return `Nothing`, while Functions return `Something`)
 
-`func` was chosen over `fn` because this way, it looks pretty when next to a `test` or
+`func` was chosen over `func` because this way, it looks pretty when next to a `test` or
 a `mock` :)

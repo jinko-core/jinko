@@ -6,7 +6,7 @@ slower, interpreted scripting language. Ultimately, prototyping in `broccoli` an
 
 ## Function declaration
 ```rust
-fn/func do_stuff(x: int) -> int {
+func do_stuff(x: int) -> int {
     do_other_stuff(x);
 
     12
