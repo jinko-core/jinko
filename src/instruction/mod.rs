@@ -2,21 +2,20 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-// FIXME: Separate in its own module
-use crate::return_kind::ReturnKind;
+mod expression;
+mod instr_trait;
+mod statement;
+mod return_kind;
 
-#[derive(Clone, Copy)]
-struct Stmt {
-}
-
-#[derive(Clone, Copy)]
-struct Expr {
-}
+pub use statement::Statement;
+pub use expression::Expression;
+pub use instr_trait::InstrTrait;
+pub use return_kind::ReturnKind;
 
 /// The actual "instruction" contained in the Instruction struct
-union InstrType {
-    stmt: Stmt,
-    expr: Expr,
+enum InstrType {
+    Stmt(Statement),
+    Expr(Expression),
 }
 
 /// Instructions contain a `ReturnKind`, indicating if they are a statement or an
@@ -27,9 +26,11 @@ pub struct Instruction {
     instruction: InstrType,
 }
 
-// FIXME: Add error type instead of String
-
-trait InstrTrait {
-    /// Execute the instruction, returning `Something` or `Nothing` inside a Result<>
-    fn execute() -> Result<ReturnKind, String>;
+impl InstrTrait for Instruction {
+    fn execute(&self) -> Result<ReturnKind, String> {
+        match self.instruction {
+            InstrType::Stmt(s) => s.execute(),
+            InstrType::Expr(e) => e.execute(),
+        }
+    }
 }
