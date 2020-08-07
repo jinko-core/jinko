@@ -12,3 +12,7 @@
 * [ ] The language must be simple
 
 Check out broccoli's [syntax](SYNTAX.md)!
+
+For more information about how broccoli is made, checkout
+[this page](https://en.wikipedia.org/wiki/Broccoli#Cultivation).
+For information about how the *language* is made, [it's here](DESIGN.md).
