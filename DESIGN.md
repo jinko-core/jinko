@@ -92,7 +92,7 @@ a `mock` :)
 
 ## The `Instruction` struct
 
-Instructions are a central part of Broccoli. A broccoli program is composed of 
+Instructions are a central part of Broccoli. A broccoli program is composed of
 instructions and functions, which themselves are instructions.
 Instructions can be either Statements or Expressions
 
@@ -106,3 +106,10 @@ exit-code will be the value assigned to `x`. In that case, 12
 An instruction needs to contain "spacial" information (Where is it in the file ? In what
 file ?), source (the actual source code, for errors), and a Statement or an Expression
 to execute.
+
+## Memory allocation
+
+Memory allocation and collection is done via reference counting. This implies lower stress
+on the hardware used to run the program, and is easier to implement, thus keeping
+broccoli simpler. However, this causes issues when an instance references itself, thus
+creating memory leaks.
