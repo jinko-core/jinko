@@ -106,3 +106,15 @@ exit-code will be the value assigned to `x`. In that case, 12
 An instruction needs to contain "spacial" information (Where is it in the file ? In what
 file ?), source (the actual source code, for errors), and a Statement or an Expression
 to execute.
+
+## FFI
+
+The idea is to mark functions from external shared libraries with the `ext` keyword.
+
+```rust
+ext func add(lhs: int, rhs: int) -> int; // This function isn't defined in broccoli
+```
+
+Calling `add()` will actually make a call into a native-code function, for example one
+written in Rust, C or C++. Adjustments need to be done on the native side of things in
+order to allow name resolution
