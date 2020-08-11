@@ -80,13 +80,29 @@ impl Token {
         Token::specific_token(input, "for")
     }
 
+    fn non_neg_num(input: &str) -> IResult<&str, &str> {
+        take_while(|c| is_digit(c as u8))(input)
+    }
+
     pub fn float_constant(input: &str) -> IResult<&str, f64> {
-        todo!()
+        let (input, negative_sign) = opt(char('-'))(input)?;
+        let (input, whole) = Token::int_constant(input)?;
+        let (input, _) = char('.')(input)?;
+        let (input, decimal) = Token::non_neg_num(input)?;
+
+        match format!("{}.{}", whole, decimal).parse::<f64>() {
+            Ok(value) => match negative_sign {
+                Some(_) => Ok((input, -value)),
+                None => Ok((input, value)),
+            },
+            // FIXME: Return better error with err message
+            Err(_) => Err(nom::Err::Failure(("Invalid floating point number", ErrorKind::OneOf))),
+        }
     }
 
     pub fn int_constant(input: &str) -> IResult<&str, i64> {
         let (input, negative_sign) = opt(char('-'))(input)?;
-        let (input, num) = take_while(|c| is_digit(c as u8))(input)?;
+        let (input, num) = Token::non_neg_num(input)?;
 
         match num.parse::<i64>() {
             Ok(value) => match negative_sign {
@@ -166,6 +182,25 @@ mod tests {
     fn t_int_constant_invalid() {
         match Token::int_constant("ff2") {
             Ok(_) => assert!(false, "Characters in integer"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_float_constant_valid() {
+        assert_eq!(Token::float_constant("12.2"), Ok(("", 12.2f64)));
+        assert_eq!(Token::float_constant("-45.06"), Ok(("", -45.06f64)));
+    }
+
+    #[test]
+    fn t_float_constant_invalid() {
+        match Token::float_constant("ff2") {
+            Ok(_) => assert!(false, "Characters in float"),
+            Err(_) => assert!(true),
+        }
+
+        match Token::float_constant("12") {
+            Ok(_) => assert!(false, "It's an integer"),
             Err(_) => assert!(true),
         }
     }
