@@ -2,7 +2,7 @@
 //! the language, so that { a + b } gets recognized into LEFT_BRACKET ID ADD ID RIGHT_BRACKET
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
-use nom::{bytes::complete::tag, character::complete::char, IResult};
+use nom::{IResult, bytes::complete::tag, character::complete::char, character::complete::anychar, sequence::delimited, bytes::complete::is_not};
 
 pub struct Token;
 
@@ -18,6 +18,14 @@ impl Token {
     /// recognize specifically the word "token".
     fn specific_token<'tok>(input: &'tok str, token: &'tok str) -> IResult<&'tok str, &'tok str> {
         tag(token)(input)
+    }
+
+    pub fn single_quote(input: &str) -> IResult<&str, char> {
+        char('\'')(input)
+    }
+
+    pub fn double_quote(input: &str) -> IResult<&str, char> {
+        char('"')(input)
     }
 
     pub fn add(input: &str) -> IResult<&str, char> {
@@ -78,13 +86,19 @@ impl Token {
 
     /// Parse a single character constant and return the character inside the quotes
     pub fn char_constant(input: &str) -> IResult<&str, char> {
-        todo!()
+        let (input, _) = Token::single_quote(input)?;
+        let (input, character) = anychar(input)?;
+        let (input, _) = Token::single_quote(input)?;
+
+        // FIXME: Handle escaping as well
+
+        Ok((input, character))
     }
 
     /// Parse a string constant and return the characters between the double quotes
     pub fn string_constant(input: &str) -> IResult<&str, &str> {
         // FIXME: This does not allow for string escaping yet
-        todo!()
+        delimited(Token::double_quote, is_not("\""), Token::double_quote)(input)
     }
 }
 
@@ -95,14 +109,16 @@ mod tests {
     #[test]
     fn t_char_constant_valid() {
         assert_eq!(Token::char_constant("'a'"), Ok(("", 'a')));
-        assert_eq!(Token::char_constant("'9'"), Ok(("", '9')));
+        assert_eq!(Token::char_constant("'9'"), Ok(("", '9'))); 
+
+        // FIXME: Add escaping
     }
 
     #[test]
     fn t_char_constant_invalid() {
         // Multiple characters
         match Token::char_constant("'abc'") {
-            Ok(tuple) => assert!(false, "Too many characters in constant"),
+            Ok(_) => assert!(false, "Too many characters in constant"),
             Err(_) => assert!(true),
         };
     }
@@ -110,8 +126,19 @@ mod tests {
     #[test]
     fn t_string_constant() {
         // Simple string
-        assert_eq!(Token::string_constant("\"a str\""), Ok(("", "a_str")));
+        assert_eq!(Token::string_constant("\"a str\""), Ok(("", "a str")));
+        assert_eq!(Token::string_constant("\"999 89 9\""), Ok(("", "999 89 9")));
+        assert_eq!(Token::string_constant("\"4.01f\""), Ok(("", "4.01f")));
 
         // FIXME: Fix string escaping
+    }
+
+    #[test]
+    fn t_string_constant_unclosed_quote() {
+        // Simple string
+        match Token::string_constant("\"a str") {
+            Ok(_) => assert!(false, "Unclosed quote delimiter"),
+            Err(_) => assert!(true),
+        }
     }
 }
