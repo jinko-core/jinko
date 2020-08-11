@@ -25,13 +25,8 @@ impl Construct {
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
     pub fn constant(input: &str) -> IResult<&str, &str> {
-        let (input, val) = alt((
-            Token::string_constant,
-            Token::int_constant,
-            Token::float_constant,
-        ))(input)?;
-
-        Ok((input, val))
+        // FIXME: Return primitive maybe ?
+        todo!()
     }
 
     /// Parses an identifier. An identifier can have alphanumeric characters. It cannot

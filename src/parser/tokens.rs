@@ -2,7 +2,11 @@
 //! the language, so that { a + b } gets recognized into LEFT_BRACKET ID ADD ID RIGHT_BRACKET
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
-use nom::{IResult, bytes::complete::tag, character::complete::char, character::complete::anychar, sequence::delimited, bytes::complete::is_not};
+use nom::{
+    bytes::complete::is_not, bytes::complete::tag, character::complete::anychar,
+    character::complete::char, combinator::opt, sequence::delimited, IResult,
+    bytes::complete::take_while, character::is_digit, error::ParseError, error::ErrorKind,
+};
 
 pub struct Token;
 
@@ -76,12 +80,22 @@ impl Token {
         Token::specific_token(input, "for")
     }
 
-    pub fn float_constant(input: &str) -> IResult<&str, &str> {
+    pub fn float_constant(input: &str) -> IResult<&str, f64> {
         todo!()
     }
 
-    pub fn int_constant(input: &str) -> IResult<&str, &str> {
-        todo!()
+    pub fn int_constant(input: &str) -> IResult<&str, i64> {
+        let (input, negative_sign) = opt(char('-'))(input)?;
+        let (input, num) = take_while(|c| is_digit(c as u8))(input)?;
+
+        match num.parse::<i64>() {
+            Ok(value) => match negative_sign {
+                Some(_) => Ok((input, -value)),
+                None => Ok((input, value)),
+            },
+            // FIXME: Return better error with err message
+            Err(_) => Err(nom::Err::Failure(("Invalid integer", ErrorKind::OneOf))),
+        }
     }
 
     /// Parse a single character constant and return the character inside the quotes
@@ -109,7 +123,7 @@ mod tests {
     #[test]
     fn t_char_constant_valid() {
         assert_eq!(Token::char_constant("'a'"), Ok(("", 'a')));
-        assert_eq!(Token::char_constant("'9'"), Ok(("", '9'))); 
+        assert_eq!(Token::char_constant("'9'"), Ok(("", '9')));
 
         // FIXME: Add escaping
     }
@@ -138,6 +152,20 @@ mod tests {
         // Simple string
         match Token::string_constant("\"a str") {
             Ok(_) => assert!(false, "Unclosed quote delimiter"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_int_constant_valid() {
+        assert_eq!(Token::int_constant("12"), Ok(("", 12)));
+        assert_eq!(Token::int_constant("-45"), Ok(("", -45)));
+    }
+
+    #[test]
+    fn t_int_constant_invalid() {
+        match Token::int_constant("ff2") {
+            Ok(_) => assert!(false, "Characters in integer"),
             Err(_) => assert!(true),
         }
     }
