@@ -2,12 +2,13 @@
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
+mod constructs;
+mod tokens;
+
 use super::function::Function;
 use std::collections::HashMap;
 
-mod tokens;
-
-use tokens::Token;
+use constructs::Construct;
 
 pub struct Parser;
 

@@ -67,4 +67,51 @@ impl Token {
     pub fn r#for(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "for")
     }
+
+    pub fn float_constant(input: &str) -> IResult<&str, &str> {
+        todo!()
+    }
+
+    pub fn int_constant(input: &str) -> IResult<&str, &str> {
+        todo!()
+    }
+
+    /// Parse a single character constant and return the character inside the quotes
+    pub fn char_constant(input: &str) -> IResult<&str, char> {
+        todo!()
+    }
+
+    /// Parse a string constant and return the characters between the double quotes
+    pub fn string_constant(input: &str) -> IResult<&str, &str> {
+        // FIXME: This does not allow for string escaping yet
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn t_char_constant_valid() {
+        assert_eq!(Token::char_constant("'a'"), Ok(("", 'a')));
+        assert_eq!(Token::char_constant("'9'"), Ok(("", '9')));
+    }
+
+    #[test]
+    fn t_char_constant_invalid() {
+        // Multiple characters
+        match Token::char_constant("'abc'") {
+            Ok(tuple) => assert!(false, "Too many characters in constant"),
+            Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_string_constant() {
+        // Simple string
+        assert_eq!(Token::string_constant("\"a str\""), Ok(("", "a_str")));
+
+        // FIXME: Fix string escaping
+    }
 }
