@@ -73,8 +73,17 @@ mod tests {
     #[test]
     fn t_constant_valid() {
         assert_eq!(Construct::constant("12").unwrap().1.kind(), ConstKind::Int);
-        assert_eq!(Construct::constant("12.2").unwrap().1.kind(), ConstKind::Float);
-        assert_eq!(Construct::constant("'a'").unwrap().1.kind(), ConstKind::Char);
-        assert_eq!(Construct::constant("\"a\"").unwrap().1.kind(), ConstKind::Str);
+        assert_eq!(
+            Construct::constant("12.2").unwrap().1.kind(),
+            ConstKind::Float
+        );
+        assert_eq!(
+            Construct::constant("'a'").unwrap().1.kind(),
+            ConstKind::Char
+        );
+        assert_eq!(
+            Construct::constant("\"a\"").unwrap().1.kind(),
+            ConstKind::Str
+        );
     }
 }

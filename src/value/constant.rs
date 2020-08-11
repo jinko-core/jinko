@@ -13,6 +13,7 @@ pub enum ConstKind {
 }
 
 /// The Constant contains a kind, and the associated value
+#[derive(Debug)]
 pub struct Constant {
     kind: ConstKind,
 
