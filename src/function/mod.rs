@@ -4,8 +4,8 @@
 
 use super::instruction::Instruction;
 
-struct Function {
-    instructions: Vec<Instruction>
+pub struct Function {
+    instructions: Vec<Instruction>,
 }
 
 impl Function {

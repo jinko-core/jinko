@@ -4,13 +4,13 @@
 
 mod expression;
 mod instr_trait;
-mod statement;
 mod return_kind;
+mod statement;
 
-pub use statement::Statement;
 pub use expression::Expression;
 pub use instr_trait::InstrTrait;
 pub use return_kind::ReturnKind;
+pub use statement::Statement;
 
 /// The actual "instruction" contained in the Instruction struct
 enum InstrType {
@@ -22,7 +22,6 @@ enum InstrType {
 /// expression
 pub struct Instruction {
     // FIXME: Add source code (&str) and spacial information (struct SpaceInfo ?)
-
     instruction: InstrType,
 }
 
