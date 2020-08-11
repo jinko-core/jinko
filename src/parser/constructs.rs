@@ -13,7 +13,9 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, IResult};
+use nom::{branch::alt, combinator::opt, IResult};
+
+use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
 
@@ -24,9 +26,22 @@ impl Construct {
     /// `0.5`.
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
-    pub fn constant(input: &str) -> IResult<&str, &str> {
-        // FIXME: Return primitive maybe ?
-        todo!()
+    pub fn constant(input: &'static str) -> IResult<&str, Constant> {
+        let (input, char_value) = opt(Token::char_constant)(input)?;
+        let (input, str_value) = opt(Token::string_constant)(input)?;
+        let (input, float_value) = opt(Token::float_constant)(input)?;
+        let (input, int_value) = opt(Token::int_constant)(input)?;
+
+        match (char_value, str_value, int_value, float_value) {
+            (Some(c), None, None, None) => Ok((input, Constant::new(ConstKind::Char).with_cv(c))),
+            (None, Some(s), None, None) => Ok((input, Constant::new(ConstKind::Str).with_sv(s))),
+            (None, None, Some(i), None) => Ok((input, Constant::new(ConstKind::Int).with_iv(i))),
+            (None, None, None, Some(f)) => Ok((input, Constant::new(ConstKind::Float).with_fv(f))),
+            _ => Err(nom::Err::Failure((
+                "Not a valid constant",
+                nom::error::ErrorKind::OneOf,
+            ))),
+        }
     }
 
     /// Parses an identifier. An identifier can have alphanumeric characters. It cannot
@@ -54,4 +69,12 @@ impl Construct {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn t_constant_valid() {
+        assert_eq!(Construct::constant("12").unwrap().1.kind(), ConstKind::Int);
+        assert_eq!(Construct::constant("12.2").unwrap().1.kind(), ConstKind::Float);
+        assert_eq!(Construct::constant("'a'").unwrap().1.kind(), ConstKind::Char);
+        assert_eq!(Construct::constant("\"a\"").unwrap().1.kind(), ConstKind::Str);
+    }
 }

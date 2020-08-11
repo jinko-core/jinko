@@ -3,9 +3,9 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    bytes::complete::is_not, bytes::complete::tag, character::complete::anychar,
-    character::complete::char, combinator::opt, sequence::delimited, IResult,
-    bytes::complete::take_while, character::is_digit, error::ParseError, error::ErrorKind,
+    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while1,
+    character::complete::anychar, character::complete::char, character::is_digit, combinator::opt,
+    error::ErrorKind, error::ParseError, sequence::delimited, IResult,
 };
 
 pub struct Token;
@@ -81,7 +81,7 @@ impl Token {
     }
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
-        take_while(|c| is_digit(c as u8))(input)
+        take_while1(|c| is_digit(c as u8))(input)
     }
 
     pub fn float_constant(input: &str) -> IResult<&str, f64> {
@@ -96,7 +96,10 @@ impl Token {
                 None => Ok((input, value)),
             },
             // FIXME: Return better error with err message
-            Err(_) => Err(nom::Err::Failure(("Invalid floating point number", ErrorKind::OneOf))),
+            Err(_) => Err(nom::Err::Failure((
+                "Invalid floating point number",
+                ErrorKind::OneOf,
+            ))),
         }
     }
 

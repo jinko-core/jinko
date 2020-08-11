@@ -2,7 +2,7 @@
 //! complex ones. Any type can implement the `Value` trait if it wishes to be returned
 //! by an instruction
 
-mod constant;
+pub mod constant;
 
 pub trait Value {
     /// The type contained inside the value
