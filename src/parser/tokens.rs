@@ -3,7 +3,7 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while1,
+    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while1, bytes::complete::take_while,
     character::complete::anychar, character::complete::char, character::is_digit, combinator::opt,
     character::is_alphanumeric, character::is_alphabetic,
     error::ErrorKind, error::ParseError, sequence::delimited, IResult,
@@ -55,6 +55,10 @@ impl Token {
 
     pub fn right_bracket(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, ']')
+    }
+
+    pub fn semicolon(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, ';')
     }
 
     pub fn func_tok(input: &str) -> IResult<&str, &str> {
@@ -160,6 +164,11 @@ impl Token {
     /// Consumes 1 or more whitespaces in an input. A whitespace is a space or a tab
     pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
         take_while1(|c| c == ' ' || c == '\t')(input)
+    }
+
+    /// Consumes 0 or more whitespaces in an input. A whitespace is a space or a tab
+    pub fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
+        take_while(|c| c == ' ' || c == '\t')(input)
     }
 }
 

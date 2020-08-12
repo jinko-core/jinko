@@ -22,6 +22,14 @@ impl VarAssign {
             value,
         }
     }
+
+    pub fn mutable(&self) -> bool {
+        self.mutable
+    }
+
+    pub fn symbol(&self) -> &str {
+        &self.symbol
+    }
 }
 
 impl Instruction for VarAssign {
