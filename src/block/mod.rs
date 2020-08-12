@@ -16,7 +16,7 @@
 use super::instruction::Instruction;
 
 pub struct Block {
-    instructions: Vec<dyn Instruction>,
+    instructions: Vec<Box<dyn Instruction>>,
 }
 
 impl Block {
@@ -28,7 +28,7 @@ impl Block {
     }
 
     /// Add a new instruction to a function
-    pub fn add(&mut self, instr: dyn Instruction) {
+    pub fn add(&mut self, instr: Box<dyn Instruction>) {
         self.instructions.push(instr)
     }
 

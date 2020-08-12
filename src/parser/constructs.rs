@@ -16,7 +16,7 @@
 use nom::{branch::alt, combinator::opt, IResult};
 
 use crate::value::constant::{ConstKind, Constant};
-use crate::instruction::Instruction;
+use crate::instruction::VarAssign;
 
 use super::tokens::Token;
 
@@ -95,7 +95,7 @@ impl Construct {
     /// ```
     ///
     /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
-    pub fn var_assignment(input: &str) -> IResult<&str, Instruction> {
+    pub fn var_assignment(input: &str) -> IResult<&str, VarAssign> {
         todo!()
     }
 }
