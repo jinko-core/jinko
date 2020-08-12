@@ -3,9 +3,9 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while1, bytes::complete::take_while,
-    character::complete::anychar, character::complete::char, character::is_digit, combinator::opt,
-    character::is_alphanumeric, character::is_alphabetic,
+    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while,
+    bytes::complete::take_while1, character::complete::anychar, character::complete::char,
+    character::is_alphabetic, character::is_alphanumeric, character::is_digit, combinator::opt,
     error::ErrorKind, error::ParseError, sequence::delimited, IResult,
 };
 
@@ -248,7 +248,10 @@ mod tests {
     #[test]
     fn t_consume_whitespace() {
         assert_eq!(Token::consume_whitespaces("   input"), Ok(("input", "   ")));
-        assert_eq!(Token::consume_whitespaces(" \t input"), Ok(("input", " \t ")));
+        assert_eq!(
+            Token::consume_whitespaces(" \t input"),
+            Ok(("input", " \t "))
+        );
     }
 
     #[test]

@@ -15,8 +15,8 @@
 
 use nom::{branch::alt, combinator::opt, IResult};
 
-use crate::value::constant::{ConstKind, Constant};
 use crate::instruction::VarAssign;
+use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
 
@@ -140,11 +140,29 @@ mod tests {
 
     #[test]
     fn t_var_assign_valid() {
-        assert_eq!(Construct::var_assignment("x = 12;").unwrap().1.mutable(), false);
-        assert_eq!(Construct::var_assignment("x = 12;").unwrap().1.symbol(), "x");
+        assert_eq!(
+            Construct::var_assignment("x = 12;").unwrap().1.mutable(),
+            false
+        );
+        assert_eq!(
+            Construct::var_assignment("x = 12;").unwrap().1.symbol(),
+            "x"
+        );
 
-        assert_eq!(Construct::var_assignment("mut x_99 = 129;").unwrap().1.mutable(), true);
-        assert_eq!(Construct::var_assignment("mut x_99 = 129;").unwrap().1.symbol(), "x_99");
+        assert_eq!(
+            Construct::var_assignment("mut x_99 = 129;")
+                .unwrap()
+                .1
+                .mutable(),
+            true
+        );
+        assert_eq!(
+            Construct::var_assignment("mut x_99 = 129;")
+                .unwrap()
+                .1
+                .symbol(),
+            "x_99"
+        );
 
         // FIXME: Allow mut* as identifier
         // assert_eq!(Construct::var_assignment("mut_x_99 = 129;").unwrap().1.mutable(), false);
