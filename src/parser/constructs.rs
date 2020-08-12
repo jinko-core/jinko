@@ -95,8 +95,14 @@ impl Construct {
     /// ```
     ///
     /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
-    pub fn var_assignment(input: &str) -> IResult<&str, VarAssign> {
+    pub fn var_assignment(input: &'static str) -> IResult<&str, VarAssign> {
         let (input, mut_opt) = opt(Token::mut_tok)(input)?;
+        let (input, _) = Token::consume_whitespaces(input)?;
+        let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::consume_whitespaces(input)?;
+        let (input, _) = Token::equal(input)?;
+        let (input, _) = Token::consume_whitespaces(input)?;
+        let (input, constant) = Construct::constant(input)?;
 
         todo!()
     }

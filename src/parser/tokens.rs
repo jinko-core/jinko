@@ -5,6 +5,7 @@
 use nom::{
     bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while1,
     character::complete::anychar, character::complete::char, character::is_digit, combinator::opt,
+    character::is_alphanumeric, character::is_alphabetic,
     error::ErrorKind, error::ParseError, sequence::delimited, IResult,
 };
 
@@ -34,6 +35,10 @@ impl Token {
 
     pub fn add(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, '+')
+    }
+
+    pub fn equal(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, '=')
     }
 
     pub fn left_curly_bracket(input: &str) -> IResult<&str, char> {
@@ -82,6 +87,20 @@ impl Token {
 
     pub fn mut_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "mut")
+    }
+
+    pub fn identifier(input: &str) -> IResult<&str, &str> {
+        let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
+
+        // FIXME: Ugly
+        // At least one alphabetical character is required
+        for c in id.chars() {
+            if is_alphabetic(c as u8) {
+                return Ok((input, id));
+            }
+        }
+
+        Err(nom::Err::Failure(("Invalid identifier", ErrorKind::Eof)))
     }
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
@@ -227,6 +246,27 @@ mod tests {
     fn t_consume_whitespace_invalid() {
         match Token::consume_whitespaces("something") {
             Ok(_) => assert!(false, "At least one whitespace required"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_id() {
+        assert_eq!(Token::identifier("x"), Ok(("", "x")));
+        assert_eq!(Token::identifier("x_"), Ok(("", "x_")));
+        assert_eq!(Token::identifier("x_99"), Ok(("", "x_99")));
+        assert_eq!(Token::identifier("99x"), Ok(("", "99x")));
+        assert_eq!(Token::identifier("n99 x"), Ok((" x", "n99")));
+    }
+
+    #[test]
+    fn t_id_invalid() {
+        match Token::identifier("99") {
+            Ok(_) => assert!(false, "At least one alphabetical required"),
+            Err(_) => assert!(true),
+        }
+        match Token::identifier("__99_") {
+            Ok(_) => assert!(false, "At least one alphabetical required"),
             Err(_) => assert!(true),
         }
     }
