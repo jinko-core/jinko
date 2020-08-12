@@ -5,7 +5,7 @@
 mod constructs;
 mod tokens;
 
-use super::function::Function;
+use super::block::Block;
 use std::collections::HashMap;
 
 use constructs::Construct;
@@ -15,7 +15,7 @@ pub struct Parser;
 impl Parser {
     /// Parses the entire user input and returns a hashmap corresponding to the user
     /// program
-    pub fn parse(input: &str) -> Result<HashMap<String, Function>, String> {
+    pub fn parse(input: &str) -> Result<HashMap<String, Block>, String> {
         todo!()
     }
 }
