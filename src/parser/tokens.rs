@@ -52,31 +52,31 @@ impl Token {
         Token::specific_char(input, ']')
     }
 
-    pub fn func(input: &str) -> IResult<&str, &str> {
+    pub fn func_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "func")
     }
 
-    pub fn ext(input: &str) -> IResult<&str, &str> {
+    pub fn ext_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "ext")
     }
 
-    pub fn test(input: &str) -> IResult<&str, &str> {
+    pub fn test_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "test")
     }
 
-    pub fn mock(input: &str) -> IResult<&str, &str> {
+    pub fn mock_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "mock")
     }
 
-    pub fn r#loop(input: &str) -> IResult<&str, &str> {
+    pub fn loop_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "loop")
     }
 
-    pub fn r#while(input: &str) -> IResult<&str, &str> {
+    pub fn while_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "while")
     }
 
-    pub fn r#for(input: &str) -> IResult<&str, &str> {
+    pub fn for_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "for")
     }
 
