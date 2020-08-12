@@ -2,6 +2,8 @@
 
 use crate::value::Constant;
 
+use super::{ Instruction, InstrKind };
+
 pub struct VarAssign {
     /// Is the variable mutable ? This is only useful on variable declaration
     mutable: bool,
@@ -19,5 +21,11 @@ impl VarAssign {
             symbol,
             value,
         }
+    }
+}
+
+impl Instruction for VarAssign {
+    fn kind(&self) -> InstrKind {
+        InstrKind::Statement
     }
 }

@@ -7,14 +7,14 @@ mod var_assignment;
 pub use var_assignment::VarAssign;
 
 /// The type of instructions available
-enum InstrKind {
+pub enum InstrKind {
     Statement,
     Expression,
 }
 
 pub trait Instruction {
     /// Execute the instruction, altering the state of the program
-    fn execute(&self);
+    fn execute(&self) {}
 
     /// What is the type of the instruction: a Statement or an Expression
     fn kind(&self) -> InstrKind;
