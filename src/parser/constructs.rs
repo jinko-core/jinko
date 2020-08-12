@@ -96,6 +96,8 @@ impl Construct {
     ///
     /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
     pub fn var_assignment(input: &str) -> IResult<&str, VarAssign> {
+        let (input, mut_opt) = opt(Token::mut_tok)(input)?;
+
         todo!()
     }
 }

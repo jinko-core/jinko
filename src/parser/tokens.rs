@@ -80,6 +80,10 @@ impl Token {
         Token::specific_token(input, "for")
     }
 
+    pub fn mut_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "mut")
+    }
+
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
         take_while1(|c| is_digit(c as u8))(input)
     }
@@ -132,6 +136,11 @@ impl Token {
     pub fn string_constant(input: &str) -> IResult<&str, &str> {
         // FIXME: This does not allow for string escaping yet
         delimited(Token::double_quote, is_not("\""), Token::double_quote)(input)
+    }
+
+    /// Consumes 1 or more whitespaces in an input. A whitespace is a space or a tab
+    pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
+        take_while1(|c| c == ' ' || c == '\t')(input)
     }
 }
 
@@ -204,6 +213,20 @@ mod tests {
 
         match Token::float_constant("12") {
             Ok(_) => assert!(false, "It's an integer"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_consume_whitespace() {
+        assert_eq!(Token::consume_whitespaces("   input"), Ok(("input", "   ")));
+        assert_eq!(Token::consume_whitespaces(" \t input"), Ok(("input", " \t ")));
+    }
+
+    #[test]
+    fn t_consume_whitespace_invalid() {
+        match Token::consume_whitespaces("something") {
+            Ok(_) => assert!(false, "At least one whitespace required"),
             Err(_) => assert!(true),
         }
     }
