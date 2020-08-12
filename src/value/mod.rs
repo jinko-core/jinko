@@ -4,6 +4,8 @@
 
 pub mod constant;
 
+pub use constant::Constant;
+
 pub trait Value {
     /// The type contained inside the value
     type Contained;

@@ -16,6 +16,7 @@
 use nom::{branch::alt, combinator::opt, IResult};
 
 use crate::value::constant::{ConstKind, Constant};
+use crate::instruction::Instruction;
 
 use super::tokens::Token;
 
@@ -60,8 +61,41 @@ impl Construct {
     /// x = fn(); // Assign the result of the function call to the variable x
     /// ```
     ///
-    /// `<identifier>(<arg_list>)`
+    /// `<identifier> ( <arg_list> )`
     pub fn function_call(input: &str) -> IResult<&str, &str> {
+        todo!()
+    }
+
+    /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
+    /// `void` type.
+    ///
+    /// ```
+    /// x = 12; // Store 12 into the variable `x`
+    /// x = 456; // Forbidden, `x` is immutable
+    /// mut n = 12; // Store 12 into `n`, a mutable variable
+    /// n = 1586; // Allowed
+    /// ```
+    ///
+    /// A variable assignment is a Statement. It cannot be used as an Expression
+    ///
+    /// ```
+    /// {
+    ///     x = 12; // Block returns void
+    /// }
+    /// {
+    ///     x = 12 // Forbidden
+    /// }
+    /// {
+    ///     x = call();
+    ///     x // Okay
+    /// } // But it's easier to just...
+    /// {
+    ///     call()
+    /// }
+    /// ```
+    ///
+    /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
+    pub fn var_assignment(input: &str) -> IResult<&str, Instruction> {
         todo!()
     }
 }
