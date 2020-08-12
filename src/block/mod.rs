@@ -16,19 +16,19 @@
 use super::instruction::Instruction;
 
 pub struct Block {
-    instructions: Vec<Instruction>,
+    instructions: Vec<dyn Instruction>,
 }
 
 impl Block {
     /// Create a new function
-    pub fn new() -> Function {
-        Function {
+    pub fn new() -> Block {
+        Block {
             instructions: Vec::new(),
         }
     }
 
     /// Add a new instruction to a function
-    pub fn add(&mut self, instr: Instruction) {
+    pub fn add(&mut self, instr: dyn Instruction) {
         self.instructions.push(instr)
     }
 

@@ -16,3 +16,6 @@ be expanded. If you want to contribute, this a good place to start!
 * [ ] While loop
 * [ ] Loop loop
 * [ ] Function definition
+
+## Behavior
+* [ ] A variable cannot be assigned the `void` type

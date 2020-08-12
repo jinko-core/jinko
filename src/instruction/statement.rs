@@ -1,7 +1,6 @@
 //! Statements are instructions that return `Nothing` upon execution
 
-use super::InstrTrait;
-use super::ReturnKind;
+use super::{Instruction, InstrType, ReturnKind};
 
 #[derive(Clone, Copy)]
 pub struct Statement;
@@ -10,8 +9,12 @@ pub struct Statement;
 // something ?
 
 /// Statements always return `Nothing`
-impl InstrTrait for Statement {
+impl Instruction for Statement {
     fn execute(&self) -> Result<ReturnKind, String> {
         Ok(ReturnKind::Nothing)
+    }
+
+    fn kind(&self) -> InstrType {
+        InstrType::Stmt
     }
 }
