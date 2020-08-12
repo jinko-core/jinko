@@ -15,6 +15,7 @@
 
 use nom::{branch::alt, combinator::opt, IResult};
 
+use crate::instruction::VarAssign;
 use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
@@ -60,9 +61,59 @@ impl Construct {
     /// x = fn(); // Assign the result of the function call to the variable x
     /// ```
     ///
-    /// `<identifier>(<arg_list>)`
+    /// `<identifier> ( <arg_list> )`
     pub fn function_call(input: &str) -> IResult<&str, &str> {
         todo!()
+    }
+
+    /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
+    /// `void` type.
+    ///
+    /// ```
+    /// x = 12; // Store 12 into the variable `x`
+    /// x = 456; // Forbidden, `x` is immutable
+    /// mut n = 12; // Store 12 into `n`, a mutable variable
+    /// n = 1586; // Allowed
+    /// ```
+    ///
+    /// A variable assignment is a Statement. It cannot be used as an Expression
+    ///
+    /// ```
+    /// {
+    ///     x = 12; // Block returns void
+    /// }
+    /// {
+    ///     x = 12 // Forbidden
+    /// }
+    /// {
+    ///     x = call();
+    ///     x // Okay
+    /// } // But it's easier to just...
+    /// {
+    ///     call()
+    /// }
+    /// ```
+    ///
+    /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
+    pub fn var_assignment(input: &'static str) -> IResult<&str, VarAssign> {
+        // FIXME: Maybe use alt ?
+        let (input, mut_opt) = opt(Token::mut_tok)(input)?;
+        let (input, _) = match mut_opt {
+            Some(_) => Token::consume_whitespaces(input)?,
+            None => Token::maybe_consume_whitespaces(input)?,
+        };
+
+        let (input, id) = Token::identifier(input)?;
+        let (input, _) = opt(Token::consume_whitespaces)(input)?;
+        let (input, _) = Token::equal(input)?;
+        let (input, _) = opt(Token::consume_whitespaces)(input)?;
+        let (input, constant) = Construct::constant(input)?;
+        let (input, _) = Token::semicolon(input)?;
+
+        match mut_opt {
+            Some(_) => Ok((input, VarAssign::new(true, id.to_owned(), constant))),
+            None => Ok((input, VarAssign::new(false, id.to_owned(), constant))),
+        }
     }
 }
 
@@ -85,5 +136,65 @@ mod tests {
             Construct::constant("\"a\"").unwrap().1.kind(),
             ConstKind::Str
         );
+    }
+
+    #[test]
+    fn t_var_assign_valid() {
+        assert_eq!(
+            Construct::var_assignment("x = 12;").unwrap().1.mutable(),
+            false
+        );
+        assert_eq!(
+            Construct::var_assignment("x = 12;").unwrap().1.symbol(),
+            "x"
+        );
+
+        assert_eq!(
+            Construct::var_assignment("mut x_99 = 129;")
+                .unwrap()
+                .1
+                .mutable(),
+            true
+        );
+        assert_eq!(
+            Construct::var_assignment("mut x_99 = 129;")
+                .unwrap()
+                .1
+                .symbol(),
+            "x_99"
+        );
+
+        // FIXME: Allow mut* as identifier
+        // assert_eq!(Construct::var_assignment("mut_x_99 = 129;").unwrap().1.mutable(), false);
+        // assert_eq!(Construct::var_assignment("mut_x_99 = 129;").unwrap().1.symbol(), "mut_x_99");
+
+        match Construct::var_assignment("mut x=12;") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Equal stuck to id is allowed"),
+        }
+        match Construct::var_assignment("mut x= 12;") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Equal stuck to id is allowed"),
+        }
+        match Construct::var_assignment("mut x =12;") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Equal stuck to value is allowed"),
+        }
+    }
+
+    #[test]
+    fn t_var_assign_invalid() {
+        match Construct::var_assignment("mutable x = 12") {
+            Ok(_) => assert!(false, "Mutable isn't mut"),
+            Err(_) => assert!(true),
+        }
+        match Construct::var_assignment("mut x = 12") {
+            Ok(_) => assert!(false, "No semicolon"),
+            Err(_) => assert!(true),
+        }
+        match Construct::var_assignment("mut x = 12") {
+            Ok(_) => assert!(false, "No semicolon"),
+            Err(_) => assert!(true),
+        }
     }
 }

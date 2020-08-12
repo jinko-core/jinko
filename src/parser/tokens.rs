@@ -3,8 +3,9 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while1,
-    character::complete::anychar, character::complete::char, character::is_digit, combinator::opt,
+    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while,
+    bytes::complete::take_while1, character::complete::anychar, character::complete::char,
+    character::is_alphabetic, character::is_alphanumeric, character::is_digit, combinator::opt,
     error::ErrorKind, error::ParseError, sequence::delimited, IResult,
 };
 
@@ -36,6 +37,10 @@ impl Token {
         Token::specific_char(input, '+')
     }
 
+    pub fn equal(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, '=')
+    }
+
     pub fn left_curly_bracket(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, '{')
     }
@@ -52,32 +57,54 @@ impl Token {
         Token::specific_char(input, ']')
     }
 
-    pub fn func(input: &str) -> IResult<&str, &str> {
+    pub fn semicolon(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, ';')
+    }
+
+    pub fn func_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "func")
     }
 
-    pub fn ext(input: &str) -> IResult<&str, &str> {
+    pub fn ext_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "ext")
     }
 
-    pub fn test(input: &str) -> IResult<&str, &str> {
+    pub fn test_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "test")
     }
 
-    pub fn mock(input: &str) -> IResult<&str, &str> {
+    pub fn mock_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "mock")
     }
 
-    pub fn r#loop(input: &str) -> IResult<&str, &str> {
+    pub fn loop_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "loop")
     }
 
-    pub fn r#while(input: &str) -> IResult<&str, &str> {
+    pub fn while_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "while")
     }
 
-    pub fn r#for(input: &str) -> IResult<&str, &str> {
+    pub fn for_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "for")
+    }
+
+    pub fn mut_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "mut")
+    }
+
+    pub fn identifier(input: &str) -> IResult<&str, &str> {
+        let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
+
+        // FIXME: Ugly
+        // At least one alphabetical character is required
+        for c in id.chars() {
+            if is_alphabetic(c as u8) {
+                return Ok((input, id));
+            }
+        }
+
+        Err(nom::Err::Failure(("Invalid identifier", ErrorKind::Eof)))
     }
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
@@ -132,6 +159,16 @@ impl Token {
     pub fn string_constant(input: &str) -> IResult<&str, &str> {
         // FIXME: This does not allow for string escaping yet
         delimited(Token::double_quote, is_not("\""), Token::double_quote)(input)
+    }
+
+    /// Consumes 1 or more whitespaces in an input. A whitespace is a space or a tab
+    pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
+        take_while1(|c| c == ' ' || c == '\t')(input)
+    }
+
+    /// Consumes 0 or more whitespaces in an input. A whitespace is a space or a tab
+    pub fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
+        take_while(|c| c == ' ' || c == '\t')(input)
     }
 }
 
@@ -204,6 +241,44 @@ mod tests {
 
         match Token::float_constant("12") {
             Ok(_) => assert!(false, "It's an integer"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_consume_whitespace() {
+        assert_eq!(Token::consume_whitespaces("   input"), Ok(("input", "   ")));
+        assert_eq!(
+            Token::consume_whitespaces(" \t input"),
+            Ok(("input", " \t "))
+        );
+    }
+
+    #[test]
+    fn t_consume_whitespace_invalid() {
+        match Token::consume_whitespaces("something") {
+            Ok(_) => assert!(false, "At least one whitespace required"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_id() {
+        assert_eq!(Token::identifier("x"), Ok(("", "x")));
+        assert_eq!(Token::identifier("x_"), Ok(("", "x_")));
+        assert_eq!(Token::identifier("x_99"), Ok(("", "x_99")));
+        assert_eq!(Token::identifier("99x"), Ok(("", "99x")));
+        assert_eq!(Token::identifier("n99 x"), Ok((" x", "n99")));
+    }
+
+    #[test]
+    fn t_id_invalid() {
+        match Token::identifier("99") {
+            Ok(_) => assert!(false, "At least one alphabetical required"),
+            Err(_) => assert!(true),
+        }
+        match Token::identifier("__99_") {
+            Ok(_) => assert!(false, "At least one alphabetical required"),
             Err(_) => assert!(true),
         }
     }

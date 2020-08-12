@@ -8,6 +8,7 @@ be expanded. If you want to contribute, this a good place to start!
 * [x] Constants
 * [ ] Constants with escaping characters
 * [ ] Variable assignment
+* [ ] Allow variables named "mut\*"
 * [ ] Function calls
 * [ ] If condition
 * [ ] Else condition
@@ -16,3 +17,6 @@ be expanded. If you want to contribute, this a good place to start!
 * [ ] While loop
 * [ ] Loop loop
 * [ ] Function definition
+
+## Behavior
+* [ ] A variable cannot be assigned the `void` type
