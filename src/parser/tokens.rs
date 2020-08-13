@@ -9,6 +9,9 @@ use nom::{
     error::ErrorKind, error::ParseError, sequence::delimited, IResult,
 };
 
+/// Reserved Keywords by broccoli
+const RESERVED_KEYWORDS: [&str; 8] = ["func", "test", "mock", "ext", "for", "while", "loop", "mut"];
+
 pub struct Token;
 
 impl Token {
@@ -62,39 +65,49 @@ impl Token {
     }
 
     pub fn func_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "func")
+        Token::specific_token(input, "func ")
     }
 
     pub fn ext_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "ext")
+        Token::specific_token(input, "ext ")
     }
 
     pub fn test_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "test")
+        Token::specific_token(input, "test ")
     }
 
     pub fn mock_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "mock")
+        Token::specific_token(input, "mock ")
     }
 
     pub fn loop_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "loop")
+        Token::specific_token(input, "loop ")
     }
 
     pub fn while_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "while")
+        Token::specific_token(input, "while ")
     }
 
     pub fn for_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "for")
+        Token::specific_token(input, "for ")
     }
 
     pub fn mut_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "mut")
+        Token::specific_token(input, "mut ")
     }
 
     pub fn identifier(input: &str) -> IResult<&str, &str> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
+
+        match RESERVED_KEYWORDS.contains(&id) {
+            true => {
+                return Err(nom::Err::Failure((
+                    "Identifer cannot be keyword",
+                    ErrorKind::OneOf,
+                )));
+            }
+            _ => {}
+        }
 
         // FIXME: Ugly
         // At least one alphabetical character is required
@@ -269,6 +282,7 @@ mod tests {
         assert_eq!(Token::identifier("x_99"), Ok(("", "x_99")));
         assert_eq!(Token::identifier("99x"), Ok(("", "99x")));
         assert_eq!(Token::identifier("n99 x"), Ok((" x", "n99")));
+        assert_eq!(Token::identifier("func_ x"), Ok((" x", "func_")));
     }
 
     #[test]
@@ -279,6 +293,10 @@ mod tests {
         }
         match Token::identifier("__99_") {
             Ok(_) => assert!(false, "At least one alphabetical required"),
+            Err(_) => assert!(true),
+        }
+        match Token::identifier("func") {
+            Ok(_) => assert!(false, "ID can't be a reserved keyword"),
             Err(_) => assert!(true),
         }
     }
