@@ -106,3 +106,9 @@ exit-code will be the value assigned to `x`. In that case, 12
 An instruction needs to contain "spacial" information (Where is it in the file ? In what
 file ?), source (the actual source code, for errors), and a Statement or an Expression
 to execute.
+
+## The interpreter
+
+The broccoli interpreter should keep track of variables and functions. Therefore, at
+least two hashmaps are required, one for variables and one for functions. Each of these
+elements need to have a unique name to identify them.
