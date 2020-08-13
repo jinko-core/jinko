@@ -12,7 +12,7 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, IResult};
+use nom::{branch::alt, combinator::opt, IResult, multi::many0};
 
 use crate::instruction::{VarAssign, FunctionCall};
 use crate::value::constant::{ConstKind, Constant};
@@ -52,6 +52,15 @@ impl Construct {
         todo!()
     }
 
+    fn function_arg(input: &str) -> IResult<&str, &str> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::comma(input)?;
+
+        Ok((input, id))
+    }
+
     /// When a function is called in the source code.
     ///
     /// ```
@@ -63,7 +72,14 @@ impl Construct {
     /// `<arg_list> := [(<constant> | <variable> | <expression>)*]
     /// `<identifier> ( <arg_list> )`
     pub fn function_call(input: &str) -> IResult<&str, FunctionCall> {
-        todo!()
+        let (input, fn_id) = Token::identifier(input)?;
+        let (input, _) = Token::left_parenthesis(input)?;
+
+        let args_vec = many0(function_arg)(input
+
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        Ok((input, FunctionCall::new(fn_id.to_owned())))
     }
 
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
@@ -226,8 +242,13 @@ mod tests {
         assert_eq!(Construct::function_call("fn()").unwrap().1.name(), "fn");
         assert_eq!(Construct::function_call("fn()").unwrap().1.args().len(), 0);
 
-        assert_eq!(Construct::function_call("fn(1, 2, 3)").unwrap().1.name(), "fn");
-        assert_eq!(Construct::function_call("fn(1, 2, 3)").unwrap().1.args().len(), 3);
+        assert_eq!(Construct::function_call("fn(1a, 2a, 3a)").unwrap().1.name(), "fn");
+        assert_eq!(Construct::function_call("fn(1a, 2a, 3a)").unwrap().1.args().len(), 3);
+
+        assert_eq!(Construct::function_call("fn(1a   , 2a,3a)").unwrap().1.name(), "fn");
+        assert_eq!(Construct::function_call("fn(1a   , 2a,3a)").unwrap().1.args().len(), 3);
+
+        // FIXME: Add constants and expressions
     }
 
     #[test]
