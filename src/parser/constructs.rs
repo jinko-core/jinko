@@ -98,10 +98,7 @@ impl Construct {
     pub fn var_assignment(input: &'static str) -> IResult<&str, VarAssign> {
         // FIXME: Maybe use alt ?
         let (input, mut_opt) = opt(Token::mut_tok)(input)?;
-        let (input, _) = match mut_opt {
-            Some(_) => Token::consume_whitespaces(input)?,
-            None => Token::maybe_consume_whitespaces(input)?,
-        };
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         let (input, id) = Token::identifier(input)?;
         let (input, _) = opt(Token::consume_whitespaces)(input)?;
@@ -164,9 +161,35 @@ mod tests {
             "x_99"
         );
 
-        // FIXME: Allow mut* as identifier
-        // assert_eq!(Construct::var_assignment("mut_x_99 = 129;").unwrap().1.mutable(), false);
-        // assert_eq!(Construct::var_assignment("mut_x_99 = 129;").unwrap().1.symbol(), "mut_x_99");
+        assert_eq!(
+            Construct::var_assignment("mut_x_99 = 129;")
+                .unwrap()
+                .1
+                .mutable(),
+            false
+        );
+        assert_eq!(
+            Construct::var_assignment("mut_x_99 = 129;")
+                .unwrap()
+                .1
+                .symbol(),
+            "mut_x_99"
+        );
+
+        assert_eq!(
+            Construct::var_assignment("mut mut_x_99 = 129;")
+                .unwrap()
+                .1
+                .mutable(),
+            true
+        );
+        assert_eq!(
+            Construct::var_assignment("mut mut_x_99 = 129;")
+                .unwrap()
+                .1
+                .symbol(),
+            "mut_x_99"
+        );
 
         match Construct::var_assignment("mut x=12;") {
             Ok(_) => assert!(true),

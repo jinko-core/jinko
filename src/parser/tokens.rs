@@ -9,6 +9,9 @@ use nom::{
     error::ErrorKind, error::ParseError, sequence::delimited, IResult,
 };
 
+/// Reserved Keywords by broccoli
+const KEYWORDS: [&str; 12] = [""; 12];
+
 pub struct Token;
 
 impl Token {
@@ -62,39 +65,41 @@ impl Token {
     }
 
     pub fn func_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "func")
+        Token::specific_token(input, "func ")
     }
 
     pub fn ext_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "ext")
+        Token::specific_token(input, "ext ")
     }
 
     pub fn test_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "test")
+        Token::specific_token(input, "test ")
     }
 
     pub fn mock_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "mock")
+        Token::specific_token(input, "mock ")
     }
 
     pub fn loop_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "loop")
+        Token::specific_token(input, "loop ")
     }
 
     pub fn while_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "while")
+        Token::specific_token(input, "while ")
     }
 
     pub fn for_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "for")
+        Token::specific_token(input, "for ")
     }
 
     pub fn mut_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "mut")
+        Token::specific_token(input, "mut ")
     }
 
     pub fn identifier(input: &str) -> IResult<&str, &str> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
+
+        // FIXME: Can't be a keyword
 
         // FIXME: Ugly
         // At least one alphabetical character is required
