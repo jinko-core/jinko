@@ -1,7 +1,14 @@
+mod args;
 mod block;
 mod interpreter;
 mod instruction;
 mod parser;
 mod value;
 
-fn main() {}
+use args::Args;
+
+fn main() {
+    let args = Args::handle();
+
+    println!("{:#?}", args.input);
+}
