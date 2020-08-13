@@ -20,3 +20,4 @@ be expanded. If you want to contribute, this a good place to start!
 
 ## Behavior
 * [ ] A variable cannot be assigned the `void` type
+* [ ] `-i|--interactive` option allows you to run a script and then open a REPL
