@@ -45,14 +45,6 @@ impl Construct {
         }
     }
 
-    /// Parses an identifier. An identifier can have alphanumeric characters. It cannot
-    /// only be constituted of numbers. An identifier is NOT a `const`.
-    ///
-    /// `<alphanumeric>?`
-    pub fn identifier(input: &str) -> IResult<&str, &str> {
-        todo!()
-    }
-
     /// When a function is called in the source code.
     ///
     /// ```
