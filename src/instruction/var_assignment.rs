@@ -33,6 +33,7 @@ impl VarAssign {
 }
 
 impl Instruction for VarAssign {
+    // FIXME: Add logic
     fn kind(&self) -> InstrKind {
         InstrKind::Statement
     }

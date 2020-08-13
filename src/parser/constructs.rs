@@ -1,7 +1,6 @@
 //! A `Construct` is a complex set of tokens. For example, `fn()` is an identifier, a
 //! left parenthesis and a right parenthesis. Together, they constitute a function call.
-//! In the same vein, `x = 12;` is 4 tokens used to represent variable assignment.
-//! Therefore, constructs use tokens while the parser only uses constructs. This is an
+//! In the same vein, `x = 12;` is 4 tokens used to represent variable assignment.  Therefore, constructs use tokens while the parser only uses constructs. This is an
 //! abstraction for all possible ways to parse a line in broccoli.
 //!
 //! Each of the functions in that module contain the grammar they represent above their
@@ -15,7 +14,7 @@
 
 use nom::{branch::alt, combinator::opt, IResult};
 
-use crate::instruction::VarAssign;
+use crate::instruction::{VarAssign, FunctionCall};
 use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
@@ -61,8 +60,9 @@ impl Construct {
     /// x = fn(); // Assign the result of the function call to the variable x
     /// ```
     ///
+    /// `<arg_list> := [(<constant> | <variable> | <expression>)*]
     /// `<identifier> ( <arg_list> )`
-    pub fn function_call(input: &str) -> IResult<&str, &str> {
+    pub fn function_call(input: &str) -> IResult<&str, FunctionCall> {
         todo!()
     }
 
@@ -215,8 +215,42 @@ mod tests {
             Ok(_) => assert!(false, "No semicolon"),
             Err(_) => assert!(true),
         }
-        match Construct::var_assignment("mut x = 12") {
+        match Construct::var_assignment("mut_x = 12") {
             Ok(_) => assert!(false, "No semicolon"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_function_call_valid() {
+        assert_eq!(Construct::function_call("fn()").unwrap().1.name(), "fn");
+        assert_eq!(Construct::function_call("fn()").unwrap().1.args().len(), 0);
+
+        assert_eq!(Construct::function_call("fn(1, 2, 3)").unwrap().1.name(), "fn");
+        assert_eq!(Construct::function_call("fn(1, 2, 3)").unwrap().1.args().len(), 3);
+    }
+
+    #[test]
+    fn t_function_call_invalid() {
+        match Construct::function_call("fn(") {
+            Ok(_) => assert!(false, "Unterminated parenthesis"),
+            Err(_) => assert!(true),
+        }
+        match Construct::function_call("fn))") {
+            Ok(_) => assert!(false, "Wrong parenthesis"),
+            Err(_) => assert!(true),
+        }
+        match Construct::function_call("fn((") {
+            Ok(_) => assert!(false, "Wrong parenthesis again"),
+            Err(_) => assert!(true),
+        }
+        match Construct::function_call("fn((") {
+            Ok(_) => assert!(false, "Wrong parenthesis again"),
+            Err(_) => assert!(true),
+        }
+
+        match Construct::function_call("fn((") {
+            Ok(_) => assert!(false, "Wrong parenthesis again"),
             Err(_) => assert!(true),
         }
     }
