@@ -100,8 +100,13 @@ impl Token {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
         match RESERVED_KEYWORDS.contains(&id) {
-            true => { return Err(nom::Err::Failure(("Identifer cannot be keyword", ErrorKind::OneOf))); },
-            _ => {},
+            true => {
+                return Err(nom::Err::Failure((
+                    "Identifer cannot be keyword",
+                    ErrorKind::OneOf,
+                )));
+            }
+            _ => {}
         }
 
         // FIXME: Ugly
