@@ -11,8 +11,7 @@ pub struct Interpreter;
 impl Interpreter {
     /// Create a new empty interpreter
     pub fn new() -> Interpreter {
-        Interpreter {
-        }
+        Interpreter {}
     }
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`

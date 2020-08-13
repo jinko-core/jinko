@@ -1,7 +1,7 @@
 mod args;
 mod block;
-mod interpreter;
 mod instruction;
+mod interpreter;
 mod parser;
 mod value;
 
