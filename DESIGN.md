@@ -106,3 +106,27 @@ exit-code will be the value assigned to `x`. In that case, 12
 An instruction needs to contain "spacial" information (Where is it in the file ? In what
 file ?), source (the actual source code, for errors), and a Statement or an Expression
 to execute.
+
+## Nullable types
+
+In Rust, types are not nullable. There is no way (in the safe subset of the language
+at least) to return `NULL` as a value. However, the `Option` type exists: You can either
+return `Some(value)` or `None` in case something went wrong. You also have to handle both
+cases when using those Option types. In languages such as Zig (I think) or Dart (soon),
+some types can be "nullable". By annotating the type with a question mark, you can
+indicate that the value might be null. For example, `String` needs to be a valid string,
+but `String?` can be a valid string or NULL. These two approaches do not exactly serve
+the same purpose. However, they are useful when it comes to error handling, as well as
+the possibility of not having something. In C, you are constrained to use NULL. Every
+pointer is "nullable", and therefore you always have to check for NULL. In Dart and Zig,
+you only have to check for NULL if the type is nullable. In Rust, you have to check
+your option types or `unwrap()` on them, which will cause a panic in case of a `None`
+(a bit equivalent to segfaulting on NULL, but less sneaky and way less vulnerable).
+
+While these two approaches both have advantages and inconvenient, the Rust approach is,
+in my opinion for Broccoli, significantly better for a simple reason: Even if Options are
+part of the standard library and "included" by default, they do not relie on some obscure
+compiler magic: They are just a type. Therefore, they are being understood by the compiler
+as just a type. And I think that keeping `broccoli` simple also means keeping the interpreter
+simple. Therefore, I think that simply using `Option`s (or some other nomenclature) would
+be best.
