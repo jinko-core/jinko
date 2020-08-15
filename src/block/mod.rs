@@ -6,9 +6,14 @@
 //!
 //! `{ something(); something_else(); }`
 //!
-//! and function definitions (as well as test and mock definitions)
+//! function definitions (as well as test and mock definitions)
 //!
 //! `func something() { do_something_else() }`
+//!
+//! and other kind of code blocks, for example in if/else blocks or loops
+//!
+//! `if something() { do_something(); }`
+//! `loop { do_something_repeatedly(); }`
 //!
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
