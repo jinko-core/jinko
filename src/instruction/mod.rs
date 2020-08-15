@@ -2,35 +2,22 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-mod expression;
-mod instr_trait;
-mod statement;
-mod return_kind;
+mod function_call;
+mod var_assignment;
 
-pub use statement::Statement;
-pub use expression::Expression;
-pub use instr_trait::InstrTrait;
-pub use return_kind::ReturnKind;
+pub use function_call::FunctionCall;
+pub use var_assignment::VarAssign;
 
-/// The actual "instruction" contained in the Instruction struct
-enum InstrType {
-    Stmt(Statement),
-    Expr(Expression),
+/// The type of instructions available
+pub enum InstrKind {
+    Statement,
+    Expression,
 }
 
-/// Instructions contain a `ReturnKind`, indicating if they are a statement or an
-/// expression
-pub struct Instruction {
-    // FIXME: Add source code (&str) and spacial information (struct SpaceInfo ?)
+pub trait Instruction {
+    /// Execute the instruction, altering the state of the program
+    fn execute(&self) {}
 
-    instruction: InstrType,
-}
-
-impl InstrTrait for Instruction {
-    fn execute(&self) -> Result<ReturnKind, String> {
-        match self.instruction {
-            InstrType::Stmt(s) => s.execute(),
-            InstrType::Expr(e) => e.execute(),
-        }
-    }
+    /// What is the type of the instruction: a Statement or an Expression
+    fn kind(&self) -> InstrKind;
 }
