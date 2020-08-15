@@ -107,12 +107,22 @@ An instruction needs to contain "spacial" information (Where is it in the file ?
 file ?), source (the actual source code, for errors), and a Statement or an Expression
 to execute.
 
-## Memory allocation
-
 Memory allocation and collection is done via reference counting. This implies lower stress
 on the hardware used to run the program, and is easier to implement, thus keeping
 broccoli simpler. However, this causes issues when an instance references itself, thus
 creating memory leaks.
+
+## FFI
+
+The idea is to mark functions from external shared libraries with the `ext` keyword.
+
+```rust
+ext func add(lhs: int, rhs: int) -> int; // This function isn't defined in broccoli
+```
+
+Calling `add()` will actually make a call into a native-code function, for example one
+written in Rust, C or C++. Adjustments need to be done on the native side of things in
+order to allow name resolution
 
 ## Nullable types
 
