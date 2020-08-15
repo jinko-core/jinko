@@ -125,7 +125,7 @@ impl Construct {
     ///
     /// A variable assignment is a Statement. It cannot be used as an Expression
     ///
-    /// ```
+    /// ```md
     /// {
     ///     x = 12; // Block returns void
     /// }
@@ -142,7 +142,7 @@ impl Construct {
     /// ```
     ///
     /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
-    pub fn var_assignment(input: &'static str) -> IResult<&str, VarAssign> {
+    pub fn var_assignment(input: &str) -> IResult<&str, VarAssign> {
         // FIXME: Maybe use alt ?
         let (input, mut_opt) = opt(Token::mut_tok)(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
@@ -158,6 +158,33 @@ impl Construct {
             Some(_) => Ok((input, VarAssign::new(true, id.to_owned(), constant))),
             None => Ok((input, VarAssign::new(false, id.to_owned(), constant))),
         }
+    }
+
+    /// A block of code is a new inner scope that contains instructions. You can use
+    /// them in If/Else blocks, in function declarations, or just as is.
+    ///
+    /// ```
+    /// {
+    ///     compute_stuff();
+    /// } // Block returns void
+    ///
+    /// x = {
+    ///     12
+    /// } // Block returns 12
+    ///
+    /// x = {
+    ///     compute_stuff();
+    ///     some_other_stuff();
+    ///     12
+    /// } // Block returns 12 after having called two functions
+    ///
+    /// There can only be one returning instruction, and it must be the last one
+    /// in the block.
+    ///
+    /// `{ [ <expression> ; ]* [ <expression> ] }`
+    // FIXME: Fix grammar and description
+    pub fn block(input: &str) -> IResult<&str, Block> {
+        todo!()
     }
 }
 
@@ -328,5 +355,46 @@ mod tests {
             Ok(_) => assert!(false, "Wrong parenthesis again"),
             Err(_) => assert!(true),
         }
+    }
+
+    #[test]
+    fn t_block_valid_oneline() {
+        assert_eq!(Construct::block("{ 12; }").unwrap().1.instructions().len(), 1);
+        assert_eq!(Construct::block("{ 12; 14; }").unwrap().1.instructions().len(), 2);
+        assert_eq!(Construct::block("{ 12; 14 }").unwrap().1.instructions().len(), 2);
+    }
+
+    #[test]
+    fn t_block_invalid_oneline() {
+        match Construct::block("{ 12;") {
+            Ok(_) => assert!(false, "Unterminated bracket"),
+            Err(_) => assert!(true),
+        }
+
+        match Construct::block("{ 12") {
+            Ok(_) => assert!(false, "Unterminated bracket but on expression"),
+            Err(_) => assert!(true),
+        }
+
+        match Construct::block("{ 12; 13") {
+            Ok(_) => assert!(false, "Unterminated bracket but on second expression"),
+            Err(_) => assert!(true),
+        }
+
+        match Construct::block("12; 13 }") {
+            Ok(_) => assert!(false, "Not starting with a bracket"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_block_valid_multiline() {
+        let input = r#"{
+                "12";
+                "12";
+                "13";
+            }"#;
+
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 3);
     }
 }
