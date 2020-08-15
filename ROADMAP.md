@@ -9,7 +9,8 @@ be expanded. If you want to contribute, this a good place to start!
 * [ ] Constants with escaping characters
 * [x] Variable assignment
 * [x] Allow variables named "mut\*"
-* [ ] Function calls
+* [x] Function calls
+* [ ] Code blocks
 * [ ] If condition
 * [ ] Else condition
 * [ ] Elif condition
