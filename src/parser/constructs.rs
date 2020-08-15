@@ -181,6 +181,34 @@ impl Construct {
         Ok((input, constant))
     }
 
+    /// Parse an empty block
+    fn block_empty(input: &str) -> IResult<&str, Block> {
+        let (input, _) = Token::left_curly_bracket(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::right_curly_bracket(input)?;
+
+        Ok((input, Block::new()))
+    }
+
+    fn block_non_empty(input: &str) -> IResult<&str, Block> {
+        let block = Block::new();
+
+        let (input, _) = Token::left_curly_bracket(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, instructions) = many0(Construct::instruction_semicolon)(input)?;
+
+        /// A block can contain a last expression that will be returned
+        let (input, last_expr) = opt(Construct::constant)(input)?;
+
+        // FIXME: Add instructions and last_expr to block instead of just parsing them
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::right_curly_bracket(input)?;
+
+        Ok((input, block))
+    }
+
     /// A block of code is a new inner scope that contains instructions. You can use
     /// them in If/Else blocks, in function declarations, or just as is.
     ///
@@ -206,22 +234,7 @@ impl Construct {
     /// `{ [ <expression> ; ]* [ <expression> ] }`
     // FIXME: Fix grammar and description
     pub fn block(input: &str) -> IResult<&str, Block> {
-        let (input, _) = Token::left_curly_bracket(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-
-        let (input, instructions) = many0(Construct::instruction_semicolon)(input)?;
-
-        /// A block can contain a last expression that will be returned
-        // let (input, last_expr) = opt(Construct::constant)(input)?;
-
-        // FIXME: Add instructions and last_expr to block instead of just parsing them
-
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::right_curly_bracket(input)?;
-
-        let block = Block::new();
-
-        Ok((input, block))
+        alt((Construct::block_empty, Construct::block_non_empty))(input)
     }
 }
 
