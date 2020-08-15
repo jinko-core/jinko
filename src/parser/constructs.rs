@@ -41,7 +41,7 @@ impl Construct {
             (None, None, Some(i), None) => Ok((input, Constant::new(ConstKind::Int).with_iv(i))),
             (None, None, None, Some(f)) => Ok((input, Constant::new(ConstKind::Float).with_fv(f))),
             _ => Err(nom::Err::Failure((
-                "Not a valid constant",
+                input,
                 nom::error::ErrorKind::OneOf,
             ))),
         }
@@ -209,7 +209,7 @@ impl Construct {
         let (input, _) = Token::left_curly_bracket(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        // let (input, instructions) = many0(Construct::instruction_semicolon)(input)?;
+        let (input, instructions) = many0(Construct::instruction_semicolon)(input)?;
 
         /// A block can contain a last expression that will be returned
         // let (input, last_expr) = opt(Construct::constant)(input)?;
@@ -387,9 +387,20 @@ mod tests {
             Ok(_) => assert!(false, "Wrong parenthesis again"),
             Err(_) => assert!(true),
         }
-
         match Construct::function_call("fn((") {
             Ok(_) => assert!(false, "Wrong parenthesis again"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_function_call_multiarg_invalid() {
+        match Construct::function_call("fn(1, 2, 3, 4,)") {
+            Ok(_) => assert!(false, "Unterminated arglist"),
+            Err(_) => assert!(true),
+        }
+        match Construct::function_call("fn(1, 2, 3, 4,   )") {
+            Ok(_) => assert!(false, "Unterminated arglist"),
             Err(_) => assert!(true),
         }
     }
