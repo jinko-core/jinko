@@ -12,7 +12,7 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, multi::many1, IResult};
+use nom::{branch::alt, combinator::opt, multi::many1, multi::many0, IResult};
 
 use crate::block::Block;
 use crate::instruction::{FunctionCall, VarAssign};
@@ -91,6 +91,7 @@ impl Construct {
 
         // Parse the last argument, which does not have a comma
         let (input, last_arg) = Construct::arg(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
 
         arg_vec.drain(0..).for_each(|arg| fn_call.add_arg(arg));
         fn_call.add_arg(last_arg);
@@ -162,6 +163,15 @@ impl Construct {
         }
     }
 
+    /// Consumes an instruction and a semicolon
+    fn instruction_semicolon(input: &str) -> IResult<&str, Constant> {
+        let (input, constant) = Construct::constant(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::semicolon(input)?;
+
+        Ok((input, constant))
+    }
+
     /// A block of code is a new inner scope that contains instructions. You can use
     /// them in If/Else blocks, in function declarations, or just as is.
     ///
@@ -187,7 +197,22 @@ impl Construct {
     /// `{ [ <expression> ; ]* [ <expression> ] }`
     // FIXME: Fix grammar and description
     pub fn block(input: &str) -> IResult<&str, Block> {
-        todo!()
+        let (input, _) = Token::left_curly_bracket(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, instructions) = many0(Construct::instruction_semicolon)(input)?;
+
+        /// A block can contain a last expression that will be returned
+        let (input, last_expr) = Construct::constant(input)?;
+
+        // FIXME: Add instructions and last_expr to block instead of just parsing them
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::right_curly_bracket(input)?;
+
+        let block = Block::new();
+
+        Ok((input, block))
     }
 }
 
@@ -358,6 +383,11 @@ mod tests {
             Ok(_) => assert!(false, "Wrong parenthesis again"),
             Err(_) => assert!(true),
         }
+    }
+
+    #[test]
+    fn t_block_empty() {
+        assert_eq!(Construct::block("{}").unwrap().1.instructions().len(), 0);
     }
 
     #[test]
