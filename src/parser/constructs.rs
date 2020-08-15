@@ -12,7 +12,7 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, multi::many1, multi::many0, IResult};
+use nom::{branch::alt, combinator::opt, multi::many0, multi::many1, IResult};
 
 use crate::block::Block;
 use crate::instruction::{FunctionCall, VarAssign};
@@ -40,10 +40,7 @@ impl Construct {
             }
             (None, None, Some(i), None) => Ok((input, Constant::new(ConstKind::Int).with_iv(i))),
             (None, None, None, Some(f)) => Ok((input, Constant::new(ConstKind::Float).with_fv(f))),
-            _ => Err(nom::Err::Failure((
-                input,
-                nom::error::ErrorKind::OneOf,
-            ))),
+            _ => Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf))),
         }
     }
 
@@ -425,9 +422,26 @@ mod tests {
 
     #[test]
     fn t_block_valid_oneline() {
-        assert_eq!(Construct::block("{ 12; }").unwrap().1.instructions().len(), 1);
-        assert_eq!(Construct::block("{ 12; 14; }").unwrap().1.instructions().len(), 2);
-        assert_eq!(Construct::block("{ 12; 14 }").unwrap().1.instructions().len(), 2);
+        assert_eq!(
+            Construct::block("{ 12; }").unwrap().1.instructions().len(),
+            1
+        );
+        assert_eq!(
+            Construct::block("{ 12; 14; }")
+                .unwrap()
+                .1
+                .instructions()
+                .len(),
+            2
+        );
+        assert_eq!(
+            Construct::block("{ 12; 14 }")
+                .unwrap()
+                .1
+                .instructions()
+                .len(),
+            2
+        );
     }
 
     #[test]
