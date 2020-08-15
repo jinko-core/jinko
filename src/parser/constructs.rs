@@ -163,11 +163,20 @@ impl Construct {
         }
     }
 
-    /// Consumes an instruction and a semicolon
-    fn instruction_semicolon(input: &str) -> IResult<&str, Constant> {
+    fn instruction(input: &str) -> IResult<&str, Constant> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, constant) = Construct::constant(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Ok((input, constant))
+    }
+
+    /// Consumes an instruction and a semicolon
+    fn instruction_semicolon(input: &str) -> IResult<&str, Constant> {
+        let (input, constant) = Construct::instruction(input)?;
+
         let (input, _) = Token::semicolon(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         Ok((input, constant))
     }
@@ -200,10 +209,10 @@ impl Construct {
         let (input, _) = Token::left_curly_bracket(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        let (input, instructions) = many0(Construct::instruction_semicolon)(input)?;
+        // let (input, instructions) = many0(Construct::instruction_semicolon)(input)?;
 
         /// A block can contain a last expression that will be returned
-        let (input, last_expr) = Construct::constant(input)?;
+        // let (input, last_expr) = opt(Construct::constant)(input)?;
 
         // FIXME: Add instructions and last_expr to block instead of just parsing them
 
