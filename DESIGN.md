@@ -143,6 +143,25 @@ incl dir1::source0 as dir1_source0;
 
 I'm not entirely happy with this design yet. It's obviously open to discussion and changes
 
+## Garbage collection
+
+Memory allocation and collection is done via reference counting. This implies lower stress
+on the hardware used to run the program, and is easier to implement, thus keeping
+broccoli simpler. However, this causes issues when an instance references itself, thus
+creating memory leaks.
+
+## FFI
+
+The idea is to mark functions from external shared libraries with the `ext` keyword.
+
+```rust
+ext func add(lhs: int, rhs: int) -> int; // This function isn't defined in broccoli
+```
+
+Calling `add()` will actually make a call into a native-code function, for example one
+written in Rust, C or C++. Adjustments need to be done on the native side of things in
+order to allow name resolution
+
 ## Nullable types
 
 In Rust, types are not nullable. There is no way (in the safe subset of the language
