@@ -3,7 +3,7 @@
 
 use crate::value::Constant;
 
-use super::{Instruction, InstrKind};
+use super::{InstrKind, Instruction};
 
 pub struct FunctionCall {
     /// Name of the function to call

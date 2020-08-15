@@ -12,9 +12,9 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, IResult, multi::many0};
+use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
-use crate::instruction::{VarAssign, FunctionCall};
+use crate::instruction::{FunctionCall, VarAssign};
 use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
@@ -52,13 +52,25 @@ impl Construct {
         todo!()
     }
 
-    fn function_arg(input: &str) -> IResult<&str, &str> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, id) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::comma(input)?;
+    /// Parse a function call with no arguments
+    ///
+    /// `<identifier> ( )`
+    fn function_call_no_args(input: &str) -> IResult<&str, FunctionCall> {
+        let (input, fn_id) = Token::identifier(input)?;
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
 
-        Ok((input, id))
+        Ok((input, FunctionCall::new(fn_id.to_owned())))
+    }
+
+    /// Parse a function call with arguments
+    fn function_call_args(input: &str) -> IResult<&str, FunctionCall> {
+        let (input, fn_id) = Token::identifier(input)?;
+        let (input, _) = Token::left_parenthesis(input)?;
+
+        let mut fn_call = FunctionCall::new(fn_id.to_owned());
+
+        Ok((input, fn_call))
     }
 
     /// When a function is called in the source code.
@@ -72,14 +84,10 @@ impl Construct {
     /// `<arg_list> := [(<constant> | <variable> | <expression>)*]
     /// `<identifier> ( <arg_list> )`
     pub fn function_call(input: &str) -> IResult<&str, FunctionCall> {
-        let (input, fn_id) = Token::identifier(input)?;
-        let (input, _) = Token::left_parenthesis(input)?;
-
-        let args_vec = many0(function_arg)(input
-
-        let (input, _) = Token::right_parenthesis(input)?;
-
-        Ok((input, FunctionCall::new(fn_id.to_owned())))
+        alt((
+            Construct::function_call_no_args,
+            Construct::function_call_args,
+        ))(input)
     }
 
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
@@ -238,15 +246,38 @@ mod tests {
     }
 
     #[test]
-    fn t_function_call_valid() {
+    fn t_function_call_no_args_valid() {
         assert_eq!(Construct::function_call("fn()").unwrap().1.name(), "fn");
         assert_eq!(Construct::function_call("fn()").unwrap().1.args().len(), 0);
+    }
 
-        assert_eq!(Construct::function_call("fn(1a, 2a, 3a)").unwrap().1.name(), "fn");
-        assert_eq!(Construct::function_call("fn(1a, 2a, 3a)").unwrap().1.args().len(), 3);
+    #[test]
+    fn t_function_call_valid() {
+        assert_eq!(
+            Construct::function_call("fn(1, 2, 3)").unwrap().1.name(),
+            "fn"
+        );
+        assert_eq!(
+            Construct::function_call("fn(1, 2, 3)")
+                .unwrap()
+                .1
+                .args()
+                .len(),
+            3
+        );
 
-        assert_eq!(Construct::function_call("fn(1a   , 2a,3a)").unwrap().1.name(), "fn");
-        assert_eq!(Construct::function_call("fn(1a   , 2a,3a)").unwrap().1.args().len(), 3);
+        assert_eq!(
+            Construct::function_call("fn(1   , 2,3)").unwrap().1.name(),
+            "fn"
+        );
+        assert_eq!(
+            Construct::function_call("fn(1   , 2,3)")
+                .unwrap()
+                .1
+                .args()
+                .len(),
+            3
+        );
 
         // FIXME: Add constants and expressions
     }
