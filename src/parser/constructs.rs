@@ -12,7 +12,7 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, multi::many0, IResult};
+use nom::{branch::alt, combinator::opt, multi::many1, IResult};
 
 use crate::instruction::{FunctionCall, VarAssign};
 use crate::value::constant::{ConstKind, Constant};
@@ -26,7 +26,7 @@ impl Construct {
     /// `0.5`.
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
-    pub fn constant(input: &'static str) -> IResult<&str, Constant> {
+    pub fn constant(input: & str) -> IResult<&str, Constant> {
         let (input, char_value) = opt(Token::char_constant)(input)?;
         let (input, str_value) = opt(Token::string_constant)(input)?;
         let (input, float_value) = opt(Token::float_constant)(input)?;
@@ -34,7 +34,7 @@ impl Construct {
 
         match (char_value, str_value, int_value, float_value) {
             (Some(c), None, None, None) => Ok((input, Constant::new(ConstKind::Char).with_cv(c))),
-            (None, Some(s), None, None) => Ok((input, Constant::new(ConstKind::Str).with_sv(s))),
+            (None, Some(s), None, None) => Ok((input, Constant::new(ConstKind::Str).with_sv(s.to_owned()))),
             (None, None, Some(i), None) => Ok((input, Constant::new(ConstKind::Int).with_iv(i))),
             (None, None, None, Some(f)) => Ok((input, Constant::new(ConstKind::Float).with_fv(f))),
             _ => Err(nom::Err::Failure((
@@ -55,12 +55,41 @@ impl Construct {
         Ok((input, FunctionCall::new(fn_id.to_owned())))
     }
 
+    // FIXME: Allow something else than constants
+    /// Parse an argument given to a function. Consumes the whitespaces before and after
+    /// the argument
+    fn arg(input: &str) -> IResult<&str, Constant> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        // FIXME: Allow something else than constants, as above
+        let (input, constant) = Construct::constant(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Ok((input, constant))
+    }
+    fn arg_and_comma(input: &str) -> IResult<&str, Constant> {
+        let (input, constant) = Construct::arg(input)?;
+        let (input, _) = Token::comma(input)?;
+
+        Ok((input, constant))
+    }
+
     /// Parse a function call with arguments
     fn function_call_args(input: &str) -> IResult<&str, FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
         let (input, _) = Token::left_parenthesis(input)?;
 
         let mut fn_call = FunctionCall::new(fn_id.to_owned());
+
+        // Get 1 or more arguments to the function call
+        let (input, mut arg_vec) = many1(Construct::arg_and_comma)(input)?;
+
+        // Parse the last argument, which does not have a comma
+        let (input, last_arg) = Construct::arg(input)?;
+
+        arg_vec.drain(0..).for_each(|arg| fn_call.add_arg(arg));
+        fn_call.add_arg(last_arg);
 
         Ok((input, fn_call))
     }

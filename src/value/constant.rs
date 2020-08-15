@@ -18,7 +18,7 @@ pub struct Constant {
     kind: ConstKind,
 
     pub char_value: Option<char>,
-    pub str_value: Option<&'static str>,
+    pub str_value: Option<String>,
     pub int_value: Option<i64>,
     pub float_value: Option<f64>,
 }
@@ -39,7 +39,7 @@ impl Constant {
         self
     }
 
-    pub fn with_sv(mut self, sv: &'static str) -> Constant {
+    pub fn with_sv(mut self, sv: String) -> Constant {
         self.str_value = Some(sv);
         self
     }
