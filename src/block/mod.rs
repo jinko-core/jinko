@@ -36,4 +36,9 @@ impl Block {
     pub fn call(&self) {
         todo!();
     }
+
+    /// Returns a reference to the instructions contained in the block
+    pub fn instructions(&self) -> &Vec<Box<dyn Instruction>> {
+        &self.instructions
+    }
 }

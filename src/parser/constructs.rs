@@ -14,6 +14,7 @@
 
 use nom::{branch::alt, combinator::opt, multi::many1, IResult};
 
+use crate::block::Block;
 use crate::instruction::{FunctionCall, VarAssign};
 use crate::value::constant::{ConstKind, Constant};
 
@@ -70,6 +71,7 @@ impl Construct {
 
         Ok((input, constant))
     }
+
     fn arg_and_comma(input: &str) -> IResult<&str, Constant> {
         let (input, constant) = Construct::arg(input)?;
         let (input, _) = Token::comma(input)?;
