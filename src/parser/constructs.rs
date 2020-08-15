@@ -179,6 +179,7 @@ impl Construct {
     ///     some_other_stuff();
     ///     12
     /// } // Block returns 12 after having called two functions
+    /// ```
     ///
     /// There can only be one returning instruction, and it must be the last one
     /// in the block.
