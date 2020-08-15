@@ -130,3 +130,9 @@ compiler magic: They are just a type. Therefore, they are being understood by th
 as just a type. And I think that keeping `broccoli` simple also means keeping the interpreter
 simple. Therefore, I think that simply using `Option`s (or some other nomenclature) would
 be best.
+
+## The interpreter
+
+The broccoli interpreter should keep track of variables and functions. Therefore, at
+least two hashmaps are required, one for variables and one for functions. Each of these
+elements need to have a unique name to identify them.

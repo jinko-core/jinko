@@ -12,7 +12,7 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, multi::many1, IResult};
+use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{FunctionCall, VarAssign};
 use crate::value::constant::{ConstKind, Constant};
@@ -84,10 +84,11 @@ impl Construct {
 
         let mut fn_call = FunctionCall::new(fn_id.to_owned());
 
-        // Get 1 or more arguments to the function call
-        let (input, mut arg_vec) = many1(Construct::arg_and_comma)(input)?;
+        // Get 1 or more arguments with a comma to the function call
+        let (input, mut arg_vec) = many0(Construct::arg_and_comma)(input)?;
 
-        // Parse the last argument, which does not have a comma
+        // Parse the last argument, which does not have a comma. There needs to be
+        // at least one argument, which can be this one
         let (input, last_arg) = Construct::arg(input)?;
 
         arg_vec.drain(0..).for_each(|arg| fn_call.add_arg(arg));
@@ -276,6 +277,9 @@ mod tests {
 
     #[test]
     fn t_function_call_valid() {
+        assert_eq!(Construct::function_call("fn(2)").unwrap().1.name(), "fn");
+        assert_eq!(Construct::function_call("fn(2)").unwrap().1.args().len(), 1);
+
         assert_eq!(
             Construct::function_call("fn(1, 2, 3)").unwrap().1.name(),
             "fn"
