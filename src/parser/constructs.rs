@@ -1,7 +1,6 @@
 //! A `Construct` is a complex set of tokens. For example, `fn()` is an identifier, a
 //! left parenthesis and a right parenthesis. Together, they constitute a function call.
-//! In the same vein, `x = 12;` is 4 tokens used to represent variable assignment.
-//! Therefore, constructs use tokens while the parser only uses constructs. This is an
+//! In the same vein, `x = 12;` is 4 tokens used to represent variable assignment.  Therefore, constructs use tokens while the parser only uses constructs. This is an
 //! abstraction for all possible ways to parse a line in broccoli.
 //!
 //! Each of the functions in that module contain the grammar they represent above their
@@ -13,9 +12,9 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, IResult};
+use nom::{branch::alt, combinator::opt, multi::many1, IResult};
 
-use crate::instruction::VarAssign;
+use crate::instruction::{FunctionCall, VarAssign};
 use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
@@ -27,7 +26,7 @@ impl Construct {
     /// `0.5`.
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
-    pub fn constant(input: &'static str) -> IResult<&str, Constant> {
+    pub fn constant(input: &str) -> IResult<&str, Constant> {
         let (input, char_value) = opt(Token::char_constant)(input)?;
         let (input, str_value) = opt(Token::string_constant)(input)?;
         let (input, float_value) = opt(Token::float_constant)(input)?;
@@ -35,7 +34,9 @@ impl Construct {
 
         match (char_value, str_value, int_value, float_value) {
             (Some(c), None, None, None) => Ok((input, Constant::new(ConstKind::Char).with_cv(c))),
-            (None, Some(s), None, None) => Ok((input, Constant::new(ConstKind::Str).with_sv(s))),
+            (None, Some(s), None, None) => {
+                Ok((input, Constant::new(ConstKind::Str).with_sv(s.to_owned())))
+            }
             (None, None, Some(i), None) => Ok((input, Constant::new(ConstKind::Int).with_iv(i))),
             (None, None, None, Some(f)) => Ok((input, Constant::new(ConstKind::Float).with_fv(f))),
             _ => Err(nom::Err::Failure((
@@ -45,12 +46,54 @@ impl Construct {
         }
     }
 
-    /// Parses an identifier. An identifier can have alphanumeric characters. It cannot
-    /// only be constituted of numbers. An identifier is NOT a `const`.
+    /// Parse a function call with no arguments
     ///
-    /// `<alphanumeric>?`
-    pub fn identifier(input: &str) -> IResult<&str, &str> {
-        todo!()
+    /// `<identifier> ( )`
+    fn function_call_no_args(input: &str) -> IResult<&str, FunctionCall> {
+        let (input, fn_id) = Token::identifier(input)?;
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        Ok((input, FunctionCall::new(fn_id.to_owned())))
+    }
+
+    // FIXME: Allow something else than constants
+    /// Parse an argument given to a function. Consumes the whitespaces before and after
+    /// the argument
+    fn arg(input: &str) -> IResult<&str, Constant> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        // FIXME: Allow something else than constants, as above
+        let (input, constant) = Construct::constant(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Ok((input, constant))
+    }
+    fn arg_and_comma(input: &str) -> IResult<&str, Constant> {
+        let (input, constant) = Construct::arg(input)?;
+        let (input, _) = Token::comma(input)?;
+
+        Ok((input, constant))
+    }
+
+    /// Parse a function call with arguments
+    fn function_call_args(input: &str) -> IResult<&str, FunctionCall> {
+        let (input, fn_id) = Token::identifier(input)?;
+        let (input, _) = Token::left_parenthesis(input)?;
+
+        let mut fn_call = FunctionCall::new(fn_id.to_owned());
+
+        // Get 1 or more arguments to the function call
+        let (input, mut arg_vec) = many1(Construct::arg_and_comma)(input)?;
+
+        // Parse the last argument, which does not have a comma
+        let (input, last_arg) = Construct::arg(input)?;
+
+        arg_vec.drain(0..).for_each(|arg| fn_call.add_arg(arg));
+        fn_call.add_arg(last_arg);
+
+        Ok((input, fn_call))
     }
 
     /// When a function is called in the source code.
@@ -61,9 +104,13 @@ impl Construct {
     /// x = fn(); // Assign the result of the function call to the variable x
     /// ```
     ///
+    /// `<arg_list> := [(<constant> | <variable> | <expression>)*]
     /// `<identifier> ( <arg_list> )`
-    pub fn function_call(input: &str) -> IResult<&str, &str> {
-        todo!()
+    pub fn function_call(input: &str) -> IResult<&str, FunctionCall> {
+        alt((
+            Construct::function_call_no_args,
+            Construct::function_call_args,
+        ))(input)
     }
 
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
@@ -215,8 +262,70 @@ mod tests {
             Ok(_) => assert!(false, "No semicolon"),
             Err(_) => assert!(true),
         }
-        match Construct::var_assignment("mut x = 12") {
+        match Construct::var_assignment("mut_x = 12") {
             Ok(_) => assert!(false, "No semicolon"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_function_call_no_args_valid() {
+        assert_eq!(Construct::function_call("fn()").unwrap().1.name(), "fn");
+        assert_eq!(Construct::function_call("fn()").unwrap().1.args().len(), 0);
+    }
+
+    #[test]
+    fn t_function_call_valid() {
+        assert_eq!(
+            Construct::function_call("fn(1, 2, 3)").unwrap().1.name(),
+            "fn"
+        );
+        assert_eq!(
+            Construct::function_call("fn(1, 2, 3)")
+                .unwrap()
+                .1
+                .args()
+                .len(),
+            3
+        );
+
+        assert_eq!(
+            Construct::function_call("fn(1   , 2,3)").unwrap().1.name(),
+            "fn"
+        );
+        assert_eq!(
+            Construct::function_call("fn(1   , 2,3)")
+                .unwrap()
+                .1
+                .args()
+                .len(),
+            3
+        );
+
+        // FIXME: Add constants and expressions
+    }
+
+    #[test]
+    fn t_function_call_invalid() {
+        match Construct::function_call("fn(") {
+            Ok(_) => assert!(false, "Unterminated parenthesis"),
+            Err(_) => assert!(true),
+        }
+        match Construct::function_call("fn))") {
+            Ok(_) => assert!(false, "Wrong parenthesis"),
+            Err(_) => assert!(true),
+        }
+        match Construct::function_call("fn((") {
+            Ok(_) => assert!(false, "Wrong parenthesis again"),
+            Err(_) => assert!(true),
+        }
+        match Construct::function_call("fn((") {
+            Ok(_) => assert!(false, "Wrong parenthesis again"),
+            Err(_) => assert!(true),
+        }
+
+        match Construct::function_call("fn((") {
+            Ok(_) => assert!(false, "Wrong parenthesis again"),
             Err(_) => assert!(true),
         }
     }
