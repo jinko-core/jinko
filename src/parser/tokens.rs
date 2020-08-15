@@ -44,6 +44,18 @@ impl Token {
         Token::specific_char(input, '=')
     }
 
+    pub fn comma(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, ',')
+    }
+
+    pub fn left_parenthesis(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, '(')
+    }
+
+    pub fn right_parenthesis(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, ')')
+    }
+
     pub fn left_curly_bracket(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, '{')
     }

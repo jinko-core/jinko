@@ -9,7 +9,8 @@ be expanded. If you want to contribute, this a good place to start!
 * [ ] Constants with escaping characters
 * [x] Variable assignment
 * [x] Allow variables named "mut\*"
-* [ ] Function calls
+* [x] Function calls
+* [ ] Code blocks
 * [ ] If condition
 * [ ] Else condition
 * [ ] Elif condition
@@ -20,3 +21,4 @@ be expanded. If you want to contribute, this a good place to start!
 
 ## Behavior
 * [ ] A variable cannot be assigned the `void` type
+* [ ] `-i|--interactive` option allows you to run a script and then open a REPL
