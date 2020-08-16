@@ -421,4 +421,9 @@ mod tests {
             "type"
         );
     }
+
+    #[test]
+    fn t_args_dec_empty() {
+        assert_eq!(Construct::args_dec("()").unwrap().1.len(), 0);
+    }
 }
