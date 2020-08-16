@@ -57,8 +57,16 @@ impl FunctionDec {
     }
 
     /// Return a reference to the function's return type
-    pub fn ty(&self) -> &Option<String> {
-        &self.ty
+    pub fn ty(&self) -> Option<&str> {
+        match &self.ty {
+            Some(ty) => Some(&ty),
+            None => None,
+        }
+    }
+
+    /// Return a reference to the function's arguments
+    pub fn args(&self) -> &Vec<FunctionDecArg> {
+        &self.args
     }
 
     /// Set the vector of arguments that the function should handle

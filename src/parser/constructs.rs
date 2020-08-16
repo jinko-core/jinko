@@ -164,7 +164,8 @@ impl Construct {
 
     // FIXME: Implement
     pub fn block(input: &str) -> IResult<&str, Block> {
-        todo!()
+        // FIXME: Add logic instead of empty block
+        Ok((input, Block::new()))
     }
 
     fn args_dec_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
@@ -224,7 +225,7 @@ impl Construct {
 
         match arrow {
             Some(_) => Err(nom::Err::Error((input, nom::error::ErrorKind::OneOf))),
-            None => Ok((input, None))
+            None => Ok((input, None)),
         }
     }
 
@@ -263,15 +264,13 @@ impl Construct {
         let (input, fn_name) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        // FIXME
-        let mut function = FunctionDec::new(fn_name.to_owned(), Some("".to_owned()));
-
-        // Parse the list of arguments and give it to the function
         let (input, args) = Construct::args_dec(input)?;
-        function.set_args(args);
-
-        // Parse the associated code block and give it to the function
+        let (input, ty) = Construct::return_type(input)?;
         let (input, block) = Construct::block(input)?;
+
+        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+
+        function.set_args(args);
         function.set_block(block);
 
         Ok((input, function))
@@ -486,19 +485,52 @@ mod tests {
 
     #[test]
     fn t_args_dec_valid() {
-        assert_eq!(Construct::args_dec("(name :type, name1      : type1)").unwrap().1.len(), 2);
+        assert_eq!(
+            Construct::args_dec("(name :type, name1      : type1)")
+                .unwrap()
+                .1
+                .len(),
+            2
+        );
     }
 
     #[test]
     fn t_return_type_void() {
         assert_eq!(Construct::return_type(""), Ok(("", None)));
         assert_eq!(Construct::return_type("    "), Ok(("", None)));
-        assert_eq!(Construct::return_type("        { 12 }"), Ok(("{ 12 }", None)));
+        assert_eq!(
+            Construct::return_type("        { 12 }"),
+            Ok(("{ 12 }", None))
+        );
     }
 
     #[test]
     fn t_return_type_non_void() {
-        assert_eq!(Construct::return_type("-> int"), Ok(("", Some("int".to_owned()))));
-        assert_eq!(Construct::return_type("   ->    int   {"), Ok(("{", Some("int".to_owned()))));
+        assert_eq!(
+            Construct::return_type("-> int"),
+            Ok(("", Some("int".to_owned())))
+        );
+        assert_eq!(
+            Construct::return_type("   ->    int   {"),
+            Ok(("{", Some("int".to_owned())))
+        );
+    }
+
+    #[test]
+    fn t_function_declaration_valid_simple() {
+        let func = Construct::function_declaration("func something() {}").unwrap().1;
+
+        assert_eq!(func.name(), "something");
+        assert_eq!(func.ty(), None);
+        assert_eq!(func.args().len(), 0);
+    }
+
+    #[test]
+    fn t_function_declaration_valid() {
+        let func = Construct::function_declaration("func add(lhs: type, rhs: type) -> type {}").unwrap().1;
+
+        assert_eq!(func.name(), "add");
+        assert_eq!(func.ty(), Some("type"));
+        assert_eq!(func.args().len(), 2);
     }
 }
