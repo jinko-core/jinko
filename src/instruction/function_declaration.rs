@@ -54,7 +54,7 @@ impl FunctionDec {
 
     /// Return a reference to the function's block
     pub fn block(&self) -> Option<&Block> {
-        match self.block {
+        match &self.block {
             Some(b) => Some(&b),
             None => None
         }
