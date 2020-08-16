@@ -24,4 +24,7 @@ pub trait Instruction {
 
     /// What is the type of the instruction: a Statement or an Expression
     fn kind(&self) -> InstrKind;
+
+    /// Pretty-print the instruction to valid broccoli code
+    fn print(&self) -> String;
 }

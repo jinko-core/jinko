@@ -66,4 +66,13 @@ impl Instruction for Constant {
         // FIXME: Add logic
         InstrKind::Expression
     }
+
+    fn print(&self) -> String {
+        match self.kind {
+            ConstKind::Float => self.float_value.unwrap().to_string(),
+            ConstKind::Int => self.int_value.unwrap().to_string(),
+            ConstKind::Char => self.char_value.unwrap().to_string(),
+            ConstKind::Str => format!("\"{}\"", self.str_value.unwrap()),
+        }
+    }
 }
