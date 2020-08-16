@@ -16,6 +16,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{FunctionCall, VarAssign};
 use crate::value::constant::{ConstKind, Constant};
+use crate::block::Block;
 
 use super::tokens::Token;
 
@@ -159,6 +160,28 @@ impl Construct {
             Some(_) => Ok((input, VarAssign::new(true, id.to_owned(), constant))),
             None => Ok((input, VarAssign::new(false, id.to_owned(), constant))),
         }
+    }
+
+    // FIXME: Implement
+    pub fn block(input: &str) -> IResult<&str, Block> {
+        todo!()
+    }
+
+    /// Parse a function declaration. This includes the function's signature and the
+    /// associated code block
+    ///
+    /// ```
+    /// func fn_name(arg0: int) -> int {
+    ///     do_something(arg0);
+    ///
+    ///     12
+    /// }
+    /// ```
+    ///
+    /// `<typed_arg_list> := [ (<identifier> : <type>)* ]
+    /// `<func> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>`
+    pub fn function_declaration(input: &str) -> IResult<&str, FunctionDec> {
+        todo!()
     }
 }
 
