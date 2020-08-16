@@ -112,6 +112,10 @@ impl Token {
         Token::specific_token(input, "mut ")
     }
 
+    pub fn arrow(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "->")
+    }
+
     pub fn identifier(input: &str) -> IResult<&str, &str> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 

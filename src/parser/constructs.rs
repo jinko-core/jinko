@@ -218,6 +218,31 @@ impl Construct {
         alt((Construct::args_dec_empty, Construct::args_dec_non_empty))(input)
     }
 
+    fn return_type_void(input: &str) -> IResult<&str, Option<String>> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, arrow) = opt(Token::arrow)(input)?;
+
+        match arrow {
+            Some(_) => Err(nom::Err::Error((input, nom::error::ErrorKind::OneOf))),
+            None => Ok((input, None))
+        }
+    }
+
+    /// Parse a non-void return type
+    fn return_type_non_void(input: &str) -> IResult<&str, Option<String>> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::arrow(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, ty) = Token::identifier(input)?;
+
+        Ok((input, Some(ty.to_owned())))
+    }
+
+    /// Parse the return type of a function. Can be void
+    fn return_type(input: &str) -> IResult<&str, Option<String>> {
+        alt((Construct::return_type_non_void, Construct::return_type_void))(input)
+    }
+
     /// Parse a function declaration. This includes the function's signature and the
     /// associated code block
     ///
@@ -237,7 +262,8 @@ impl Construct {
         let (input, fn_name) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        let mut function = FunctionDec::new(fn_name.to_owned());
+        // FIXME
+        let mut function = FunctionDec::new(fn_name.to_owned(), Some("".to_owned()));
 
         // Parse the list of arguments and give it to the function
         let (input, args) = Construct::args_dec(input)?;
@@ -460,5 +486,18 @@ mod tests {
     #[test]
     fn t_args_dec_valid() {
         assert_eq!(Construct::args_dec("(name :type, name1      : type1)").unwrap().1.len(), 2);
+    }
+
+    #[test]
+    fn t_return_type_void() {
+        assert_eq!(Construct::return_type(""), Ok(("", None)));
+        assert_eq!(Construct::return_type("    "), Ok(("", None)));
+        assert_eq!(Construct::return_type("        { 12 }"), Ok(("{ 12 }", None)));
+    }
+
+    #[test]
+    fn t_return_type_non_void() {
+        assert_eq!(Construct::return_type("-> int"), Ok(("", Some("int".to_owned()))));
+        assert_eq!(Construct::return_type("   ->    int   {"), Ok(("{", Some("int".to_owned()))));
     }
 }

@@ -12,6 +12,7 @@ pub struct FunctionDecArg {
 
 pub struct FunctionDec {
     name: String,
+    ty: Option<String>,
     args: Vec<FunctionDecArg>,
     block: Option<Block>,
 }
@@ -35,9 +36,10 @@ impl FunctionDecArg {
 
 impl FunctionDec {
     /// Create a new function declaration with a given name, no args and no code block
-    pub fn new(name: String) -> FunctionDec {
+    pub fn new(name: String, ty: Option<String>) -> FunctionDec {
         FunctionDec {
             name,
+            ty,
             args: Vec::new(),
             block: None,
         }
@@ -52,6 +54,11 @@ impl FunctionDec {
     /// Return a reference to the function's name
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Return a reference to the function's return type
+    pub fn ty(&self) -> &Option<String> {
+        &self.ty
     }
 
     /// Set the vector of arguments that the function should handle
