@@ -23,4 +23,8 @@ impl Instruction for Var {
     fn kind(&self) -> InstrKind {
         InstrKind::Expression
     }
+
+    fn print(&self) -> String {
+        self.name
+    }
 }
