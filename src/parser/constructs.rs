@@ -52,6 +52,7 @@ impl Construct {
     fn function_call_no_args(input: &str) -> IResult<&str, FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
         let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
 
         Ok((input, FunctionCall::new(fn_id.to_owned())))
@@ -541,6 +542,9 @@ mod tests {
     fn t_function_call_no_args_valid() {
         assert_eq!(Construct::function_call("fn()").unwrap().1.name(), "fn");
         assert_eq!(Construct::function_call("fn()").unwrap().1.args().len(), 0);
+
+        assert_eq!(Construct::function_call("fn(    )").unwrap().1.name(), "fn");
+        assert_eq!(Construct::function_call("fn(    )").unwrap().1.args().len(), 0);
     }
 
     #[test]
