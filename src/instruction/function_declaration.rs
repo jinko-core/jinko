@@ -127,22 +127,22 @@ impl Instruction for FunctionDec {
         base = format!("{} {}(", base, self.name);
 
         let mut first_arg = true;
-        for arg in self.args {
-            base.push_str(&format!("{}: {}", arg.name(), arg.ty()));
-
+        for arg in &self.args {
             if !first_arg {
                 base.push_str(", ");
             }
 
+            base.push_str(&format!("{}: {}", arg.name(), arg.ty()));
+
             first_arg = false;
         }
 
-        base = match self.ty {
+        base = match &self.ty {
             Some(ty) => format!("{}) -> {}", base, ty),
-            None => format!("{}) ", base),
+            None => format!("{})", base),
         };
 
-        match self.block {
+        match &self.block {
             Some(block) => format!("{} {}", base, block.print()),
             None => format!("{} {{}}", base),
         }
@@ -155,14 +155,16 @@ mod tests {
 
     #[test]
     fn simple_no_arg() {
-        let function = FunctionDec::new("fn".to_owned(), None);
+        let mut function = FunctionDec::new("fn".to_owned(), None);
+        function.set_kind(FunctionKind::Func);
 
         assert_eq!(function.print(), "func fn() {}");
     }
 
     #[test]
     fn simple_args() {
-        let function = FunctionDec::new("fn".to_owned(), Some("int".to_owned()));
+        let mut function = FunctionDec::new("fn".to_owned(), Some("int".to_owned()));
+        function.set_kind(FunctionKind::Func);
         let args = vec![
             FunctionDecArg::new("arg0".to_owned(), "int".to_owned()),
             FunctionDecArg::new("arg1".to_owned(), "int".to_owned()),

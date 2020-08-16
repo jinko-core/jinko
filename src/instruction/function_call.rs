@@ -45,15 +45,15 @@ impl Instruction for FunctionCall {
     }
 
     fn print(&self) -> String {
-        let base = format!("{}(", self.fn_name);
+        let mut base = format!("{}(", self.fn_name);
 
         let mut first_arg = true;
-        for arg in self.args {
-            base.push_str(&arg.print());
-
+        for arg in &self.args {
             if !first_arg {
                 base.push_str(", ");
             }
+
+            base.push_str(&arg.print());
 
             first_arg = false;
         }
@@ -80,7 +80,7 @@ mod tests {
         let c1 = Constant::new(ConstKind::Int).with_iv(13);
         let c2 = Constant::new(ConstKind::Int).with_iv(14);
 
-        let function = FunctionCall::new("fn_name".to_string());
+        let mut function = FunctionCall::new("fn_name".to_string());
 
         function.add_arg(c0);
         function.add_arg(c1);

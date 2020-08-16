@@ -21,10 +21,11 @@ impl Var {
 
 impl Instruction for Var {
     fn kind(&self) -> InstrKind {
-        InstrKind::Expression
+        // FIXME: Add logic
+        InstrKind::Statement
     }
 
     fn print(&self) -> String {
-        self.name
+        self.name.clone()
     }
 }

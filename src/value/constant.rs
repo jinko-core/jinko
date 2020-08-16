@@ -72,7 +72,7 @@ impl Instruction for Constant {
             ConstKind::Float => self.float_value.unwrap().to_string(),
             ConstKind::Int => self.int_value.unwrap().to_string(),
             ConstKind::Char => self.char_value.unwrap().to_string(),
-            ConstKind::Str => format!("\"{}\"", self.str_value.unwrap()),
+            ConstKind::Str => format!("\"{}\"", self.str_value.as_ref().unwrap()),
         }
     }
 }

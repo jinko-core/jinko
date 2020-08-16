@@ -54,6 +54,21 @@ impl Instruction for Block {
             None => InstrKind::Statement,
         }
     }
+
+    fn print(&self) -> String {
+        let mut base = String::from("{\n");
+
+        for instr in self.instructions() {
+            base = format!("{}    {}", base, &instr.print());
+            base.push_str(match instr.kind() {
+                InstrKind::Statement => ";\n",
+                InstrKind::Expression => "\n",
+            });
+        }
+
+        base.push_str("}");
+        base
+    }
 }
 
 #[cfg(test)]
@@ -67,7 +82,7 @@ mod tests {
         let b = Block::new();
 
         assert_eq!(b.kind(), InstrKind::Statement);
-        assert_eq!(b.print(), "{}");
+        assert_eq!(b.print(), "{\n}");
     }
 
     #[test]
@@ -84,9 +99,9 @@ mod tests {
         assert_eq!(
             b.print(),
             r#"{
-            x;
-            n;
-        }"#
+    x;
+    n;
+}"#
         );
     }
 
@@ -105,10 +120,10 @@ mod tests {
         assert_eq!(
             b.print(),
             r#"{
-            x;
-            n;
-            15
-        }"#
+    x;
+    n;
+    14
+}"#
         );
     }
 }
