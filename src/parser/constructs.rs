@@ -298,7 +298,23 @@ impl Construct {
     ///
     /// `<test> <identifier> ( ) <block>
     pub fn test_declaration(input: &str) -> IResult<&str, FunctionDec> {
-        todo!()
+        let (input, _) = Token::test_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, fn_name) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, args) = Construct::args_dec(input)?;
+        let (input, ty) = Construct::return_type_void(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+
+        function.set_args(args);
+        function.set_block(block);
+
+        function.set_kind(FunctionKind::Test);
+
+        Ok((input, function))
     }
 
     /// Parse a mock declaration. This returns a FunctionDec as well, but of
@@ -313,7 +329,12 @@ impl Construct {
     ///
     /// `<mock> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>
     pub fn mock_declaration(input: &str) -> IResult<&str, FunctionDec> {
-        todo!()
+        let (input, _) = Token::mock_tok(input)?;
+
+        let (input, mut function) = Construct::function_content(input)?;
+        function.set_kind(FunctionKind::Mock);
+
+        Ok((input, function))
     }
 
     /// Parse an external function declaration.
@@ -323,7 +344,26 @@ impl Construct {
     ///
     /// `<ext> <func> <identifier> ( <typed_arg_list> ) [ -> <type> ] ;`
     pub fn ext_declaration(input: &str) -> IResult<&str, FunctionDec> {
-        todo!()
+        let (input, _) = Token::ext_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::func_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, fn_name) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, args) = Construct::args_dec(input)?;
+        let (input, ty) = Construct::return_type(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::semicolon(input)?;
+
+        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+
+        function.set_args(args);
+
+        function.set_kind(FunctionKind::Ext);
+
+        Ok((input, function))
     }
 }
 
@@ -588,11 +628,19 @@ mod tests {
 
     #[test]
     fn t_test_valid() {
-        let test = Construct::test_declaration("test add(lhs: type, rhs: type) {}").unwrap().1;
+        let test = Construct::test_declaration("test add() {}").unwrap().1;
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), None);
         assert_eq!(test.kind(), FunctionKind::Test);
+    }
+
+    #[test]
+    fn t_test_invalid() {
+        match Construct::test_declaration("test add(a: int) -> int {}") {
+            Ok(_) => assert!(false, "Can't have arguments to a test"),
+            Err(_) => assert!(true),
+        };
     }
 
     #[test]
@@ -606,10 +654,18 @@ mod tests {
 
     #[test]
     fn t_ext_valid() {
-        let test = Construct::ext_declaration("ext add(lhs: type, rhs: type) -> type;").unwrap().1;
+        let test = Construct::ext_declaration("ext func add(lhs: type, rhs: type) -> type;").unwrap().1;
 
         assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), None);
+        assert_eq!(test.ty(), Some("type"));
         assert_eq!(test.kind(), FunctionKind::Ext);
+    }
+
+    #[test]
+    fn t_ext_invalid() {
+        match Construct::ext_declaration("ext func add(a: int) -> int {}") {
+            Ok(_) => assert!(false, "Can't have a block for an ext function"),
+            Err(_) => assert!(true),
+        };
     }
 }
