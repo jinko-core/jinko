@@ -544,7 +544,10 @@ mod tests {
         assert_eq!(Construct::function_call("fn()").unwrap().1.args().len(), 0);
 
         assert_eq!(Construct::function_call("fn(    )").unwrap().1.name(), "fn");
-        assert_eq!(Construct::function_call("fn(    )").unwrap().1.args().len(), 0);
+        assert_eq!(
+            Construct::function_call("fn(    )").unwrap().1.args().len(),
+            0
+        );
     }
 
     #[test]
