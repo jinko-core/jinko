@@ -234,6 +234,7 @@ impl Construct {
         let (input, _) = Token::arrow(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, ty) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         Ok((input, Some(ty.to_owned())))
     }
