@@ -4,15 +4,30 @@
 use super::{InstrKind, Instruction};
 use crate::block::Block;
 
+// FIXME: Shouldn't be a String
+type Ty = String;
+
+/// What "kind" of function is defined. There are four types of functions in broccoli,
+/// the normal ones, the external ones, the unit tests and the mocks
+#[derive(Clone, Copy)]
+pub enum FunctionKind {
+    Unknown,
+    Func,
+    Ext,
+    Test,
+    Mock,
+}
+
 pub struct FunctionDecArg {
     name: String,
     // FIXME: Shouldn't be a string
-    ty: String,
+    ty: Ty,
 }
 
 pub struct FunctionDec {
     name: String,
-    ty: Option<String>,
+    ty: Option<Ty>,
+    kind: FunctionKind,
     args: Vec<FunctionDecArg>,
     block: Option<Block>,
 }
@@ -40,6 +55,7 @@ impl FunctionDec {
         FunctionDec {
             name,
             ty,
+            kind: FunctionKind::Unknown,
             args: Vec::new(),
             block: None,
         }
@@ -62,6 +78,17 @@ impl FunctionDec {
             Some(ty) => Some(&ty),
             None => None,
         }
+    }
+
+    /// Return the kind of a function
+    pub fn kind(&self) -> FunctionKind {
+        self.kind
+    }
+
+    /// Set the kind of a function. This cannot be done at initialization due to the
+    /// parser's nature
+    pub fn set_kind(&mut self, kind: FunctionKind) {
+        self.kind = kind
     }
 
     /// Return a reference to the function's arguments

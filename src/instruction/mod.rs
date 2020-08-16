@@ -7,7 +7,7 @@ mod function_declaration;
 mod var_assignment;
 
 pub use function_call::FunctionCall;
-pub use function_declaration::{FunctionDec, FunctionDecArg};
+pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
 pub use var_assignment::VarAssign;
 
 /// The type of instructions available

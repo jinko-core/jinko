@@ -15,7 +15,7 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::block::Block;
-use crate::instruction::{FunctionCall, FunctionDec, FunctionDecArg, VarAssign};
+use crate::instruction::{FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, VarAssign};
 use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
@@ -245,6 +245,23 @@ impl Construct {
         alt((Construct::return_type_non_void, Construct::return_type_void))(input)
     }
 
+    fn function_content(input: &str) -> IResult<&str, FunctionDec> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, fn_name) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, args) = Construct::args_dec(input)?;
+        let (input, ty) = Construct::return_type(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+
+        function.set_args(args);
+        function.set_block(block);
+
+        Ok((input, function))
+    }
+
     /// Parse a function declaration. This includes the function's signature and the
     /// associated code block
     ///
@@ -260,18 +277,9 @@ impl Construct {
     /// `<func> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>`
     pub fn function_declaration(input: &str) -> IResult<&str, FunctionDec> {
         let (input, _) = Token::func_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, fn_name) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        let (input, args) = Construct::args_dec(input)?;
-        let (input, ty) = Construct::return_type(input)?;
-        let (input, block) = Construct::block(input)?;
-
-        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
-
-        function.set_args(args);
-        function.set_block(block);
+        let (input, mut function) = Construct::function_content(input)?;
+        function.set_kind(FunctionKind::Func);
 
         Ok((input, function))
     }
