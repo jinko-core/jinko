@@ -10,9 +10,7 @@ pub struct Var {
 impl Var {
     /// Create a new variable usage with the given name
     pub fn new(name: String) -> Var {
-        Var {
-            name,
-        }
+        Var { name }
     }
 }
 

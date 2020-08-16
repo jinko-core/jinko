@@ -3,7 +3,7 @@
 
 // use super::Value;
 
-use crate::instruction::{Instruction, InstrKind};
+use crate::instruction::{InstrKind, Instruction};
 
 /// The 4 different types of constants
 #[derive(Clone, Copy, Debug, PartialEq)]

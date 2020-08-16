@@ -3,12 +3,14 @@
 //! two instructions: A function call expression, and a variable assignment statement
 
 mod function_call;
-mod var_assignment;
+mod function_declaration;
 mod var;
+mod var_assignment;
 
 pub use function_call::FunctionCall;
-pub use var_assignment::VarAssign;
+pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
 pub use var::Var;
+pub use var_assignment::VarAssign;
 
 /// The type of instructions available
 pub enum InstrKind {
