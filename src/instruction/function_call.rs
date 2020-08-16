@@ -43,4 +43,49 @@ impl Instruction for FunctionCall {
         // FIXME: Add logic
         InstrKind::Expression
     }
+
+    fn print(&self) -> String {
+        let base = format!("{}(", self.fn_name);
+
+        let mut first_arg = true;
+        for arg in self.args {
+            base.push_str(&arg.print());
+
+            if !first_arg {
+                base.push_str(", ");
+            }
+
+            first_arg = false;
+        }
+
+        format!("{})", base)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::value::constant::*;
+
+    #[test]
+    fn pretty_print_empty() {
+        let function = FunctionCall::new("something".to_owned());
+
+        assert_eq!(function.print(), "something()");
+    }
+
+    #[test]
+    fn pretty_print_simple() {
+        let c0 = Constant::new(ConstKind::Int).with_iv(12);
+        let c1 = Constant::new(ConstKind::Int).with_iv(13);
+        let c2 = Constant::new(ConstKind::Int).with_iv(14);
+
+        let function = FunctionCall::new("fn_name".to_string());
+
+        function.add_arg(c0);
+        function.add_arg(c1);
+        function.add_arg(c2);
+
+        assert_eq!(function.print(), "fn_name(12, 13, 14)");
+    }
 }
