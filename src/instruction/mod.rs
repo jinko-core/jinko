@@ -4,10 +4,12 @@
 
 mod function_call;
 mod function_declaration;
+mod var;
 mod var_assignment;
 
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
+pub use var::Var;
 pub use var_assignment::VarAssign;
 
 /// The type of instructions available

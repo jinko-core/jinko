@@ -15,7 +15,9 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::block::Block;
-use crate::instruction::{FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, VarAssign};
+use crate::instruction::{
+    FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, Instruction, Var, VarAssign,
+};
 use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
@@ -40,10 +42,7 @@ impl Construct {
             }
             (None, None, Some(i), None) => Ok((input, Constant::new(ConstKind::Int).with_iv(i))),
             (None, None, None, Some(f)) => Ok((input, Constant::new(ConstKind::Float).with_fv(f))),
-            _ => Err(nom::Err::Failure((
-                "Not a valid constant",
-                nom::error::ErrorKind::OneOf,
-            ))),
+            _ => Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf))),
         }
     }
 
@@ -71,6 +70,7 @@ impl Construct {
 
         Ok((input, constant))
     }
+
     fn arg_and_comma(input: &str) -> IResult<&str, Constant> {
         let (input, constant) = Construct::arg(input)?;
         let (input, _) = Token::comma(input)?;
@@ -91,6 +91,7 @@ impl Construct {
         // Parse the last argument, which does not have a comma. There needs to be
         // at least one argument, which can be this one
         let (input, last_arg) = Construct::arg(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
 
         arg_vec.drain(0..).for_each(|arg| fn_call.add_arg(arg));
         fn_call.add_arg(last_arg);
@@ -127,7 +128,7 @@ impl Construct {
     ///
     /// A variable assignment is a Statement. It cannot be used as an Expression
     ///
-    /// ```
+    /// ```md
     /// {
     ///     x = 12; // Block returns void
     /// }
@@ -144,7 +145,7 @@ impl Construct {
     /// ```
     ///
     /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
-    pub fn var_assignment(input: &'static str) -> IResult<&str, VarAssign> {
+    pub fn var_assignment(input: &str) -> IResult<&str, VarAssign> {
         // FIXME: Maybe use alt ?
         let (input, mut_opt) = opt(Token::mut_tok)(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
@@ -162,10 +163,72 @@ impl Construct {
         }
     }
 
-    // FIXME: Implement
+    fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, expression) = Token::identifier(input)?;
+
+        Ok((input, Box::new(Var::new(expression.to_owned()))))
+    }
+
+    fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, constant) = Construct::expression(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::semicolon(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Ok((input, constant))
+    }
+
+    /// Parses the statements in a block as well as a possible last expression
+    fn instructions(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
+        let (input, _) = Token::left_curly_bracket(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, mut instructions) = many0(Construct::stmt_semicolon)(input)?;
+        let (input, last_expr) = opt(Construct::expression)(input)?;
+
+        match last_expr {
+            Some(expr) => instructions.push(expr),
+            None => {}
+        }
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::right_curly_bracket(input)?;
+
+        Ok((input, instructions))
+    }
+
+    /// A block of code is a new inner scope that contains instructions. You can use
+    /// them in If/Else blocks, in function declarations, or just as is.
+    ///
+    /// ```
+    /// fn return_nothing() {
+    ///     compute_stuff();
+    /// } // Block returns void, so does the function
+    ///
+    /// x = {
+    ///     12
+    /// } // Block returns 12
+    ///
+    /// x = {
+    ///     compute_stuff();
+    ///     some_other_stuff();
+    ///     12
+    /// } // Block returns 12 after having called two functions
+    /// ```
+    ///
+    /// There can only be one returning instruction, and it must be the last one
+    /// in the block.
+    ///
+    /// `{ [ <expression> ; ]* [ <expression> ] }`
+    // FIXME: Fix grammar and description
     pub fn block(input: &str) -> IResult<&str, Block> {
-        // FIXME: Add logic instead of empty block
-        Ok((input, Block::new()))
+        let (input, instructions) = Construct::instructions(input)?;
+
+        let mut block = Block::new();
+        block.set_instructions(instructions);
+
+        Ok((input, block))
     }
 
     fn args_dec_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
@@ -532,7 +595,6 @@ mod tests {
             Ok(_) => assert!(false, "Wrong parenthesis again"),
             Err(_) => assert!(true),
         }
-
         match Construct::function_call("fn((") {
             Ok(_) => assert!(false, "Wrong parenthesis again"),
             Err(_) => assert!(true),
@@ -540,6 +602,46 @@ mod tests {
     }
 
     #[test]
+    fn t_function_call_multiarg_invalid() {
+        match Construct::function_call("fn(1, 2, 3, 4,)") {
+            Ok(_) => assert!(false, "Unterminated arglist"),
+            Err(_) => assert!(true),
+        }
+        match Construct::function_call("fn(1, 2, 3, 4,   )") {
+            Ok(_) => assert!(false, "Unterminated arglist"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_block_empty() {
+        assert_eq!(Construct::block("{}").unwrap().1.instructions().len(), 0);
+    }
+
+    #[test]
+    fn t_block_valid_oneline() {
+        assert_eq!(
+            Construct::block("{ 12a; }").unwrap().1.instructions().len(),
+            1
+        );
+        assert_eq!(
+            Construct::block("{ 12a; 14a; }")
+                .unwrap()
+                .1
+                .instructions()
+                .len(),
+            2
+        );
+        assert_eq!(
+            Construct::block("{ 12a; 14a }")
+                .unwrap()
+                .1
+                .instructions()
+                .len(),
+            2
+        );
+    }
+
     fn t_id_type_valid() {
         assert_eq!(
             Construct::identifier_type("name: type").unwrap().1.name(),
@@ -595,6 +697,48 @@ mod tests {
     }
 
     #[test]
+    fn t_block_invalid_oneline() {
+        match Construct::block("{ 12a;") {
+            Ok(_) => assert!(false, "Unterminated bracket"),
+            Err(_) => assert!(true),
+        }
+
+        match Construct::block("{ 12a") {
+            Ok(_) => assert!(false, "Unterminated bracket but on expression"),
+            Err(_) => assert!(true),
+        }
+
+        match Construct::block("{ 12a; 13a") {
+            Ok(_) => assert!(false, "Unterminated bracket but on second expression"),
+            Err(_) => assert!(true),
+        }
+
+        match Construct::block("12a; 13a }") {
+            Ok(_) => assert!(false, "Not starting with a bracket"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_block_valid_multiline() {
+        let input = r#"{
+                12a;
+                12a;
+                13a;
+            }"#;
+
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 3);
+
+        let input = r#"{
+                12a;
+                12a;
+                13a;
+                14a
+            }"#;
+
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 4);
+    }
+
     fn t_return_type_non_void() {
         assert_eq!(
             Construct::return_type("-> int"),
