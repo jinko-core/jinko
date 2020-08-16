@@ -27,4 +27,9 @@ impl Interpreter {
     pub fn add_variable(&mut self) -> Result<(), String> {
         todo!()
     }
+
+    /// Pretty-prints valid broccoli code from a given interpreter
+    pub fn print(&self) -> String {
+        todo!()
+    }
 }

@@ -13,6 +13,7 @@ pub use var::Var;
 pub use var_assignment::VarAssign;
 
 /// The type of instructions available
+#[derive(Debug, PartialEq)]
 pub enum InstrKind {
     Statement,
     Expression,
@@ -24,4 +25,7 @@ pub trait Instruction {
 
     /// What is the type of the instruction: a Statement or an Expression
     fn kind(&self) -> InstrKind;
+
+    /// Pretty-print the instruction to valid broccoli code
+    fn print(&self) -> String;
 }

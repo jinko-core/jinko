@@ -37,4 +37,41 @@ impl Instruction for VarAssign {
     fn kind(&self) -> InstrKind {
         InstrKind::Statement
     }
+
+    fn print(&self) -> String {
+        let base = if self.mutable {
+            String::from("mut ")
+        } else {
+            String::new()
+        };
+        format!("{}{} = {}", base, self.symbol, self.value.print())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::value::constant::*;
+
+    #[test]
+    fn non_mutable() {
+        let var_assignment = VarAssign::new(
+            false,
+            "x".to_owned(),
+            Constant::new(ConstKind::Int).with_iv(12),
+        );
+
+        assert_eq!(var_assignment.print(), "x = 12");
+    }
+
+    #[test]
+    fn mutable() {
+        let var_assignment = VarAssign::new(
+            true,
+            "some_id_99".to_owned(),
+            Constant::new(ConstKind::Str).with_sv("Hey there".to_owned()),
+        );
+
+        assert_eq!(var_assignment.print(), "mut some_id_99 = \"Hey there\"");
+    }
 }

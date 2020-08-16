@@ -114,4 +114,64 @@ impl Instruction for FunctionDec {
     fn kind(&self) -> InstrKind {
         InstrKind::Statement
     }
+
+    fn print(&self) -> String {
+        let mut base = String::from(match self.kind {
+            FunctionKind::Func => "func",
+            FunctionKind::Ext => "ext func",
+            FunctionKind::Test => "test",
+            FunctionKind::Mock => "mock",
+            FunctionKind::Unknown => "UNKNOWN",
+        });
+
+        base = format!("{} {}(", base, self.name);
+
+        let mut first_arg = true;
+        for arg in &self.args {
+            if !first_arg {
+                base.push_str(", ");
+            }
+
+            base.push_str(&format!("{}: {}", arg.name(), arg.ty()));
+
+            first_arg = false;
+        }
+
+        base = match &self.ty {
+            Some(ty) => format!("{}) -> {}", base, ty),
+            None => format!("{})", base),
+        };
+
+        match &self.block {
+            Some(block) => format!("{} {}", base, block.print()),
+            None => format!("{} {{}}", base),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn simple_no_arg() {
+        let mut function = FunctionDec::new("fn".to_owned(), None);
+        function.set_kind(FunctionKind::Func);
+
+        assert_eq!(function.print(), "func fn() {}");
+    }
+
+    #[test]
+    fn simple_args() {
+        let mut function = FunctionDec::new("fn".to_owned(), Some("int".to_owned()));
+        function.set_kind(FunctionKind::Func);
+        let args = vec![
+            FunctionDecArg::new("arg0".to_owned(), "int".to_owned()),
+            FunctionDecArg::new("arg1".to_owned(), "int".to_owned()),
+        ];
+
+        function.set_args(args);
+
+        assert_eq!(function.print(), "func fn(arg0: int, arg1: int) -> int {}");
+    }
 }
