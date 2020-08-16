@@ -283,6 +283,48 @@ impl Construct {
 
         Ok((input, function))
     }
+
+    /// Parse a test declaration. This returns a FunctionDec as well, but of
+    /// kind `FunctionDec::Test`.
+    /// test functions are non-callable by the programmer. Only the interpreter can
+    /// invoke them. Thererfore, naming the test the same as the tested function is fine
+    /// and is not any form of overloading whatsoever.
+    ///
+    /// ```
+    /// test add() {
+    ///     assert_eq(12 + 2, add(12, 2));
+    /// }
+    /// ```
+    ///
+    /// `<test> <identifier> ( ) <block>
+    pub fn test_declaration(input: &str) -> IResult<&str, FunctionDec> {
+        todo!()
+    }
+
+    /// Parse a mock declaration. This returns a FunctionDec as well, but of
+    /// kind `FunctionDec::Mock`.
+    ///
+    ///
+    /// ```
+    /// mock add(lhs: int, rhs: int) -> int {
+    ///     mock_stuff()
+    /// }
+    /// ```
+    ///
+    /// `<mock> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>
+    pub fn mock_declaration(input: &str) -> IResult<&str, FunctionDec> {
+        todo!()
+    }
+
+    /// Parse an external function declaration.
+    ///
+    /// External functions cannot have an associated block. The function's code resides
+    /// in a native program, for example a shared C library or a Rust crate.
+    ///
+    /// `<ext> <func> <identifier> ( <typed_arg_list> ) [ -> <type> ] ;`
+    pub fn ext_declaration(input: &str) -> IResult<&str, FunctionDec> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -531,6 +573,7 @@ mod tests {
         assert_eq!(func.name(), "something");
         assert_eq!(func.ty(), None);
         assert_eq!(func.args().len(), 0);
+        assert_eq!(func.kind(), FunctionKind::Func);
     }
 
     #[test]
@@ -540,5 +583,33 @@ mod tests {
         assert_eq!(func.name(), "add");
         assert_eq!(func.ty(), Some("type"));
         assert_eq!(func.args().len(), 2);
+        assert_eq!(func.kind(), FunctionKind::Func);
+    }
+
+    #[test]
+    fn t_test_valid() {
+        let test = Construct::test_declaration("test add(lhs: type, rhs: type) {}").unwrap().1;
+
+        assert_eq!(test.name(), "add");
+        assert_eq!(test.ty(), None);
+        assert_eq!(test.kind(), FunctionKind::Test);
+    }
+
+    #[test]
+    fn t_mock_valid() {
+        let test = Construct::mock_declaration("mock add(lhs: type, rhs: type) {}").unwrap().1;
+
+        assert_eq!(test.name(), "add");
+        assert_eq!(test.ty(), None);
+        assert_eq!(test.kind(), FunctionKind::Mock);
+    }
+
+    #[test]
+    fn t_ext_valid() {
+        let test = Construct::ext_declaration("ext add(lhs: type, rhs: type) -> type;").unwrap().1;
+
+        assert_eq!(test.name(), "add");
+        assert_eq!(test.ty(), None);
+        assert_eq!(test.kind(), FunctionKind::Ext);
     }
 }

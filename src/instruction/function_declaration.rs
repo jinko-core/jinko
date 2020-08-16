@@ -9,7 +9,7 @@ type Ty = String;
 
 /// What "kind" of function is defined. There are four types of functions in broccoli,
 /// the normal ones, the external ones, the unit tests and the mocks
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FunctionKind {
     Unknown,
     Func,
