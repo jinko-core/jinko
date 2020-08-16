@@ -12,6 +12,11 @@ impl Var {
     pub fn new(name: String) -> Var {
         Var { name }
     }
+
+    /// Return the name of the variable
+    pub fn name(&self) -> &String {
+        &self.name
+    }
 }
 
 impl Instruction for Var {

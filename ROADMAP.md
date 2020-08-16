@@ -10,14 +10,14 @@ be expanded. If you want to contribute, this a good place to start!
 * [x] Variable assignment
 * [x] Allow variables named "mut\*"
 * [x] Function calls
-* [ ] Code blocks
+* [x] Code blocks
 * [ ] If condition
 * [ ] Else condition
 * [ ] Elif condition
 * [ ] For loop
 * [ ] While loop
 * [ ] Loop loop
-* [ ] Function definition
+* [x] Function definition
 
 ## Behavior
 * [ ] A variable cannot be assigned the `void` type
