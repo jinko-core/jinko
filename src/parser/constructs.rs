@@ -14,7 +14,8 @@
 
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
-use crate::instruction::{FunctionCall, VarAssign};
+use crate::block::Block;
+use crate::instruction::{FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, VarAssign};
 use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
@@ -159,6 +160,210 @@ impl Construct {
             Some(_) => Ok((input, VarAssign::new(true, id.to_owned(), constant))),
             None => Ok((input, VarAssign::new(false, id.to_owned(), constant))),
         }
+    }
+
+    // FIXME: Implement
+    pub fn block(input: &str) -> IResult<&str, Block> {
+        // FIXME: Add logic instead of empty block
+        Ok((input, Block::new()))
+    }
+
+    fn args_dec_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        Ok((input, vec![]))
+    }
+
+    /// Parse an identifier then its type
+    ///
+    /// `<identifier> : <identifier>
+    fn identifier_type(input: &str) -> IResult<&str, FunctionDecArg> {
+        let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::colon(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, ty) = Token::identifier(input)?;
+
+        Ok((input, FunctionDecArg::new(id.to_owned(), ty.to_owned())))
+    }
+
+    fn identifier_type_comma(input: &str) -> IResult<&str, FunctionDecArg> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, arg) = Construct::identifier_type(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::comma(input)?;
+
+        Ok((input, arg))
+    }
+
+    fn args_dec_non_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, mut args) = many0(Construct::identifier_type_comma)(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        // Parse the last argument which does not have a comma
+        let (input, last_arg) = Construct::identifier_type(input)?;
+        args.push(last_arg);
+
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        Ok((input, args))
+    }
+
+    /// Parse a list (maybe empty) of argument declarations
+    fn args_dec(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+        alt((Construct::args_dec_empty, Construct::args_dec_non_empty))(input)
+    }
+
+    fn return_type_void(input: &str) -> IResult<&str, Option<String>> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, arrow) = opt(Token::arrow)(input)?;
+
+        match arrow {
+            Some(_) => Err(nom::Err::Error((input, nom::error::ErrorKind::OneOf))),
+            None => Ok((input, None)),
+        }
+    }
+
+    /// Parse a non-void return type
+    fn return_type_non_void(input: &str) -> IResult<&str, Option<String>> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::arrow(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, ty) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Ok((input, Some(ty.to_owned())))
+    }
+
+    /// Parse the return type of a function. Can be void
+    fn return_type(input: &str) -> IResult<&str, Option<String>> {
+        alt((Construct::return_type_non_void, Construct::return_type_void))(input)
+    }
+
+    fn function_content(input: &str) -> IResult<&str, FunctionDec> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, fn_name) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, args) = Construct::args_dec(input)?;
+        let (input, ty) = Construct::return_type(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+
+        function.set_args(args);
+        function.set_block(block);
+
+        Ok((input, function))
+    }
+
+    /// Parse a function declaration. This includes the function's signature and the
+    /// associated code block
+    ///
+    /// ```
+    /// func fn_name(arg0: int) -> int {
+    ///     do_something(arg0);
+    ///
+    ///     12
+    /// }
+    /// ```
+    ///
+    /// `<typed_arg_list> := [ (<identifier> : <type>)* ]
+    /// `<func> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>`
+    pub fn function_declaration(input: &str) -> IResult<&str, FunctionDec> {
+        let (input, _) = Token::func_tok(input)?;
+
+        let (input, mut function) = Construct::function_content(input)?;
+        function.set_kind(FunctionKind::Func);
+
+        Ok((input, function))
+    }
+
+    /// Parse a test declaration. This returns a FunctionDec as well, but of
+    /// kind `FunctionDec::Test`.
+    /// test functions are non-callable by the programmer. Only the interpreter can
+    /// invoke them. Thererfore, naming the test the same as the tested function is fine
+    /// and is not any form of overloading whatsoever.
+    ///
+    /// ```
+    /// test add() {
+    ///     assert_eq(12 + 2, add(12, 2));
+    /// }
+    /// ```
+    ///
+    /// `<test> <identifier> ( ) <block>
+    pub fn test_declaration(input: &str) -> IResult<&str, FunctionDec> {
+        let (input, _) = Token::test_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, fn_name) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, args) = Construct::args_dec(input)?;
+        let (input, ty) = Construct::return_type_void(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+
+        function.set_args(args);
+        function.set_block(block);
+
+        function.set_kind(FunctionKind::Test);
+
+        Ok((input, function))
+    }
+
+    /// Parse a mock declaration. This returns a FunctionDec as well, but of
+    /// kind `FunctionDec::Mock`.
+    ///
+    ///
+    /// ```
+    /// mock add(lhs: int, rhs: int) -> int {
+    ///     mock_stuff()
+    /// }
+    /// ```
+    ///
+    /// `<mock> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>
+    pub fn mock_declaration(input: &str) -> IResult<&str, FunctionDec> {
+        let (input, _) = Token::mock_tok(input)?;
+
+        let (input, mut function) = Construct::function_content(input)?;
+        function.set_kind(FunctionKind::Mock);
+
+        Ok((input, function))
+    }
+
+    /// Parse an external function declaration.
+    ///
+    /// External functions cannot have an associated block. The function's code resides
+    /// in a native program, for example a shared C library or a Rust crate.
+    ///
+    /// `<ext> <func> <identifier> ( <typed_arg_list> ) [ -> <type> ] ;`
+    pub fn ext_declaration(input: &str) -> IResult<&str, FunctionDec> {
+        let (input, _) = Token::ext_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::func_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, fn_name) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, args) = Construct::args_dec(input)?;
+        let (input, ty) = Construct::return_type(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::semicolon(input)?;
+
+        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+
+        function.set_args(args);
+
+        function.set_kind(FunctionKind::Ext);
+
+        Ok((input, function))
     }
 }
 
@@ -332,5 +537,143 @@ mod tests {
             Ok(_) => assert!(false, "Wrong parenthesis again"),
             Err(_) => assert!(true),
         }
+    }
+
+    #[test]
+    fn t_id_type_valid() {
+        assert_eq!(
+            Construct::identifier_type("name: type").unwrap().1.name(),
+            "name"
+        );
+        assert_eq!(
+            Construct::identifier_type("name: type").unwrap().1.ty(),
+            "type"
+        );
+
+        assert_eq!(
+            Construct::identifier_type("name     :type")
+                .unwrap()
+                .1
+                .name(),
+            "name"
+        );
+        assert_eq!(
+            Construct::identifier_type("name     :type").unwrap().1.ty(),
+            "type"
+        );
+    }
+
+    #[test]
+    fn t_args_dec_empty() {
+        assert_eq!(Construct::args_dec("()").unwrap().1.len(), 0);
+    }
+
+    #[test]
+    fn t_args_dec_one_arg() {
+        assert_eq!(Construct::args_dec("(name :type)").unwrap().1.len(), 1);
+    }
+
+    #[test]
+    fn t_args_dec_valid() {
+        assert_eq!(
+            Construct::args_dec("(name :type, name1      : type1)")
+                .unwrap()
+                .1
+                .len(),
+            2
+        );
+    }
+
+    #[test]
+    fn t_return_type_void() {
+        assert_eq!(Construct::return_type(""), Ok(("", None)));
+        assert_eq!(Construct::return_type("    "), Ok(("", None)));
+        assert_eq!(
+            Construct::return_type("        { 12 }"),
+            Ok(("{ 12 }", None))
+        );
+    }
+
+    #[test]
+    fn t_return_type_non_void() {
+        assert_eq!(
+            Construct::return_type("-> int"),
+            Ok(("", Some("int".to_owned())))
+        );
+        assert_eq!(
+            Construct::return_type("   ->    int   {"),
+            Ok(("{", Some("int".to_owned())))
+        );
+    }
+
+    #[test]
+    fn t_function_declaration_valid_simple() {
+        let func = Construct::function_declaration("func something() {}")
+            .unwrap()
+            .1;
+
+        assert_eq!(func.name(), "something");
+        assert_eq!(func.ty(), None);
+        assert_eq!(func.args().len(), 0);
+        assert_eq!(func.kind(), FunctionKind::Func);
+    }
+
+    #[test]
+    fn t_function_declaration_valid() {
+        let func = Construct::function_declaration("func add(lhs: type, rhs: type) -> type {}")
+            .unwrap()
+            .1;
+
+        assert_eq!(func.name(), "add");
+        assert_eq!(func.ty(), Some("type"));
+        assert_eq!(func.args().len(), 2);
+        assert_eq!(func.kind(), FunctionKind::Func);
+    }
+
+    #[test]
+    fn t_test_valid() {
+        let test = Construct::test_declaration("test add() {}").unwrap().1;
+
+        assert_eq!(test.name(), "add");
+        assert_eq!(test.ty(), None);
+        assert_eq!(test.kind(), FunctionKind::Test);
+    }
+
+    #[test]
+    fn t_test_invalid() {
+        match Construct::test_declaration("test add(a: int) -> int {}") {
+            Ok(_) => assert!(false, "Can't have arguments to a test"),
+            Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_mock_valid() {
+        let test = Construct::mock_declaration("mock add(lhs: type, rhs: type) {}")
+            .unwrap()
+            .1;
+
+        assert_eq!(test.name(), "add");
+        assert_eq!(test.ty(), None);
+        assert_eq!(test.kind(), FunctionKind::Mock);
+    }
+
+    #[test]
+    fn t_ext_valid() {
+        let test = Construct::ext_declaration("ext func add(lhs: type, rhs: type) -> type;")
+            .unwrap()
+            .1;
+
+        assert_eq!(test.name(), "add");
+        assert_eq!(test.ty(), Some("type"));
+        assert_eq!(test.kind(), FunctionKind::Ext);
+    }
+
+    #[test]
+    fn t_ext_invalid() {
+        match Construct::ext_declaration("ext func add(a: int) -> int {}") {
+            Ok(_) => assert!(false, "Can't have a block for an ext function"),
+            Err(_) => assert!(true),
+        };
     }
 }

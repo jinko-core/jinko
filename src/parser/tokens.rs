@@ -72,6 +72,10 @@ impl Token {
         Token::specific_char(input, ']')
     }
 
+    pub fn colon(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, ':')
+    }
+
     pub fn semicolon(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, ';')
     }
@@ -106,6 +110,10 @@ impl Token {
 
     pub fn mut_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "mut ")
+    }
+
+    pub fn arrow(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "->")
     }
 
     pub fn identifier(input: &str) -> IResult<&str, &str> {
