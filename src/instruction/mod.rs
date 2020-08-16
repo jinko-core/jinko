@@ -4,9 +4,11 @@
 
 mod function_call;
 mod var_assignment;
+mod var;
 
 pub use function_call::FunctionCall;
 pub use var_assignment::VarAssign;
+pub use var::Var;
 
 /// The type of instructions available
 pub enum InstrKind {

@@ -32,11 +32,6 @@ impl Block {
         }
     }
 
-    /// Add a new instruction to a function
-    pub fn add(&mut self, instr: Box<dyn Instruction>) {
-        self.instructions.push(instr)
-    }
-
     /// "Call" the function and run its code
     pub fn call(&self) {
         todo!();
@@ -45,5 +40,9 @@ impl Block {
     /// Returns a reference to the instructions contained in the block
     pub fn instructions(&self) -> &Vec<Box<dyn Instruction>> {
         &self.instructions
+    }
+
+    pub fn set_instructions(&mut self, instructions: Vec<Box<dyn Instruction>>) {
+        self.instructions = instructions;
     }
 }

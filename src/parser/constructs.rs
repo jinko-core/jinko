@@ -15,7 +15,7 @@
 use nom::{branch::alt, combinator::opt, multi::many0, multi::many1, IResult};
 
 use crate::block::Block;
-use crate::instruction::{FunctionCall, VarAssign};
+use crate::instruction::{Instruction, FunctionCall, VarAssign, Var};
 use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
@@ -160,50 +160,39 @@ impl Construct {
         }
     }
 
-    fn instruction(input: &str) -> IResult<&str, Constant> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, constant) = Construct::constant(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+    fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, expression) = Token::identifier(input)?;
 
-        Ok((input, constant))
+        Ok((input, Box::new(Var::new(expression.to_owned()))))
     }
 
-    /// Consumes an instruction and a semicolon
-    fn instruction_semicolon(input: &str) -> IResult<&str, Constant> {
-        let (input, constant) = Construct::instruction(input)?;
-
+    fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, constant) = Construct::expression(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, _) = Token::semicolon(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         Ok((input, constant))
     }
 
-    /// Parse an empty block
-    fn block_empty(input: &str) -> IResult<&str, Block> {
-        let (input, _) = Token::left_curly_bracket(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::right_curly_bracket(input)?;
-
-        Ok((input, Block::new()))
-    }
-
-    fn block_non_empty(input: &str) -> IResult<&str, Block> {
-        let block = Block::new();
-
+    /// Parses the statements in a block as well as a possible last expression
+    fn instructions(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
         let (input, _) = Token::left_curly_bracket(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        let (input, instructions) = many0(Construct::instruction_semicolon)(input)?;
+        let (input, mut instructions) = many0(Construct::stmt_semicolon)(input)?;
+        let (input, last_expr) = opt(Construct::expression)(input)?;
 
-        // A block can contain a last expression that will be returned
-        let (input, last_expr) = opt(Construct::constant)(input)?;
-
-        // FIXME: Add instructions and last_expr to block instead of just parsing them
+        match last_expr {
+            Some(expr) => instructions.push(expr),
+            None => {},
+        }
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
 
-        Ok((input, block))
+        Ok((input, instructions))
     }
 
     /// A block of code is a new inner scope that contains instructions. You can use
@@ -231,7 +220,12 @@ impl Construct {
     /// `{ [ <expression> ; ]* [ <expression> ] }`
     // FIXME: Fix grammar and description
     pub fn block(input: &str) -> IResult<&str, Block> {
-        alt((Construct::block_empty, Construct::block_non_empty))(input)
+        let (input, instructions) = Construct::instructions(input)?;
+
+        let mut block = Block::new();
+        block.set_instructions(instructions);
+
+        Ok((input, block))
     }
 }
 
@@ -423,11 +417,11 @@ mod tests {
     #[test]
     fn t_block_valid_oneline() {
         assert_eq!(
-            Construct::block("{ 12; }").unwrap().1.instructions().len(),
+            Construct::block("{ 12a; }").unwrap().1.instructions().len(),
             1
         );
         assert_eq!(
-            Construct::block("{ 12; 14; }")
+            Construct::block("{ 12a; 14a; }")
                 .unwrap()
                 .1
                 .instructions()
@@ -435,7 +429,7 @@ mod tests {
             2
         );
         assert_eq!(
-            Construct::block("{ 12; 14 }")
+            Construct::block("{ 12a; 14a }")
                 .unwrap()
                 .1
                 .instructions()
@@ -446,22 +440,22 @@ mod tests {
 
     #[test]
     fn t_block_invalid_oneline() {
-        match Construct::block("{ 12;") {
+        match Construct::block("{ 12a;") {
             Ok(_) => assert!(false, "Unterminated bracket"),
             Err(_) => assert!(true),
         }
 
-        match Construct::block("{ 12") {
+        match Construct::block("{ 12a") {
             Ok(_) => assert!(false, "Unterminated bracket but on expression"),
             Err(_) => assert!(true),
         }
 
-        match Construct::block("{ 12; 13") {
+        match Construct::block("{ 12a; 13a") {
             Ok(_) => assert!(false, "Unterminated bracket but on second expression"),
             Err(_) => assert!(true),
         }
 
-        match Construct::block("12; 13 }") {
+        match Construct::block("12a; 13a }") {
             Ok(_) => assert!(false, "Not starting with a bracket"),
             Err(_) => assert!(true),
         }
@@ -470,11 +464,20 @@ mod tests {
     #[test]
     fn t_block_valid_multiline() {
         let input = r#"{
-                "12";
-                "12";
-                "13";
+                12a;
+                12a;
+                13a;
             }"#;
 
         assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 3);
+
+        let input = r#"{
+                12a;
+                12a;
+                13a;
+                14a
+            }"#;
+
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 4);
     }
 }

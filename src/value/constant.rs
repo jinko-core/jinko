@@ -3,6 +3,8 @@
 
 // use super::Value;
 
+use crate::instruction::{Instruction, InstrKind};
+
 /// The 4 different types of constants
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ConstKind {
@@ -56,5 +58,12 @@ impl Constant {
 
     pub fn kind(&self) -> ConstKind {
         self.kind
+    }
+}
+
+impl Instruction for Constant {
+    fn kind(&self) -> InstrKind {
+        // FIXME: Add logic
+        InstrKind::Expression
     }
 }
