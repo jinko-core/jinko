@@ -13,6 +13,7 @@ pub use var::Var;
 pub use var_assignment::VarAssign;
 
 /// The type of instructions available
+#[derive(Debug, PartialEq)]
 pub enum InstrKind {
     Statement,
     Expression,

@@ -18,7 +18,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use super::instruction::Instruction;
+use super::instruction::{InstrKind, Instruction};
 
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
@@ -44,5 +44,71 @@ impl Block {
 
     pub fn set_instructions(&mut self, instructions: Vec<Box<dyn Instruction>>) {
         self.instructions = instructions;
+    }
+}
+
+impl Instruction for Block {
+    fn kind(&self) -> InstrKind {
+        match self.instructions.last() {
+            Some(last) => last.as_ref().kind(),
+            None => InstrKind::Statement,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::instruction::Var;
+    use crate::value::constant::{Constant, ConstKind};
+
+    #[test]
+    fn empty() {
+        let b = Block::new();
+
+        assert_eq!(b.kind(), InstrKind::Statement);
+        assert_eq!(b.print(), "{}");
+    }
+
+    #[test]
+    fn all_stmts() {
+        let mut b = Block::new();
+        let instrs: Vec<Box<dyn Instruction>> = vec![
+            Box::new(Var::new("x".to_owned())),
+            Box::new(Var::new("n".to_owned())),
+        ];
+
+        b.set_instructions(instrs);
+
+        assert_eq!(b.kind(), InstrKind::Statement);
+        assert_eq!(
+            b.print(),
+            r#"{
+            x;
+            n;
+        }"#
+        );
+    }
+
+    #[test]
+    fn stmt_plus_expr() {
+        let mut b = Block::new();
+        let instrs: Vec<Box<dyn Instruction>> = vec![
+            Box::new(Var::new("x".to_owned())),
+            Box::new(Var::new("n".to_owned())),
+            Box::new(Constant::new(ConstKind::Int).with_iv(14)),
+        ];
+
+        b.set_instructions(instrs);
+
+        assert_eq!(b.kind(), InstrKind::Expression);
+        assert_eq!(
+            b.print(),
+            r#"{
+            x;
+            n;
+            15
+        }"#
+        );
     }
 }
