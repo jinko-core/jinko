@@ -195,7 +195,7 @@ impl Construct {
 
         let (input, instructions) = many0(Construct::instruction_semicolon)(input)?;
 
-        /// A block can contain a last expression that will be returned
+        // A block can contain a last expression that will be returned
         let (input, last_expr) = opt(Construct::constant)(input)?;
 
         // FIXME: Add instructions and last_expr to block instead of just parsing them
