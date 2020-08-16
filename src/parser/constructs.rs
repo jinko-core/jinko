@@ -175,6 +175,9 @@ impl Construct {
         Ok((input, vec![]))
     }
 
+    /// Parse an identifier then its type
+    ///
+    /// `<identifier> : <identifier>
     fn identifier_type(input: &str) -> IResult<&str, FunctionDecArg> {
         let (input, id) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
@@ -185,12 +188,29 @@ impl Construct {
         Ok((input, FunctionDecArg::new(id.to_owned(), ty.to_owned())))
     }
 
+    fn identifier_type_comma(input: &str) -> IResult<&str, FunctionDecArg> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, arg) = Construct::identifier_type(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::comma(input)?;
+
+        Ok((input, arg))
+    }
+
     fn args_dec_non_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, mut args) = many0(Construct::identifier_type_comma)(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        // Parse the last argument which does not have a comma
+        let (input, last_arg) = Construct::identifier_type(input)?;
+        args.push(last_arg);
+
         let (input, _) = Token::right_parenthesis(input)?;
 
-        todo!()
+        Ok((input, args))
     }
 
     /// Parse a list (maybe empty) of argument declarations
@@ -219,6 +239,11 @@ impl Construct {
 
         let mut function = FunctionDec::new(fn_name.to_owned());
 
+        // Parse the list of arguments and give it to the function
+        let (input, args) = Construct::args_dec(input)?;
+        function.set_args(args);
+
+        // Parse the associated code block and give it to the function
         let (input, block) = Construct::block(input)?;
         function.set_block(block);
 
@@ -425,5 +450,15 @@ mod tests {
     #[test]
     fn t_args_dec_empty() {
         assert_eq!(Construct::args_dec("()").unwrap().1.len(), 0);
+    }
+
+    #[test]
+    fn t_args_dec_one_arg() {
+        assert_eq!(Construct::args_dec("(name :type)").unwrap().1.len(), 1);
+    }
+
+    #[test]
+    fn t_args_dec_valid() {
+        assert_eq!(Construct::args_dec("(name :type, name1      : type1)").unwrap().1.len(), 2);
     }
 }
