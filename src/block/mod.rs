@@ -75,7 +75,7 @@ impl Instruction for Block {
 mod tests {
     use super::*;
     use crate::instruction::Var;
-    use crate::value::constant::{Constant, ConstKind};
+    use crate::value::constant::{ConstKind, Constant};
 
     #[test]
     fn empty() {
