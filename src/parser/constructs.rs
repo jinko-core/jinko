@@ -608,7 +608,9 @@ mod tests {
 
     #[test]
     fn t_function_declaration_valid_simple() {
-        let func = Construct::function_declaration("func something() {}").unwrap().1;
+        let func = Construct::function_declaration("func something() {}")
+            .unwrap()
+            .1;
 
         assert_eq!(func.name(), "something");
         assert_eq!(func.ty(), None);
@@ -618,7 +620,9 @@ mod tests {
 
     #[test]
     fn t_function_declaration_valid() {
-        let func = Construct::function_declaration("func add(lhs: type, rhs: type) -> type {}").unwrap().1;
+        let func = Construct::function_declaration("func add(lhs: type, rhs: type) -> type {}")
+            .unwrap()
+            .1;
 
         assert_eq!(func.name(), "add");
         assert_eq!(func.ty(), Some("type"));
@@ -645,7 +649,9 @@ mod tests {
 
     #[test]
     fn t_mock_valid() {
-        let test = Construct::mock_declaration("mock add(lhs: type, rhs: type) {}").unwrap().1;
+        let test = Construct::mock_declaration("mock add(lhs: type, rhs: type) {}")
+            .unwrap()
+            .1;
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), None);
@@ -654,7 +660,9 @@ mod tests {
 
     #[test]
     fn t_ext_valid() {
-        let test = Construct::ext_declaration("ext func add(lhs: type, rhs: type) -> type;").unwrap().1;
+        let test = Construct::ext_declaration("ext func add(lhs: type, rhs: type) -> type;")
+            .unwrap()
+            .1;
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), Some("type"));
