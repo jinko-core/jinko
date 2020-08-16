@@ -1,8 +1,8 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use super::{InstrKind, Instruction};
 use crate::block::Block;
-use super::{Instruction, InstrKind};
 
 pub struct FunctionDecArg {
     name: String,
@@ -19,10 +19,17 @@ pub struct FunctionDec {
 impl FunctionDecArg {
     /// Create a new function declaration argument with a name and a type
     pub fn new(name: String, ty: String) -> FunctionDecArg {
-        FunctionDecArg {
-            name,
-            ty,
-        }
+        FunctionDecArg { name, ty }
+    }
+
+    /// Return a reference to the argument's name
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    /// Return a reference to the argument's type
+    pub fn ty(&self) -> &String {
+        &self.ty
     }
 }
 
@@ -47,16 +54,16 @@ impl FunctionDec {
         &self.name
     }
 
-    /// Add an argument to the function's signature
-    pub fn add_arg(&mut self, arg: FunctionDecArg) {
-        self.args.push(arg)
+    /// Set the vector of arguments that the function should handle
+    pub fn set_args(&mut self, args: Vec<FunctionDecArg>) {
+        self.args = args
     }
 
     /// Return a reference to the function's block
     pub fn block(&self) -> Option<&Block> {
         match &self.block {
             Some(b) => Some(&b),
-            None => None
+            None => None,
         }
     }
 }

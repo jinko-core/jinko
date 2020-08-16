@@ -72,6 +72,10 @@ impl Token {
         Token::specific_char(input, ']')
     }
 
+    pub fn colon(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, ':')
+    }
+
     pub fn semicolon(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, ';')
     }

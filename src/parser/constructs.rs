@@ -14,9 +14,9 @@
 
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
-use crate::instruction::{FunctionCall, FunctionDec, VarAssign};
-use crate::value::constant::{ConstKind, Constant};
 use crate::block::Block;
+use crate::instruction::{FunctionCall, FunctionDec, FunctionDecArg, VarAssign};
+use crate::value::constant::{ConstKind, Constant};
 
 use super::tokens::Token;
 
@@ -167,6 +167,37 @@ impl Construct {
         todo!()
     }
 
+    fn args_dec_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        Ok((input, vec![]))
+    }
+
+    fn identifier_type(input: &str) -> IResult<&str, FunctionDecArg> {
+        let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::colon(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, ty) = Token::identifier(input)?;
+
+        Ok((input, FunctionDecArg::new(id.to_owned(), ty.to_owned())))
+    }
+
+    fn args_dec_non_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        todo!()
+    }
+
+    /// Parse a list (maybe empty) of argument declarations
+    fn args_dec(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+        alt((Construct::args_dec_empty, Construct::args_dec_non_empty))(input)
+    }
+
     /// Parse a function declaration. This includes the function's signature and the
     /// associated code block
     ///
@@ -181,7 +212,17 @@ impl Construct {
     /// `<typed_arg_list> := [ (<identifier> : <type>)* ]
     /// `<func> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>`
     pub fn function_declaration(input: &str) -> IResult<&str, FunctionDec> {
-        todo!()
+        let (input, _) = Token::func_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, fn_name) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let mut function = FunctionDec::new(fn_name.to_owned());
+
+        let (input, block) = Construct::block(input)?;
+        function.set_block(block);
+
+        Ok((input, function))
     }
 }
 
@@ -355,5 +396,29 @@ mod tests {
             Ok(_) => assert!(false, "Wrong parenthesis again"),
             Err(_) => assert!(true),
         }
+    }
+
+    #[test]
+    fn t_id_type_valid() {
+        assert_eq!(
+            Construct::identifier_type("name: type").unwrap().1.name(),
+            "name"
+        );
+        assert_eq!(
+            Construct::identifier_type("name: type").unwrap().1.ty(),
+            "type"
+        );
+
+        assert_eq!(
+            Construct::identifier_type("name     :type")
+                .unwrap()
+                .1
+                .name(),
+            "name"
+        );
+        assert_eq!(
+            Construct::identifier_type("name     :type").unwrap().1.ty(),
+            "type"
+        );
     }
 }
