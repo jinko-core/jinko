@@ -200,7 +200,7 @@ Therefore, the following code
 ```rust
 if (condition) {
     /* */
-elif (other_condition) {
+} elif (other_condition) {
     /* */
 }
 ```
@@ -208,7 +208,7 @@ Becomes
 ```rust
 if (condition) {
     /* */
-else {
+} else {
     if (other_condition) {
         /* */
     }
