@@ -9,6 +9,17 @@ struct IfElse {
     else_body: Option<Block>,
 }
 
+impl IfElse {
+    /// Create a new IfElse block and return it
+    pub fn new(condition: Box<dyn Instruction>, if_body: Block, else_body: Option<Block>) -> IfElse {
+        IfElse {
+            condition,
+            if_body,
+            else_body,
+        }
+    }
+}
+
 impl Instruction for IfElse {
     fn kind(&self) -> InstrKind {
         /// We don't check the kind of the else_body, since the typechecker will have
