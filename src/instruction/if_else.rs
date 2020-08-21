@@ -15,4 +15,6 @@ impl Instruction for IfElse {
         /// approved that the if_body and else_body return the same thing
         self.block.kind()
     }
+
+    // FIXME: Add execute()
 }
