@@ -430,10 +430,38 @@ impl Construct {
         Ok((input, function))
     }
 
+    /// Parse the content after the `if` token. This is useful for parsing `elif`s since
+    /// the construct is the same, the leading token is just different. This consumes
+    /// the condition, as well as the other blocks such as `else` or `elif`.
+    fn if_content(input: &str) -> IResult<&str, IfElse> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, condition) = Construct::expression(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, if_body) = Construct::block(input)?;
+
+        let (input, else_body) = opt(Construct::else_block)(input)?;
+
+        let if_else = IfElse::new(condition, if_body, else_body);
+
+        Ok((input, if_else))
+    }
+
     /// Parse an `elif` and the associated block. This creates an `IfElse` in a `Block`
     /// because it gets desugared
-    fn elif_block(input: &str) -> IResult<&str, IfElse> {
-        todo!()
+    fn elif_block(input: &str) -> IResult<&str, Block> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::elif_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, ie) = Construct::if_content(input)?;
+
+        let mut block = Block::new();
+
+        // FIXME: This is an extra memcpy
+        block.add_instruction(Box::new(ie)); // Box the IfElse to use it in the block
+
+        Ok((input, block))
     }
 
     /// Parse an `else` plus the associated block
@@ -455,16 +483,7 @@ impl Construct {
         let (input, _) = Token::if_tok(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        let (input, condition) = Construct::expression(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-
-        let (input, if_body) = Construct::block(input)?;
-
-        let (input, else_body) = opt(Construct::else_block)(input)?;
-
-        let if_else = IfElse::new(condition, if_body, else_body);
-
-        Ok((input, if_else))
+        Construct::if_content(input)
     }
 }
 
