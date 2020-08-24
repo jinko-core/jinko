@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::instruction::{FunctionDec, Var};
+use crate::instruction::{Instruction, FunctionDec, Var};
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -62,13 +62,18 @@ impl Interpreter {
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_variable(&mut self) -> Result<(), String> {
-        todo!()
+    pub fn add_variable(&mut self, var: Var) -> Result<(), String> {
+        match self.variables.get(var.name()) {
+            Some(_) => Err(format!("variable already declared: {}", var.name())),
+            None => Ok({
+                self.variables.insert(var.name().to_owned(), var);
+            }),
+        }
     }
 
     /// Pretty-prints valid broccoli code from a given interpreter
     pub fn print(&self) -> String {
-        todo!()
+        self.entry_point.print()
     }
 }
 
@@ -85,5 +90,16 @@ mod tests {
 
         assert_eq!(i.add_function(f0), Ok(()));
         assert_eq!(i.add_function(f0_copy), Err("function already declared: f0".to_owned()));
+    }
+
+    #[test]
+    fn t_redefinition_of_variable() {
+        let v0 = Var::new("v0".to_owned());
+        let v0_copy = Var::new("v0".to_owned());
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(i.add_variable(v0), Ok(()));
+        assert_eq!(i.add_variable(v0_copy), Err("variable already declared: v0".to_owned()));
     }
 }

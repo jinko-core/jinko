@@ -14,6 +14,8 @@ pub use if_else::IfElse;
 pub use var::Var;
 pub use var_assignment::VarAssign;
 
+use crate::interpreter::Interpreter;
+
 /// The type of instructions available
 #[derive(Debug, PartialEq)]
 pub enum InstrKind {
@@ -23,7 +25,7 @@ pub enum InstrKind {
 
 pub trait Instruction {
     /// Execute the instruction, altering the state of the program
-    fn execute(&self) {
+    fn execute(&self, _: &mut Interpreter) {
         unreachable!("The execution of this instruction is not implemented yet")
     }
 
