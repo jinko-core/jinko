@@ -8,19 +8,28 @@ use std::collections::HashMap;
 
 use crate::instruction::{FunctionDec, Var};
 
+/// Type the interpreter uses for keys
+type IKey = String;
+
+/// Name of the entry point in broccoli
+const ENTRY_NAME: &str = "__entry";
+
 pub struct Interpreter {
     /// Is the interpreter in an audit block or not
     pub in_audit: bool,
 
+    /// Entry point to the interpreter, the "main" function
+    pub entry_point: FunctionDec,
+
     /// Functions registered in the interpreter
-    pub functions: HashMap<String, FunctionDec>,
+    functions: HashMap<IKey, FunctionDec>,
     /// Variables registered in the interpreter
-    pub variables: HashMap<String, Var>,
+    variables: HashMap<IKey, Var>,
 
     /// Tests registered in the interpreter
-    pub tests: HashMap<String, FunctionDec>,
+    tests: HashMap<IKey, FunctionDec>,
     /// External functions registered in the interpreter
-    pub exts: HashMap<String, FunctionDec>,
+    exts: HashMap<IKey, FunctionDec>,
 }
 
 impl Interpreter {
@@ -29,6 +38,7 @@ impl Interpreter {
         Interpreter {
             in_audit: false,
 
+            entry_point: FunctionDec::new(String::from(ENTRY_NAME), None),
             functions: HashMap::new(),
             variables: HashMap::new(),
 
@@ -40,8 +50,13 @@ impl Interpreter {
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_function(&mut self) -> Result<(), String> {
-        todo!()
+    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), String> {
+        match self.functions.get(function.name()) {
+            Some(_) => Err(format!("function already declared: {}", function.name())),
+            None => Ok({
+                self.functions.insert(function.name().to_owned(), function);
+            }),
+        }
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
@@ -54,5 +69,21 @@ impl Interpreter {
     /// Pretty-prints valid broccoli code from a given interpreter
     pub fn print(&self) -> String {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn t_redefinition_of_function() {
+        let f0 = FunctionDec::new("f0".to_owned(), None);
+        let f0_copy = FunctionDec::new("f0".to_owned(), None);
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(i.add_function(f0), Ok(()));
+        assert_eq!(i.add_function(f0_copy), Err("function already declared: f0".to_owned()));
     }
 }
