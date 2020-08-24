@@ -4,11 +4,13 @@
 
 mod function_call;
 mod function_declaration;
+mod if_else;
 mod var;
 mod var_assignment;
 
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
+pub use if_else::IfElse;
 pub use var::Var;
 pub use var_assignment::VarAssign;
 
@@ -21,7 +23,9 @@ pub enum InstrKind {
 
 pub trait Instruction {
     /// Execute the instruction, altering the state of the program
-    fn execute(&self) {}
+    fn execute(&self) {
+        unreachable!("The execution of this instruction is not implemented yet")
+    }
 
     /// What is the type of the instruction: a Statement or an Expression
     fn kind(&self) -> InstrKind;

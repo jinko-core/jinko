@@ -112,6 +112,14 @@ impl Token {
         Token::specific_token(input, "mut ")
     }
 
+    pub fn if_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "if ")
+    }
+
+    pub fn else_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "else ")
+    }
+
     pub fn arrow(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "->")
     }

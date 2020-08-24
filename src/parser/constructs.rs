@@ -16,7 +16,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::block::Block;
 use crate::instruction::{
-    FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, Instruction, Var, VarAssign,
+    FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction, Var, VarAssign,
 };
 use crate::value::constant::{ConstKind, Constant};
 
@@ -203,7 +203,7 @@ impl Construct {
     /// them in If/Else blocks, in function declarations, or just as is.
     ///
     /// ```
-    /// fn return_nothing() {
+    /// func return_nothing() {
     ///     compute_stuff();
     /// } // Block returns void, so does the function
     ///
@@ -428,6 +428,36 @@ impl Construct {
         function.set_kind(FunctionKind::Ext);
 
         Ok((input, function))
+    }
+
+    /// Parse an `else` plus the associated block
+    fn else_block(input: &str) -> IResult<&str, Block> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::else_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Construct::block(input)
+    }
+
+    /// Parse an if/else construct. This parses the entirety of the if/else. Therefore
+    /// consuming the first `if` and the remaining optional `else`.
+    ///
+    /// `<if> <block> [ <else> <block> ]`
+    pub fn if_else(input: &str) -> IResult<&str, IfElse> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::if_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, condition) = Construct::expression(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, if_body) = Construct::block(input)?;
+
+        let (input, else_body) = opt(Construct::else_block)(input)?;
+
+        let if_else = IfElse::new(condition, if_body, else_body);
+
+        Ok((input, if_else))
     }
 }
 
@@ -825,6 +855,24 @@ mod tests {
         match Construct::ext_declaration("ext func add(a: int) -> int {}") {
             Ok(_) => assert!(false, "Can't have a block for an ext function"),
             Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_if_else_just_if() {
+        let ie = Construct::if_else("if condition {}");
+
+        match &ie {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to only have if"),
+        };
+    }
+
+    #[test]
+    fn t_if_else() {
+        match Construct::if_else("if condition {} else {}") {
+            Ok((input, _)) => assert_eq!(input, ""),
+            Err(_) => assert!(false, "Valid to have empty blocks"),
         };
     }
 }
