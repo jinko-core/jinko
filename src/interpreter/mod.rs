@@ -6,12 +6,35 @@
 
 use std::collections::HashMap;
 
-pub struct Interpreter;
+use crate::instruction::{FunctionDec, Var};
+
+pub struct Interpreter {
+    /// Is the interpreter in an audit block or not
+    pub in_audit: bool,
+
+    /// Functions registered in the interpreter
+    pub functions: HashMap<String, FunctionDec>,
+    /// Variables registered in the interpreter
+    pub variables: HashMap<String, Var>,
+
+    /// Tests registered in the interpreter
+    pub tests: HashMap<String, FunctionDec>,
+    /// External functions registered in the interpreter
+    pub exts: HashMap<String, FunctionDec>,
+}
 
 impl Interpreter {
-    /// Create a new empty interpreter
+    /// Create a new empty interpreter. Starts in non-audit mode
     pub fn new() -> Interpreter {
-        Interpreter {}
+        Interpreter {
+            in_audit: false,
+
+            functions: HashMap::new(),
+            variables: HashMap::new(),
+
+            tests: HashMap::new(),
+            exts: HashMap::new(),
+        }
     }
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
