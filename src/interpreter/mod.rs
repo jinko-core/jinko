@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::instruction::{Instruction, FunctionDec, Var};
+use crate::instruction::{FunctionDec, Instruction, Var};
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -89,7 +89,10 @@ mod tests {
         let mut i = Interpreter::new();
 
         assert_eq!(i.add_function(f0), Ok(()));
-        assert_eq!(i.add_function(f0_copy), Err("function already declared: f0".to_owned()));
+        assert_eq!(
+            i.add_function(f0_copy),
+            Err("function already declared: f0".to_owned())
+        );
     }
 
     #[test]
@@ -100,6 +103,9 @@ mod tests {
         let mut i = Interpreter::new();
 
         assert_eq!(i.add_variable(v0), Ok(()));
-        assert_eq!(i.add_variable(v0_copy), Err("variable already declared: v0".to_owned()));
+        assert_eq!(
+            i.add_variable(v0_copy),
+            Err("variable already declared: v0".to_owned())
+        );
     }
 }
