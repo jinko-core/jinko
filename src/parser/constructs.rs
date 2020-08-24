@@ -430,11 +430,24 @@ impl Construct {
         Ok((input, function))
     }
 
-    /// Parse the content after the `if` token. This is useful for parsing `elif`s since
-    /// the construct is the same, the leading token is just different. This consumes
-    /// the condition, as well as the other blocks such as `else` or `elif`.
-    fn if_content(input: &str) -> IResult<&str, IfElse> {
+    /// Parse an `else` plus the associated block
+    fn else_block(input: &str) -> IResult<&str, Block> {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::else_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Construct::block(input)
+    }
+
+    /// Parse an if/else construct. This parses the entirety of the if/else. Therefore
+    /// consuming the first `if` and the remaining optional `else`.
+    ///
+    /// `<if> <block> [ <else> <block> ]`
+    pub fn if_else(input: &str) -> IResult<&str, IfElse> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::if_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
         let (input, condition) = Construct::expression(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
@@ -445,45 +458,6 @@ impl Construct {
         let if_else = IfElse::new(condition, if_body, else_body);
 
         Ok((input, if_else))
-    }
-
-    /// Parse an `elif` and the associated block. This creates an `IfElse` in a `Block`
-    /// because it gets desugared
-    fn elif_block(input: &str) -> IResult<&str, Block> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::elif_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-
-        let (input, ie) = Construct::if_content(input)?;
-
-        let mut block = Block::new();
-
-        // FIXME: This is an extra memcpy
-        block.add_instruction(Box::new(ie)); // Box the IfElse to use it in the block
-
-        Ok((input, block))
-    }
-
-    /// Parse an `else` plus the associated block
-    fn else_block(input: &str) -> IResult<&str, Block> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::else_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-
-        Construct::block(input)
-    }
-
-    /// Parse an if/else/elif construct. This parses the entirety of the if/else. Therefore
-    /// consuming the first `if`, all the subsequent optional `elif`s, and the remaining
-    /// optional `else`.
-    ///
-    /// `<if> <block> [ (<elif> <block>)* ] [ <else> <block> ]`
-    pub fn if_else(input: &str) -> IResult<&str, IfElse> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::if_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-
-        Construct::if_content(input)
     }
 }
 
@@ -897,22 +871,6 @@ mod tests {
     #[test]
     fn t_if_else() {
         match Construct::if_else("if condition {} else {}") {
-            Ok((input, _)) => assert_eq!(input, ""),
-            Err(_) => assert!(false, "Valid to have empty blocks"),
-        };
-    }
-
-    #[test]
-    fn t_if_elif_else() {
-        match Construct::if_else("if condition {} elif condition {} else {}") {
-            Ok((input, _)) => assert_eq!(input, ""),
-            Err(_) => assert!(false, "Valid to have empty blocks"),
-        };
-    }
-
-    #[test]
-    fn t_if_multi_elif_else() {
-        match Construct::if_else("if condition {} elif condition2 {} elif condition3 {} else {}") {
             Ok((input, _)) => assert_eq!(input, ""),
             Err(_) => assert!(false, "Valid to have empty blocks"),
         };

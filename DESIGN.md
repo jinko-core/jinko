@@ -191,26 +191,3 @@ be best.
 The broccoli interpreter should keep track of variables and functions. Therefore, at
 least two hashmaps are required, one for variables and one for functions. Each of these
 elements need to have a unique name to identify them.
-
-## if/else statements
-
-Broccoli wants to introduce the `elif` keyword, akin to Python. This should simply be
-syntactic sugar for an inner if/else block. This desugaring happens during parsing.
-Therefore, the following code
-```rust
-if (condition) {
-    /* */
-} elif (other_condition) {
-    /* */
-}
-```
-Becomes
-```rust
-if (condition) {
-    /* */
-} else {
-    if (other_condition) {
-        /* */
-    }
-}
-```

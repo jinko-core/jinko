@@ -120,10 +120,6 @@ impl Token {
         Token::specific_token(input, "else ")
     }
 
-    pub fn elif_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "elif ")
-    }
-
     pub fn arrow(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "->")
     }
