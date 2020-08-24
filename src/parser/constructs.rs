@@ -15,7 +15,7 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
-    Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction, Var, VarAssign,
+    Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction, Var, VarAssign,
 };
 use crate::value::constant::{ConstKind, Constant};
 
@@ -458,6 +458,20 @@ impl Construct {
 
         Ok((input, if_else))
     }
+
+    /// Parse an audit block. This consists in the the audit keyword and the following
+    /// block. Audit blocks are useful to relax the interpreter and develop faster. For
+    /// example, you're allowed to ignore return values in an audit block.
+    ///
+    /// `<audit> <block>`
+    pub fn audit(input: &str) -> IResult<&str, Audit> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::audit_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        Ok((input, Audit::new(block)))
+    }
 }
 
 #[cfg(test)]
@@ -873,5 +887,13 @@ mod tests {
             Ok((input, _)) => assert_eq!(input, ""),
             Err(_) => assert!(false, "Valid to have empty blocks"),
         };
+    }
+
+    #[test]
+    fn t_audit_simple() {
+        match Construct::audit("audit {}") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid audit syntax"),
+        }
     }
 }
