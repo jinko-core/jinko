@@ -15,9 +15,7 @@
 //! x = if condition { 12 } else { 13 };
 //! ```
 
-use crate::block::Block;
-
-use super::{InstrKind, Instruction};
+use super::{Block, InstrKind, Instruction};
 
 pub struct IfElse {
     condition: Box<dyn Instruction>,

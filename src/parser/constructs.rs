@@ -14,9 +14,8 @@
 
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
-use crate::block::Block;
 use crate::instruction::{
-    FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction, Var, VarAssign,
+    Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction, Var, VarAssign,
 };
 use crate::value::constant::{ConstKind, Constant};
 
