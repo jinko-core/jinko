@@ -28,7 +28,7 @@ pub struct IfElse {
 }
 
 impl IfElse {
-    /// Create a new IfElse block
+    /// Create a new IfElse block and return it
     pub fn new(condition: Box<dyn Instruction>, if_body: Block, else_body: Option<Block>) -> IfElse {
         IfElse {
             condition,
@@ -53,9 +53,10 @@ impl Instruction for IfElse {
             None => base,
         }
     }
+
+    // FIXME: Add execute()
 }
 
 #[cfg(test)]
 mod tests {
-    // FIXME: Add printing tests to IfElse
 }
