@@ -17,7 +17,7 @@
 
 use crate::block::Block;
 
-use super::{Instruction, InstrKind};
+use super::{InstrKind, Instruction};
 
 pub struct IfElse {
     condition: Box<dyn Instruction>,
@@ -27,7 +27,11 @@ pub struct IfElse {
 
 impl IfElse {
     /// Create a new IfElse block and return it
-    pub fn new(condition: Box<dyn Instruction>, if_body: Block, else_body: Option<Block>) -> IfElse {
+    pub fn new(
+        condition: Box<dyn Instruction>,
+        if_body: Block,
+        else_body: Option<Block>,
+    ) -> IfElse {
         IfElse {
             condition,
             if_body,
@@ -56,5 +60,4 @@ impl Instruction for IfElse {
 }
 
 #[cfg(test)]
-mod tests {
-}
+mod tests {}
