@@ -4,8 +4,6 @@
 //! ```
 //! if condition {
 //!     condition_evaluates_to_true();
-//! } elif condition_2 {
-//!     condition_2_evaluates_to_true();
 //! } else {
 //!     all_conditions_are_false();
 //! }

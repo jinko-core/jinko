@@ -13,7 +13,6 @@ be expanded. If you want to contribute, this a good place to start!
 * [x] Code blocks
 * [ ] If condition
 * [ ] Else condition
-* [ ] Elif condition
 * [ ] For loop
 * [ ] While loop
 * [ ] Loop loop

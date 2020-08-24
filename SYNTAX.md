@@ -27,8 +27,6 @@ mut another_x: int = 35;
 ```rust
 if boolean_condition {
 
-} elif other_boolean_condition {
-
 } else {
 
 }
@@ -37,7 +35,7 @@ if boolean_condition {
 ## Ternaries
 
 ```rust
-x = if bool { value0 } elif other_bool { value1 } else { value2 }
+x = if bool { value0 } else { value2 }
 
 /* Ternaries work too */
 x = bool ? value0 : value1;
