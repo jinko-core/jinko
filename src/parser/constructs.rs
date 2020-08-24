@@ -430,6 +430,21 @@ impl Construct {
         Ok((input, function))
     }
 
+    /// Parse an `elif` and the associated block. This creates an `IfElse` in a `Block`
+    /// because it gets desugared
+    fn elif_block(input: &str) -> IResult<&str, IfElse> {
+        todo!()
+    }
+
+    /// Parse an `else` plus the associated block
+    fn else_block(input: &str) -> IResult<&str, Block> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::else_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Construct::block(input)
+    }
+
     /// Parse an if/else/elif construct. This parses the entirety of the if/else. Therefore
     /// consuming the first `if`, all the subsequent optional `elif`s, and the remaining
     /// optional `else`.
@@ -445,7 +460,9 @@ impl Construct {
 
         let (input, if_body) = Construct::block(input)?;
 
-        let if_else = IfElse::new(condition, if_body, None);
+        let (input, else_body) = opt(Construct::else_block)(input)?;
+
+        let if_else = IfElse::new(condition, if_body, else_body);
 
         Ok((input, if_else))
     }
@@ -850,7 +867,9 @@ mod tests {
 
     #[test]
     fn t_if_else_just_if() {
-        match Construct::if_else("if condition {}") {
+        let ie = Construct::if_else("if condition {}");
+
+        match &ie {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to only have if"),
         };
@@ -859,7 +878,7 @@ mod tests {
     #[test]
     fn t_if_else() {
         match Construct::if_else("if condition {} else {}") {
-            Ok(_) => assert!(true),
+            Ok((input, _)) => assert_eq!(input, ""),
             Err(_) => assert!(false, "Valid to have empty blocks"),
         };
     }
@@ -867,7 +886,7 @@ mod tests {
     #[test]
     fn t_if_elif_else() {
         match Construct::if_else("if condition {} elif condition {} else {}") {
-            Ok(_) => assert!(true),
+            Ok((input, _)) => assert_eq!(input, ""),
             Err(_) => assert!(false, "Valid to have empty blocks"),
         };
     }
@@ -875,7 +894,7 @@ mod tests {
     #[test]
     fn t_if_multi_elif_else() {
         match Construct::if_else("if condition {} elif condition2 {} elif condition3 {} else {}") {
-            Ok(_) => assert!(true),
+            Ok((input, _)) => assert_eq!(input, ""),
             Err(_) => assert!(false, "Valid to have empty blocks"),
         };
     }
