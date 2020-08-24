@@ -203,7 +203,7 @@ impl Construct {
     /// them in If/Else blocks, in function declarations, or just as is.
     ///
     /// ```
-    /// fn return_nothing() {
+    /// func return_nothing() {
     ///     compute_stuff();
     /// } // Block returns void, so does the function
     ///
