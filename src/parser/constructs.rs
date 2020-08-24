@@ -16,7 +16,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::block::Block;
 use crate::instruction::{
-    FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, Instruction, Var, VarAssign,
+    FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction, Var, VarAssign,
 };
 use crate::value::constant::{ConstKind, Constant};
 
@@ -429,6 +429,26 @@ impl Construct {
 
         Ok((input, function))
     }
+
+    /// Parse an if/else/elif construct. This parses the entirety of the if/else. Therefore
+    /// consuming the first `if`, all the subsequent optional `elif`s, and the remaining
+    /// optional `else`.
+    ///
+    /// `<if> <block> [ (<elif> <block>)* ] [ <else> <block> ]`
+    pub fn if_else(input: &str) -> IResult<&str, IfElse> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::if_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, condition) = Construct::expression(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, if_body) = Construct::block(input)?;
+
+        let if_else = IfElse::new(condition, if_body, None);
+
+        Ok((input, if_else))
+    }
 }
 
 #[cfg(test)]
@@ -825,6 +845,38 @@ mod tests {
         match Construct::ext_declaration("ext func add(a: int) -> int {}") {
             Ok(_) => assert!(false, "Can't have a block for an ext function"),
             Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_if_else_just_if() {
+        match Construct::if_else("if condition {}") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to only have if"),
+        };
+    }
+
+    #[test]
+    fn t_if_else() {
+        match Construct::if_else("if condition {} else {}") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have empty blocks"),
+        };
+    }
+
+    #[test]
+    fn t_if_elif_else() {
+        match Construct::if_else("if condition {} elif condition {} else {}") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have empty blocks"),
+        };
+    }
+
+    #[test]
+    fn t_if_multi_elif_else() {
+        match Construct::if_else("if condition {} elif condition2 {} elif condition3 {} else {}") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have empty blocks"),
         };
     }
 }
