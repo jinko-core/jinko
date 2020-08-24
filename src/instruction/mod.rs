@@ -2,6 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
+mod audit;
 mod block;
 mod function_call;
 mod function_declaration;
@@ -9,6 +10,7 @@ mod if_else;
 mod var;
 mod var_assignment;
 
+pub use audit::Audit;
 pub use block::Block;
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
