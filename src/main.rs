@@ -1,5 +1,4 @@
 mod args;
-mod block;
 mod instruction;
 mod interpreter;
 mod parser;

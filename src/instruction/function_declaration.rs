@@ -1,8 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use super::{InstrKind, Instruction};
-use crate::block::Block;
+use super::{Block, InstrKind, Instruction};
 
 // FIXME: Shouldn't be a String
 type Ty = String;

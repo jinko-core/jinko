@@ -18,7 +18,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use super::instruction::{InstrKind, Instruction};
+use super::{InstrKind, Instruction};
 
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
