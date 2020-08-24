@@ -10,9 +10,7 @@ pub struct Audit {
 impl Audit {
     /// Create a new assign block
     pub fn new(block: Block) -> Audit {
-        Audit {
-            block,
-        }
+        Audit { block }
     }
 }
 
