@@ -4,6 +4,9 @@
 //! source file returns an "Interpreter", which is really just a complex structure
 //! aggregating the necessary information to run a broccoli program.
 
+mod scope_map;
+use scope_map::ScopeMap;
+
 use std::collections::HashMap;
 
 use crate::instruction::{FunctionDec, Instruction, Var};
