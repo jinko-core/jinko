@@ -1,7 +1,10 @@
 //! A `ScopeMap` is a set of "scopes" used to keep track of the available variables and
 //! functions in a given scope.
+//! In order to access variables and functions, the scope map first looks in the current
+//! scope. If the specified name cannot be found, it searches the other scopes, defined
+//! before the current one, until it finds the correct component.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, LinkedList};
 
 use crate::instruction::{Var, FunctionDec};
 
@@ -21,13 +24,12 @@ impl Scope {
     }
 }
 
-/// A stack is simply a vector. This alias is made for code clarity
-type ScopeStack<T> = Vec<T>;
+/// A scope stack is a reversed stack. This alias is made for code clarity
+type ScopeStack<T> = LinkedList<T>;
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
 pub struct ScopeMap {
-    depth: usize,
     scopes: ScopeStack<Scope>,
 }
 
@@ -35,28 +37,30 @@ impl ScopeMap {
     /// Create a new empty scope map, at depth 0
     pub fn new() -> ScopeMap {
         ScopeMap {
-            depth: 0usize,
             scopes: ScopeStack::new(),
         }
     }
 
     /// Enter into a new scope
     pub fn scope_enter(&mut self) {
-        self.scopes.push(Scope::new())
+        self.scopes.push_front(Scope::new());
     }
 
     /// Exit the last added scope
     pub fn scope_exit(&mut self) {
         // We unwrap since we want the interpreter to crash in case we pop an unexisting
         // scope.
-        self.scopes.pop().unwrap();
+        self.scopes.pop_front().unwrap();
     }
 
-    pub fn get_variable(&self, name: &str) -> &Var {
+    pub fn get_variable(&self, name: &str) -> Option<&Var> {
+        for scope in self.scopes.iter() {
+        }
+
         todo!()
     }
 
-    pub fn get_function(&self, name: &str) -> &FunctionDec {
+    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
         todo!()
     }
 }
