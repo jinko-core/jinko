@@ -24,11 +24,11 @@ impl Scope {
     }
 
     pub fn get_variable(&self, name: &str) -> Option<&Var> {
-        todo!()
+        self.variables.get(name)
     }
 
     pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
-        todo!()
+        self.functions.get(name)
     }
 
     // FIXME: Add doc
@@ -157,7 +157,7 @@ mod tests {
         let mut s = ScopeMap::new();
 
         s.scope_enter();
-        s.add_variable(Var::new("a0".to_owned())).unwrap();
+        s.add_variable(Var::new("a".to_owned())).unwrap();
 
         assert!(s.get_variable("a").is_some());
     }
@@ -167,7 +167,7 @@ mod tests {
         let mut s = ScopeMap::new();
 
         s.scope_enter();
-        s.add_variable(Var::new("a0".to_owned())).unwrap();
+        s.add_variable(Var::new("a".to_owned())).unwrap();
 
         s.scope_enter();
         s.scope_enter();
