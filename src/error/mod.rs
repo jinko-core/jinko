@@ -11,7 +11,6 @@ pub enum ErrKind {
 }
 
 /// Contains indications vis-a-vis the error's location in the source file
-#[derive(Debug)]
 pub struct SpaceLocation(pub usize, pub usize);
 
 impl SpaceLocation {
@@ -27,7 +26,6 @@ impl SpaceLocation {
 }
 
 /// The actual error type
-#[derive(Debug)]
 pub struct BroccoliError<'err> {
     kind: ErrKind,
     msg: String,
@@ -46,6 +44,6 @@ impl<'err> BroccoliError<'err> {
 impl std::fmt::Display for BroccoliError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // FIXME: Add better formatting
-        write!(f, "ErrorKind: {:?}\nInfo: {}", self.kind, self.msg.red())
+        write!(f, "Input: {}\nErrorKind: {:?}\nInfo: {}", self.input, self.kind, self.msg.red())
     }
 }
