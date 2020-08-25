@@ -45,6 +45,7 @@ impl<'err> BroccoliError<'err> {
 
 impl std::fmt::Display for BroccoliError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}: {}", self.kind, self.msg.red())
+        // FIXME: Add better formatting
+        write!(f, "ErrorKind: {:?}\nInfo: {}", self.kind, self.msg.red())
     }
 }
