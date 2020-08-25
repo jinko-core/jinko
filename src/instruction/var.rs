@@ -14,7 +14,7 @@ impl Var {
     }
 
     /// Return the name of the variable
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &str {
         &self.name
     }
 }

@@ -22,10 +22,37 @@ impl Scope {
             functions: HashMap::new(),
         }
     }
+
+    pub fn get_variable(&self, name: &str) -> Option<&Var> {
+        todo!()
+    }
+
+    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
+        todo!()
+    }
+
+    // FIXME: Add doc
+    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
+        // FIXME: Add actual logic
+        self.variables.insert(var.name().to_owned(), var);
+
+        Ok(())
+    }
+
+    // FIXME: Add doc
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), FIXMEError> {
+        // FIXME: Add actual logic
+        self.functions.insert(func.name().to_owned(), func);
+
+        Ok(())
+    }
 }
 
 /// A scope stack is a reversed stack. This alias is made for code clarity
 type ScopeStack<T> = LinkedList<T>;
+
+// FIXME: Add actual error type
+type FIXMEError = String;
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
@@ -53,15 +80,46 @@ impl ScopeMap {
         self.scopes.pop_front().unwrap();
     }
 
+    /// Maybe get a variable in any available scopes
     pub fn get_variable(&self, name: &str) -> Option<&Var> {
+        // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
+            match scope.get_variable(name) {
+                Some(v) => return Some(v),
+                None => continue,
+            };
         }
 
-        todo!()
+        None
     }
 
+    /// Maybe get a function in any available scopes
     pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
-        todo!()
+        // FIXME: Use find for code quality?
+        for scope in self.scopes.iter() {
+            match scope.get_function(name) {
+                Some(v) => return Some(v),
+                None => continue,
+            };
+        }
+
+        None
+    }
+
+    // FIXME: Add doc
+    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
+        match self.scopes.front_mut() {
+            Some(head) => head.add_variable(var),
+            None => Err(FIXMEError::from("Adding variable to empty scopemap")),
+        }
+    }
+
+    // FIXME: Add doc
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), FIXMEError> {
+        match self.scopes.front_mut() {
+            Some(head) => head.add_function(func),
+            None => Err(FIXMEError::from("Adding function to empty scopemap")),
+        }
     }
 }
 
@@ -77,5 +135,46 @@ mod tests {
         s.scope_enter();
         s.scope_exit();
         s.scope_exit();
+    }
+
+    #[test]
+    #[should_panic]
+    fn t_add_var_non_existent_scope() {
+        let mut s = ScopeMap::new();
+
+        s.add_variable(Var::new("Something".to_owned())).unwrap();
+    }
+
+    #[test]
+    fn t_find_non_existent_var() {
+        let s = ScopeMap::new();
+
+        assert!(s.get_variable("a").is_none());
+    }
+
+    #[test]
+    fn t_add_var_and_get_it() {
+        let mut s = ScopeMap::new();
+
+        s.scope_enter();
+        s.add_variable(Var::new("a0".to_owned())).unwrap();
+
+        assert!(s.get_variable("a").is_some());
+    }
+
+    #[test]
+    fn t_add_var_and_get_it_from_inner_scope() {
+        let mut s = ScopeMap::new();
+
+        s.scope_enter();
+        s.add_variable(Var::new("a0".to_owned())).unwrap();
+
+        s.scope_enter();
+        s.scope_enter();
+        s.scope_enter();
+        s.scope_enter();
+        s.scope_enter();
+
+        assert!(s.get_variable("a").is_some());
     }
 }
