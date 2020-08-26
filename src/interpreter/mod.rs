@@ -5,7 +5,7 @@
 //! aggregating the necessary information to run a broccoli program.
 
 mod scope_map;
-use scope_map::ScopeMap;
+use scope_map::{ScopeMap, FIXMEError};
 
 use std::collections::HashMap;
 
@@ -54,14 +54,14 @@ impl Interpreter {
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), String> {
+    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), FIXMEError> {
         self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_variable(&mut self, var: Var) -> Result<(), String> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
         self.scope_map.add_variable(var)
     }
 

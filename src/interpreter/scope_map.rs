@@ -52,7 +52,7 @@ impl Scope {
 type ScopeStack<T> = LinkedList<T>;
 
 // FIXME: Add actual error type
-type FIXMEError = String;
+pub type FIXMEError = String;
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
