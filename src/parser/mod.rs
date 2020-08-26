@@ -15,6 +15,8 @@ impl Parser {
     /// Parses the entire user input and returns a hashmap corresponding to the user
     /// program
     pub fn parse(input: &str) -> Result<Interpreter, String> {
-        todo!()
+        let interpreter = Interpreter::new();
+
+        Ok(interpreter)
     }
 }

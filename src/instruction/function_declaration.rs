@@ -38,12 +38,12 @@ impl FunctionDecArg {
     }
 
     /// Return a reference to the argument's name
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
     /// Return a reference to the argument's type
-    pub fn ty(&self) -> &String {
+    pub fn ty(&self) -> &Ty {
         &self.ty
     }
 }
