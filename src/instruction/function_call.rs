@@ -1,6 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument lists is given to the
 //! function on execution.
 
+use crate::interpreter::Interpreter;
 use crate::value::Constant;
 
 use super::{InstrKind, Instruction};
@@ -11,6 +12,7 @@ pub struct FunctionCall {
 
     /// Arguments to give to the function
     args: Vec<Constant>,
+    // FIXME: Use Box<dyn Instruction> or something along those lines
 }
 
 impl FunctionCall {
@@ -59,6 +61,12 @@ impl Instruction for FunctionCall {
         }
 
         format!("{})", base)
+    }
+
+    fn execute(&self, i: &mut Interpreter) {
+        let function = i.get_function(self.name());
+
+        // FIXME: execute function
     }
 }
 

@@ -65,6 +65,16 @@ impl Interpreter {
         self.scope_map.add_variable(var)
     }
 
+    /// Get a reference on an existing function
+    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
+        self.scope_map.get_function(name)
+    }
+
+    /// Get a reference on an existing variable
+    pub fn get_variable(&self, name: &str) -> Option<&Var> {
+        self.scope_map.get_variable(name)
+    }
+
     /// Create a new empty scope
     pub fn scope_enter(&mut self) {
         self.scope_map.scope_enter()
