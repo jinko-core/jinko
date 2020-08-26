@@ -55,20 +55,14 @@ impl Interpreter {
     /// if it existed already and was not.
     // FIXME: Add semantics error type
     pub fn add_function(&mut self, function: FunctionDec) -> Result<(), String> {
-        match self.scope_map.get_function(function.name()) {
-            Some(_) => Err(format!("function already declared: {}", function.name())),
-            None => self.scope_map.add_function(function),
-        }
+        self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
     pub fn add_variable(&mut self, var: Var) -> Result<(), String> {
-        match self.scope_map.get_variable(var.name()) {
-            Some(_) => Err(format!("variable already declared: {}", var.name())),
-            None => self.scope_map.add_variable(var),
-        }
+        self.scope_map.add_variable(var)
     }
 
     /// Create a new empty scope
