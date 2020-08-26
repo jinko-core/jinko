@@ -36,7 +36,7 @@ pub struct Interpreter {
 impl Interpreter {
     /// Create a new empty interpreter. Starts in non-audit mode
     pub fn new() -> Interpreter {
-        Interpreter {
+        let mut i = Interpreter {
             in_audit: false,
 
             entry_point: FunctionDec::new(String::from(ENTRY_NAME), None),
@@ -44,7 +44,11 @@ impl Interpreter {
 
             tests: HashMap::new(),
             exts: HashMap::new(),
-        }
+        };
+
+        i.scope_enter();
+
+        i
     }
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
@@ -65,6 +69,16 @@ impl Interpreter {
             Some(_) => Err(format!("variable already declared: {}", var.name())),
             None => self.scope_map.add_variable(var),
         }
+    }
+
+    /// Create a new empty scope
+    pub fn scope_enter(&mut self) {
+        self.scope_map.scope_enter()
+    }
+
+    /// Exit the latest created scope
+    pub fn scope_exit(&mut self) {
+        self.scope_map.scope_exit()
     }
 
     /// Pretty-prints valid broccoli code from a given interpreter

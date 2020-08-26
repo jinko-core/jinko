@@ -33,18 +33,18 @@ impl Scope {
 
     // FIXME: Add doc
     pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
-        // FIXME: Add actual logic
-        self.variables.insert(var.name().to_owned(), var);
-
-        Ok(())
+        match self.get_variable(var.name()) {
+            Some(_) => Err(format!("variable already declared: {}", var.name())),
+            None => Ok({ self.variables.insert(var.name().to_owned(), var); }),
+        }
     }
 
     // FIXME: Add doc
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), FIXMEError> {
-        // FIXME: Add actual logic
-        self.functions.insert(func.name().to_owned(), func);
-
-        Ok(())
+        match self.get_function(func.name()) {
+            Some(_) => Err(format!("function already declared: {}", func.name())),
+            None => Ok({ self.functions.insert(func.name().to_owned(), func); }),
+        }
     }
 }
 
