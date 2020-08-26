@@ -18,6 +18,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
+use crate::interpreter::Interpreter;
 use super::{InstrKind, Instruction};
 
 pub struct Block {
@@ -74,6 +75,16 @@ impl Instruction for Block {
 
         base.push_str("}");
         base
+    }
+
+    fn execute(&self, i: &mut Interpreter) {
+        i.scope_enter();
+
+        self.instructions
+            .iter()
+            .for_each(|inst| inst.execute(i));
+
+        i.scope_exit();
     }
 }
 

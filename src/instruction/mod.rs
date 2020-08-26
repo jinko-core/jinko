@@ -30,7 +30,7 @@ pub enum InstrKind {
 pub trait Instruction {
     /// Execute the instruction, altering the state of the program
     fn execute(&self, _: &mut Interpreter) {
-        unreachable!("The execution of this instruction is not implemented yet")
+        unreachable!("The execution of this instruction is not implemented yet. This is a bug")
     }
 
     /// What is the type of the instruction: a Statement or an Expression
