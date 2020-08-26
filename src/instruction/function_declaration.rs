@@ -66,6 +66,18 @@ impl FunctionDec {
         self.block = Some(block)
     }
 
+    /// Add an instruction to the function declaration, in order. This is mostly useful
+    /// when adding instructions to the entry point of the interpreter, since parsing
+    /// directly gives a block to the function
+    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) -> Result<(), String> {
+        match &mut self.block {
+            Some(b) => Ok(b.add_instruction(instruction)),
+            // FIXME: Return correct error
+            None => Err(format!("function {} has no instruction block. It might be an extern
+            function or an error", self.name)),
+        }
+    }
+
     /// Return a reference to the function's name
     pub fn name(&self) -> &str {
         &self.name

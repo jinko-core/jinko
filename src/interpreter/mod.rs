@@ -75,6 +75,11 @@ impl Interpreter {
         self.scope_map.scope_exit()
     }
 
+    /// Return the entry point of the interpreter
+    pub fn entry_point(&self) -> &FunctionDec {
+        &self.entry_point
+    }
+
     /// Pretty-prints valid broccoli code from a given interpreter
     pub fn print(&self) -> String {
         self.entry_point.print()
