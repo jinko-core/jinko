@@ -75,8 +75,11 @@ impl FunctionDec {
         match &mut self.block {
             Some(b) => Ok(b.add_instruction(instruction)),
             // FIXME: Return correct error
-            None => Err(format!("function {} has no instruction block. It might be an extern
-            function or an error", self.name)),
+            None => Err(format!(
+                "function {} has no instruction block. It might be an extern
+            function or an error",
+                self.name
+            )),
         }
     }
 

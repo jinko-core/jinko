@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, LinkedList};
 
-use crate::instruction::{Var, FunctionDec};
+use crate::instruction::{FunctionDec, Var};
 
 /// A scope contains a set of available variables and functions
 struct Scope {
@@ -35,7 +35,9 @@ impl Scope {
     pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
         match self.get_variable(var.name()) {
             Some(_) => Err(format!("variable already declared: {}", var.name())),
-            None => Ok({ self.variables.insert(var.name().to_owned(), var); }),
+            None => Ok({
+                self.variables.insert(var.name().to_owned(), var);
+            }),
         }
     }
 
@@ -43,7 +45,9 @@ impl Scope {
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), FIXMEError> {
         match self.get_function(func.name()) {
             Some(_) => Err(format!("function already declared: {}", func.name())),
-            None => Ok({ self.functions.insert(func.name().to_owned(), func); }),
+            None => Ok({
+                self.functions.insert(func.name().to_owned(), func);
+            }),
         }
     }
 }

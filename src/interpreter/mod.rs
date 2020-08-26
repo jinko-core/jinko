@@ -5,7 +5,7 @@
 //! aggregating the necessary information to run a broccoli program.
 
 mod scope_map;
-use scope_map::{ScopeMap, FIXMEError};
+use scope_map::{FIXMEError, ScopeMap};
 
 use std::collections::HashMap;
 
