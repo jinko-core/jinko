@@ -75,9 +75,11 @@ impl Interpreter {
         self.scope_map.scope_exit()
     }
 
-    /// Return the entry point of the interpreter
-    pub fn entry_point(&self) -> &FunctionDec {
-        &self.entry_point
+    /// Run the interpreter once, altering its contents
+    pub fn run_once(&mut self) {
+        // Take ownership of the entry point, replacing it with a new one,
+        // and execute it
+        std::mem::take(&mut self.entry_point).execute(self)
     }
 
     /// Pretty-prints valid broccoli code from a given interpreter
