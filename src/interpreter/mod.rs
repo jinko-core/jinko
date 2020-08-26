@@ -4,6 +4,9 @@
 //! source file returns an "Interpreter", which is really just a complex structure
 //! aggregating the necessary information to run a broccoli program.
 
+mod scope_map;
+use scope_map::{FIXMEError, ScopeMap};
+
 use std::collections::HashMap;
 
 use crate::instruction::{FunctionDec, Instruction, Var};
@@ -21,10 +24,8 @@ pub struct Interpreter {
     /// Entry point to the interpreter, the "main" function
     pub entry_point: FunctionDec,
 
-    /// Functions registered in the interpreter
-    functions: HashMap<IKey, FunctionDec>,
-    /// Variables registered in the interpreter
-    variables: HashMap<IKey, Var>,
+    /// Contains the scopes of the interpreter, in which are variables and functions
+    scope_map: ScopeMap,
 
     /// Tests registered in the interpreter
     tests: HashMap<IKey, FunctionDec>,
@@ -35,40 +36,50 @@ pub struct Interpreter {
 impl Interpreter {
     /// Create a new empty interpreter. Starts in non-audit mode
     pub fn new() -> Interpreter {
-        Interpreter {
+        let mut i = Interpreter {
             in_audit: false,
 
             entry_point: FunctionDec::new(String::from(ENTRY_NAME), None),
-            functions: HashMap::new(),
-            variables: HashMap::new(),
+            scope_map: ScopeMap::new(),
 
             tests: HashMap::new(),
             exts: HashMap::new(),
-        }
+        };
+
+        i.scope_enter();
+
+        i
     }
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), String> {
-        match self.functions.get(function.name()) {
-            Some(_) => Err(format!("function already declared: {}", function.name())),
-            None => Ok({
-                self.functions.insert(function.name().to_owned(), function);
-            }),
-        }
+    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), FIXMEError> {
+        self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_variable(&mut self, var: Var) -> Result<(), String> {
-        match self.variables.get(var.name()) {
-            Some(_) => Err(format!("variable already declared: {}", var.name())),
-            None => Ok({
-                self.variables.insert(var.name().to_owned(), var);
-            }),
-        }
+    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
+        self.scope_map.add_variable(var)
+    }
+
+    /// Create a new empty scope
+    pub fn scope_enter(&mut self) {
+        self.scope_map.scope_enter()
+    }
+
+    /// Exit the latest created scope
+    pub fn scope_exit(&mut self) {
+        self.scope_map.scope_exit()
+    }
+
+    /// Run the interpreter once, altering its contents
+    pub fn run_once(&mut self) {
+        // Take ownership of the entry point, replacing it with a new one,
+        // and execute it
+        std::mem::take(&mut self.entry_point).execute(self)
     }
 
     /// Pretty-prints valid broccoli code from a given interpreter

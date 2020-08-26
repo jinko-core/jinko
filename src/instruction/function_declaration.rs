@@ -1,6 +1,8 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use crate::interpreter::Interpreter;
+
 use super::{Block, InstrKind, Instruction};
 
 // FIXME: Shouldn't be a String
@@ -64,6 +66,21 @@ impl FunctionDec {
     /// function's block comes after the function signature.
     pub fn set_block(&mut self, block: Block) {
         self.block = Some(block)
+    }
+
+    /// Add an instruction to the function declaration, in order. This is mostly useful
+    /// when adding instructions to the entry point of the interpreter, since parsing
+    /// directly gives a block to the function
+    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) -> Result<(), String> {
+        match &mut self.block {
+            Some(b) => Ok(b.add_instruction(instruction)),
+            // FIXME: Return correct error
+            None => Err(format!(
+                "function {} has no instruction block. It might be an extern
+            function or an error",
+                self.name
+            )),
+        }
     }
 
     /// Return a reference to the function's name
@@ -145,6 +162,16 @@ impl Instruction for FunctionDec {
             Some(block) => format!("{} {}", base, block.print()),
             None => format!("{} {{}}", base),
         }
+    }
+
+    fn execute(&self, i: &mut Interpreter) {
+        println!("{} has been called!", self.name())
+    }
+}
+
+impl Default for FunctionDec {
+    fn default() -> Self {
+        FunctionDec::new(String::new(), None)
     }
 }
 
