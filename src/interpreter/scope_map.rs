@@ -181,4 +181,17 @@ mod tests {
 
         assert!(s.get_variable("a").is_some());
     }
+
+    #[test]
+    fn t_add_var_and_get_it_from_outer_scope() {
+        let mut s = ScopeMap::new();
+
+        s.scope_enter();
+
+        s.add_variable(Var::new("a".to_owned())).unwrap();
+
+        s.scope_exit();
+
+        assert!(s.get_variable("a").is_none());
+    }
 }
