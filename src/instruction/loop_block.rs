@@ -1,10 +1,12 @@
 //! The Loop instruction is used for repeating instructions. They can be of three
 //! different kinds, `for`, `while` or `loop`.
 
+use super::Block;
+
 /// What kind of loop the loop block represents: Either a for Loop, with a lower and
 /// upper bound, a while loop with just an upper bound, or a loop with no bound
 /// at all
-enum LoopKind {
+pub enum LoopKind {
     For,
     While,
     Loop,
@@ -15,4 +17,13 @@ enum LoopKind {
 pub struct Loop {
     kind: LoopKind,
     block: Block,
+}
+
+impl Loop {
+    pub fn new(kind: LoopKind, block: Block) -> Loop {
+        Loop {
+            kind,
+            block,
+        }
+    }
 }
