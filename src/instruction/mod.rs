@@ -7,6 +7,7 @@ mod block;
 mod function_call;
 mod function_declaration;
 mod if_else;
+mod loop_block;
 mod var;
 mod var_assignment;
 
@@ -15,6 +16,7 @@ pub use block::Block;
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
 pub use if_else::IfElse;
+pub use loop_block::Loop:
 pub use var::Var;
 pub use var_assignment::VarAssign;
 
