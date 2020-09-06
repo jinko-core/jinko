@@ -16,7 +16,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Var, VarAssign,
+    Loop, LoopKind, Var, VarAssign,
 };
 use crate::value::constant::{ConstKind, Constant};
 
@@ -164,10 +164,16 @@ impl Construct {
         }
     }
 
-    fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, expression) = Token::identifier(input)?;
+    fn variable(input: &str) -> IResult<&str, Var> {
+        let (input, name) = Token::identifier(input)?;
 
-        Ok((input, Box::new(Var::new(expression.to_owned()))))
+        Ok((input, Var::new(name.to_owned())))
+    }
+
+    fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, variable) = Construct::variable(input)?;
+
+        Ok((input, Box::new(variable)))
     }
 
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
@@ -472,6 +478,56 @@ impl Construct {
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Audit::new(block)))
+    }
+
+    /// Parse a loop block, meaning the `loop` keyword and a corresponding block
+    ///
+    /// `<loop> <block>`
+    pub fn loop_block(input: &str) -> IResult<&str, Loop> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::loop_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        Ok((input, Loop::new(LoopKind::Loop, block)))
+    }
+
+    /// Parse a while block. A while block consists of a high bound, or expression, as
+    /// well as a block
+    ///
+    /// `<while> <expression> <block>`
+    pub fn while_block(input: &str) -> IResult<&str, Loop> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::while_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, condition) = Construct::expression(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        Ok((input, Loop::new(LoopKind::While(condition), block)))
+    }
+
+    /// Construct a for block, which consists of a variable, a range expression, and
+    /// a block to execute
+    ///
+    /// `<for> <variable> <in> <expression> <block>`
+    pub fn for_block(input: &str) -> IResult<&str, Loop> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::for_tok(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, variable) = Construct::variable(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::in_tok(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, expression) = Construct::expression(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        Ok((input, Loop::new(LoopKind::For(variable, expression), block)))
     }
 }
 
@@ -896,5 +952,70 @@ mod tests {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid audit syntax"),
         }
+    }
+
+    #[test]
+    fn t_loop_valid() {
+        match Construct::loop_block("loop {}") {
+            Ok((i, _)) => assert_eq!(i, ""),
+            Err(_) => assert!(false, "Valid empty loop"),
+        }
+    }
+
+    #[test]
+    fn t_loop_invalid() {
+        match Construct::loop_block("loo {}") {
+            Ok(_) => assert!(false, "`loo` is not the keyword"),
+            Err(_) => assert!(true),
+        };
+
+        match Construct::loop_block("loop") {
+            Ok(_) => assert!(false, "A block is required"),
+            Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_while_valid() {
+        match Construct::while_block("while x_99 {}") {
+            Ok((i, _)) => assert_eq!(i, ""),
+            Err(_) => assert!(false, "Valid empty while"),
+        }
+    }
+
+    #[test]
+    fn t_while_invalid() {
+        match Construct::while_block("while {}") {
+            Ok(_) => assert!(false, "Need a condition"),
+            Err(_) => assert!(true),
+        };
+
+        match Construct::while_block("while") {
+            Ok(_) => assert!(false, "A block is required"),
+            Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_for_valid() {
+        match Construct::for_block("for x_99 in x_99 {}") {
+            Ok((i, _)) => assert_eq!(i, ""),
+            Err(_) => assert!(false, "Valid empty for"),
+        }
+    }
+
+    #[test]
+    fn t_for_invalid() {
+        match Construct::for_block("for {}") {
+            Ok(_) => assert!(false, "Need a variable and range"),
+            Err(_) => assert!(true),
+        };
+
+        match Construct::for_block("for x99 in {}") {
+            Ok(_) => assert!(false, "A range is required"),
+            Err(_) => assert!(true),
+        };
+
+        // FIXME: Add fun tests like `for x in { some_range_stuff() } {}`
     }
 }
