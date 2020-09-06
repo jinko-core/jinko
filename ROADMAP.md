@@ -11,11 +11,11 @@ be expanded. If you want to contribute, this a good place to start!
 * [x] Allow variables named "mut\*"
 * [x] Function calls
 * [x] Code blocks
-* [ ] If condition
-* [ ] Else condition
-* [ ] For loop
-* [ ] While loop
-* [ ] Loop loop
+* [x] If condition
+* [x] Else condition
+* [x] For loop
+* [x] While loop
+* [x] Loop loop
 * [x] Function definition
 
 ## Behavior
