@@ -63,10 +63,16 @@ impl Instruction for FunctionCall {
         format!("{})", base)
     }
 
-    fn execute(&self, i: &mut Interpreter) {
-        let function = i.get_function(self.name());
+    fn execute(&mut self, interpreter: &mut Interpreter) {
+        let mut function = match interpreter.get_function(self.name()) {
+            Some(f) => f,
+            None => unreachable!("Not exist chief"), // FIXME: Error out? Return Result instead
+        };
 
-        // FIXME: execute function
+        match function.block() {
+            Some(b) => b.execute(interpreter),
+            None => unreachable!("No can execute this chief"), // FIXME: error out,
+        }
     }
 }
 

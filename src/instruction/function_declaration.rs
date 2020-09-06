@@ -118,9 +118,9 @@ impl FunctionDec {
     }
 
     /// Return a reference to the function's block
-    pub fn block(&self) -> Option<&Block> {
-        match &self.block {
-            Some(b) => Some(&b),
+    pub fn block(&mut self) -> Option<&mut Block> {
+        match &mut self.block {
+            Some(b) => Some(&mut b),
             None => None,
         }
     }
@@ -164,7 +164,8 @@ impl Instruction for FunctionDec {
         }
     }
 
-    fn execute(&self, i: &mut Interpreter) {
+    fn execute(&mut self, i: &mut Interpreter) {
+        // FIXME: Add logic
         println!("{} has been called!", self.name())
     }
 }

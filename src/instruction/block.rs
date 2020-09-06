@@ -77,14 +77,14 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&self, i: &mut Interpreter) {
-        i.scope_enter();
+    fn execute(&mut self, interpreter: &mut Interpreter) {
+        interpreter.scope_enter();
 
         self.instructions
             .iter()
-            .for_each(|inst| inst.execute(i));
+            .for_each(|inst| inst.execute(interpreter));
 
-        i.scope_exit();
+        interpreter.scope_exit();
     }
 }
 
