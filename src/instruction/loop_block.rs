@@ -21,9 +21,6 @@ pub struct Loop {
 
 impl Loop {
     pub fn new(kind: LoopKind, block: Block) -> Loop {
-        Loop {
-            kind,
-            block,
-        }
+        Loop { kind, block }
     }
 }

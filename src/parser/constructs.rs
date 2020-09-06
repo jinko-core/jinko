@@ -16,7 +16,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Var, VarAssign, Loop, LoopKind,
+    Loop, LoopKind, Var, VarAssign,
 };
 use crate::value::constant::{ConstKind, Constant};
 
@@ -514,12 +514,16 @@ impl Construct {
     pub fn for_block(input: &str) -> IResult<&str, Loop> {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, _) = Token::for_tok(input)?;
+
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, variable) = Construct::variable(input)?;
+
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, _) = Token::in_tok(input)?;
+
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, expression) = Construct::expression(input)?;
+
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, block) = Construct::block(input)?;
 
