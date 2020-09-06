@@ -5,6 +5,7 @@ use colored::Colorize;
 
 /// What kind of error we are dealing with: Either a parsing error, or a behavioural one.
 #[derive(Debug)]
+#[repr(u8)]
 pub enum ErrKind {
     Parsing,
     Interpreter,
@@ -49,6 +50,15 @@ impl<'err> BroccoliError<'err> {
             loc,
             input,
         }
+    }
+
+
+    /// Display the error on stderr before exiting the program
+    pub fn exit(&self) {
+        eprintln!("{}", self.to_string());
+
+        // The exit code depends on the kind of error
+        std::process::exit(self.kind as i32 + 1);
     }
 }
 

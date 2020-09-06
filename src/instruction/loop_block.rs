@@ -47,7 +47,8 @@ impl Instruction for Loop {
         }
     }
 
-    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+    fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
+        /*
         match &mut self.kind {
             LoopKind::Loop => loop {
                 self.block.execute(interpreter)
@@ -57,7 +58,7 @@ impl Instruction for Loop {
                     self.block.execute(interpreter)
                 }
             }
-            LoopKind::For(var, range) => {
+            LoopKind::For(var, range) => Ok({
                 let var_name = var.name().to_owned();
                 interpreter.scope_enter();
 
@@ -78,7 +79,9 @@ impl Instruction for Loop {
                 }
 
                 interpreter.scope_exit();
-            }
+            })
         }
+        */
+        unreachable!("This is a bug")
     }
 }

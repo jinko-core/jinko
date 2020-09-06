@@ -77,17 +77,20 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+    fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
         interpreter.scope_enter();
 
-        self.instructions
+        let r =self.instructions
             .iter_mut()
             .map(|inst| inst.execute(interpreter))
-            .collect::<Result<(), BroccoliError>>();
+            .collect::<Result<(), BroccoliError<'i>>>();
 
         interpreter.scope_exit();
 
-        Ok(())
+        match r {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        }
     }
 }
 

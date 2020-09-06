@@ -90,7 +90,10 @@ impl Interpreter {
     pub fn run_once(&mut self) {
         // Take ownership of the entry point, replacing it with a new one,
         // and execute it
-        std::mem::take(&mut self.entry_point).execute(self)
+        match std::mem::take(&mut self.entry_point).execute(self) {
+            Ok(_) => {},
+            Err(e) => e.exit(),
+        }
     }
 
     /// Pretty-prints valid broccoli code from a given interpreter
