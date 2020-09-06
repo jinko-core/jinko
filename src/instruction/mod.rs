@@ -20,7 +20,7 @@ pub use loop_block::{Loop, LoopKind};
 pub use var::Var;
 pub use var_assignment::VarAssign;
 
-use crate::interpreter::Interpreter;
+use crate::{error::BroccoliError, interpreter::Interpreter};
 
 /// The type of instructions available
 #[derive(Debug, PartialEq)]
@@ -31,7 +31,7 @@ pub enum InstrKind {
 
 pub trait Instruction {
     /// Execute the instruction, altering the state of the program
-    fn execute(&mut self, _: &mut Interpreter) {
+    fn execute(&mut self, _: &mut Interpreter) -> Result<(), BroccoliError> {
         unreachable!("The execution of this instruction is not implemented yet. This is a bug")
     }
 
@@ -39,7 +39,10 @@ pub trait Instruction {
     /// only possible to execute as_bool on boolean variables, boolean constants. blocks
     /// returning a boolean and functions returning a boolean.
     fn as_bool(&self) -> bool {
-        unreachable!(format!("{}\n -> Cannot get boolean from expression", self.print()))
+        unreachable!(format!(
+            "{}\n -> Cannot get boolean from expression",
+            self.print()
+        ))
     }
 
     /// What is the type of the instruction: a Statement or an Expression

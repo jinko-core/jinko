@@ -6,7 +6,10 @@
 
 use std::collections::{HashMap, LinkedList};
 
-use crate::instruction::{FunctionDec, Var};
+use crate::{
+    error::{BroccoliError, ErrKind},
+    instruction::{FunctionDec, Var},
+};
 
 /// A scope contains a set of available variables and functions
 struct Scope {
@@ -32,9 +35,14 @@ impl Scope {
     }
 
     // FIXME: Add doc
-    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), BroccoliError> {
         match self.get_variable(var.name()) {
-            Some(_) => Err(format!("variable already declared: {}", var.name())),
+            Some(_) => Err(BroccoliError::new(
+                ErrKind::Interpreter,
+                format!("variable already declared: {}", var.name()),
+                None,
+                None,
+            )),
             None => Ok({
                 self.variables.insert(var.name().to_owned(), var);
             }),
@@ -42,9 +50,14 @@ impl Scope {
     }
 
     // FIXME: Add doc
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), FIXMEError> {
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), BroccoliError> {
         match self.get_function(func.name()) {
-            Some(_) => Err(format!("function already declared: {}", func.name())),
+            Some(_) => Err(BroccoliError::new(
+                ErrKind::Interpreter,
+                format!("function already declared: {}", func.name()),
+                None,
+                None,
+            )),
             None => Ok({
                 self.functions.insert(func.name().to_owned(), func);
             }),
@@ -54,9 +67,6 @@ impl Scope {
 
 /// A scope stack is a reversed stack. This alias is made for code clarity
 type ScopeStack<T> = LinkedList<T>;
-
-// FIXME: Add actual error type
-pub type FIXMEError = String;
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
@@ -111,18 +121,28 @@ impl ScopeMap {
     }
 
     // FIXME: Add doc
-    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), BroccoliError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(var),
-            None => Err(FIXMEError::from("Adding variable to empty scopemap")),
+            None => Err(BroccoliError::new(
+                ErrKind::Interpreter,
+                String::from("Adding variable to empty scopemap"),
+                None,
+                None,
+            )),
         }
     }
 
     // FIXME: Add doc
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), FIXMEError> {
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), BroccoliError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(func),
-            None => Err(FIXMEError::from("Adding function to empty scopemap")),
+            None => Err(BroccoliError::new(
+                ErrKind::Interpreter,
+                String::from("Adding function to empty scopemap"),
+                None,
+                None,
+            )),
         }
     }
 }

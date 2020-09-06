@@ -1,7 +1,7 @@
 //! The Loop instruction is used for repeating instructions. They can be of three
 //! different kinds, `for`, `while` or `loop`.
 
-use crate::interpreter::Interpreter;
+use crate::{error::BroccoliError, interpreter::Interpreter};
 
 use super::{Block, InstrKind, Instruction, Var};
 
@@ -47,10 +47,16 @@ impl Instruction for Loop {
         }
     }
 
-    fn execute(&mut self, interpreter: &mut Interpreter) {
+    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         match &mut self.kind {
-            LoopKind::Loop => loop { self.block.execute(interpreter) },
-            LoopKind::While(cond) => while cond.as_bool() { self.block.execute(interpreter) }
+            LoopKind::Loop => loop {
+                self.block.execute(interpreter)
+            },
+            LoopKind::While(cond) => {
+                while cond.as_bool() {
+                    self.block.execute(interpreter)
+                }
+            }
             LoopKind::For(var, range) => {
                 let var_name = var.name().to_owned();
                 interpreter.scope_enter();
@@ -65,14 +71,14 @@ impl Instruction for Loop {
 
                     // We can unwrap since we added the variable just before
                     if interpreter.get_variable(&var_name).unwrap().as_bool() {
-                        break
+                        break;
                     }
 
                     self.block.execute(interpreter)
-                };
+                }
 
                 interpreter.scope_exit();
-            },
+            }
         }
     }
 }

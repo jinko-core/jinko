@@ -5,10 +5,11 @@
 //! aggregating the necessary information to run a broccoli program.
 
 mod scope_map;
-use scope_map::{FIXMEError, ScopeMap};
+use scope_map::ScopeMap;
 
 use std::collections::HashMap;
 
+use crate::error::BroccoliError;
 use crate::instruction::{FunctionDec, Instruction, Var};
 
 /// Type the interpreter uses for keys
@@ -54,14 +55,14 @@ impl Interpreter {
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), FIXMEError> {
+    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), BroccoliError> {
         self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), BroccoliError> {
         self.scope_map.add_variable(var)
     }
 

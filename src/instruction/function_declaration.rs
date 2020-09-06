@@ -1,7 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::interpreter::Interpreter;
+use crate::{error::BroccoliError, interpreter::Interpreter};
 
 use super::{Block, InstrKind, Instruction};
 
@@ -161,9 +161,8 @@ impl Instruction for FunctionDec {
         }
     }
 
-    fn execute(&mut self, interpreter: &mut Interpreter) {
-        // FIXME: Fix once execute returns Result
-        interpreter.add_function(std::mem::take(self)).unwrap();
+    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+        interpreter.add_function(std::mem::take(self))
     }
 }
 

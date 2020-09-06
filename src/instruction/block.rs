@@ -18,8 +18,8 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::interpreter::Interpreter;
 use super::{InstrKind, Instruction};
+use crate::{error::BroccoliError, interpreter::Interpreter};
 
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
@@ -77,14 +77,17 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&mut self, interpreter: &mut Interpreter) {
+    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         interpreter.scope_enter();
 
         self.instructions
             .iter_mut()
-            .for_each(|inst| inst.execute(interpreter));
+            .map(|inst| inst.execute(interpreter))
+            .collect::<Result<(), BroccoliError>>();
 
         interpreter.scope_exit();
+
+        Ok(())
     }
 }
 
