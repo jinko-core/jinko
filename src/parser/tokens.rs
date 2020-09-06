@@ -108,6 +108,10 @@ impl Token {
         Token::specific_token(input, "for ")
     }
 
+    pub fn in_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "in ")
+    }
+
     pub fn mut_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "mut ")
     }

@@ -164,10 +164,16 @@ impl Construct {
         }
     }
 
-    fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, expression) = Token::identifier(input)?;
+    fn variable(input: &str) -> IResult<&str, Var> {
+        let (input, name) = Token::identifier(input)?;
 
-        Ok((input, Box::new(Var::new(expression.to_owned()))))
+        Ok((input, Var::new(name.to_owned())))
+    }
+
+    fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, variable) = Construct::variable(input)?;
+
+        Ok((input, Box::new(variable)))
     }
 
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
@@ -506,7 +512,18 @@ impl Construct {
     ///
     /// `<for> <variable> <in> <expression> <block>`
     pub fn for_block(input: &str) -> IResult<&str, Loop> {
-        todo!()
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::for_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, variable) = Construct::variable(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::in_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, expression) = Construct::expression(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        Ok((input, Loop::new(LoopKind::For(variable, expression), block)))
     }
 }
 
