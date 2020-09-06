@@ -33,15 +33,47 @@ impl Instruction for Loop {
     fn print(&self) -> String {
         match &self.kind {
             LoopKind::For(var, range) => format!(
-                "for {} in {} {}",
+                "for {} in {} {}\n",
                 var.name(),
                 range.print(),
                 self.block.print()
             ),
             LoopKind::While(condition) => {
-                format!("while {} {}", condition.print(), self.block.print())
+                format!("while {} {}\n", condition.print(), self.block.print())
             }
-            LoopKind::Loop => format!("loop {}", self.block.print()),
+            LoopKind::Loop => format!("loop {}\n", self.block.print()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::instruction::FunctionCall;
+
+    #[test]
+    fn pretty_print_loop() {
+        let b = Block::new();
+        let l = Loop::new(LoopKind::Loop, b);
+
+        assert_eq!(l.print().as_str(), "loop {\n}\n")
+    }
+
+    #[test]
+    fn pretty_print_for() {
+        let r = Box::new(FunctionCall::new("iter".to_owned()));
+        let b = Block::new();
+        let l = Loop::new(LoopKind::For(Var::new("i".to_owned()), r), b);
+
+        assert_eq!(l.print().as_str(), "for i in iter() {\n}\n")
+    }
+
+    #[test]
+    fn pretty_print_while() {
+        let r = Box::new(Block::new());
+        let b = Block::new();
+        let l = Loop::new(LoopKind::While(r), b);
+
+        assert_eq!(l.print().as_str(), "while {\n} {\n}\n")
     }
 }
