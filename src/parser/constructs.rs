@@ -485,6 +485,29 @@ impl Construct {
 
         Ok((input, Loop::new(LoopKind::Loop, block)))
     }
+
+    /// Parse a while block. A while block consists of a high bound, or expression, as
+    /// well as a block
+    ///
+    /// `<while> <expression> <block>`
+    pub fn while_block(input: &str) -> IResult<&str, Loop> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::while_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, condition) = Construct::expression(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        Ok((input, Loop::new(LoopKind::While(condition), block)))
+    }
+
+    /// Construct a for block, which consists of a variable, a range expression, and
+    /// a block to execute
+    ///
+    /// `<for> <variable> <in> <expression> <block>`
+    pub fn for_block(input: &str) -> IResult<&str, Loop> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -927,6 +950,48 @@ mod tests {
 
         match Construct::loop_block("loop") {
             Ok(_) => assert!(false, "A block is required"),
+            Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_while_valid() {
+        match Construct::while_block("while x_99 {}") {
+            Ok((i, _)) => assert_eq!(i, ""),
+            Err(_) => assert!(false, "Valid empty while"),
+        }
+    }
+
+    #[test]
+    fn t_while_invalid() {
+        match Construct::while_block("while {}") {
+            Ok(_) => assert!(false, "Need a condition"),
+            Err(_) => assert!(true),
+        };
+
+        match Construct::while_block("while") {
+            Ok(_) => assert!(false, "A block is required"),
+            Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_for_valid() {
+        match Construct::for_block("for x_99 in x_99 {}") {
+            Ok((i, _)) => assert_eq!(i, ""),
+            Err(_) => assert!(false, "Valid empty for"),
+        }
+    }
+
+    #[test]
+    fn t_for_invalid() {
+        match Construct::for_block("for {}") {
+            Ok(_) => assert!(false, "Need a variable and range"),
+            Err(_) => assert!(true),
+        };
+
+        match Construct::for_block("for x99 in {}") {
+            Ok(_) => assert!(false, "A range is required"),
             Err(_) => assert!(true),
         };
     }
