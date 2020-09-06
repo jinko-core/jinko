@@ -81,7 +81,7 @@ impl Instruction for Block {
         interpreter.scope_enter();
 
         self.instructions
-            .iter()
+            .iter_mut()
             .for_each(|inst| inst.execute(interpreter));
 
         interpreter.scope_exit();

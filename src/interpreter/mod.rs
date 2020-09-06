@@ -65,8 +65,8 @@ impl Interpreter {
         self.scope_map.add_variable(var)
     }
 
-    /// Get a reference on an existing function
-    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
+    /// Get a mutable reference on an existing function
+    pub fn get_function(&mut self, name: &str) -> Option<&mut FunctionDec> {
         self.scope_map.get_function(name)
     }
 
