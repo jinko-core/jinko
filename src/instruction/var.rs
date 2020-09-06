@@ -3,7 +3,6 @@
 
 use super::{InstrKind, Instruction};
 
-#[derive(Clone)]
 pub struct Var {
     name: String,
 }
@@ -28,5 +27,11 @@ impl Instruction for Var {
 
     fn print(&self) -> String {
         self.name.clone()
+    }
+}
+
+impl Default for Var {
+    fn default() -> Self {
+        Var::new(String::new())
     }
 }
