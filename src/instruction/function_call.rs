@@ -64,6 +64,8 @@ impl Instruction for FunctionCall {
     }
 
     fn execute(&mut self, interpreter: &mut Interpreter) {
+        // FIXME: Add logic
+        /*
         let function = match interpreter.get_function(self.name()) {
             Some(f) => f,
             None => unreachable!("Not exist chief"), // FIXME: Error out? Return Result instead
@@ -71,8 +73,9 @@ impl Instruction for FunctionCall {
 
         match function.block() {
             Some(b) => b.execute(interpreter),
-            None => unreachable!("No can execute this chief"), // FIXME: error out,
+            None => unreachable!("No can execute this chief"), // FIXME: Error out
         }
+        */
     }
 }
 

@@ -119,10 +119,7 @@ impl FunctionDec {
 
     /// Return a reference to the function's block
     pub fn block(&mut self) -> Option<&mut Block> {
-        match &mut self.block {
-            Some(b) => Some(&mut b),
-            None => None,
-        }
+        self.block.as_mut()
     }
 }
 
@@ -164,9 +161,9 @@ impl Instruction for FunctionDec {
         }
     }
 
-    fn execute(&mut self, i: &mut Interpreter) {
-        // FIXME: Add logic
-        println!("{} has been called!", self.name())
+    fn execute(&mut self, interpreter: &mut Interpreter) {
+        // FIXME: Fix once execute returns Result
+        interpreter.add_function(std::mem::take(self)).unwrap();
     }
 }
 

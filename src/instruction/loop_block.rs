@@ -48,15 +48,15 @@ impl Instruction for Loop {
     }
 
     fn execute(&mut self, interpreter: &mut Interpreter) {
-        match &self.kind {
+        match &mut self.kind {
             LoopKind::Loop => loop { self.block.execute(interpreter) },
             LoopKind::While(cond) => while cond.as_bool() { self.block.execute(interpreter) }
             LoopKind::For(var, range) => {
-                let var_name = var.name();
+                let var_name = var.name().to_owned();
                 interpreter.scope_enter();
 
                 // FIXME: No unwrap if ugly?
-                interpreter.add_variable(std::mem::take(&mut var)).unwrap();
+                interpreter.add_variable(std::mem::take(var)).unwrap();
 
                 loop {
                     // Set the value of `var` to the last return value, and execute
@@ -64,7 +64,7 @@ impl Instruction for Loop {
                     range.execute(interpreter);
 
                     // We can unwrap since we added the variable just before
-                    if interpreter.get_variable(var_name).unwrap().as_bool() {
+                    if interpreter.get_variable(&var_name).unwrap().as_bool() {
                         break
                     }
 
