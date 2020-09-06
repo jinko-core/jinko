@@ -16,7 +16,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Var, VarAssign,
+    Var, VarAssign, Loop,
 };
 use crate::value::constant::{ConstKind, Constant};
 
@@ -473,6 +473,10 @@ impl Construct {
 
         Ok((input, Audit::new(block)))
     }
+
+    pub fn loop_block(input: &str) -> IResult<&str, Loop> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -896,5 +900,26 @@ mod tests {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid audit syntax"),
         }
+    }
+
+    #[test]
+    fn t_loop_valid() {
+        match Construct::loop_block("loop {}") {
+            Ok((i, _)) => assert_eq!(i, ""),
+            Err(_) => assert!(false, "Valid empty loop"),
+        }
+    }
+
+    #[test]
+    fn t_loop_invalid() {
+        match Construct::loop_block("loo {}") {
+            Ok(_) => assert!(false, "`loo` is not the keyword"),
+            Err(_) => assert!(true),
+        };
+
+        match Construct::loop_block("loop") {
+            Ok(_) => assert!(false, "A block is required"),
+            Err(_) => assert!(true),
+        };
     }
 }
