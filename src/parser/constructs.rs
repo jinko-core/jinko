@@ -16,7 +16,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Var, VarAssign, Loop,
+    Var, VarAssign, Loop, LoopKind,
 };
 use crate::value::constant::{ConstKind, Constant};
 
@@ -474,8 +474,16 @@ impl Construct {
         Ok((input, Audit::new(block)))
     }
 
+    /// Parse a loop block, meaning the `loop` keyword and a corresponding block
+    ///
+    /// `<loop> <block>`
     pub fn loop_block(input: &str) -> IResult<&str, Loop> {
-        todo!()
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::loop_tok(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, block) = Construct::block(input)?;
+
+        Ok((input, Loop::new(LoopKind::Loop, block)))
     }
 }
 

@@ -16,7 +16,7 @@ pub use block::Block;
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
 pub use if_else::IfElse;
-pub use loop_block::Loop;
+pub use loop_block::{Loop, LoopKind};
 pub use var::Var;
 pub use var_assignment::VarAssign;
 
