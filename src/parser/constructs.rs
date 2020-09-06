@@ -1015,5 +1015,7 @@ mod tests {
             Ok(_) => assert!(false, "A range is required"),
             Err(_) => assert!(true),
         };
+
+        // FIXME: Add fun tests like `for x in { some_range_stuff() } {}`
     }
 }
