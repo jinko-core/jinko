@@ -3,6 +3,7 @@
 
 use super::{InstrKind, Instruction};
 
+#[derive(Clone)]
 pub struct Var {
     name: String,
 }

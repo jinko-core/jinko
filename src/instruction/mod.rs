@@ -35,6 +35,13 @@ pub trait Instruction {
         unreachable!("The execution of this instruction is not implemented yet. This is a bug")
     }
 
+    /// Maybe execute the instruction, transforming it in a Rust bool if possible. It's
+    /// only possible to execute as_bool on boolean variables, boolean constants. blocks
+    /// returning a boolean and functions returning a boolean.
+    fn as_bool(&self) -> bool {
+        unreachable!(format!("{}\n -> Cannot get boolean from expression", self.print()))
+    }
+
     /// What is the type of the instruction: a Statement or an Expression
     fn kind(&self) -> InstrKind;
 
