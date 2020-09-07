@@ -39,8 +39,8 @@ impl Block {
     }
 
     /// Returns a reference to the instructions contained in the block
-    pub fn instructions(&self) -> &Vec<Box<dyn Instruction>> {
-        &self.instructions
+    pub fn instructions(&mut self) -> &mut Vec<Box<dyn Instruction>> {
+        &mut self.instructions
     }
 
     /// Gives a set of instructions to the block
@@ -65,7 +65,7 @@ impl Instruction for Block {
     fn print(&self) -> String {
         let mut base = String::from("{\n");
 
-        for instr in self.instructions() {
+        for instr in &self.instructions {
             base = format!("{}    {}", base, &instr.print());
             base.push_str(match instr.kind() {
                 InstrKind::Statement => ";\n",
@@ -80,12 +80,10 @@ impl Instruction for Block {
     fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
         interpreter.scope_enter();
 
-        for inst in &mut self.instructions {
-            match inst.execute(interpreter) {
-                Ok(_) => continue,
-                Err(e) => return Err(e),
-            }
-        }
+        // FIXME: Use Result of inst.execute()
+        self.instructions()
+            .iter_mut()
+            .for_each(|inst| { inst.execute(interpreter); });
 
         interpreter.scope_exit();
 

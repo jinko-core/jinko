@@ -4,7 +4,7 @@
 use colored::Colorize;
 
 /// What kind of error we are dealing with: Either a parsing error, or a behavioural one.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum ErrKind {
     Parsing,
@@ -12,6 +12,7 @@ pub enum ErrKind {
 }
 
 /// Contains indications vis-a-vis the error's location in the source file
+#[derive(Debug, PartialEq)]
 pub struct SpaceLocation(pub usize, pub usize);
 
 impl SpaceLocation {
@@ -28,6 +29,7 @@ impl SpaceLocation {
 
 /// The actual error type
 // FIXME: Remove `Option` once input tracking is implemented
+#[derive(Debug, PartialEq)]
 pub struct BroccoliError<'err> {
     kind: ErrKind,
     msg: String,
@@ -52,13 +54,17 @@ impl<'err> BroccoliError<'err> {
         }
     }
 
-
     /// Display the error on stderr before exiting the program
     pub fn exit(&self) {
         eprintln!("{}", self.to_string());
 
         // The exit code depends on the kind of error
         std::process::exit(self.kind as i32 + 1);
+    }
+
+    /// What kind of error the error is
+    pub fn kind(&self) -> ErrKind {
+        self.kind
     }
 }
 

@@ -105,6 +105,7 @@ impl Interpreter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::ErrKind;
 
     #[test]
     fn t_redefinition_of_function() {
@@ -115,8 +116,8 @@ mod tests {
 
         assert_eq!(i.add_function(f0), Ok(()));
         assert_eq!(
-            i.add_function(f0_copy),
-            Err("function already declared: f0".to_owned())
+            i.add_function(f0_copy).err().unwrap().kind(),
+            ErrKind::Interpreter,
         );
     }
 
@@ -129,8 +130,8 @@ mod tests {
 
         assert_eq!(i.add_variable(v0), Ok(()));
         assert_eq!(
-            i.add_variable(v0_copy),
-            Err("variable already declared: v0".to_owned())
+            i.add_variable(v0_copy).err().unwrap().kind(),
+            ErrKind::Interpreter,
         );
     }
 }
