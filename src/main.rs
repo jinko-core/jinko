@@ -7,9 +7,10 @@ mod repl;
 mod value;
 
 use args::Args;
+use repl::Repl;
 
 fn main() {
     let args = Args::handle();
 
-    println!("{:#?}", args.input);
+    Repl::launch_repl();
 }

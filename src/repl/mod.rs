@@ -16,6 +16,10 @@ impl Repl {
         interpreter: &mut Interpreter,
         input: &'i str,
     ) -> Result<(), BroccoliError> {
+        let (_, fc) = Construct::function_call(input).unwrap();
+
+        interpreter.entry_point.add_instruction(Box::new(fc));
+
         Ok(())
     }
 
@@ -25,7 +29,7 @@ impl Repl {
         let mut interpreter = Interpreter::new();
 
         // FIXME: Add actual prompt
-        line_reader.set_prompt("broccoli >")?;
+        line_reader.set_prompt("broccoli > ")?;
 
         while let ReadResult::Input(input) = line_reader.read_line()? {
             Repl::parse_reentrant(&mut interpreter, &input)?;
