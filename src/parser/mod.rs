@@ -5,9 +5,9 @@
 mod constructs;
 mod tokens;
 
-use super::interpreter::Interpreter;
+use crate::interpreter::Interpreter;
 
-use constructs::Construct;
+pub use constructs::Construct;
 
 pub struct Parser;
 
