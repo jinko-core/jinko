@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument lists is given to the
 //! function on execution.
 
-use crate::error::BroccoliError;
+use crate::error::{BroccoliError, ErrKind};
 use crate::interpreter::Interpreter;
 use crate::value::Constant;
 
@@ -65,19 +65,19 @@ impl Instruction for FunctionCall {
     }
 
     fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
-        // FIXME: Add logic
-        /*
         let function = match interpreter.get_function(self.name()) {
             Some(f) => f,
-            None => unreachable!("Not exist chief"), // FIXME: Error out? Return Result instead
+            // FIXME: Fix Location and input
+            None => return Err(BroccoliError::new(ErrKind::Interpreter, format!("cannot find function {}", self.name()), None, self.name().to_owned()))
         };
 
         match function.block() {
             Some(b) => b.execute(interpreter),
-            None => unreachable!("No can execute this chief"), // FIXME: Error out
-        }
-        */
-        unreachable!("Function calls are not implemented yet")
+            // FIXME: Fix Location and input
+            None => return Err(BroccoliError::new(ErrKind::Interpreter, format!("Cannot execute function with no body: {}", self.name()), None, self.name().to_owned())),
+        };
+
+        Ok(())
     }
 }
 
