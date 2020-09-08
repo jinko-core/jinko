@@ -86,6 +86,16 @@ impl Interpreter {
         self.scope_map.scope_exit()
     }
 
+    /// Enter audit mode
+    pub fn audit_enter(&mut self) {
+        self.in_audit = true;
+    }
+
+    /// Exit audit mode
+    pub fn audit_exit(&mut self) {
+        self.in_audit = false;
+    }
+
     /// Run the interpreter once, altering its contents
     pub fn run_once(&mut self) {
         // Take ownership of the entry point, replacing it with a new one,
