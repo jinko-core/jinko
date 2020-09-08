@@ -30,21 +30,21 @@ impl SpaceLocation {
 /// The actual error type
 // FIXME: Remove `Option` once input tracking is implemented
 #[derive(Debug, PartialEq)]
-pub struct BroccoliError<'err> {
+pub struct BroccoliError {
     kind: ErrKind,
     msg: String,
 
     loc: Option<SpaceLocation>,
-    input: Option<&'err str>,
+    input: String,
 }
 
-impl<'err> BroccoliError<'err> {
+impl BroccoliError {
     /// Create a new error and return it
     pub fn new(
         kind: ErrKind,
         msg: String,
         loc: Option<SpaceLocation>,
-        input: Option<&'err str>,
+        input: String,
     ) -> BroccoliError {
         BroccoliError {
             kind,
@@ -68,13 +68,13 @@ impl<'err> BroccoliError<'err> {
     }
 }
 
-impl std::fmt::Display for BroccoliError<'_> {
+impl std::fmt::Display for BroccoliError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // FIXME: Add better formatting
         write!(
             f,
             "Input: {}\nErrorKind: {:?}\nInfo: {}",
-            self.input.unwrap(), // FIXME: Remove unwrap()
+            self.input, // FIXME: Remove unwrap()
             self.kind,
             self.msg.red()
         )

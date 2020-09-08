@@ -41,7 +41,7 @@ impl Scope {
                 ErrKind::Interpreter,
                 format!("variable already declared: {}", var.name()),
                 None,
-                None,
+                var.name().to_owned(),
             )),
             None => Ok({
                 self.variables.insert(var.name().to_owned(), var);
@@ -56,7 +56,7 @@ impl Scope {
                 ErrKind::Interpreter,
                 format!("function already declared: {}", func.name()),
                 None,
-                None,
+                func.name().to_owned(),
             )),
             None => Ok({
                 self.functions.insert(func.name().to_owned(), func);
@@ -120,7 +120,7 @@ impl ScopeMap {
         None
     }
 
-    // FIXME: Add doc
+    /// Add a variable to the current scope if it hasn't been added before
     pub fn add_variable(&mut self, var: Var) -> Result<(), BroccoliError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(var),
@@ -128,12 +128,12 @@ impl ScopeMap {
                 ErrKind::Interpreter,
                 String::from("Adding variable to empty scopemap"),
                 None,
-                None,
+                var.name().to_owned(),
             )),
         }
     }
 
-    // FIXME: Add doc
+    /// Add a function to the current scope if it hasn't been added before
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), BroccoliError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(func),
@@ -141,7 +141,7 @@ impl ScopeMap {
                 ErrKind::Interpreter,
                 String::from("Adding function to empty scopemap"),
                 None,
-                None,
+                func.name().to_owned(),
             )),
         }
     }

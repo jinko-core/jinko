@@ -161,7 +161,7 @@ impl Instruction for FunctionDec {
         }
     }
 
-    fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
+    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         interpreter.add_function(std::mem::take(self))
     }
 }

@@ -31,7 +31,7 @@ pub enum InstrKind {
 
 pub trait Instruction {
     /// Execute the instruction, altering the state of the program
-    fn execute<'i>(&mut self, _: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
+    fn execute(&mut self, _: &mut Interpreter) -> Result<(), BroccoliError> {
         unreachable!("The execution of this instruction is not implemented yet. This is a bug")
     }
 

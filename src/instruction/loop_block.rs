@@ -47,7 +47,7 @@ impl Instruction for Loop {
         }
     }
 
-    fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
+    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         /*
         match &mut self.kind {
             LoopKind::Loop => loop {
