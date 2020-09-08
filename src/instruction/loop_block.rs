@@ -47,8 +47,8 @@ impl Instruction for Loop {
         }
     }
 
-    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
-        match &mut self.kind {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+        match &self.kind {
             LoopKind::Loop => loop {
                 self.block.execute(interpreter)?;
             },
@@ -61,7 +61,7 @@ impl Instruction for Loop {
                 let var_name = var.name().to_owned();
                 interpreter.scope_enter();
 
-                interpreter.add_variable(std::mem::take(var))?;
+                interpreter.add_variable(var.clone())?;
 
                 loop {
                     range.execute(interpreter)?;
