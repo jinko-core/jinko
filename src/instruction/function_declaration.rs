@@ -160,10 +160,6 @@ impl Instruction for FunctionDec {
             None => format!("{} {{}}", base),
         }
     }
-
-    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
-        interpreter.add_function(std::mem::take(self))
-    }
 }
 
 impl Default for FunctionDec {

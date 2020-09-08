@@ -110,7 +110,7 @@ impl ScopeMap {
     /// Maybe get a function in any available scopes
     pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
         // FIXME: Use find for code quality?
-        for scope in self.scopes.iter_mut() {
+        for scope in self.scopes.iter() {
             match scope.get_function(name) {
                 Some(v) => return Some(v),
                 None => continue,

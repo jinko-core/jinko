@@ -866,7 +866,7 @@ mod tests {
         assert_eq!(func.name(), "something");
         assert_eq!(func.ty(), None);
         assert_eq!(func.args().len(), 0);
-        assert_eq!(func.kind(), FunctionKind::Func);
+        assert_eq!(func.fn_kind(), FunctionKind::Func);
     }
 
     #[test]
@@ -878,7 +878,7 @@ mod tests {
         assert_eq!(func.name(), "add");
         assert_eq!(func.ty(), Some("type"));
         assert_eq!(func.args().len(), 2);
-        assert_eq!(func.kind(), FunctionKind::Func);
+        assert_eq!(func.fn_kind(), FunctionKind::Func);
     }
 
     #[test]
@@ -887,7 +887,7 @@ mod tests {
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), None);
-        assert_eq!(test.kind(), FunctionKind::Test);
+        assert_eq!(test.fn_kind(), FunctionKind::Test);
     }
 
     #[test]
@@ -906,7 +906,7 @@ mod tests {
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), None);
-        assert_eq!(test.kind(), FunctionKind::Mock);
+        assert_eq!(test.fn_kind(), FunctionKind::Mock);
     }
 
     #[test]
@@ -917,7 +917,7 @@ mod tests {
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), Some("type"));
-        assert_eq!(test.kind(), FunctionKind::Ext);
+        assert_eq!(test.fn_kind(), FunctionKind::Ext);
     }
 
     #[test]

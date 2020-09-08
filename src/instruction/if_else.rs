@@ -57,13 +57,13 @@ impl Instruction for IfElse {
         }
     }
 
-    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         let cond = self.condition.as_bool();
 
         if cond {
             self.if_body.execute(interpreter)
         } else {
-            match &mut self.else_body {
+            match &self.else_body {
                 Some(b) => b.execute(interpreter),
                 None => Ok(()),
             }
