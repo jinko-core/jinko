@@ -120,7 +120,7 @@ impl ScopeMap {
         None
     }
 
-    // FIXME: Add doc, cleanup errors
+    /// Add a variable to the current scope if it hasn't been added before
     pub fn add_variable(&mut self, var: Var) -> Result<(), BroccoliError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(var),
@@ -133,7 +133,7 @@ impl ScopeMap {
         }
     }
 
-    // FIXME: Add doc, cleanup errors
+    /// Add a function to the current scope if it hasn't been added before
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), BroccoliError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(func),
