@@ -48,40 +48,34 @@ impl Instruction for Loop {
     }
 
     fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
-        /*
         match &mut self.kind {
             LoopKind::Loop => loop {
-                self.block.execute(interpreter)
+                self.block.execute(interpreter)?;
             },
-            LoopKind::While(cond) => {
-                while cond.as_bool() {
-                    self.block.execute(interpreter)
-                }
-            }
-            LoopKind::For(var, range) => Ok({
+            LoopKind::While(cond) => while cond.as_bool() {
+                self.block.execute(interpreter)?;
+            },
+            LoopKind::For(var, range) => {
                 let var_name = var.name().to_owned();
                 interpreter.scope_enter();
 
-                // FIXME: No unwrap if ugly?
-                interpreter.add_variable(std::mem::take(var)).unwrap();
+                interpreter.add_variable(std::mem::take(var))?;
 
                 loop {
-                    // Set the value of `var` to the last return value, and execute
-                    // the block
-                    range.execute(interpreter);
+                    range.execute(interpreter)?;
 
-                    // We can unwrap since we added the variable just before
-                    if interpreter.get_variable(&var_name).unwrap().as_bool() {
+                    // We can unwrap since we added the variable right before
+                    if !interpreter.get_variable(&var_name).unwrap().as_bool() {
                         break;
                     }
 
-                    self.block.execute(interpreter)
+                    self.block.execute(interpreter)?;
                 }
 
                 interpreter.scope_exit();
-            })
+            },
         }
-        */
-        unreachable!("This is a bug")
+
+        Ok(())
     }
 }
