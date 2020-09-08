@@ -52,9 +52,11 @@ impl Instruction for Loop {
             LoopKind::Loop => loop {
                 self.block.execute(interpreter)?;
             },
-            LoopKind::While(cond) => while cond.as_bool() {
-                self.block.execute(interpreter)?;
-            },
+            LoopKind::While(cond) => {
+                while cond.as_bool() {
+                    self.block.execute(interpreter)?;
+                }
+            }
             LoopKind::For(var, range) => {
                 let var_name = var.name().to_owned();
                 interpreter.scope_enter();
@@ -73,7 +75,7 @@ impl Instruction for Loop {
                 }
 
                 interpreter.scope_exit();
-            },
+            }
         }
 
         Ok(())

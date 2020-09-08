@@ -97,7 +97,7 @@ impl FunctionDec {
     }
 
     /// Return the kind of a function
-    pub fn kind(&self) -> FunctionKind {
+    pub fn fn_kind(&self) -> FunctionKind {
         self.kind
     }
 

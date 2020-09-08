@@ -68,16 +68,29 @@ impl Instruction for FunctionCall {
         let function = match interpreter.get_function(self.name()) {
             Some(f) => f,
             // FIXME: Fix Location and input
-            None => return Err(BroccoliError::new(ErrKind::Interpreter, format!("cannot find function {}", self.name()), None, self.name().to_owned()))
+            None => {
+                return Err(BroccoliError::new(
+                    ErrKind::Interpreter,
+                    format!("cannot find function {}", self.name()),
+                    None,
+                    self.name().to_owned(),
+                ))
+            }
         };
 
-        match function.block() {
-            Some(b) => b.execute(interpreter),
-            // FIXME: Fix Location and input
-            None => return Err(BroccoliError::new(ErrKind::Interpreter, format!("Cannot execute function with no body: {}", self.name()), None, self.name().to_owned())),
+        let block = match function.block() {
+            Some(b) => b,
+            None => {
+                return Err(BroccoliError::new(
+                    ErrKind::Interpreter,
+                    format!("cannot execute function {} as it is marked `ext`", self.name()),
+                    None,
+                    self.name().to_owned(),
+                ))
+            }
         };
 
-        Ok(())
+        block.execute(interpreter)
     }
 }
 

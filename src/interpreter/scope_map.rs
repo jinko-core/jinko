@@ -30,8 +30,8 @@ impl Scope {
         self.variables.get(name)
     }
 
-    pub fn get_function(&mut self, name: &str) -> Option<&mut FunctionDec> {
-        self.functions.get_mut(name)
+    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
+        self.functions.get(name)
     }
 
     // FIXME: Add doc
@@ -108,7 +108,7 @@ impl ScopeMap {
     }
 
     /// Maybe get a function in any available scopes
-    pub fn get_function(&mut self, name: &str) -> Option<&mut FunctionDec> {
+    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter_mut() {
             match scope.get_function(name) {
