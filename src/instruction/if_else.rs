@@ -15,6 +15,9 @@
 //! x = if condition { 12 } else { 13 };
 //! ```
 
+use crate::error::BroccoliError;
+use crate::interpreter::Interpreter;
+
 use super::{Block, InstrKind, Instruction};
 
 pub struct IfElse {
@@ -54,8 +57,20 @@ impl Instruction for IfElse {
         }
     }
 
-    // FIXME: Add execute()
+    fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
+        let cond = self.condition.as_bool();
+
+        if cond {
+            self.if_body.execute(interpreter)
+        } else {
+            match &mut self.else_body {
+                Some(b) => b.execute(interpreter),
+                None => Ok(()),
+            }
+        }
+    }
 }
 
+// FIXME: Add printing tests for if else
 #[cfg(test)]
 mod tests {}
