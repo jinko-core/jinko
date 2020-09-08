@@ -81,9 +81,9 @@ impl Instruction for Block {
         interpreter.scope_enter();
 
         // FIXME: Use Result of inst.execute()
-        self.instructions()
-            .iter_mut()
-            .for_each(|inst| { inst.execute(interpreter); });
+        self.instructions().iter_mut().for_each(|inst| {
+            inst.execute(interpreter);
+        });
 
         interpreter.scope_exit();
 
