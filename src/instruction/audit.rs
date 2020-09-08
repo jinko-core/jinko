@@ -26,7 +26,7 @@ impl Instruction for Audit {
         format!("audit {}", self.block.print())
     }
 
-    fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
+    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         interpreter.audit_enter();
 
         // FIXME: Use block execute as return value

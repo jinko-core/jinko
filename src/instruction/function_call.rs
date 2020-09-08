@@ -64,7 +64,7 @@ impl Instruction for FunctionCall {
         format!("{})", base)
     }
 
-    fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
+    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         // FIXME: Add logic
         /*
         let function = match interpreter.get_function(self.name()) {

@@ -77,7 +77,7 @@ impl Instruction for Block {
         base
     }
 
-    fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
+    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         interpreter.scope_enter();
 
         // FIXME: Use Result of inst.execute()

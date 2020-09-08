@@ -57,7 +57,7 @@ impl Instruction for IfElse {
         }
     }
 
-    fn execute<'i>(&mut self, interpreter: &'i mut Interpreter) -> Result<(), BroccoliError<'i>> {
+    fn execute(&mut self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         let cond = self.condition.as_bool();
 
         if cond {
