@@ -118,8 +118,8 @@ impl FunctionDec {
     }
 
     /// Return a reference to the function's block
-    pub fn block(&mut self) -> Option<&mut Block> {
-        self.block.as_mut()
+    pub fn block(&self) -> Option<&Block> {
+        self.block.as_ref()
     }
 }
 
