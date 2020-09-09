@@ -1,6 +1,6 @@
-# Broccoli Roadmap
+# Jinko Roadmap
 
-This document contains the roadmap of features that are being added to broccoli. It will
+This document contains the roadmap of features that are being added to jinko. It will
 be expanded. If you want to contribute, this a good place to start!
 
 ## Parsing

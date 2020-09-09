@@ -1,5 +1,5 @@
 [package]
-name = "broccoli"
+name = "jinko"
 version = "0.1.0"
 authors = ["CohenArthur <arthur.cohen@epita.fr>"]
 edition = "2018"

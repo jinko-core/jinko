@@ -1,4 +1,4 @@
-//! Instructions are used to represent a single expression/statement in broccoli.
+//! Instructions are used to represent a single expression/statement in jinko.
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
@@ -38,6 +38,6 @@ pub trait Instruction {
     /// What is the type of the instruction: a Statement or an Expression
     fn kind(&self) -> InstrKind;
 
-    /// Pretty-print the instruction to valid broccoli code
+    /// Pretty-print the instruction to valid jinko code
     fn print(&self) -> String;
 }

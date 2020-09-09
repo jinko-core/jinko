@@ -1,8 +1,8 @@
-//! The broccoli interpreter keeps track of variables and functions, and dispatches calls
+//! The jinko interpreter keeps track of variables and functions, and dispatches calls
 //! and references to their correct location. It contains a information regarding the
 //! registered functions and variables. It also handles garbage collection. Parsing a
 //! source file returns an "Interpreter", which is really just a complex structure
-//! aggregating the necessary information to run a broccoli program.
+//! aggregating the necessary information to run a jinko program.
 
 mod scope_map;
 use scope_map::{FIXMEError, ScopeMap};
@@ -14,7 +14,7 @@ use crate::instruction::{FunctionDec, Instruction, Var};
 /// Type the interpreter uses for keys
 type IKey = String;
 
-/// Name of the entry point in broccoli
+/// Name of the entry point in jinko
 const ENTRY_NAME: &str = "__entry";
 
 pub struct Interpreter {
@@ -82,7 +82,7 @@ impl Interpreter {
         std::mem::take(&mut self.entry_point).execute(self)
     }
 
-    /// Pretty-prints valid broccoli code from a given interpreter
+    /// Pretty-prints valid jinko code from a given interpreter
     pub fn print(&self) -> String {
         self.entry_point.print()
     }

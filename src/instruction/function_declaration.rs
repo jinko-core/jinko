@@ -8,7 +8,7 @@ use super::{Block, InstrKind, Instruction};
 // FIXME: Shouldn't be a String
 type Ty = String;
 
-/// What "kind" of function is defined. There are four types of functions in broccoli,
+/// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FunctionKind {
