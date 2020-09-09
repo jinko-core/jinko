@@ -54,8 +54,28 @@ impl Construct {
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
     pub fn constant(input: &str) -> IResult<&str, Box<dyn Value>> {
+        // FIXME: Use alt instead?
         match opt(Construct::c_char_constant)(input)? {
-        }
+            (input, Some(value)) => return Ok((input, value)),
+            (input, None) => {},
+        };
+
+        match opt(Construct::c_string_constant)(input)? {
+            (input, Some(value)) => return Ok((input, value)),
+            (input, None) => {},
+        };
+
+        match opt(Construct::c_float_constant)(input)? {
+            (input, Some(value)) => return Ok((input, value)),
+            (input, None) => {},
+        };
+
+        match opt(Construct::c_int_constant)(input)? {
+            (input, Some(value)) => return Ok((input, value)),
+            (input, None) => {},
+        };
+
+        Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf)))
 
         /*
         let (input, char_value) = opt(Token::char_constant)(input)?;

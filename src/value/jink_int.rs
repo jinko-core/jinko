@@ -1,5 +1,7 @@
 //! Represents an integer in Jinko. All integers are signed 64 bytes
 
+use super::Value;
+
 pub struct JinkInt(i64);
 
 impl From<i64> for JinkInt {
@@ -7,3 +9,5 @@ impl From<i64> for JinkInt {
         JinkInt(i)
     }
 }
+
+impl Value for JinkInt {}
