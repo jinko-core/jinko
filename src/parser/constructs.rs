@@ -18,7 +18,7 @@ use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
     Loop, LoopKind, Var, VarAssign,
 };
-use crate::value::constant::{ConstKind, Constant};
+use crate::value::{Value, JinkFloat, JinkInt, JinkChar, JinkString};
 
 use super::tokens::Token;
 
@@ -29,7 +29,7 @@ impl Construct {
     /// `0.5`.
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
-    pub fn constant(input: &str) -> IResult<&str, Constant> {
+    pub fn constant(input: &str) -> IResult<&str, Box<dyn Value>> {
         let (input, char_value) = opt(Token::char_constant)(input)?;
         let (input, str_value) = opt(Token::string_constant)(input)?;
         let (input, float_value) = opt(Token::float_constant)(input)?;
