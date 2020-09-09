@@ -6,7 +6,7 @@ use nom::{
     bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while,
     bytes::complete::take_while1, character::complete::anychar, character::complete::char,
     character::is_alphabetic, character::is_alphanumeric, character::is_digit, combinator::opt,
-    error::ErrorKind, error::ParseError, sequence::delimited, IResult,
+    error::ErrorKind, sequence::delimited, IResult, branch::alt,
 };
 
 /// Reserved Keywords by broccoli
@@ -128,6 +128,14 @@ impl Token {
         Token::specific_token(input, "audit ")
     }
 
+    pub fn true_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "true ")
+    }
+
+    pub fn false_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "false ")
+    }
+
     pub fn arrow(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "->")
     }
@@ -158,6 +166,13 @@ impl Token {
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
         take_while1(|c| is_digit(c as u8))(input)
+    }
+
+    pub fn bool_constant(input: &str) -> IResult<&str, bool> {
+        let (input, b) = alt((Token::true_tok, Token::false_tok))(input)?;
+
+        // We can unwrap since we recognized valid tokens already
+        Ok((input, b.parse::<bool>().unwrap()))
     }
 
     pub fn float_constant(input: &str) -> IResult<&str, f64> {
@@ -337,6 +352,29 @@ mod tests {
         }
         match Token::identifier("func") {
             Ok(_) => assert!(false, "ID can't be a reserved keyword"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_bool_valid() {
+        assert_eq!(Token::bool_constant("true"), Ok(("", true)));
+        assert_eq!(Token::bool_constant("false"), Ok(("", false)));
+        assert_eq!(Token::bool_constant("true a"), Ok((" a", true)));
+    }
+
+    #[test]
+    fn t_bool_invalid() {
+        match Token::bool_constant("tru") {
+            Ok(_) => assert!(false, "Not a valid boolean"),
+            Err(_) => assert!(true),
+        }
+        match Token::bool_constant("tru a") {
+            Ok(_) => assert!(false, "Not a valid boolean"),
+            Err(_) => assert!(true),
+        }
+        match Token::bool_constant("trueast") {
+            Ok(_) => assert!(false, "Not a valid boolean"),
             Err(_) => assert!(true),
         }
     }

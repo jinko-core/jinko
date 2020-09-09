@@ -1,5 +1,6 @@
 //! Represents an integer in Jinko. All integers are signed 64 bytes
 
+use crate::instruction::{Instruction, InstrKind};
 use super::Value;
 
 pub struct JinkInt(i64);
@@ -11,3 +12,13 @@ impl From<i64> for JinkInt {
 }
 
 impl Value for JinkInt {}
+
+impl Instruction for JinkInt {
+    fn kind(&self) -> InstrKind {
+        InstrKind::Expression
+    }
+
+    fn print(&self) -> String {
+        self.0.to_string()
+    }
+}

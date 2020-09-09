@@ -81,7 +81,7 @@ impl Instruction for Block {
 mod tests {
     use super::*;
     use crate::instruction::Var;
-    use crate::value::constant::{ConstKind, Constant};
+    use crate::value::JinkInt;
 
     #[test]
     fn empty() {
@@ -117,7 +117,7 @@ mod tests {
         let instrs: Vec<Box<dyn Instruction>> = vec![
             Box::new(Var::new("x".to_owned())),
             Box::new(Var::new("n".to_owned())),
-            Box::new(Constant::new(ConstKind::Int).with_iv(14)),
+            Box::new(JinkInt::from(14)),
         ];
 
         b.set_instructions(instrs);
