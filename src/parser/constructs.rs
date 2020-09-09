@@ -18,13 +18,19 @@ use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
     Loop, LoopKind, Var, VarAssign,
 };
-use crate::value::{Value, JinkFloat, JinkInt, JinkChar, JinkString};
+use crate::value::{Value, JinkBool, JinkFloat, JinkInt, JinkChar, JinkString};
 
 use super::tokens::Token;
 
 pub struct Construct;
 
 impl Construct {
+    fn char_constant(input: &str) -> IResult<&str, Box<JinkChar>> {
+        let (input, char_value) = Token::char_constant(input)?;
+
+        Ok((input, Box::new(JinkChar::from(char_value))))
+    }
+
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
     /// `0.5`.
     ///
@@ -35,6 +41,7 @@ impl Construct {
         let (input, float_value) = opt(Token::float_constant)(input)?;
         let (input, int_value) = opt(Token::int_constant)(input)?;
 
+        /*
         match (char_value, str_value, int_value, float_value) {
             (Some(c), None, None, None) => Ok((input, Constant::new(ConstKind::Char).with_cv(c))),
             (None, Some(s), None, None) => {
@@ -44,6 +51,7 @@ impl Construct {
             (None, None, None, Some(f)) => Ok((input, Constant::new(ConstKind::Float).with_fv(f))),
             _ => Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf))),
         }
+        */
     }
 
     /// Parse a function call with no arguments
@@ -58,22 +66,21 @@ impl Construct {
         Ok((input, FunctionCall::new(fn_id.to_owned())))
     }
 
-    // FIXME: Allow something else than constants
     /// Parse an argument given to a function. Consumes the whitespaces before and after
     /// the argument
-    fn arg(input: &str) -> IResult<&str, Constant> {
+    fn arg(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         // FIXME: Allow something else than constants, as above
-        let (input, constant) = Construct::constant(input)?;
+        let (input, constant) = Construct::expression(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         Ok((input, constant))
     }
 
-    fn arg_and_comma(input: &str) -> IResult<&str, Constant> {
-        let (input, constant) = Construct::arg(input)?;
+    fn arg_and_comma(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, constant) = Construct::expression(input)?;
         let (input, _) = Token::comma(input)?;
 
         Ok((input, constant))
