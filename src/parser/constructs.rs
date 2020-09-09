@@ -25,10 +25,28 @@ use super::tokens::Token;
 pub struct Construct;
 
 impl Construct {
-    fn char_constant(input: &str) -> IResult<&str, Box<JinkChar>> {
+    fn c_char_constant(input: &str) -> IResult<&str, Box<JinkChar>> {
         let (input, char_value) = Token::char_constant(input)?;
 
         Ok((input, Box::new(JinkChar::from(char_value))))
+    }
+
+    fn c_string_constant(input: &str) -> IResult<&str, Box<JinkString>> {
+        let (input, string_value) = Token::string_constant(input)?;
+
+        Ok((input, Box::new(JinkString::from(string_value))))
+    }
+
+    fn c_float_constant(input: &str) -> IResult<&str, Box<JinkFloat>> {
+        let (input, float_value) = Token::float_constant(input)?;
+
+        Ok((input, Box::new(JinkFloat::from(float_value))))
+    }
+
+    fn c_int_constant(input: &str) -> IResult<&str, Box<JinkInt>> {
+        let (input, int_value) = Token::int_constant(input)?;
+
+        Ok((input, Box::new(JinkInt::from(int_value))))
     }
 
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
@@ -36,10 +54,15 @@ impl Construct {
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
     pub fn constant(input: &str) -> IResult<&str, Box<dyn Value>> {
+        match opt(Construct::c_char_constant)(input)? {
+        }
+
+        /*
         let (input, char_value) = opt(Token::char_constant)(input)?;
         let (input, str_value) = opt(Token::string_constant)(input)?;
         let (input, float_value) = opt(Token::float_constant)(input)?;
         let (input, int_value) = opt(Token::int_constant)(input)?;
+        */
 
         /*
         match (char_value, str_value, int_value, float_value) {
