@@ -1,7 +1,7 @@
 //! A `Construct` is a complex set of tokens. For example, `fn()` is an identifier, a
 //! left parenthesis and a right parenthesis. Together, they constitute a function call.
 //! In the same vein, `x = 12;` is 4 tokens used to represent variable assignment.  Therefore, constructs use tokens while the parser only uses constructs. This is an
-//! abstraction for all possible ways to parse a line in broccoli.
+//! abstraction for all possible ways to parse a line in jinko.
 //!
 //! Each of the functions in that module contain the grammar they represent above their
 //! name. The syntax used for the grammar is loosely based on regular expressions and
