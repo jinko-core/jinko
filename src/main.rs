@@ -13,7 +13,7 @@ fn main() {
     let args = Args::handle();
 
     match Repl::launch_repl() {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(e) => e.exit(),
     }
 }

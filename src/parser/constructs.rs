@@ -20,7 +20,7 @@ use crate::instruction::{
 };
 use crate::value::constant::{ConstKind, Constant};
 
-use super::tokens::Token;
+use super::{box_construct::BoxConstruct, tokens::Token};
 
 pub struct Construct;
 
@@ -170,10 +170,14 @@ impl Construct {
         Ok((input, Var::new(name.to_owned())))
     }
 
-    fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, variable) = Construct::variable(input)?;
-
-        Ok((input, Box::new(variable)))
+    /// Parse any valid jinko expression. This can be a function call, a variable,
+    /// a block declaration...
+    pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        /*
+        let (input, exp) = alt(BoxConstruct::new(
+        Ok((input, Box::new(exp)))
+        */
+        Ok((input, Box::new(Var::new(String::from("a")))))
     }
 
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {

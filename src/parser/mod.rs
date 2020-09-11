@@ -2,6 +2,7 @@
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
+mod box_construct;
 mod constructs;
 mod tokens;
 
