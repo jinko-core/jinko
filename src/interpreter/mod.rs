@@ -23,6 +23,9 @@ pub struct Interpreter {
     /// Is the interpreter in an audit block or not
     pub in_audit: bool,
 
+    /// Entry point to the interpreter, the "main" function
+    pub entry_point: FunctionDec,
+
     /// Contains the scopes of the interpreter, in which are variables and functions
     scope_map: ScopeMap,
 
@@ -33,11 +36,22 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    /// Create a new empty interpreter, as well as an entry point. Starts in non-audit mode
-    pub fn new() -> (Interpreter, FunctionDec) {
+    // FIXME: Remove this function
+    fn new_entry() -> FunctionDec {
+        let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None);
+
+        ep.set_kind(FunctionKind::Func);
+        ep.set_block(Block::new());
+
+        ep
+    }
+
+    /// Create a new empty interpreter. Starts in non-audit mode
+    pub fn new() -> Interpreter {
         let mut i = Interpreter {
             in_audit: false,
 
+            entry_point: Self::new_entry(),
             scope_map: ScopeMap::new(),
 
             tests: HashMap::new(),
@@ -47,21 +61,19 @@ impl Interpreter {
         // FIXME: Necessary?
         i.scope_enter();
 
-        let entry_point = FunctionDec::new(String::from(ENTRY_NAME), None);
-        entry_point.set_block(Block::new());
-        entry_point.set_kind(FunctionKind::Func);
-
-        (i, entry_point)
+        i
     }
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
+    // FIXME: Add semantics error type
     pub fn add_function(&mut self, function: FunctionDec) -> Result<(), JinkoError> {
         self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
+    // FIXME: Add semantics error type
     pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         self.scope_map.add_variable(var)
     }
@@ -94,6 +106,24 @@ impl Interpreter {
     /// Exit audit mode
     pub fn audit_exit(&mut self) {
         self.in_audit = false;
+    }
+
+    // FIXME: This is not working
+    /// Run the interpreter once, altering its contents
+    pub fn run_once(&mut self) {
+        // Take ownership of the entry point, replacing it with a new one,
+        // and execute it
+        match std::mem::take(&mut self.entry_point).block().unwrap().execute(self) {
+            Ok(_) => {}
+            Err(e) => e.exit(),
+        }
+
+        self.entry_point = Self::new_entry();
+    }
+
+    /// Pretty-prints valid jinko code from a given interpreter
+    pub fn print(&self) -> String {
+        self.entry_point.print()
     }
 }
 

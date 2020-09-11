@@ -545,6 +545,8 @@ impl Construct {
     pub fn jinko_inst(input: &str) -> IResult<&str, JinkoInst> {
         let (input, _) = Token::at_sign(input)?;
         let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::semicolon(input)?;
 
         // FIXME: No unwrap()
         let inst = JinkoInst::from_str(id).unwrap();
