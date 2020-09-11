@@ -20,7 +20,7 @@ use crate::instruction::{
 };
 use crate::value::constant::{ConstKind, Constant};
 
-use super::{box_construct::BoxConstruct, tokens::Token};
+use super::{box_construct::BoxConstruct, jinko_insts::JinkoInst, tokens::Token};
 
 pub struct Construct;
 
@@ -177,6 +177,7 @@ impl Construct {
     /// a block declaration...
     pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         alt((
+            BoxConstruct::jinko_inst,
             BoxConstruct::function_call,
             BoxConstruct::variable,
             BoxConstruct::block,
@@ -535,6 +536,20 @@ impl Construct {
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Loop::new(LoopKind::For(variable, expression), block)))
+    }
+
+    /// Parse an interpreter directive. There are only a few of them, listed in
+    /// the `JinkoInst` module
+    ///
+    /// `@<jinko_inst>`
+    pub fn jinko_inst(input: &str) -> IResult<&str, JinkoInst> {
+        let (input, _) = Token::at_sign(input)?;
+        let (input, id) = Token::identifier(input)?;
+
+        // FIXME: No unwrap()
+        let inst = JinkoInst::from_str(id).unwrap();
+
+        Ok((input, inst))
     }
 }
 
@@ -1024,5 +1039,10 @@ mod tests {
         };
 
         // FIXME: Add fun tests like `for x in { some_range_stuff() } {}`
+    }
+
+    #[test]
+    fn t_jinko_inst_valid() {
+        assert_eq!(Construct::jinko_inst("@dump"), Ok(("", JinkoInst::Dump)));
     }
 }

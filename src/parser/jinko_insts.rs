@@ -3,12 +3,12 @@
 //! really an `Instruction`, and therefore their implementation lives in the parser
 //! module. They are executed at "compile" time, when running through the code first.
 
-use crate::error::JinkoError;
+use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
 use crate::instruction::{InstrKind, Instruction};
 
 /// The potential interpreter instructions
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum JinkoInst {
     Dump,
 }
@@ -18,6 +18,15 @@ impl JinkoInst {
     /// This function is just a shorthand wrapper around `unreachable!`
     fn unreachable(&self) -> ! {
         unreachable!("Unknown JinkoInst {:#?}. This is a bug", self)
+    }
+
+    /// Construct a `JinkoInst` from a given keyword
+    pub fn from_str(keyword: &str) -> Result<Self, JinkoError> {
+        match keyword {
+            "dump" => Ok(JinkoInst::Dump),
+            // FIXME: Fix error input
+            _ => Err(JinkoError::new(ErrKind::Parsing, format!("unknown interpreter directive @{}", keyword), None, "".to_owned())),
+        }
     }
 }
 
