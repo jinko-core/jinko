@@ -1,7 +1,7 @@
 //! The Loop instruction is used for repeating instructions. They can be of three
 //! different kinds, `for`, `while` or `loop`.
 
-use crate::{error::BroccoliError, interpreter::Interpreter};
+use crate::{error::JinkoError, interpreter::Interpreter};
 
 use super::{Block, InstrKind, Instruction, Var};
 
@@ -35,19 +35,19 @@ impl Instruction for Loop {
     fn print(&self) -> String {
         match &self.kind {
             LoopKind::For(var, range) => format!(
-                "for {} in {} {}",
+                "for {} in {} {}\n",
                 var.name(),
                 range.print(),
                 self.block.print()
             ),
             LoopKind::While(condition) => {
-                format!("while {} {}", condition.print(), self.block.print())
+                format!("while {} {}\n", condition.print(), self.block.print())
             }
-            LoopKind::Loop => format!("loop {}", self.block.print()),
+            LoopKind::Loop => format!("loop {}\n", self.block.print()),
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         match &self.kind {
             LoopKind::Loop => loop {
                 self.block.execute(interpreter)?;
@@ -79,5 +79,37 @@ impl Instruction for Loop {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::instruction::FunctionCall;
+
+    #[test]
+    fn pretty_print_loop() {
+        let b = Block::new();
+        let l = Loop::new(LoopKind::Loop, b);
+
+        assert_eq!(l.print().as_str(), "loop {\n}\n")
+    }
+
+    #[test]
+    fn pretty_print_for() {
+        let r = Box::new(FunctionCall::new("iter".to_owned()));
+        let b = Block::new();
+        let l = Loop::new(LoopKind::For(Var::new("i".to_owned()), r), b);
+
+        assert_eq!(l.print().as_str(), "for i in iter() {\n}\n")
+    }
+
+    #[test]
+    fn pretty_print_while() {
+        let r = Box::new(Block::new());
+        let b = Block::new();
+        let l = Loop::new(LoopKind::While(r), b);
+
+        assert_eq!(l.print().as_str(), "while {\n} {\n}\n")
     }
 }

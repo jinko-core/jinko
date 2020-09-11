@@ -8,7 +8,7 @@ use std::rc::Rc;
 use std::collections::{HashMap, LinkedList};
 
 use crate::{
-    error::{BroccoliError, ErrKind},
+    error::{JinkoError, ErrKind},
     instruction::{FunctionDec, Var},
 };
 
@@ -36,9 +36,9 @@ impl Scope {
     }
 
     // FIXME: Add doc
-    pub fn add_variable(&mut self, var: Var) -> Result<(), BroccoliError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         match self.get_variable(var.name()) {
-            Some(_) => Err(BroccoliError::new(
+            Some(_) => Err(JinkoError::new(
                 ErrKind::Interpreter,
                 format!("variable already declared: {}", var.name()),
                 None,
@@ -51,9 +51,9 @@ impl Scope {
     }
 
     // FIXME: Add doc
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), BroccoliError> {
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JinkoError> {
         match self.get_function(func.name()) {
-            Some(_) => Err(BroccoliError::new(
+            Some(_) => Err(JinkoError::new(
                 ErrKind::Interpreter,
                 format!("function already declared: {}", func.name()),
                 None,
@@ -122,10 +122,10 @@ impl ScopeMap {
     }
 
     /// Add a variable to the current scope if it hasn't been added before
-    pub fn add_variable(&mut self, var: Var) -> Result<(), BroccoliError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(var),
-            None => Err(BroccoliError::new(
+            None => Err(JinkoError::new(
                 ErrKind::Interpreter,
                 String::from("Adding variable to empty scopemap"),
                 None,
@@ -135,10 +135,10 @@ impl ScopeMap {
     }
 
     /// Add a function to the current scope if it hasn't been added before
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), BroccoliError> {
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JinkoError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(func),
-            None => Err(BroccoliError::new(
+            None => Err(JinkoError::new(
                 ErrKind::Interpreter,
                 String::from("Adding function to empty scopemap"),
                 None,

@@ -19,7 +19,7 @@
 //! Otherwise, it's `void`
 
 use super::{InstrKind, Instruction};
-use crate::{error::BroccoliError, interpreter::Interpreter};
+use crate::{error::JinkoError, interpreter::Interpreter};
 
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
@@ -77,13 +77,13 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         interpreter.scope_enter();
 
         self.instructions()
             .iter()
             .map(|inst| inst.execute(interpreter))
-            .collect::<Result<Vec<()>, BroccoliError>>()?;
+            .collect::<Result<Vec<()>, JinkoError>>()?;
 
         interpreter.scope_exit();
 

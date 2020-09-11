@@ -1,8 +1,8 @@
-//! The broccoli interpreter keeps track of variables and functions, and dispatches calls
+//! The jinko interpreter keeps track of variables and functions, and dispatches calls
 //! and references to their correct location. It contains a information regarding the
 //! registered functions and variables. It also handles garbage collection. Parsing a
 //! source file returns an "Interpreter", which is really just a complex structure
-//! aggregating the necessary information to run a broccoli program.
+//! aggregating the necessary information to run a jinko program.
 
 mod scope_map;
 use scope_map::ScopeMap;
@@ -10,13 +10,13 @@ use scope_map::ScopeMap;
 use std::rc::Rc;
 use std::collections::HashMap;
 
-use crate::error::BroccoliError;
+use crate::error::JinkoError;
 use crate::instruction::{FunctionDec, Instruction, Var};
 
 /// Type the interpreter uses for keys
 type IKey = String;
 
-/// Name of the entry point in broccoli
+/// Name of the entry point in jinko
 const ENTRY_NAME: &str = "__entry";
 
 pub struct Interpreter {
@@ -56,14 +56,14 @@ impl Interpreter {
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), BroccoliError> {
+    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), JinkoError> {
         self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_variable(&mut self, var: Var) -> Result<(), BroccoliError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         self.scope_map.add_variable(var)
     }
 
@@ -107,7 +107,7 @@ impl Interpreter {
         }
     }
 
-    /// Pretty-prints valid broccoli code from a given interpreter
+    /// Pretty-prints valid jinko code from a given interpreter
     pub fn print(&self) -> String {
         self.entry_point.print()
     }

@@ -15,7 +15,7 @@
 //! x = if condition { 12 } else { 13 };
 //! ```
 
-use crate::error::BroccoliError;
+use crate::error::JinkoError;
 use crate::interpreter::Interpreter;
 
 use super::{Block, InstrKind, Instruction};
@@ -57,7 +57,7 @@ impl Instruction for IfElse {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         let cond = self.condition.as_bool();
 
         if cond {

@@ -9,7 +9,7 @@ use nom::{
     error::ErrorKind, sequence::delimited, IResult,
 };
 
-/// Reserved Keywords by broccoli
+/// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: [&str; 8] = ["func", "test", "mock", "ext", "for", "while", "loop", "mut"];
 
 pub struct Token;

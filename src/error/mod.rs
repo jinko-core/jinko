@@ -1,4 +1,4 @@
-//! The Error module contains helpful wrapper around possible errors in broccoli. They
+//! The Error module contains helpful wrapper around possible errors in jinko. They
 //! are used by the interpreter as well as the parser.
 
 use colored::Colorize;
@@ -30,7 +30,7 @@ impl SpaceLocation {
 /// The actual error type
 // FIXME: Remove `Option` once input tracking is implemented
 #[derive(Debug, PartialEq)]
-pub struct BroccoliError {
+pub struct JinkoError {
     kind: ErrKind,
     msg: String,
 
@@ -38,15 +38,15 @@ pub struct BroccoliError {
     input: String,
 }
 
-impl BroccoliError {
+impl JinkoError {
     /// Create a new error and return it
     pub fn new(
         kind: ErrKind,
         msg: String,
         loc: Option<SpaceLocation>,
         input: String,
-    ) -> BroccoliError {
-        BroccoliError {
+    ) -> JinkoError {
+        JinkoError {
             kind,
             msg,
             loc,
@@ -68,7 +68,7 @@ impl BroccoliError {
     }
 }
 
-impl std::fmt::Display for BroccoliError {
+impl std::fmt::Display for JinkoError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // FIXME: Add better formatting
         write!(

@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument lists is given to the
 //! function on execution.
 
-use crate::error::{BroccoliError, ErrKind};
+use crate::error::{JinkoError, ErrKind};
 use crate::interpreter::Interpreter;
 use crate::value::Constant;
 
@@ -64,13 +64,13 @@ impl Instruction for FunctionCall {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         let function = match interpreter.get_function(self.name()) {
             // get_function() return a Rc, so this clones the Rc, not the FunctionDec
             Some(f) => f.clone(),
             // FIXME: Fix Location and input
             None => {
-                return Err(BroccoliError::new(
+                return Err(JinkoError::new(
                     ErrKind::Interpreter,
                     format!("cannot find function {}", self.name()),
                     None,
@@ -83,7 +83,7 @@ impl Instruction for FunctionCall {
             Some(b) => b,
             // FIXME: Fix Location and input
             None => {
-                return Err(BroccoliError::new(
+                return Err(JinkoError::new(
                     ErrKind::Interpreter,
                     format!("cannot execute function {} as it is marked `ext`", self.name()),
                     None,

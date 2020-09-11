@@ -1,7 +1,7 @@
 //! Audit blocks are more permissive than normal blocks. They allow ignoring a return
 //! value, for example.
 
-use crate::error::BroccoliError;
+use crate::error::JinkoError;
 use crate::interpreter::Interpreter;
 
 use super::{Block, InstrKind, Instruction};
@@ -26,7 +26,7 @@ impl Instruction for Audit {
         format!("audit {}", self.block.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         interpreter.audit_enter();
 
         let r = self.block.execute(interpreter);
