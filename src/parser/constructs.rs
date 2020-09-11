@@ -1,7 +1,7 @@
 //! A `Construct` is a complex set of tokens. For example, `fn()` is an identifier, a
 //! left parenthesis and a right parenthesis. Together, they constitute a function call.
 //! In the same vein, `x = 12;` is 4 tokens used to represent variable assignment.  Therefore, constructs use tokens while the parser only uses constructs. This is an
-//! abstraction for all possible ways to parse a line in broccoli.
+//! abstraction for all possible ways to parse a line in jinko.
 //!
 //! Each of the functions in that module contain the grammar they represent above their
 //! name. The syntax used for the grammar is loosely based on regular expressions and
@@ -866,7 +866,7 @@ mod tests {
         assert_eq!(func.name(), "something");
         assert_eq!(func.ty(), None);
         assert_eq!(func.args().len(), 0);
-        assert_eq!(func.kind(), FunctionKind::Func);
+        assert_eq!(func.fn_kind(), FunctionKind::Func);
     }
 
     #[test]
@@ -878,7 +878,7 @@ mod tests {
         assert_eq!(func.name(), "add");
         assert_eq!(func.ty(), Some("type"));
         assert_eq!(func.args().len(), 2);
-        assert_eq!(func.kind(), FunctionKind::Func);
+        assert_eq!(func.fn_kind(), FunctionKind::Func);
     }
 
     #[test]
@@ -887,7 +887,7 @@ mod tests {
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), None);
-        assert_eq!(test.kind(), FunctionKind::Test);
+        assert_eq!(test.fn_kind(), FunctionKind::Test);
     }
 
     #[test]
@@ -906,7 +906,7 @@ mod tests {
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), None);
-        assert_eq!(test.kind(), FunctionKind::Mock);
+        assert_eq!(test.fn_kind(), FunctionKind::Mock);
     }
 
     #[test]
@@ -917,7 +917,7 @@ mod tests {
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), Some("type"));
-        assert_eq!(test.kind(), FunctionKind::Ext);
+        assert_eq!(test.fn_kind(), FunctionKind::Ext);
     }
 
     #[test]

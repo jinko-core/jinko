@@ -1,10 +1,11 @@
-//! The Error module contains helpful wrapper around possible errors in broccoli. They
+//! The Error module contains helpful wrapper around possible errors in jinko. They
 //! are used by the interpreter as well as the parser.
 
 use colored::Colorize;
 
 /// What kind of error we are dealing with: Either a parsing error, or a behavioural one.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum ErrKind {
     Parsing,
     Interpreter,
@@ -12,6 +13,7 @@ pub enum ErrKind {
 }
 
 /// Contains indications vis-a-vis the error's location in the source file
+#[derive(Debug, PartialEq)]
 pub struct SpaceLocation(pub usize, pub usize);
 
 impl SpaceLocation {
@@ -27,29 +29,55 @@ impl SpaceLocation {
 }
 
 /// The actual error type
-pub struct BroccoliError {
+// FIXME: Remove `Option` once input tracking is implemented
+#[derive(Debug, PartialEq)]
+pub struct JinkoError {
     kind: ErrKind,
     msg: String,
 
     loc: Option<SpaceLocation>,
+    input: String,
 }
 
-impl BroccoliError {
+impl JinkoError {
     /// Create a new error and return it
-    pub fn new(kind: ErrKind, msg: String, loc: Option<SpaceLocation>) -> BroccoliError {
-        BroccoliError { kind, msg, loc }
+    pub fn new(
+        kind: ErrKind,
+        msg: String,
+        loc: Option<SpaceLocation>,
+        input: String,
+    ) -> JinkoError {
+        JinkoError {
+            kind,
+            msg,
+            loc,
+            input,
+        }
+    }
+
+    /// Display the error on stderr before exiting the program
+    pub fn exit(&self) {
+        eprintln!("{}", self.to_string());
+
+        // The exit code depends on the kind of error
+        std::process::exit(self.kind as i32 + 1);
+    }
+
+    /// What kind of error the error is
+    pub fn kind(&self) -> ErrKind {
+        self.kind
     }
 }
 
-impl std::fmt::Display for BroccoliError {
+impl std::fmt::Display for JinkoError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // FIXME: Add better formatting
         write!(f, "ErrorKind: {:?}\nInfo: {}", self.kind, self.msg.red())
     }
 }
 
-impl std::convert::From<std::io::Error> for BroccoliError {
+impl std::convert::From<std::io::Error> for JinkoError {
     fn from(e: std::io::Error) -> Self {
-        BroccoliError::new(ErrKind::IO, e.to_string(), None)
+        JinkoError::new(ErrKind::IO, e.to_string(), None, "".to_owned())
     }
 }

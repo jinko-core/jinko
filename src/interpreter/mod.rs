@@ -1,20 +1,22 @@
-//! The broccoli interpreter keeps track of variables and functions, and dispatches calls
+//! The jinko interpreter keeps track of variables and functions, and dispatches calls
 //! and references to their correct location. It contains a information regarding the
 //! registered functions and variables. It also handles garbage collection. Parsing a
 //! source file returns an "Interpreter", which is really just a complex structure
-//! aggregating the necessary information to run a broccoli program.
+//! aggregating the necessary information to run a jinko program.
 
 mod scope_map;
-use scope_map::{FIXMEError, ScopeMap};
+use scope_map::ScopeMap;
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
+use crate::error::JinkoError;
 use crate::instruction::{FunctionDec, Instruction, Var};
 
 /// Type the interpreter uses for keys
 type IKey = String;
 
-/// Name of the entry point in broccoli
+/// Name of the entry point in jinko
 const ENTRY_NAME: &str = "__entry";
 
 pub struct Interpreter {
@@ -54,15 +56,25 @@ impl Interpreter {
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), FIXMEError> {
+    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), JinkoError> {
         self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
     // FIXME: Add semantics error type
-    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         self.scope_map.add_variable(var)
+    }
+
+    /// Get a mutable reference on an existing function
+    pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
+        self.scope_map.get_function(name)
+    }
+
+    /// Get a reference on an existing variable
+    pub fn get_variable(&self, name: &str) -> Option<&Var> {
+        self.scope_map.get_variable(name)
     }
 
     /// Create a new empty scope
@@ -75,14 +87,27 @@ impl Interpreter {
         self.scope_map.scope_exit()
     }
 
+    /// Enter audit mode
+    pub fn audit_enter(&mut self) {
+        self.in_audit = true;
+    }
+
+    /// Exit audit mode
+    pub fn audit_exit(&mut self) {
+        self.in_audit = false;
+    }
+
     /// Run the interpreter once, altering its contents
     pub fn run_once(&mut self) {
         // Take ownership of the entry point, replacing it with a new one,
         // and execute it
-        std::mem::take(&mut self.entry_point).execute(self)
+        match std::mem::take(&mut self.entry_point).execute(self) {
+            Ok(_) => {}
+            Err(e) => e.exit(),
+        }
     }
 
-    /// Pretty-prints valid broccoli code from a given interpreter
+    /// Pretty-prints valid jinko code from a given interpreter
     pub fn print(&self) -> String {
         self.entry_point.print()
     }
@@ -91,6 +116,7 @@ impl Interpreter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::ErrKind;
 
     #[test]
     fn t_redefinition_of_function() {
@@ -101,8 +127,8 @@ mod tests {
 
         assert_eq!(i.add_function(f0), Ok(()));
         assert_eq!(
-            i.add_function(f0_copy),
-            Err("function already declared: f0".to_owned())
+            i.add_function(f0_copy).err().unwrap().kind(),
+            ErrKind::Interpreter,
         );
     }
 
@@ -115,8 +141,8 @@ mod tests {
 
         assert_eq!(i.add_variable(v0), Ok(()));
         assert_eq!(
-            i.add_variable(v0_copy),
-            Err("variable already declared: v0".to_owned())
+            i.add_variable(v0_copy).err().unwrap().kind(),
+            ErrKind::Interpreter,
         );
     }
 }

@@ -1,11 +1,11 @@
-//! The `Args` module helps giving command line option to broccoli
+//! The `Args` module helps giving command line option to jinko
 
 use structopt::StructOpt;
 
 use std::path::PathBuf;
 
 #[derive(StructOpt)]
-#[structopt(name = "broccoli", about = "The broccoli interpreter")]
+#[structopt(name = "jinko", about = "The jinko interpreter")]
 pub struct Args {
     #[structopt(short, long)]
     version: bool,

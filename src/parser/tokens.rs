@@ -6,10 +6,10 @@ use nom::{
     bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while,
     bytes::complete::take_while1, character::complete::anychar, character::complete::char,
     character::is_alphabetic, character::is_alphanumeric, character::is_digit, combinator::opt,
-    error::ErrorKind, error::ParseError, sequence::delimited, IResult,
+    error::ErrorKind, sequence::delimited, IResult,
 };
 
-/// Reserved Keywords by broccoli
+/// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: [&str; 8] = ["func", "test", "mock", "ext", "for", "while", "loop", "mut"];
 
 pub struct Token;

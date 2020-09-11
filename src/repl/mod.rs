@@ -4,7 +4,7 @@
 use linefeed::{Interface, ReadResult};
 
 use crate::interpreter::Interpreter;
-use crate::error::BroccoliError;
+use crate::error::JinkoError;
 use crate::parser::Construct;
 
 /// Empty struct for the Repl methods
@@ -15,7 +15,7 @@ impl Repl {
     fn parse_reentrant<'i>(
         interpreter: &mut Interpreter,
         input: &'i str,
-    ) -> Result<(), BroccoliError> {
+    ) -> Result<(), JinkoError> {
         let (_, fc) = Construct::function_call(input).unwrap();
 
         interpreter.entry_point.add_instruction(Box::new(fc));
@@ -24,7 +24,7 @@ impl Repl {
     }
 
     /// Launch the REPL
-    pub fn launch_repl<'i>() -> Result<(), BroccoliError> {
+    pub fn launch_repl<'i>() -> Result<(), JinkoError> {
         let line_reader = Interface::new("broccoli")?;
         let mut interpreter = Interpreter::new();
 

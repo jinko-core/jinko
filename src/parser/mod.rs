@@ -1,4 +1,4 @@
-//! The broccoli parser transforms user inputs into a map of instructions. A special
+//! The jinko parser transforms user inputs into a map of instructions. A special
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
