@@ -176,13 +176,19 @@ impl Construct {
     /// Parse any valid jinko expression. This can be a function call, a variable,
     /// a block declaration...
     pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        alt((
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, value) = alt((
             BoxConstruct::function_declaration,
             BoxConstruct::function_call,
             BoxConstruct::jinko_inst,
             BoxConstruct::variable,
             BoxConstruct::block,
-        ))(input)
+        ))(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Ok((input, value))
     }
 
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
