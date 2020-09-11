@@ -6,10 +6,10 @@ mod parser;
 mod repl;
 mod value;
 
-use std::fs;
 use args::Args;
-use repl::Repl;
 use parser::Parser;
+use repl::Repl;
+use std::fs;
 
 fn main() {
     let args = Args::handle();
