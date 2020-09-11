@@ -29,10 +29,10 @@ impl Instruction for Audit {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         interpreter.audit_enter();
 
-        self.block.execute(interpreter)?;
+        let r = self.block.execute(interpreter);
 
         interpreter.audit_exit();
 
-        Ok(())
+        r
     }
 }
