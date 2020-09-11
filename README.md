@@ -1,5 +1,6 @@
 # jinko
-`jinko` is a small and safe interpreted language using the [`stir`](https://github.com/cohenarthur/stir) intermediate representation
+`jinko` is a small and safe interpreted language written in Rust, with integrated
+unit tests, mocking and FFI.
 
 ## Requirements
 
@@ -13,6 +14,4 @@
 
 Check out jinko's [syntax](SYNTAX.md)!
 
-For more information about how jinko is made, checkout
-[this page](https://en.wikipedia.org/wiki/Jinko#Cultivation).
-For information about how the *language* is made, [it's here](DESIGN.md).
+For more information about how jinko is made, checkout its [design](DESIGN.md).
