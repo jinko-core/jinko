@@ -4,6 +4,7 @@
 
 mod box_construct;
 mod constructs;
+mod jinko_insts;
 mod tokens;
 
 use crate::interpreter::Interpreter;

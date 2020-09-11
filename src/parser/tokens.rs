@@ -80,6 +80,10 @@ impl Token {
         Token::specific_char(input, ';')
     }
 
+    pub fn at_sign(input: &str) -> IResult<&str, char> {
+        Token::specific_char(input, '@')
+    }
+
     pub fn func_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "func ")
     }
