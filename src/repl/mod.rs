@@ -37,6 +37,9 @@ impl Repl {
         while let ReadResult::Input(input) = line_reader.read_line()? {
             Repl::parse_reentrant(&mut interpreter, &input)?;
             line_reader.set_prompt(&Prompt::get(&interpreter))?;
+
+            // FIXME: Is this really what we want...?
+            interpreter.run_once();
         }
 
         Ok(())
