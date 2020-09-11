@@ -18,7 +18,7 @@ impl Repl {
     ) -> Result<(), JinkoError> {
         let (_, fc) = Construct::function_call(input).unwrap();
 
-        interpreter.entry_point.add_instruction(Box::new(fc));
+        interpreter.entry_point.add_instruction(Box::new(fc))?;
 
         Ok(())
     }

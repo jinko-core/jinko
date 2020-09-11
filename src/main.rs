@@ -12,5 +12,8 @@ use repl::Repl;
 fn main() {
     let args = Args::handle();
 
-    Repl::launch_repl();
+    match Repl::launch_repl() {
+        Ok(_) => {},
+        Err(e) => e.exit(),
+    }
 }

@@ -1,7 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::{error::JinkoError, interpreter::Interpreter};
+use crate::error::{ErrKind, JinkoError};
 
 use super::{Block, InstrKind, Instruction};
 
@@ -71,14 +71,17 @@ impl FunctionDec {
     /// Add an instruction to the function declaration, in order. This is mostly useful
     /// when adding instructions to the entry point of the interpreter, since parsing
     /// directly gives a block to the function
-    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) -> Result<(), String> {
+    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) -> Result<(), JinkoError> {
         match &mut self.block {
             Some(b) => Ok(b.add_instruction(instruction)),
-            // FIXME: Return correct error
-            None => Err(format!(
-                "function {} has no instruction block. It might be an extern
-            function or an error",
-                self.name
+            None => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!(
+                    "function {} has no instruction block. It might be an extern function or an error",
+                    self.name
+                ),
+                None,
+                self.name.clone(),
             )),
         }
     }

@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::error::JinkoError;
-use crate::instruction::{FunctionDec, Instruction, Var};
+use crate::instruction::{Block, FunctionDec, Instruction, Var};
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -48,6 +48,9 @@ impl Interpreter {
             exts: HashMap::new(),
         };
 
+        i.entry_point.set_block(Block::new());
+
+        // FIXME: Necessary?
         i.scope_enter();
 
         i
