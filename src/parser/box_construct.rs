@@ -28,4 +28,5 @@ impl BoxConstruct {
     }
 
     box_construct!{function_call}
+    box_construct!{variable}
 }

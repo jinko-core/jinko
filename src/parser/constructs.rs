@@ -164,7 +164,10 @@ impl Construct {
         }
     }
 
-    fn variable(input: &str) -> IResult<&str, Var> {
+    /// Parse a valid variable name
+    ///
+    /// `<identifier>`
+    pub fn variable(input: &str) -> IResult<&str, Var> {
         let (input, name) = Token::identifier(input)?;
 
         Ok((input, Var::new(name.to_owned())))
@@ -173,11 +176,7 @@ impl Construct {
     /// Parse any valid jinko expression. This can be a function call, a variable,
     /// a block declaration...
     pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        /*
-        let (input, exp) = alt(BoxConstruct::new(
-        Ok((input, Box::new(exp)))
-        */
-        Ok((input, Box::new(Var::new(String::from("a")))))
+        alt((BoxConstruct::function_call, BoxConstruct::variable))(input)
     }
 
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
