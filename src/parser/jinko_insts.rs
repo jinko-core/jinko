@@ -50,7 +50,8 @@ impl Instruction for JinkoInst {
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         match self {
-            JinkoInst::Dump => println!("{}", interpreter.print()),
+            // FIXME: Add logic
+            JinkoInst::Dump => println!("{}", "DUMP"),
             _ => self.unreachable(),
         };
 

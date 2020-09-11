@@ -1,6 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use crate::interpreter::Interpreter;
 use crate::error::{ErrKind, JinkoError};
 
 use super::{Block, InstrKind, Instruction};
@@ -123,6 +124,28 @@ impl FunctionDec {
     /// Return a reference to the function's block
     pub fn block(&self) -> Option<&Block> {
         self.block.as_ref()
+    }
+
+    /// Run through the function as if it was called. This is useful for setting
+    /// an entry point into the interpreter and executing it
+    pub fn run(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        let block = match self.block() {
+            Some(b) => b,
+            // FIXME: Fix Location and input
+            None => {
+                return Err(JinkoError::new(
+                    ErrKind::Interpreter,
+                    format!(
+                        "cannot execute function {} as it is marked `ext`",
+                        self.name()
+                    ),
+                    None,
+                    self.name().to_owned(),
+                ))
+            }
+        };
+
+        block.execute(interpreter)
     }
 }
 

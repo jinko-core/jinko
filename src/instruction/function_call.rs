@@ -79,23 +79,7 @@ impl Instruction for FunctionCall {
             }
         };
 
-        let block = match function.block() {
-            Some(b) => b,
-            // FIXME: Fix Location and input
-            None => {
-                return Err(JinkoError::new(
-                    ErrKind::Interpreter,
-                    format!(
-                        "cannot execute function {} as it is marked `ext`",
-                        self.name()
-                    ),
-                    None,
-                    self.name().to_owned(),
-                ))
-            }
-        };
-
-        block.execute(interpreter)
+        function.run(interpreter)
     }
 }
 
