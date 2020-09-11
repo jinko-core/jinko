@@ -3,8 +3,8 @@
 
 use linefeed::{Interface, ReadResult};
 
-use crate::interpreter::Interpreter;
 use crate::error::JinkoError;
+use crate::interpreter::Interpreter;
 use crate::parser::Construct;
 
 /// Empty struct for the Repl methods
