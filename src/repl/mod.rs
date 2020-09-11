@@ -19,9 +19,9 @@ impl Repl {
         interpreter: &mut Interpreter,
         input: &'i str,
     ) -> Result<(), JinkoError> {
-        let (_, fc) = Construct::function_call(input)?;
+        let (_, exp) = Construct::expression(input)?;
 
-        interpreter.entry_point.add_instruction(Box::new(fc))?;
+        interpreter.entry_point.add_instruction(exp)?;
 
         Ok(())
     }
