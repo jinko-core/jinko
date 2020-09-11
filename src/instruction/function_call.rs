@@ -65,6 +65,7 @@ impl Instruction for FunctionCall {
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
+        /*
         let function = match interpreter.get_function(self.name()) {
             Some(f) => f,
             // FIXME: Fix Location and input
@@ -92,6 +93,9 @@ impl Instruction for FunctionCall {
         };
 
         block.execute(interpreter)
+        */
+
+        Ok(())
     }
 }
 

@@ -80,10 +80,10 @@ impl Instruction for Block {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         interpreter.scope_enter();
 
-        // FIXME: Use Result of inst.execute()
-        self.instructions().iter().for_each(|inst| {
-            inst.execute(interpreter);
-        });
+        self.instructions()
+            .iter()
+            .map(|inst| inst.execute(interpreter))
+            .collect::<Result<Vec<()>, BroccoliError>>()?;
 
         interpreter.scope_exit();
 
