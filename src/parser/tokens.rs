@@ -128,12 +128,17 @@ impl Token {
         Token::specific_token(input, "audit ")
     }
 
+    fn non_digit_nor_alpha(input: &str) -> IResult<&str, &str> {
+    }
+
     pub fn true_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "true ")
+        let (input, _) = Token::specific_token(input, "true")?;
+        Token::non_digit_nor_alpha(input)
     }
 
     pub fn false_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "false ")
+        Token::specific_token(input, "false")
+        Token::non_digit_nor_alpha(input)
     }
 
     pub fn arrow(input: &str) -> IResult<&str, &str> {
@@ -366,15 +371,15 @@ mod tests {
     #[test]
     fn t_bool_invalid() {
         match Token::bool_constant("tru") {
-            Ok(_) => assert!(false, "Not a valid boolean"),
+            Ok(_) => assert!(false, "Not a valid boolean, too short"),
             Err(_) => assert!(true),
         }
         match Token::bool_constant("tru a") {
-            Ok(_) => assert!(false, "Not a valid boolean"),
+            Ok(_) => assert!(false, "Not a valid boolean, too short + character"),
             Err(_) => assert!(true),
         }
         match Token::bool_constant("trueast") {
-            Ok(_) => assert!(false, "Not a valid boolean"),
+            Ok(_) => assert!(false, "Not a valid boolean, too long"),
             Err(_) => assert!(true),
         }
     }
