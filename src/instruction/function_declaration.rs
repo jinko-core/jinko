@@ -126,6 +126,11 @@ impl FunctionDec {
         self.block.as_ref()
     }
 
+    /// Return a mutable reference to the function's block
+    pub fn block_mut(&mut self) -> Option<&mut Block> {
+        self.block.as_mut()
+    }
+
     /// Run through the function as if it was called. This is useful for setting
     /// an entry point into the interpreter and executing it
     pub fn run(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
