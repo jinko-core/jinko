@@ -1,4 +1,5 @@
 mod args;
+mod error;
 mod instruction;
 mod interpreter;
 mod parser;

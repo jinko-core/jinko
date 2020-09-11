@@ -20,7 +20,7 @@ pub use loop_block::{Loop, LoopKind};
 pub use var::Var;
 pub use var_assignment::VarAssign;
 
-use crate::interpreter::Interpreter;
+use crate::{error::JinkoError, interpreter::Interpreter};
 
 /// The type of instructions available
 #[derive(Debug, PartialEq)]
@@ -31,8 +31,18 @@ pub enum InstrKind {
 
 pub trait Instruction {
     /// Execute the instruction, altering the state of the program
-    fn execute(&self, _: &mut Interpreter) {
-        unreachable!("The execution of this instruction is not implemented yet")
+    fn execute(&self, _: &mut Interpreter) -> Result<(), JinkoError> {
+        unreachable!("The execution of this instruction is not implemented yet. This is a bug")
+    }
+
+    /// Maybe execute the instruction, transforming it in a Rust bool if possible. It's
+    /// only possible to execute as_bool on boolean variables, boolean constants. blocks
+    /// returning a boolean and functions returning a boolean.
+    fn as_bool(&self) -> bool {
+        unreachable!(format!(
+            "{}\n -> Cannot get boolean from expression",
+            self.print()
+        ))
     }
 
     /// What is the type of the instruction: a Statement or an Expression
