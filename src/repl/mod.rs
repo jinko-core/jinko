@@ -1,6 +1,9 @@
 //! The REPL module implements an interactive mode for the broccoli interpreter. You can
 //! use it as is, or run a file and then enter the interactive mode.
 
+mod prompt;
+use prompt::Prompt;
+
 use linefeed::{Interface, ReadResult};
 
 use crate::error::JinkoError;
@@ -16,7 +19,7 @@ impl Repl {
         interpreter: &mut Interpreter,
         input: &'i str,
     ) -> Result<(), JinkoError> {
-        let (_, fc) = Construct::function_call(input).unwrap();
+        let (_, fc) = Construct::function_call(input)?;
 
         interpreter.entry_point.add_instruction(Box::new(fc))?;
 
@@ -29,10 +32,11 @@ impl Repl {
         let mut interpreter = Interpreter::new();
 
         // FIXME: Add actual prompt
-        line_reader.set_prompt("broccoli > ")?;
+        line_reader.set_prompt(&Prompt::get(&interpreter))?;
 
         while let ReadResult::Input(input) = line_reader.read_line()? {
             Repl::parse_reentrant(&mut interpreter, &input)?;
+            line_reader.set_prompt(&Prompt::get(&interpreter))?;
         }
 
         Ok(())
