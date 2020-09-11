@@ -41,4 +41,5 @@ impl BoxConstruct {
     box_construct! {variable}
     box_construct! {block}
     box_construct! {jinko_inst}
+    box_construct! {function_declaration}
 }

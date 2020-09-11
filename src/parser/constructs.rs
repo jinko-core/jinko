@@ -177,8 +177,9 @@ impl Construct {
     /// a block declaration...
     pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         alt((
-            BoxConstruct::jinko_inst,
+            BoxConstruct::function_declaration,
             BoxConstruct::function_call,
+            BoxConstruct::jinko_inst,
             BoxConstruct::variable,
             BoxConstruct::block,
         ))(input)
