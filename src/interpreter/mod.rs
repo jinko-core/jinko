@@ -7,6 +7,7 @@
 mod scope_map;
 use scope_map::ScopeMap;
 
+use std::rc::Rc;
 use std::collections::HashMap;
 
 use crate::error::BroccoliError;
@@ -67,7 +68,7 @@ impl Interpreter {
     }
 
     /// Get a mutable reference on an existing function
-    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
+    pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         self.scope_map.get_function(name)
     }
 

@@ -4,6 +4,7 @@
 //! scope. If the specified name cannot be found, it searches the other scopes, defined
 //! before the current one, until it finds the correct component.
 
+use std::rc::Rc;
 use std::collections::{HashMap, LinkedList};
 
 use crate::{
@@ -14,7 +15,7 @@ use crate::{
 /// A scope contains a set of available variables and functions
 struct Scope {
     variables: HashMap<String, Var>,
-    functions: HashMap<String, FunctionDec>,
+    functions: HashMap<String, Rc<FunctionDec>>,
 }
 
 impl Scope {
@@ -30,7 +31,7 @@ impl Scope {
         self.variables.get(name)
     }
 
-    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
+    pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         self.functions.get(name)
     }
 
@@ -59,7 +60,7 @@ impl Scope {
                 func.name().to_owned(),
             )),
             None => Ok({
-                self.functions.insert(func.name().to_owned(), func);
+                self.functions.insert(func.name().to_owned(), Rc::new(func));
             }),
         }
     }
@@ -108,7 +109,7 @@ impl ScopeMap {
     }
 
     /// Maybe get a function in any available scopes
-    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
+    pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_function(name) {

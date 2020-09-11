@@ -66,7 +66,8 @@ impl Instruction for FunctionCall {
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), BroccoliError> {
         let function = match interpreter.get_function(self.name()) {
-            Some(f) => f,
+            // get_function() return a Rc, so this clones the Rc, not the FunctionDec
+            Some(f) => f.clone(),
             // FIXME: Fix Location and input
             None => {
                 return Err(BroccoliError::new(
