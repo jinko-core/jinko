@@ -7,8 +7,8 @@
 mod scope_map;
 use scope_map::ScopeMap;
 
-use std::rc::Rc;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::error::JinkoError;
 use crate::instruction::{FunctionDec, Instruction, Var};

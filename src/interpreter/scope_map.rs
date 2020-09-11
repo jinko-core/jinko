@@ -4,11 +4,11 @@
 //! scope. If the specified name cannot be found, it searches the other scopes, defined
 //! before the current one, until it finds the correct component.
 
-use std::rc::Rc;
 use std::collections::{HashMap, LinkedList};
+use std::rc::Rc;
 
 use crate::{
-    error::{JinkoError, ErrKind},
+    error::{ErrKind, JinkoError},
     instruction::{FunctionDec, Var},
 };
 

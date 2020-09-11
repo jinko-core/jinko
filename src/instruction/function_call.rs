@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument lists is given to the
 //! function on execution.
 
-use crate::error::{JinkoError, ErrKind};
+use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
 use crate::value::Constant;
 
@@ -85,7 +85,10 @@ impl Instruction for FunctionCall {
             None => {
                 return Err(JinkoError::new(
                     ErrKind::Interpreter,
-                    format!("cannot execute function {} as it is marked `ext`", self.name()),
+                    format!(
+                        "cannot execute function {} as it is marked `ext`",
+                        self.name()
+                    ),
                     None,
                     self.name().to_owned(),
                 ))
