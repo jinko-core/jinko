@@ -4,8 +4,8 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::error::{ErrKind, JinkoError};
-use crate::interpreter::Interpreter;
 use crate::instruction::{InstrKind, Instruction};
+use crate::interpreter::Interpreter;
 
 /// The potential interpreter instructions
 #[derive(Debug, PartialEq)]
@@ -25,7 +25,12 @@ impl JinkoInst {
         match keyword {
             "dump" => Ok(JinkoInst::Dump),
             // FIXME: Fix error input
-            _ => Err(JinkoError::new(ErrKind::Parsing, format!("unknown interpreter directive @{}", keyword), None, "".to_owned())),
+            _ => Err(JinkoError::new(
+                ErrKind::Parsing,
+                format!("unknown interpreter directive @{}", keyword),
+                None,
+                "".to_owned(),
+            )),
         }
     }
 }
@@ -39,13 +44,14 @@ impl Instruction for JinkoInst {
         match self {
             JinkoInst::Dump => "@dump",
             _ => self.unreachable(),
-        }.to_string()
+        }
+        .to_string()
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         match self {
             JinkoInst::Dump => println!("{}", interpreter.print()),
-            _ => self.unreachable()
+            _ => self.unreachable(),
         };
 
         Ok(())
