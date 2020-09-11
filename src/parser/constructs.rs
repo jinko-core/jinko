@@ -129,7 +129,7 @@ impl Construct {
     ///
     /// A variable assignment is a Statement. It cannot be used as an Expression
     ///
-    /// ```md
+    /// ```
     /// {
     ///     x = 12; // Block returns void
     /// }

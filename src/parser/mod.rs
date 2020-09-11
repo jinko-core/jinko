@@ -21,7 +21,11 @@ impl Parser {
     pub fn parse(input: &str) -> Result<Interpreter, JinkoError> {
         let mut interpreter = Interpreter::new();
         let (_, instructions) = many0(Construct::expression)(input)?;
-        interpreter.entry_point.block_mut().unwrap().set_instructions(instructions);
+        interpreter
+            .entry_point
+            .block_mut()
+            .unwrap()
+            .set_instructions(instructions);
 
         Ok(interpreter)
     }
