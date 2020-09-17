@@ -25,7 +25,7 @@ impl Repl {
 
     /// Launch the REPL
     pub fn launch_repl() -> Result<(), JinkoError> {
-        let line_reader = Interface::new("broccoli")?;
+        let line_reader = Interface::new("jinko")?;
         let mut interpreter = Interpreter::new();
 
         // FIXME: Add actual prompt
