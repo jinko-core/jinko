@@ -2,6 +2,8 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
+use colored::Colorize;
+
 mod audit;
 mod block;
 mod function_call;
@@ -33,8 +35,9 @@ pub trait Instruction {
     /// Execute the instruction, altering the state of the program
     fn execute(&self, _: &mut Interpreter) -> Result<(), JinkoError> {
         unreachable!(
-            "{}\n --> The execution of this instruction is not implemented yet. This is a bug",
-            self.print()
+            "\n{}\n --> {}",
+            self.print(),
+            "The execution of this instruction is not implemented yet. This is a bug".red(),
         )
     }
 
@@ -42,10 +45,11 @@ pub trait Instruction {
     /// only possible to execute as_bool on boolean variables, boolean constants. blocks
     /// returning a boolean and functions returning a boolean.
     fn as_bool(&self) -> bool {
-        unreachable!(format!(
-            "{}\n -> Cannot get boolean from expression",
-            self.print()
-        ))
+        unreachable!(
+            "\n{}\n --> {}",
+            self.print(),
+            "Cannot get boolean from expression".red(),
+        )
     }
 
     /// What is the type of the instruction: a Statement or an Expression
