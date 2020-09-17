@@ -32,13 +32,17 @@ impl Repl {
         line_reader.set_prompt(&Prompt::get(&interpreter))?;
 
         while let ReadResult::Input(input) = line_reader.read_line()? {
-            let inst = Repl::parse_instruction(&input)?;
-            line_reader.set_prompt(&Prompt::get(&interpreter))?;
+            let inst = match Repl::parse_instruction(&input) {
+                Ok(i) => i,
+                Err(e) => { println!("{}", e.to_string()); continue; },
+            };
 
             match inst.execute(&mut interpreter) {
                 Ok(()) => {}
                 Err(e) => println!("{}", e.to_string()),
             };
+
+            line_reader.set_prompt(&Prompt::get(&interpreter))?;
         }
 
         Ok(())
