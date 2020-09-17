@@ -3,10 +3,10 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
+    branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
     bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
     character::complete::char, character::is_alphabetic, character::is_alphanumeric,
-    character::is_digit, combinator::opt, error::ErrorKind, sequence::delimited, IResult, branch::alt,
+    character::is_digit, combinator::opt, error::ErrorKind, sequence::delimited, IResult,
 };
 
 /// Reserved Keywords by jinko
@@ -253,7 +253,10 @@ impl Token {
 
     /// Consumes all kinds of comments: Multi-line or single-line
     pub fn maybe_consume_comment(input: &str) -> IResult<&str, &str> {
-        alt((Token::maybe_consume_single_comment, Token::maybe_consume_multi_comment))(input)
+        alt((
+            Token::maybe_consume_single_comment,
+            Token::maybe_consume_multi_comment,
+        ))(input)
     }
 }
 
@@ -413,7 +416,10 @@ mod tests {
         };
         match Token::maybe_consume_comment("// a bbbb a something  /* hey */") {
             Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have tons of text and stuff, even other comment"),
+            Err(_) => assert!(
+                false,
+                "Valid to have tons of text and stuff, even other comment"
+            ),
         };
     }
 
