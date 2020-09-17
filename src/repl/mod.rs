@@ -7,6 +7,7 @@ use prompt::Prompt;
 use linefeed::{Interface, ReadResult};
 
 use crate::error::JinkoError;
+use crate::instruction::Instruction;
 use crate::interpreter::Interpreter;
 use crate::parser::Construct;
 
@@ -15,19 +16,15 @@ pub struct Repl;
 
 impl Repl {
     /// Parse a new input, adding it to an existing interpreter
-    fn parse_reentrant<'i>(
-        interpreter: &mut Interpreter,
-        input: &'i str,
-    ) -> Result<(), JinkoError> {
-        let (_, exp) = Construct::expression(input)?;
-
-        interpreter.entry_point.add_instruction(exp)?;
-
-        Ok(())
+    fn parse_instruction(input: & str) -> Result<Box<dyn Instruction>, JinkoError> {
+        match Construct::expression(input) {
+            Ok((_, value)) => Ok(value),
+            Err(e) => Err(JinkoError::from(e)),
+        }
     }
 
     /// Launch the REPL
-    pub fn launch_repl<'i>() -> Result<(), JinkoError> {
+    pub fn launch_repl() -> Result<(), JinkoError> {
         let line_reader = Interface::new("broccoli")?;
         let mut interpreter = Interpreter::new();
 
@@ -35,11 +32,13 @@ impl Repl {
         line_reader.set_prompt(&Prompt::get(&interpreter))?;
 
         while let ReadResult::Input(input) = line_reader.read_line()? {
-            Repl::parse_reentrant(&mut interpreter, &input)?;
+            let inst = Repl::parse_instruction(&input)?;
             line_reader.set_prompt(&Prompt::get(&interpreter))?;
 
-            // FIXME: Is this really what we want...?
-            interpreter.run_once();
+            match inst.execute(&mut interpreter) {
+                Ok(()) => {}
+                Err(e) => println!("{}", e.to_string()),
+            };
         }
 
         Ok(())
