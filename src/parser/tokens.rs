@@ -3,10 +3,10 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while,
-    bytes::complete::take_while1, character::complete::anychar, character::complete::char,
-    character::is_alphabetic, character::is_alphanumeric, character::is_digit, combinator::opt,
-    error::ErrorKind, sequence::delimited, IResult,
+    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
+    bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
+    character::complete::char, character::is_alphabetic, character::is_alphanumeric,
+    character::is_digit, combinator::opt, error::ErrorKind, sequence::delimited, IResult,
 };
 
 /// Reserved Keywords by jinko
@@ -132,6 +132,18 @@ impl Token {
         Token::specific_token(input, "->")
     }
 
+    pub fn comment_multi_start(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "/*")
+    }
+
+    pub fn comment_multi_end(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "*/")
+    }
+
+    pub fn comment_single(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "//")
+    }
+
     pub fn identifier(input: &str) -> IResult<&str, &str> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
@@ -222,6 +234,13 @@ impl Token {
     /// Consumes 0 or more whitespaces in an input. A whitespace is a space or a tab
     pub fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
         take_while(|c| Token::is_whitespace(c))(input)
+    }
+
+    /// Consumes all kinds of comments: Multi-line or single-line
+    pub fn maybe_consume_comments(input: &str) -> IResult<&str, &str> {
+        let (input, _) = Token::comment_multi_start(input)?;
+        let (input, _) = take_until("*/")(input)?;
+        Token::comment_multi_end(input)
     }
 }
 
@@ -339,5 +358,33 @@ mod tests {
             Ok(_) => assert!(false, "ID can't be a reserved keyword"),
             Err(_) => assert!(true),
         }
+    }
+
+    #[test]
+    fn t_multi_comment_valid() {
+        match Token::maybe_consume_comments("/* */") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have one space"),
+        };
+        match Token::maybe_consume_comments("/**/") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have zero space"),
+        };
+        match Token::maybe_consume_comments("/*            */") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have tons of spaces"),
+        };
+        match Token::maybe_consume_comments("/* a bbbb a something   */") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have tons of text and stuff"),
+        };
+    }
+
+    #[test]
+    fn t_multi_comment_invalid() {
+        match Token::maybe_consume_comments("/*") {
+            Ok(_) => assert!(false, "Unclosed start delimiter"),
+            Err(_) => assert!(true),
+        };
     }
 }
