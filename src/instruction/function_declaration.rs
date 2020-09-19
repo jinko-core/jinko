@@ -159,6 +159,10 @@ impl Instruction for FunctionDec {
         InstrKind::Statement
     }
 
+    fn execute(&self, _: &mut Interpreter) -> Result<(), JinkoError> {
+        Ok(())
+    }
+
     fn print(&self) -> String {
         let mut base = String::from(match self.kind {
             FunctionKind::Func => "func",
