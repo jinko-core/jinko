@@ -209,16 +209,15 @@ impl Construct {
 
         let (input, value) = alt((
             BoxConstruct::function_declaration,
+            BoxConstruct::function_call,
             BoxConstruct::var_assignment,
             BoxConstruct::any_loop,
-            BoxConstruct::function_call,
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
             BoxConstruct::variable,
         ))(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = opt(Token::semicolon)(input)?;
 
         Ok((input, value))
     }

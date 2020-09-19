@@ -34,7 +34,7 @@ impl Repl {
         line_reader.set_prompt(&Prompt::get(&interpreter))?;
 
         while let ReadResult::Input(input) = line_reader.read_line()? {
-            let mut inst = match Repl::parse_instruction(&input) {
+            let inst = match Repl::parse_instruction(&input) {
                 Ok(i) => i,
                 Err(e) => {
                     println!("{}", e.to_string());
