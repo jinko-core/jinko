@@ -3,14 +3,17 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
-    bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
-    character::complete::char, character::is_alphabetic, character::is_alphanumeric,
-    character::is_digit, combinator::opt, error::ErrorKind, sequence::delimited, IResult,
+    branch::alt, bytes::complete::is_a, bytes::complete::is_not, bytes::complete::tag,
+    bytes::complete::take_until, bytes::complete::take_while, bytes::complete::take_while1,
+    character::complete::anychar, character::complete::char, character::is_alphabetic,
+    character::is_alphanumeric, character::is_digit, combinator::opt, error::ErrorKind,
+    sequence::delimited, IResult,
 };
 
-/// Reserved Keywords by jinko
-const RESERVED_KEYWORDS: [&str; 8] = ["func", "test", "mock", "ext", "for", "while", "loop", "mut"];
+/// Reserved Keywords by broccoli
+const RESERVED_KEYWORDS: [&str; 10] = [
+    "func", "test", "mock", "ext", "for", "while", "loop", "mut", "true", "false",
+];
 
 pub struct Token;
 
@@ -128,6 +131,27 @@ impl Token {
         Token::specific_token(input, "audit ")
     }
 
+    fn non_digit_nor_alpha<'i>(input: &'i str) -> IResult<&'i str, &'i str> {
+        match input.len() {
+            0 => Ok((input, "")),
+            _ => is_a(" \t\r\n;")(input),
+        }
+    }
+
+    pub fn true_tok(input: &str) -> IResult<&str, &str> {
+        let (input, t) = Token::specific_token(input, "true")?;
+        let (input, _) = Token::non_digit_nor_alpha(input)?;
+
+        Ok((input, t))
+    }
+
+    pub fn false_tok(input: &str) -> IResult<&str, &str> {
+        let (input, f) = Token::specific_token(input, "false")?;
+        let (input, _) = Token::non_digit_nor_alpha(input)?;
+
+        Ok((input, f))
+    }
+
     pub fn arrow(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "->")
     }
@@ -170,6 +194,13 @@ impl Token {
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
         take_while1(|c| is_digit(c as u8))(input)
+    }
+
+    pub fn bool_constant(input: &str) -> IResult<&str, bool> {
+        let (input, b) = alt((Token::true_tok, Token::false_tok))(input)?;
+
+        // We can unwrap since we recognized valid tokens already
+        Ok((input, b.parse::<bool>().unwrap()))
     }
 
     pub fn float_constant(input: &str) -> IResult<&str, f64> {
@@ -372,6 +403,29 @@ mod tests {
         }
         match Token::identifier("func") {
             Ok(_) => assert!(false, "ID can't be a reserved keyword"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_bool_valid() {
+        assert_eq!(Token::bool_constant("true"), Ok(("", true)));
+        assert_eq!(Token::bool_constant("false"), Ok(("", false)));
+        assert_eq!(Token::bool_constant("true a"), Ok(("a", true)));
+    }
+
+    #[test]
+    fn t_bool_invalid() {
+        match Token::bool_constant("tru") {
+            Ok(_) => assert!(false, "Not a valid boolean, too short"),
+            Err(_) => assert!(true),
+        }
+        match Token::bool_constant("tru a") {
+            Ok(_) => assert!(false, "Not a valid boolean, too short + character"),
+            Err(_) => assert!(true),
+        }
+        match Token::bool_constant("trueast") {
+            Ok(_) => assert!(false, "Not a valid boolean, too long"),
             Err(_) => assert!(true),
         }
     }
