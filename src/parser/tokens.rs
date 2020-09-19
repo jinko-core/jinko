@@ -3,14 +3,16 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_while,
-    bytes::complete::take_while1, character::complete::anychar, character::complete::char,
-    character::is_alphabetic, character::is_alphanumeric, character::is_digit, combinator::opt,
-    error::ErrorKind, sequence::delimited, IResult, branch::alt,
+    branch::alt, bytes::complete::is_a, bytes::complete::is_not, bytes::complete::tag,
+    bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
+    character::complete::char, character::is_alphabetic, character::is_alphanumeric,
+    character::is_digit, combinator::opt, error::ErrorKind, sequence::delimited, IResult,
 };
 
 /// Reserved Keywords by broccoli
-const RESERVED_KEYWORDS: [&str; 8] = ["func", "test", "mock", "ext", "for", "while", "loop", "mut"];
+const RESERVED_KEYWORDS: [&str; 10] = [
+    "func", "test", "mock", "ext", "for", "while", "loop", "mut", "true", "false",
+];
 
 pub struct Token;
 
@@ -128,17 +130,25 @@ impl Token {
         Token::specific_token(input, "audit ")
     }
 
-    fn non_digit_nor_alpha(input: &str) -> IResult<&str, &str> {
+    fn non_digit_nor_alpha<'i>(input: &'i str) -> IResult<&'i str, &'i str> {
+        match input.len() {
+            0 => Ok((input, "")),
+            _ => is_a(" \t\r\n;")(input),
+        }
     }
 
     pub fn true_tok(input: &str) -> IResult<&str, &str> {
-        let (input, _) = Token::specific_token(input, "true")?;
-        Token::non_digit_nor_alpha(input)
+        let (input, t) = Token::specific_token(input, "true")?;
+        let (input, _) = Token::non_digit_nor_alpha(input)?;
+
+        Ok((input, t))
     }
 
     pub fn false_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "false")
-        Token::non_digit_nor_alpha(input)
+        let (input, f) = Token::specific_token(input, "false")?;
+        let (input, _) = Token::non_digit_nor_alpha(input)?;
+
+        Ok((input, f))
     }
 
     pub fn arrow(input: &str) -> IResult<&str, &str> {
@@ -365,7 +375,7 @@ mod tests {
     fn t_bool_valid() {
         assert_eq!(Token::bool_constant("true"), Ok(("", true)));
         assert_eq!(Token::bool_constant("false"), Ok(("", false)));
-        assert_eq!(Token::bool_constant("true a"), Ok((" a", true)));
+        assert_eq!(Token::bool_constant("true a"), Ok(("a", true)));
     }
 
     #[test]

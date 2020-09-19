@@ -19,12 +19,18 @@ pub use jink_string::JinkString;
 /// C is the type contained inside the `Value`
 pub trait Value: Instruction {
     /// Return the value contained in the `Value`
-    fn value<C>(&self) -> C where Self: Sized {
+    fn value<C>(&self) -> C
+    where
+        Self: Sized,
+    {
         unreachable!("Cannot get value from Value. This is a bug")
     }
 
     /// Change the value contained in the `Value`
-    fn set<C>(&mut self, value: C) where Self: Sized {
+    fn set<C>(&mut self, value: C)
+    where
+        Self: Sized,
+    {
         unreachable!("Cannot set value on Value. This is a bug")
     }
 }

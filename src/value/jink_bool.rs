@@ -1,7 +1,7 @@
 //! Represents a boolean in Jinko
 
-use crate::instruction::{Instruction, InstrKind};
 use super::Value;
+use crate::instruction::{InstrKind, Instruction};
 
 pub struct JinkBool(bool);
 

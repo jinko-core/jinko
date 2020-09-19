@@ -1,7 +1,7 @@
 //! Represents a single character in Jinko
 
-use crate::instruction::{Instruction, InstrKind};
 use super::Value;
+use crate::instruction::{InstrKind, Instruction};
 
 pub struct JinkChar(char);
 

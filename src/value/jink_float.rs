@@ -1,8 +1,8 @@
 //! Represents a floating point number in Jinko. Floating point numbers are always
 //! double precision
 
-use crate::instruction::{Instruction, InstrKind};
 use super::Value;
+use crate::instruction::{InstrKind, Instruction};
 
 pub struct JinkFloat(f64);
 

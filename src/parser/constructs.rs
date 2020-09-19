@@ -18,7 +18,7 @@ use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
     Loop, LoopKind, Var, VarAssign,
 };
-use crate::value::{Value, JinkBool, JinkFloat, JinkInt, JinkChar, JinkString};
+use crate::value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString, Value};
 
 use super::tokens::Token;
 
@@ -57,22 +57,22 @@ impl Construct {
         // FIXME: Use alt instead?
         match opt(Construct::c_char_constant)(input)? {
             (input, Some(value)) => return Ok((input, value)),
-            (input, None) => {},
+            (input, None) => {}
         };
 
         match opt(Construct::c_string_constant)(input)? {
             (input, Some(value)) => return Ok((input, value)),
-            (input, None) => {},
+            (input, None) => {}
         };
 
         match opt(Construct::c_float_constant)(input)? {
             (input, Some(value)) => return Ok((input, value)),
-            (input, None) => {},
+            (input, None) => {}
         };
 
         match opt(Construct::c_int_constant)(input)? {
             (input, Some(value)) => return Ok((input, value)),
-            (input, None) => {},
+            (input, None) => {}
         };
 
         Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf)))

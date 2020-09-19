@@ -1,7 +1,7 @@
 //! Represents an integer in Jinko. All integers are signed 64 bytes
 
-use crate::instruction::{Instruction, InstrKind};
 use super::Value;
+use crate::instruction::{InstrKind, Instruction};
 
 pub struct JinkInt(i64);
 

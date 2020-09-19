@@ -1,7 +1,7 @@
 //! Represents a resizeable string in Jinko
 
-use crate::instruction::{Instruction, InstrKind};
 use super::Value;
+use crate::instruction::{InstrKind, Instruction};
 
 pub struct JinkString(String);
 
