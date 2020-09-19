@@ -64,7 +64,10 @@ pub trait InstructionClone {
     fn box_clone(&self) -> Box<dyn Instruction>;
 }
 
-impl<T> InstructionClone for T where T: 'static + Instruction + Clone {
+impl<T> InstructionClone for T
+where
+    T: 'static + Instruction + Clone,
+{
     fn box_clone(&self) -> Box<dyn Instruction> {
         Box::new(self.clone())
     }
