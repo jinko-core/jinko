@@ -77,7 +77,7 @@ impl Instruction for FunctionCall {
             }
         };
 
-        if interpreter.debug_mode { println!("{} called", self.name()) };
+        interpreter.debug("CALL", self.name());
 
         function.run(interpreter)
     }

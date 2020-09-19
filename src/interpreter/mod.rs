@@ -4,6 +4,8 @@
 //! source file returns an "Interpreter", which is really just a complex structure
 //! aggregating the necessary information to run a jinko program.
 
+use colored::Colorize;
+
 mod scope_map;
 use scope_map::ScopeMap;
 
@@ -115,6 +117,16 @@ impl Interpreter {
     /// Pretty-prints valid jinko code from a given interpreter
     pub fn print(&self) -> String {
         self.entry_point.print()
+    }
+
+    /// Print a debug message if the interpreter is in debug mode, according to the
+    /// following format:
+    ///
+    /// <specifier>: <msg>
+    pub fn debug(&self, specifier: &str, msg: &str) {
+        if self.debug_mode {
+            println!("{}: {}", specifier.purple(), msg);
+        }
     }
 }
 
