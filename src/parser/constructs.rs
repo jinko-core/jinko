@@ -20,7 +20,7 @@ use crate::instruction::{
 };
 use crate::value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString, Value};
 
-use super::tokens::Token;
+use super::{box_construct::BoxConstruct, jinko_insts::JinkoInst, tokens::Token};
 
 pub struct Construct;
 
@@ -193,16 +193,33 @@ impl Construct {
         }
     }
 
-    fn variable(input: &str) -> IResult<&str, Var> {
+    /// Parse a valid variable name
+    ///
+    /// `<identifier>`
+    pub fn variable(input: &str) -> IResult<&str, Var> {
         let (input, name) = Token::identifier(input)?;
 
         Ok((input, Var::new(name.to_owned())))
     }
 
-    fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, variable) = Construct::variable(input)?;
+    /// Parse any valid jinko expression. This can be a function call, a variable,
+    /// a block declaration...
+    pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        Ok((input, Box::new(variable)))
+        let (input, value) = alt((
+            BoxConstruct::function_declaration,
+            BoxConstruct::var_assignment,
+            BoxConstruct::any_loop,
+            BoxConstruct::function_call,
+            BoxConstruct::jinko_inst,
+            BoxConstruct::block,
+            BoxConstruct::variable,
+        ))(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Ok((input, value))
     }
 
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
@@ -557,6 +574,31 @@ impl Construct {
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Loop::new(LoopKind::For(variable, expression), block)))
+    }
+
+    /// Parse any loop construct: For, While or Loop
+    pub fn any_loop(input: &str) -> IResult<&str, Loop> {
+        alt((
+            Construct::loop_block,
+            Construct::for_block,
+            Construct::while_block,
+        ))(input)
+    }
+
+    /// Parse an interpreter directive. There are only a few of them, listed in
+    /// the `JinkoInst` module
+    ///
+    /// `@<jinko_inst>`
+    pub fn jinko_inst(input: &str) -> IResult<&str, JinkoInst> {
+        let (input, _) = Token::at_sign(input)?;
+        let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::semicolon(input)?;
+
+        // FIXME: No unwrap()
+        let inst = JinkoInst::from_str(id).unwrap();
+
+        Ok((input, inst))
     }
 }
 
@@ -1051,5 +1093,10 @@ mod tests {
         };
 
         // FIXME: Add fun tests like `for x in { some_range_stuff() } {}`
+    }
+
+    #[test]
+    fn t_jinko_inst_valid() {
+        assert_eq!(Construct::jinko_inst("@dump;"), Ok(("", JinkoInst::Dump)));
     }
 }

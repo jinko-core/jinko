@@ -1,7 +1,10 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::{error::JinkoError, interpreter::Interpreter};
+use std::any::Any;
+
+use crate::error::{ErrKind, JinkoError};
+use crate::interpreter::Interpreter;
 
 use super::{Block, InstrKind, Instruction};
 
@@ -71,14 +74,17 @@ impl FunctionDec {
     /// Add an instruction to the function declaration, in order. This is mostly useful
     /// when adding instructions to the entry point of the interpreter, since parsing
     /// directly gives a block to the function
-    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) -> Result<(), String> {
+    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) -> Result<(), JinkoError> {
         match &mut self.block {
             Some(b) => Ok(b.add_instruction(instruction)),
-            // FIXME: Return correct error
-            None => Err(format!(
-                "function {} has no instruction block. It might be an extern
-            function or an error",
-                self.name
+            None => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!(
+                    "function {} has no instruction block. It might be an extern function or an error",
+                    self.name
+                ),
+                None,
+                self.name.clone(),
             )),
         }
     }
@@ -121,11 +127,42 @@ impl FunctionDec {
     pub fn block(&self) -> Option<&Block> {
         self.block.as_ref()
     }
+
+    /// Return a mutable reference to the function's block
+    pub fn block_mut(&mut self) -> Option<&mut Block> {
+        self.block.as_mut()
+    }
+
+    /// Run through the function as if it was called. This is useful for setting
+    /// an entry point into the interpreter and executing it
+    pub fn run(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        let block = match self.block() {
+            Some(b) => b,
+            // FIXME: Fix Location and input
+            None => {
+                return Err(JinkoError::new(
+                    ErrKind::Interpreter,
+                    format!(
+                        "cannot execute function {} as it is marked `ext`",
+                        self.name()
+                    ),
+                    None,
+                    self.name().to_owned(),
+                ))
+            }
+        };
+
+        block.execute(interpreter)
+    }
 }
 
 impl Instruction for FunctionDec {
     fn kind(&self) -> InstrKind {
-        InstrKind::Statement
+        InstrKind::FuncDec
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
     }
 
     fn print(&self) -> String {

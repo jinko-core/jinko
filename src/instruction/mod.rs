@@ -2,6 +2,10 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
+use std::any::Any;
+
+use colored::Colorize;
+
 mod audit;
 mod block;
 mod function_call;
@@ -27,22 +31,28 @@ use crate::{error::JinkoError, interpreter::Interpreter};
 pub enum InstrKind {
     Statement,
     Expression,
+    FuncDec,
 }
 
 pub trait Instruction {
     /// Execute the instruction, altering the state of the program
     fn execute(&self, _: &mut Interpreter) -> Result<(), JinkoError> {
-        unreachable!("The execution of this instruction is not implemented yet. This is a bug")
+        unreachable!(
+            "\n{}\n --> {}",
+            self.print(),
+            "The execution of this instruction is not implemented yet. This is a bug".red(),
+        )
     }
 
     /// Maybe execute the instruction, transforming it in a Rust bool if possible. It's
     /// only possible to execute as_bool on boolean variables, boolean constants. blocks
     /// returning a boolean and functions returning a boolean.
     fn as_bool(&self) -> bool {
-        unreachable!(format!(
-            "{}\n -> Cannot get boolean from expression",
-            self.print()
-        ))
+        unreachable!(
+            "\n{}\n --> {}",
+            self.print(),
+            "Cannot get boolean from expression".red(),
+        )
     }
 
     /// What is the type of the instruction: a Statement or an Expression
@@ -50,4 +60,8 @@ pub trait Instruction {
 
     /// Pretty-print the instruction to valid jinko code
     fn print(&self) -> String;
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        unreachable!()
+    }
 }

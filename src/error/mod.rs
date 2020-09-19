@@ -9,6 +9,7 @@ use colored::Colorize;
 pub enum ErrKind {
     Parsing,
     Interpreter,
+    IO,
 }
 
 /// Contains indications vis-a-vis the error's location in the source file
@@ -63,6 +64,7 @@ impl JinkoError {
     }
 
     /// What kind of error the error is
+    #[cfg(test)]
     pub fn kind(&self) -> ErrKind {
         self.kind
     }
@@ -71,12 +73,19 @@ impl JinkoError {
 impl std::fmt::Display for JinkoError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // FIXME: Add better formatting
-        write!(
-            f,
-            "Input: {}\nErrorKind: {:?}\nInfo: {}",
-            self.input, // FIXME: Remove unwrap()
-            self.kind,
-            self.msg.red()
-        )
+        write!(f, "ErrorKind: {:?}\nInfo: {}", self.kind, self.msg.red())
+    }
+}
+
+impl std::convert::From<std::io::Error> for JinkoError {
+    fn from(e: std::io::Error) -> Self {
+        JinkoError::new(ErrKind::IO, e.to_string(), None, "".to_owned())
+    }
+}
+
+// FIXME: Improve formatting, current output is barren
+impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for JinkoError {
+    fn from(e: nom::Err<(&str, nom::error::ErrorKind)>) -> Self {
+        JinkoError::new(ErrKind::Parsing, e.to_string(), None, "".to_owned())
     }
 }

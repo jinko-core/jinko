@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::error::JinkoError;
-use crate::instruction::{FunctionDec, Instruction, Var};
+use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, Var};
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -36,18 +36,29 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
+    // FIXME: Remove this function
+    fn new_entry() -> FunctionDec {
+        let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None);
+
+        ep.set_kind(FunctionKind::Func);
+        ep.set_block(Block::new());
+
+        ep
+    }
+
     /// Create a new empty interpreter. Starts in non-audit mode
     pub fn new() -> Interpreter {
         let mut i = Interpreter {
             in_audit: false,
 
-            entry_point: FunctionDec::new(String::from(ENTRY_NAME), None),
+            entry_point: Self::new_entry(),
             scope_map: ScopeMap::new(),
 
             tests: HashMap::new(),
             exts: HashMap::new(),
         };
 
+        // FIXME: Necessary?
         i.scope_enter();
 
         i
@@ -97,14 +108,21 @@ impl Interpreter {
         self.in_audit = false;
     }
 
+    // FIXME: This is not working
     /// Run the interpreter once, altering its contents
     pub fn run_once(&mut self) {
         // Take ownership of the entry point, replacing it with a new one,
         // and execute it
-        match std::mem::take(&mut self.entry_point).execute(self) {
+        match std::mem::take(&mut self.entry_point)
+            .block()
+            .unwrap()
+            .execute(self)
+        {
             Ok(_) => {}
             Err(e) => e.exit(),
         }
+
+        self.entry_point = Self::new_entry();
     }
 
     /// Pretty-prints valid jinko code from a given interpreter

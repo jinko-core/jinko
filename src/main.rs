@@ -3,12 +3,29 @@ mod error;
 mod instruction;
 mod interpreter;
 mod parser;
+mod repl;
 mod value;
 
 use args::Args;
+use parser::Parser;
+use repl::Repl;
+use std::fs;
 
 fn main() {
     let args = Args::handle();
 
-    println!("{:#?}", args.input);
+    if args.interactive || args.input.is_none() {
+        match Repl::launch_repl() {
+            Ok(_) => {}
+            Err(e) => e.exit(),
+        }
+    };
+
+    // We can unwrap since we checked for `None` in the if
+    let input = fs::read_to_string(args.input.unwrap()).unwrap();
+
+    // FIXME: No unwrap()
+    let mut interpreter = Parser::parse(&input).unwrap();
+
+    interpreter.run_once();
 }

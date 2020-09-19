@@ -2,20 +2,30 @@
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
+mod box_construct;
 mod constructs;
+mod jinko_insts;
 mod tokens;
 
-use super::interpreter::Interpreter;
+use nom::multi::many0;
 
-use constructs::Construct;
+use crate::{error::JinkoError, interpreter::Interpreter};
+
+pub use constructs::Construct;
 
 pub struct Parser;
 
 impl Parser {
     /// Parses the entire user input and returns a hashmap corresponding to the user
     /// program
-    pub fn parse(input: &str) -> Result<Interpreter, String> {
-        let interpreter = Interpreter::new();
+    pub fn parse(input: &str) -> Result<Interpreter, JinkoError> {
+        let mut interpreter = Interpreter::new();
+        let (_, instructions) = many0(Construct::expression)(input)?;
+        interpreter
+            .entry_point
+            .block_mut()
+            .unwrap()
+            .set_instructions(instructions);
 
         Ok(interpreter)
     }
