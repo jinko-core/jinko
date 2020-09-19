@@ -8,6 +8,7 @@ use super::{Block, InstrKind, Instruction, Var};
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
 /// at all
+#[derive(Clone)]
 pub enum LoopKind {
     For(Var, Box<dyn Instruction>),
     While(Box<dyn Instruction>),
@@ -16,6 +17,7 @@ pub enum LoopKind {
 
 /// The Loop block struct. Contains the block to execute, as well as the kind of loop
 /// it represents.
+#[derive(Clone)]
 pub struct Loop {
     kind: LoopKind,
     block: Block,

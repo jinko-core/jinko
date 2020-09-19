@@ -2,8 +2,6 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use std::any::Any;
-
 use colored::Colorize;
 
 mod audit;
@@ -31,10 +29,9 @@ use crate::{error::JinkoError, interpreter::Interpreter};
 pub enum InstrKind {
     Statement,
     Expression,
-    FuncDec,
 }
 
-pub trait Instruction {
+pub trait Instruction: InstructionClone {
     /// Execute the instruction, altering the state of the program
     fn execute(&self, _: &mut Interpreter) -> Result<(), JinkoError> {
         unreachable!(
@@ -60,8 +57,24 @@ pub trait Instruction {
 
     /// Pretty-print the instruction to valid jinko code
     fn print(&self) -> String;
+}
 
-    fn as_any(&mut self) -> &mut dyn Any {
-        unreachable!()
+/// The `InstructionClone` provides a wrapper around `Instruction` to allow cloning them
+pub trait InstructionClone {
+    fn box_clone(&self) -> Box<dyn Instruction>;
+}
+
+impl<T> InstructionClone for T
+where
+    T: 'static + Instruction + Clone,
+{
+    fn box_clone(&self) -> Box<dyn Instruction> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Instruction> {
+    fn clone(&self) -> Self {
+        self.box_clone()
     }
 }

@@ -8,7 +8,7 @@ use crate::instruction::{InstrKind, Instruction};
 use crate::interpreter::Interpreter;
 
 /// The potential interpreter instructions
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum JinkoInst {
     Dump,
 }
