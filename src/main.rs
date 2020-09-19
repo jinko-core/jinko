@@ -11,6 +11,8 @@ use parser::Parser;
 use repl::Repl;
 use std::fs;
 
+use instruction::Instruction;
+
 fn main() {
     let args = Args::handle();
 
@@ -27,5 +29,10 @@ fn main() {
     // FIXME: No unwrap()
     let mut interpreter = Parser::parse(&input).unwrap();
 
-    interpreter.run_once();
+    // The entry point always has a block
+    let ep = interpreter.entry_point.block().unwrap().clone();
+    match ep.execute(&mut interpreter) {
+        Ok(_) => {},
+        Err(e) => e.exit(),
+    }
 }

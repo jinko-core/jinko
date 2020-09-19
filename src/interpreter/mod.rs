@@ -108,23 +108,6 @@ impl Interpreter {
         self.in_audit = false;
     }
 
-    // FIXME: This is not working
-    /// Run the interpreter once, altering its contents
-    pub fn run_once(&mut self) {
-        // Take ownership of the entry point, replacing it with a new one,
-        // and execute it
-        match std::mem::take(&mut self.entry_point)
-            .block()
-            .unwrap()
-            .execute(self)
-        {
-            Ok(_) => {}
-            Err(e) => e.exit(),
-        }
-
-        self.entry_point = Self::new_entry();
-    }
-
     /// Pretty-prints valid jinko code from a given interpreter
     pub fn print(&self) -> String {
         self.entry_point.print()
