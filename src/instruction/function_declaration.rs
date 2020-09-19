@@ -161,10 +161,6 @@ impl Instruction for FunctionDec {
         InstrKind::FuncDec
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
-        self.block().unwrap().execute(interpreter)
-    }
-
     fn as_any(&mut self) -> &mut dyn Any {
         self
     }

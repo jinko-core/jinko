@@ -1,7 +1,7 @@
 //! The VarAssign struct is used when assigning values to variables.
 
+use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
-use crate::error::{JinkoError, ErrKind};
 use crate::value::Constant;
 
 use super::{InstrKind, Instruction};
@@ -53,7 +53,12 @@ impl Instruction for VarAssign {
             Some(v) => match self.mutable {
                 // FIXME: Add logic once constant type is cleaned up
                 true => unreachable!("Mutating mutable variable {}", v.print()),
-                false => Err(JinkoError::new(ErrKind::Interpreter, format!("Trying to mutate immutable variable {}", self.symbol), None, self.print())),
+                false => Err(JinkoError::new(
+                    ErrKind::Interpreter,
+                    format!("Trying to mutate immutable variable {}", self.symbol),
+                    None,
+                    self.print(),
+                )),
             },
             // FIXME: Add logic once constant type is cleaned up
             None => unreachable!("First assignment for variable {}", self.symbol),
