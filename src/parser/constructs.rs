@@ -57,44 +57,25 @@ impl Construct {
         // FIXME: Use alt instead?
         match opt(Construct::c_char_constant)(input)? {
             (input, Some(value)) => return Ok((input, value)),
-            (input, None) => {}
+            (_, None) => {}
         };
 
         match opt(Construct::c_string_constant)(input)? {
             (input, Some(value)) => return Ok((input, value)),
-            (input, None) => {}
+            (_, None) => {}
         };
 
         match opt(Construct::c_float_constant)(input)? {
             (input, Some(value)) => return Ok((input, value)),
-            (input, None) => {}
+            (_, None) => {}
         };
 
         match opt(Construct::c_int_constant)(input)? {
             (input, Some(value)) => return Ok((input, value)),
-            (input, None) => {}
+            (_, None) => {}
         };
 
         Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf)))
-
-        /*
-        let (input, char_value) = opt(Token::char_constant)(input)?;
-        let (input, str_value) = opt(Token::string_constant)(input)?;
-        let (input, float_value) = opt(Token::float_constant)(input)?;
-        let (input, int_value) = opt(Token::int_constant)(input)?;
-        */
-
-        /*
-        match (char_value, str_value, int_value, float_value) {
-            (Some(c), None, None, None) => Ok((input, Constant::new(ConstKind::Char).with_cv(c))),
-            (None, Some(s), None, None) => {
-                Ok((input, Constant::new(ConstKind::Str).with_sv(s.to_owned())))
-            }
-            (None, None, Some(i), None) => Ok((input, Constant::new(ConstKind::Int).with_iv(i))),
-            (None, None, None, Some(f)) => Ok((input, Constant::new(ConstKind::Float).with_fv(f))),
-            _ => Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf))),
-        }
-        */
     }
 
     /// Parse a function call with no arguments
@@ -114,7 +95,6 @@ impl Construct {
     fn arg(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        // FIXME: Allow something else than constants, as above
         let (input, constant) = Construct::expression(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
@@ -179,7 +159,7 @@ impl Construct {
     ///
     /// A variable assignment is a Statement. It cannot be used as an Expression
     ///
-    /// ```md
+    /// ```
     /// {
     ///     x = 12; // Block returns void
     /// }
@@ -197,7 +177,6 @@ impl Construct {
     ///
     /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
     pub fn var_assignment(input: &str) -> IResult<&str, VarAssign> {
-        // FIXME: Maybe use alt ?
         let (input, mut_opt) = opt(Token::mut_tok)(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 

@@ -27,7 +27,7 @@ pub trait Value: Instruction {
     }
 
     /// Change the value contained in the `Value`
-    fn set<C>(&mut self, value: C)
+    fn set<C>(&mut self, _: C)
     where
         Self: Sized,
     {
