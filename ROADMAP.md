@@ -53,6 +53,11 @@ be expanded. If you want to contribute, this a good place to start!
 * [ ] While loop
 * [ ] Loop loop
 
+## REPL
+
+* [ ] Syntax highlighting
+
 ## Misc
 
 * [ ] Logo and .xcf for `jinko`
+* [ ] Editor support
