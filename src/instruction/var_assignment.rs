@@ -5,6 +5,7 @@ use crate::interpreter::Interpreter;
 
 use super::{InstrKind, Instruction};
 
+#[derive(Clone)]
 pub struct VarAssign {
     /// Is the variable mutable ? This is only useful on variable declaration
     mutable: bool,

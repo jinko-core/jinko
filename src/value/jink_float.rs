@@ -4,6 +4,7 @@
 use super::Value;
 use crate::instruction::{InstrKind, Instruction};
 
+#[derive(Clone)]
 pub struct JinkFloat(f64);
 
 impl From<f64> for JinkFloat {

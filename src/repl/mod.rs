@@ -7,7 +7,7 @@ use prompt::Prompt;
 use linefeed::{Interface, ReadResult};
 
 use crate::error::JinkoError;
-use crate::instruction::{FunctionDec, InstrKind, Instruction};
+use crate::instruction::Instruction;
 use crate::interpreter::Interpreter;
 use crate::parser::Construct;
 
@@ -40,18 +40,9 @@ impl Repl {
                 }
             };
 
-            match inst.kind() {
-                InstrKind::FuncDec => {
-                    let f = inst.as_any().downcast_mut::<FunctionDec>().unwrap();
-                    match interpreter.add_function(std::mem::take(f)) {
-                        Ok(()) => {}
-                        Err(e) => println!("{}", e.to_string()),
-                    }
-                }
-                _ => match inst.execute(&mut interpreter) {
-                    Ok(()) => {}
-                    Err(e) => println!("{}", e.to_string()),
-                },
+            match inst.execute(&mut interpreter) {
+                Ok(()) => {}
+                Err(e) => println!("{}", e.to_string()),
             };
 
             line_reader.set_prompt(&Prompt::get(&interpreter))?;

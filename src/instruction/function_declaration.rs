@@ -1,8 +1,6 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use std::any::Any;
-
 use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
 
@@ -22,12 +20,13 @@ pub enum FunctionKind {
     Mock,
 }
 
+#[derive(Clone)]
 pub struct FunctionDecArg {
     name: String,
-    // FIXME: Shouldn't be a string
     ty: Ty,
 }
 
+#[derive(Clone)]
 pub struct FunctionDec {
     name: String,
     ty: Option<Ty>,
@@ -158,11 +157,11 @@ impl FunctionDec {
 
 impl Instruction for FunctionDec {
     fn kind(&self) -> InstrKind {
-        InstrKind::FuncDec
+        InstrKind::Statement
     }
 
-    fn as_any(&mut self) -> &mut dyn Any {
-        self
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        interpreter.add_function(self.clone())
     }
 
     fn print(&self) -> String {
