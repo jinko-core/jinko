@@ -44,7 +44,7 @@ impl Repl {
                 InstrKind::FuncDec => {
                     let f = inst.as_any().downcast_mut::<FunctionDec>().unwrap();
                     match interpreter.add_function(std::mem::take(f)) {
-                        Ok(()) => {},
+                        Ok(()) => {}
                         Err(e) => println!("{}", e.to_string()),
                     }
                 }
