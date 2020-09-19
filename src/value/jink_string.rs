@@ -3,6 +3,7 @@
 use super::Value;
 use crate::instruction::{InstrKind, Instruction};
 
+#[derive(Clone)]
 pub struct JinkString(String);
 
 impl From<&str> for JinkString {

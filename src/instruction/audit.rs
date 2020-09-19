@@ -6,6 +6,7 @@ use crate::interpreter::Interpreter;
 
 use super::{Block, InstrKind, Instruction};
 
+#[derive(Clone)]
 pub struct Audit {
     block: Block,
 }

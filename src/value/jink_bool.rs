@@ -3,6 +3,7 @@
 use super::Value;
 use crate::instruction::{InstrKind, Instruction};
 
+#[derive(Clone)]
 pub struct JinkBool(bool);
 
 impl From<bool> for JinkBool {

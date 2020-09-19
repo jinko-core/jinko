@@ -21,6 +21,7 @@
 use super::{InstrKind, Instruction};
 use crate::{error::JinkoError, interpreter::Interpreter};
 
+#[derive(Clone)]
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
 }
@@ -69,7 +70,7 @@ impl Instruction for Block {
             base = format!("{}    {}", base, &instr.print());
             base.push_str(match instr.kind() {
                 InstrKind::Statement => ";\n",
-                InstrKind::Expression | InstrKind::FuncDec => "\n",
+                InstrKind::Expression => "\n",
             });
         }
 

@@ -5,6 +5,7 @@ use super::{InstrKind, Instruction};
 use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
 
+#[derive(Clone)]
 pub struct FunctionCall {
     /// Name of the function to call
     fn_name: String,
