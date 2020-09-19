@@ -2,14 +2,35 @@
 //! complex ones. Any type can implement the `Value` trait if it wishes to be returned
 //! by an instruction
 
-pub mod constant;
+use crate::instruction::Instruction;
 
-pub use constant::Constant;
+mod jink_bool;
+mod jink_char;
+mod jink_float;
+mod jink_int;
+mod jink_string;
 
-pub trait Value {
-    /// The type contained inside the value
-    type Contained;
+pub use jink_bool::JinkBool;
+pub use jink_char::JinkChar;
+pub use jink_float::JinkFloat;
+pub use jink_int::JinkInt;
+pub use jink_string::JinkString;
 
+/// C is the type contained inside the `Value`
+pub trait Value: Instruction {
     /// Return the value contained in the `Value`
-    fn value(&self) -> Self::Contained;
+    fn value<C>(&self) -> C
+    where
+        Self: Sized,
+    {
+        unreachable!("Cannot get value from Value. This is a bug")
+    }
+
+    /// Change the value contained in the `Value`
+    fn set<C>(&mut self, _: C)
+    where
+        Self: Sized,
+    {
+        unreachable!("Cannot set value on Value. This is a bug")
+    }
 }

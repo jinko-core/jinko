@@ -37,3 +37,27 @@ be expanded. If you want to contribute, this a good place to start!
 * [x] Loop loop
 * [ ] Test functions
 * [ ] Tests for execution
+
+## Typechecker
+
+* [ ] Add typechecker trait
+* [ ] Constants
+* [ ] Variables
+* [ ] Variable assignment
+* [ ] Function definition
+* [ ] Function calls
+* [ ] Code blocks
+* [ ] If condition
+* [ ] Else condition
+* [ ] For loop
+* [ ] While loop
+* [ ] Loop loop
+
+## REPL
+
+* [ ] Syntax highlighting
+
+## Misc
+
+* [ ] Logo and .xcf for `jinko`
+* [ ] Editor support
