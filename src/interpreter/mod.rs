@@ -23,6 +23,9 @@ pub struct Interpreter {
     /// Is the interpreter in an audit block or not
     pub in_audit: bool,
 
+    /// Is the interpreter in debugging mode or not
+    pub debug_mode: bool,
+
     /// Entry point to the interpreter, the "main" function
     pub entry_point: FunctionDec,
 
@@ -50,6 +53,7 @@ impl Interpreter {
     pub fn new() -> Interpreter {
         let mut i = Interpreter {
             in_audit: false,
+            debug_mode: false,
 
             entry_point: Self::new_entry(),
             scope_map: ScopeMap::new(),

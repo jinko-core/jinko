@@ -13,6 +13,9 @@ pub struct Args {
     #[structopt(short, long)]
     pub interactive: bool,
 
+    #[structopt(short, long)]
+    pub debug: bool,
+
     #[structopt(parse(from_os_str))]
     pub input: Option<PathBuf>,
 }

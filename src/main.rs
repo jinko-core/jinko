@@ -17,7 +17,7 @@ fn main() {
     let args = Args::handle();
 
     if args.interactive || args.input.is_none() {
-        match Repl::launch_repl() {
+        match Repl::launch_repl(&args) {
             Ok(_) => {}
             Err(e) => e.exit(),
         }
@@ -28,6 +28,8 @@ fn main() {
 
     // FIXME: No unwrap()
     let mut interpreter = Parser::parse(&input).unwrap();
+
+    interpreter.debug_mode = args.debug;
 
     // The entry point always has a block
     let ep = interpreter.entry_point.block().unwrap().clone();

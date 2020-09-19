@@ -6,6 +6,7 @@ use prompt::Prompt;
 
 use linefeed::{Interface, ReadResult};
 
+use crate::args::Args;
 use crate::error::JinkoError;
 use crate::instruction::Instruction;
 use crate::interpreter::Interpreter;
@@ -24,9 +25,10 @@ impl Repl {
     }
 
     /// Launch the REPL
-    pub fn launch_repl() -> Result<(), JinkoError> {
+    pub fn launch_repl(args: &Args) -> Result<(), JinkoError> {
         let line_reader = Interface::new("jinko")?;
         let mut interpreter = Interpreter::new();
+        interpreter.debug_mode = args.debug;
 
         // FIXME: Add actual prompt
         line_reader.set_prompt(&Prompt::get(&interpreter))?;

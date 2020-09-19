@@ -10,7 +10,7 @@ use nom::{
     sequence::delimited, IResult,
 };
 
-/// Reserved Keywords by broccoli
+/// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: [&str; 10] = [
     "func", "test", "mock", "ext", "for", "while", "loop", "mut", "true", "false",
 ];

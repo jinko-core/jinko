@@ -218,18 +218,19 @@ impl Construct {
         ))(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = opt(Token::semicolon)(input)?;
 
         Ok((input, value))
     }
 
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, constant) = Construct::expression(input)?;
+        let (input, expr) = Construct::expression(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, _) = Token::semicolon(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        Ok((input, constant))
+        Ok((input, expr))
     }
 
     /// Parses the statements in a block as well as a possible last expression
