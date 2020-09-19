@@ -606,6 +606,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn t_var_assign_valid() {
         assert_eq!(
             Construct::var_assignment("x = 12;").unwrap().1.mutable(),
@@ -704,6 +705,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn t_function_call_valid() {
         assert_eq!(Construct::function_call("fn(2)").unwrap().1.name(), "fn");
         assert_eq!(Construct::function_call("fn(2)").unwrap().1.args().len(), 1);
