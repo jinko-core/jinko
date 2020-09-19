@@ -179,11 +179,12 @@ impl Construct {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         let (input, value) = alt((
-            BoxConstruct::function_declaration,
+            BoxConstruct::var_assignment,
+            BoxConstruct::any_loop,
             BoxConstruct::function_call,
             BoxConstruct::jinko_inst,
-            BoxConstruct::variable,
             BoxConstruct::block,
+            BoxConstruct::variable,
         ))(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
@@ -543,6 +544,15 @@ impl Construct {
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Loop::new(LoopKind::For(variable, expression), block)))
+    }
+
+    /// Parse any loop construct: For, While or Loop
+    pub fn any_loop(input: &str) -> IResult<&str, Loop> {
+        alt((
+            Construct::loop_block,
+            Construct::for_block,
+            Construct::while_block,
+        ))(input)
     }
 
     /// Parse an interpreter directive. There are only a few of them, listed in

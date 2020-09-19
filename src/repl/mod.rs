@@ -16,7 +16,7 @@ pub struct Repl;
 
 impl Repl {
     /// Parse a new input, adding it to an existing interpreter
-    fn parse_instruction(input: & str) -> Result<Box<dyn Instruction>, JinkoError> {
+    fn parse_instruction(input: &str) -> Result<Box<dyn Instruction>, JinkoError> {
         match Construct::expression(input) {
             Ok((_, value)) => Ok(value),
             Err(e) => Err(JinkoError::from(e)),
@@ -34,7 +34,10 @@ impl Repl {
         while let ReadResult::Input(input) = line_reader.read_line()? {
             let inst = match Repl::parse_instruction(&input) {
                 Ok(i) => i,
-                Err(e) => { println!("{}", e.to_string()); continue; },
+                Err(e) => {
+                    println!("{}", e.to_string());
+                    continue;
+                }
             };
 
             match inst.execute(&mut interpreter) {
