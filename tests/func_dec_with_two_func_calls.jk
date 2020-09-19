@@ -1,0 +1,4 @@
+func heyho() {
+    hey();
+    ho();
+}
