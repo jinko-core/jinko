@@ -69,7 +69,7 @@ impl Instruction for Block {
             base = format!("{}    {}", base, &instr.print());
             base.push_str(match instr.kind() {
                 InstrKind::Statement => ";\n",
-                InstrKind::Expression => "\n",
+                InstrKind::Expression | InstrKind::FuncDec => "\n",
             });
         }
 

@@ -179,6 +179,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         let (input, value) = alt((
+            BoxConstruct::function_declaration,
             BoxConstruct::var_assignment,
             BoxConstruct::any_loop,
             BoxConstruct::function_call,

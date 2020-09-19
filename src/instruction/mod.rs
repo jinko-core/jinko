@@ -2,6 +2,8 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
+use std::any::Any;
+
 use colored::Colorize;
 
 mod audit;
@@ -29,6 +31,7 @@ use crate::{error::JinkoError, interpreter::Interpreter};
 pub enum InstrKind {
     Statement,
     Expression,
+    FuncDec,
 }
 
 pub trait Instruction {
@@ -57,4 +60,8 @@ pub trait Instruction {
 
     /// Pretty-print the instruction to valid jinko code
     fn print(&self) -> String;
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        unreachable!()
+    }
 }

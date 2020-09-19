@@ -1,6 +1,8 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use std::any::Any;
+
 use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
 
@@ -156,11 +158,15 @@ impl FunctionDec {
 
 impl Instruction for FunctionDec {
     fn kind(&self) -> InstrKind {
-        InstrKind::Statement
+        InstrKind::FuncDec
     }
 
-    fn execute(&self, _: &mut Interpreter) -> Result<(), JinkoError> {
-        Ok(())
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        self.block().unwrap().execute(interpreter)
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
     }
 
     fn print(&self) -> String {

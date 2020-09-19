@@ -1,13 +1,15 @@
 //! The REPL module implements an interactive mode for the broccoli interpreter. You can
 //! use it as is, or run a file and then enter the interactive mode.
 
+use std::any::Any;
+
 mod prompt;
 use prompt::Prompt;
 
 use linefeed::{Interface, ReadResult};
 
 use crate::error::JinkoError;
-use crate::instruction::Instruction;
+use crate::instruction::{FunctionDec, Instruction, InstrKind};
 use crate::interpreter::Interpreter;
 use crate::parser::Construct;
 
@@ -32,7 +34,7 @@ impl Repl {
         line_reader.set_prompt(&Prompt::get(&interpreter))?;
 
         while let ReadResult::Input(input) = line_reader.read_line()? {
-            let inst = match Repl::parse_instruction(&input) {
+            let mut inst = match Repl::parse_instruction(&input) {
                 Ok(i) => i,
                 Err(e) => {
                     println!("{}", e.to_string());
@@ -44,6 +46,14 @@ impl Repl {
                 Ok(()) => {}
                 Err(e) => println!("{}", e.to_string()),
             };
+
+            match inst.kind() {
+                InstrKind::FuncDec => {
+                    let f = inst.as_any().downcast_mut::<FunctionDec>().unwrap();
+                    interpreter.add_function(std::mem::take(f))?
+                },
+                _ => {},
+            }
 
             line_reader.set_prompt(&Prompt::get(&interpreter))?;
         }
