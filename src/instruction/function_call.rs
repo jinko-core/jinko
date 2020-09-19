@@ -2,6 +2,8 @@
 //! function on execution.
 
 use super::{InstrKind, Instruction};
+use crate::error::{ErrKind, JinkoError};
+use crate::interpreter::Interpreter;
 
 pub struct FunctionCall {
     /// Name of the function to call
@@ -57,6 +59,40 @@ impl Instruction for FunctionCall {
         }
 
         format!("{})", base)
+    }
+
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        let function = match interpreter.get_function(self.name()) {
+            // get_function() return a Rc, so this clones the Rc, not the FunctionDec
+            Some(f) => f.clone(),
+            // FIXME: Fix Location and input
+            None => {
+                return Err(JinkoError::new(
+                    ErrKind::Interpreter,
+                    format!("cannot find function {}", self.name()),
+                    None,
+                    self.name().to_owned(),
+                ))
+            }
+        };
+
+        let block = match function.block() {
+            Some(b) => b,
+            // FIXME: Fix Location and input
+            None => {
+                return Err(JinkoError::new(
+                    ErrKind::Interpreter,
+                    format!(
+                        "cannot execute function {} as it is marked `ext`",
+                        self.name()
+                    ),
+                    None,
+                    self.name().to_owned(),
+                ))
+            }
+        };
+
+        block.execute(interpreter)
     }
 }
 

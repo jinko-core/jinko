@@ -1,6 +1,8 @@
 //! The Loop instruction is used for repeating instructions. They can be of three
 //! different kinds, `for`, `while` or `loop`.
 
+use crate::{error::JinkoError, interpreter::Interpreter};
+
 use super::{Block, InstrKind, Instruction, Var};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
@@ -43,6 +45,40 @@ impl Instruction for Loop {
             }
             LoopKind::Loop => format!("loop {}\n", self.block.print()),
         }
+    }
+
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        match &self.kind {
+            LoopKind::Loop => loop {
+                self.block.execute(interpreter)?;
+            },
+            LoopKind::While(cond) => {
+                while cond.as_bool() {
+                    self.block.execute(interpreter)?;
+                }
+            }
+            LoopKind::For(var, range) => {
+                let var_name = var.name().to_owned();
+                interpreter.scope_enter();
+
+                interpreter.add_variable(var.clone())?;
+
+                loop {
+                    range.execute(interpreter)?;
+
+                    // We can unwrap since we added the variable right before
+                    if !interpreter.get_variable(&var_name).unwrap().as_bool() {
+                        break;
+                    }
+
+                    self.block.execute(interpreter)?;
+                }
+
+                interpreter.scope_exit();
+            }
+        }
+
+        Ok(())
     }
 }
 

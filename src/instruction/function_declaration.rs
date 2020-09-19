@@ -1,14 +1,14 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::interpreter::Interpreter;
+use crate::{error::JinkoError, interpreter::Interpreter};
 
 use super::{Block, InstrKind, Instruction};
 
 // FIXME: Shouldn't be a String
 type Ty = String;
 
-/// What "kind" of function is defined. There are four types of functions in broccoli,
+/// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FunctionKind {
@@ -97,7 +97,7 @@ impl FunctionDec {
     }
 
     /// Return the kind of a function
-    pub fn kind(&self) -> FunctionKind {
+    pub fn fn_kind(&self) -> FunctionKind {
         self.kind
     }
 
@@ -119,10 +119,7 @@ impl FunctionDec {
 
     /// Return a reference to the function's block
     pub fn block(&self) -> Option<&Block> {
-        match &self.block {
-            Some(b) => Some(&b),
-            None => None,
-        }
+        self.block.as_ref()
     }
 }
 
@@ -162,10 +159,6 @@ impl Instruction for FunctionDec {
             Some(block) => format!("{} {}", base, block.print()),
             None => format!("{} {{}}", base),
         }
-    }
-
-    fn execute(&self, i: &mut Interpreter) {
-        println!("{} has been called!", self.name())
     }
 }
 

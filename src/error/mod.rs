@@ -1,16 +1,18 @@
-//! The Error module contains helpful wrapper around possible errors in broccoli. They
+//! The Error module contains helpful wrapper around possible errors in jinko. They
 //! are used by the interpreter as well as the parser.
 
 use colored::Colorize;
 
 /// What kind of error we are dealing with: Either a parsing error, or a behavioural one.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum ErrKind {
     Parsing,
     Interpreter,
 }
 
 /// Contains indications vis-a-vis the error's location in the source file
+#[derive(Debug, PartialEq)]
 pub struct SpaceLocation(pub usize, pub usize);
 
 impl SpaceLocation {
@@ -26,24 +28,55 @@ impl SpaceLocation {
 }
 
 /// The actual error type
-pub struct BroccoliError<'err> {
+// FIXME: Remove `Option` once input tracking is implemented
+#[derive(Debug, PartialEq)]
+pub struct JinkoError {
     kind: ErrKind,
     msg: String,
 
-    loc: SpaceLocation,
-    input: &'err str,
+    loc: Option<SpaceLocation>,
+    input: String,
 }
 
-impl<'err> BroccoliError<'err> {
+impl JinkoError {
     /// Create a new error and return it
-    pub fn new(kind: ErrKind, msg: String, loc: SpaceLocation, input: &'err str) -> BroccoliError {
-        BroccoliError { kind, msg, loc, input }
+    pub fn new(
+        kind: ErrKind,
+        msg: String,
+        loc: Option<SpaceLocation>,
+        input: String,
+    ) -> JinkoError {
+        JinkoError {
+            kind,
+            msg,
+            loc,
+            input,
+        }
+    }
+
+    /// Display the error on stderr before exiting the program
+    pub fn exit(&self) {
+        eprintln!("{}", self.to_string());
+
+        // The exit code depends on the kind of error
+        std::process::exit(self.kind as i32 + 1);
+    }
+
+    /// What kind of error the error is
+    pub fn kind(&self) -> ErrKind {
+        self.kind
     }
 }
 
-impl std::fmt::Display for BroccoliError<'_> {
+impl std::fmt::Display for JinkoError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // FIXME: Add better formatting
-        write!(f, "Input: {}\nErrorKind: {:?}\nInfo: {}", self.input, self.kind, self.msg.red())
+        write!(
+            f,
+            "Input: {}\nErrorKind: {:?}\nInfo: {}",
+            self.input, // FIXME: Remove unwrap()
+            self.kind,
+            self.msg.red()
+        )
     }
 }

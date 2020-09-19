@@ -5,13 +5,17 @@
 //! before the current one, until it finds the correct component.
 
 use std::collections::{HashMap, LinkedList};
+use std::rc::Rc;
 
-use crate::instruction::{FunctionDec, Var};
+use crate::{
+    error::{ErrKind, JinkoError},
+    instruction::{FunctionDec, Var},
+};
 
 /// A scope contains a set of available variables and functions
 struct Scope {
     variables: HashMap<String, Var>,
-    functions: HashMap<String, FunctionDec>,
+    functions: HashMap<String, Rc<FunctionDec>>,
 }
 
 impl Scope {
@@ -27,14 +31,19 @@ impl Scope {
         self.variables.get(name)
     }
 
-    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
+    pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         self.functions.get(name)
     }
 
     // FIXME: Add doc
-    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         match self.get_variable(var.name()) {
-            Some(_) => Err(format!("variable already declared: {}", var.name())),
+            Some(_) => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!("variable already declared: {}", var.name()),
+                None,
+                var.name().to_owned(),
+            )),
             None => Ok({
                 self.variables.insert(var.name().to_owned(), var);
             }),
@@ -42,11 +51,16 @@ impl Scope {
     }
 
     // FIXME: Add doc
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), FIXMEError> {
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JinkoError> {
         match self.get_function(func.name()) {
-            Some(_) => Err(format!("function already declared: {}", func.name())),
+            Some(_) => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!("function already declared: {}", func.name()),
+                None,
+                func.name().to_owned(),
+            )),
             None => Ok({
-                self.functions.insert(func.name().to_owned(), func);
+                self.functions.insert(func.name().to_owned(), Rc::new(func));
             }),
         }
     }
@@ -54,9 +68,6 @@ impl Scope {
 
 /// A scope stack is a reversed stack. This alias is made for code clarity
 type ScopeStack<T> = LinkedList<T>;
-
-// FIXME: Add actual error type
-pub type FIXMEError = String;
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
@@ -98,7 +109,7 @@ impl ScopeMap {
     }
 
     /// Maybe get a function in any available scopes
-    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
+    pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_function(name) {
@@ -110,19 +121,29 @@ impl ScopeMap {
         None
     }
 
-    // FIXME: Add doc
-    pub fn add_variable(&mut self, var: Var) -> Result<(), FIXMEError> {
+    /// Add a variable to the current scope if it hasn't been added before
+    pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(var),
-            None => Err(FIXMEError::from("Adding variable to empty scopemap")),
+            None => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                String::from("Adding variable to empty scopemap"),
+                None,
+                var.name().to_owned(),
+            )),
         }
     }
 
-    // FIXME: Add doc
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), FIXMEError> {
+    /// Add a function to the current scope if it hasn't been added before
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JinkoError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(func),
-            None => Err(FIXMEError::from("Adding function to empty scopemap")),
+            None => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                String::from("Adding function to empty scopemap"),
+                None,
+                func.name().to_owned(),
+            )),
         }
     }
 }

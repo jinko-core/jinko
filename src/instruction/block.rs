@@ -19,6 +19,7 @@
 //! Otherwise, it's `void`
 
 use super::{InstrKind, Instruction};
+use crate::{error::JinkoError, interpreter::Interpreter};
 
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
@@ -64,7 +65,7 @@ impl Instruction for Block {
     fn print(&self) -> String {
         let mut base = String::from("{\n");
 
-        for instr in self.instructions() {
+        for instr in &self.instructions {
             base = format!("{}    {}", base, &instr.print());
             base.push_str(match instr.kind() {
                 InstrKind::Statement => ";\n",
@@ -74,6 +75,19 @@ impl Instruction for Block {
 
         base.push_str("}");
         base
+    }
+
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        interpreter.scope_enter();
+
+        self.instructions()
+            .iter()
+            .map(|inst| inst.execute(interpreter))
+            .collect::<Result<Vec<()>, JinkoError>>()?;
+
+        interpreter.scope_exit();
+
+        Ok(())
     }
 }
 

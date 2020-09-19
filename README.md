@@ -1,5 +1,6 @@
-# broccoli
-`broccoli` is a small and safe interpreted language using the [`stir`](https://github.com/cohenarthur/stir) intermediate representation
+# jinko
+`jinko` is a small and safe interpreted language written in Rust, with integrated
+unit tests, mocking and FFI.
 
 ## Requirements
 
@@ -11,8 +12,6 @@
     * [ ] This includes mocking
 * [ ] The language must be simple
 
-Check out broccoli's [syntax](SYNTAX.md)!
+Check out jinko's [syntax](SYNTAX.md)!
 
-For more information about how broccoli is made, checkout
-[this page](https://en.wikipedia.org/wiki/Broccoli#Cultivation).
-For information about how the *language* is made, [it's here](DESIGN.md).
+For more information about how jinko is made, checkout its [design](DESIGN.md).
