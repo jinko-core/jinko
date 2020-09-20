@@ -34,7 +34,7 @@ fn main() {
     // The entry point always has a block
     let ep = interpreter.entry_point.block().unwrap().clone();
     match ep.execute(&mut interpreter) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(e) => e.exit(),
     }
 }

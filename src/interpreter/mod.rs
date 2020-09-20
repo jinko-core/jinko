@@ -53,7 +53,7 @@ impl Interpreter {
 
     /// Create a new empty interpreter. Starts in non-audit mode
     pub fn new() -> Interpreter {
-        Interpreter {
+        let mut i = Interpreter {
             in_audit: false,
             debug_mode: false,
 
@@ -62,7 +62,11 @@ impl Interpreter {
 
             tests: HashMap::new(),
             exts: HashMap::new(),
-        }
+        };
+
+        i.scope_enter();
+
+        i
     }
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
@@ -133,8 +137,7 @@ impl Interpreter {
     /// secondary format is not necesarry. For example, when entering a block: There's
     /// no way to name a block, so no necessity to have more information other than
     /// "ENTER_BLOCK"
-    pub fn debug_step(&self, specifier: &str)
-    {
+    pub fn debug_step(&self, specifier: &str) {
         if self.debug_mode {
             println!("{}", specifier.yellow());
         }
