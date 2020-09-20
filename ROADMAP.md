@@ -60,4 +60,4 @@ be expanded. If you want to contribute, this a good place to start!
 ## Misc
 
 * [ ] Logo and .xcf for `jinko`
-* [ ] Editor support
+* [x] [Editor support](https://github.com/cohenarthur/jinko.vim)
