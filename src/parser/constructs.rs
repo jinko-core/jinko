@@ -67,31 +67,6 @@ impl Construct {
             Construct::c_int_constant,
             Construct::c_bool_constant,
         ))(input)
-
-        /*
-        // FIXME: Use alt instead?
-        match opt(Construct::c_char_constant)(input)? {
-            (input, Some(value)) => return Ok((input, value)),
-            (_, None) => {}
-        };
-
-        match opt(Construct::c_string_constant)(input)? {
-            (input, Some(value)) => return Ok((input, value)),
-            (_, None) => {}
-        };
-
-        match opt(Construct::c_float_constant)(input)? {
-            (input, Some(value)) => return Ok((input, value)),
-            (_, None) => {}
-        };
-
-        match opt(Construct::c_int_constant)(input)? {
-            (input, Some(value)) => return Ok((input, value)),
-            (_, None) => {}
-        };
-
-        Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf)))
-        */
     }
 
     /// Parse a function call with no arguments
@@ -225,7 +200,6 @@ impl Construct {
 
         let (input, value) = alt((
             BoxConstruct::function_declaration,
-            Construct::constant, // constant already returns a Box<dyn Instruction>
             BoxConstruct::function_call,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
@@ -233,6 +207,7 @@ impl Construct {
             BoxConstruct::block,
             BoxConstruct::var_assignment,
             BoxConstruct::variable,
+            Construct::constant, // constant already returns a Box<dyn Instruction>
         ))(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;

@@ -3,11 +3,11 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    branch::alt, bytes::complete::is_a, bytes::complete::is_not, bytes::complete::tag,
-    bytes::complete::take_until, bytes::complete::take_while, bytes::complete::take_while1,
-    character::complete::anychar, character::complete::char, character::is_alphabetic,
-    character::is_alphanumeric, character::is_digit, combinator::opt, error::ErrorKind,
-    sequence::delimited, IResult, combinator::peek,
+    branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
+    bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
+    character::complete::char, character::is_alphabetic, character::is_alphanumeric,
+    character::is_digit, combinator::opt, combinator::peek, error::ErrorKind, sequence::delimited,
+    IResult,
 };
 
 /// Reserved Keywords by jinko
@@ -139,11 +139,11 @@ impl Token {
         match input.len() {
             0 => Ok((input, '\0')),
             _ => peek(alt((
-                    char(';'),
-                    char(' '),
-                    char('\t'),
-                    char('\r'),
-                    char('\n'),
+                char(';'),
+                char(' '),
+                char('\t'),
+                char('\r'),
+                char('\n'),
             )))(input),
         }
     }
@@ -225,7 +225,7 @@ impl Token {
                 None => Ok((input, value)),
             },
             // FIXME: Return better error with err message
-            Err(_) => Err(nom::Err::Failure((
+            Err(_) => Err(nom::Err::Error((
                 "Invalid floating point number",
                 ErrorKind::OneOf,
             ))),
@@ -242,7 +242,7 @@ impl Token {
                 None => Ok((input, value)),
             },
             // FIXME: Return better error with err message
-            Err(_) => Err(nom::Err::Failure(("Invalid integer", ErrorKind::OneOf))),
+            Err(_) => Err(nom::Err::Error(("Invalid integer", ErrorKind::OneOf))),
         }
     }
 
