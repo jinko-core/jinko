@@ -49,6 +49,8 @@ impl Instruction for VarAssign {
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        interpreter.debug("ASSIGN VAR", self.symbol());
+
         match interpreter.get_variable(&self.symbol) {
             Some(v) => match self.mutable {
                 // FIXME: Add logic once constant type is cleaned up

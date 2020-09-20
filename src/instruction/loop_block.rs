@@ -52,14 +52,19 @@ impl Instruction for Loop {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         match &self.kind {
             LoopKind::Loop => loop {
+                interpreter.debug_step("LOOP ENTER");
                 self.block.execute(interpreter)?;
+                interpreter.debug_step("LOOP EXIT");
             },
             LoopKind::While(cond) => {
+                interpreter.debug_step("WHILE ENTER");
                 while cond.as_bool() {
                     self.block.execute(interpreter)?;
                 }
+                interpreter.debug_step("WHILE EXIT");
             }
             LoopKind::For(var, range) => {
+                interpreter.debug_step("FOR ENTER");
                 let var_name = var.name().to_owned();
                 interpreter.scope_enter();
 
@@ -77,6 +82,7 @@ impl Instruction for Loop {
                 }
 
                 interpreter.scope_exit();
+                interpreter.debug_step("FOR EXIT");
             }
         }
 
