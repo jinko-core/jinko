@@ -25,57 +25,48 @@ use super::{box_construct::BoxConstruct, jinko_insts::JinkoInst, tokens::Token};
 pub struct Construct;
 
 impl Construct {
-    fn c_char_constant(input: &str) -> IResult<&str, Box<JinkChar>> {
+    fn c_char_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, char_value) = Token::char_constant(input)?;
 
         Ok((input, Box::new(JinkChar::from(char_value))))
     }
 
-    fn c_string_constant(input: &str) -> IResult<&str, Box<JinkString>> {
+    fn c_string_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, string_value) = Token::string_constant(input)?;
 
         Ok((input, Box::new(JinkString::from(string_value))))
     }
 
-    fn c_float_constant(input: &str) -> IResult<&str, Box<JinkFloat>> {
+    fn c_float_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, float_value) = Token::float_constant(input)?;
 
         Ok((input, Box::new(JinkFloat::from(float_value))))
     }
 
-    fn c_int_constant(input: &str) -> IResult<&str, Box<JinkInt>> {
+    fn c_int_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, int_value) = Token::int_constant(input)?;
 
         Ok((input, Box::new(JinkInt::from(int_value))))
+    }
+
+    fn c_bool_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, bool_value) = Token::bool_constant(input)?;
+
+        Ok((input, Box::new(JinkBool::from(bool_value))))
     }
 
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
     /// `0.5`.
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
-    pub fn constant(input: &str) -> IResult<&str, Box<dyn Value>> {
-        // FIXME: Use alt instead?
-        match opt(Construct::c_char_constant)(input)? {
-            (input, Some(value)) => return Ok((input, value)),
-            (_, None) => {}
-        };
-
-        match opt(Construct::c_string_constant)(input)? {
-            (input, Some(value)) => return Ok((input, value)),
-            (_, None) => {}
-        };
-
-        match opt(Construct::c_float_constant)(input)? {
-            (input, Some(value)) => return Ok((input, value)),
-            (_, None) => {}
-        };
-
-        match opt(Construct::c_int_constant)(input)? {
-            (input, Some(value)) => return Ok((input, value)),
-            (_, None) => {}
-        };
-
-        Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf)))
+    pub fn constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        alt((
+            Construct::c_char_constant,
+            Construct::c_string_constant,
+            Construct::c_float_constant,
+            Construct::c_int_constant,
+            Construct::c_bool_constant,
+        ))(input)
     }
 
     /// Parse a function call with no arguments
@@ -109,6 +100,20 @@ impl Construct {
         Ok((input, constant))
     }
 
+    /// Parse a list of arguments separated by comma
+    fn args_list(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
+        // Get 1 or more arguments with a comma to the function call
+        let (input, mut arg_vec) = many0(Construct::arg_and_comma)(input)?;
+
+        // Parse the last argument, which does not have a comma. There needs to be
+        // at least one argument, which can be this one
+        let (input, last_arg) = Construct::arg(input)?;
+
+        arg_vec.push(last_arg);
+
+        Ok((input, arg_vec))
+    }
+
     /// Parse a function call with arguments
     fn function_call_args(input: &str) -> IResult<&str, FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
@@ -116,16 +121,10 @@ impl Construct {
 
         let mut fn_call = FunctionCall::new(fn_id.to_owned());
 
-        // Get 1 or more arguments with a comma to the function call
-        let (input, mut arg_vec) = many0(Construct::arg_and_comma)(input)?;
-
-        // Parse the last argument, which does not have a comma. There needs to be
-        // at least one argument, which can be this one
-        let (input, last_arg) = Construct::arg(input)?;
+        let (input, mut arg_vec) = Construct::args_list(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
 
         arg_vec.drain(0..).for_each(|arg| fn_call.add_arg(arg));
-        fn_call.add_arg(last_arg);
 
         Ok((input, fn_call))
     }
@@ -209,12 +208,14 @@ impl Construct {
 
         let (input, value) = alt((
             BoxConstruct::function_declaration,
-            BoxConstruct::var_assignment,
-            BoxConstruct::any_loop,
             BoxConstruct::function_call,
+            BoxConstruct::if_else,
+            BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
+            BoxConstruct::var_assignment,
             BoxConstruct::variable,
+            Construct::constant, // constant already returns a Box<dyn Instruction>
         ))(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
@@ -224,12 +225,12 @@ impl Construct {
 
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, constant) = Construct::expression(input)?;
+        let (input, expr) = Construct::expression(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, _) = Token::semicolon(input)?;
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        Ok((input, constant))
+        Ok((input, expr))
     }
 
     /// Parses the statements in a block as well as a possible last expression
@@ -588,15 +589,13 @@ impl Construct {
     /// Parse an interpreter directive. There are only a few of them, listed in
     /// the `JinkoInst` module
     ///
-    /// `@<jinko_inst>`
+    /// `@<jinko_inst><args_list>`
     pub fn jinko_inst(input: &str) -> IResult<&str, JinkoInst> {
         let (input, _) = Token::at_sign(input)?;
-        let (input, id) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::semicolon(input)?;
+        let (input, fc) = Construct::function_call(input)?;
 
-        // FIXME: No unwrap()
-        let inst = JinkoInst::from_str(id).unwrap();
+        // FIXME: No unwrap(), use something else than just the name
+        let inst = JinkoInst::from_str(fc.name()).unwrap();
 
         Ok((input, inst))
     }
@@ -825,6 +824,7 @@ mod tests {
         );
     }
 
+    #[test]
     fn t_id_type_valid() {
         assert_eq!(
             Construct::identifier_type("name: type").unwrap().1.name(),
@@ -920,8 +920,16 @@ mod tests {
             }"#;
 
         assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 4);
+
+        let input = r#"{
+                true;
+                false
+            }"#;
+
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 2);
     }
 
+    #[test]
     fn t_return_type_non_void() {
         assert_eq!(
             Construct::return_type("-> int"),
@@ -1097,6 +1105,10 @@ mod tests {
 
     #[test]
     fn t_jinko_inst_valid() {
-        assert_eq!(Construct::jinko_inst("@dump;"), Ok(("", JinkoInst::Dump)));
+        assert_eq!(Construct::jinko_inst("@dump()"), Ok(("", JinkoInst::Dump)));
+        assert_eq!(
+            Construct::jinko_inst("@quit(something, something_else)"),
+            Ok(("", JinkoInst::Quit))
+        );
     }
 }

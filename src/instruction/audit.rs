@@ -29,10 +29,12 @@ impl Instruction for Audit {
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         interpreter.audit_enter();
+        interpreter.debug_step("AUDIT ENTER");
 
         let r = self.block.execute(interpreter);
 
         interpreter.audit_exit();
+        interpreter.debug_step("AUDIT EXIT");
 
         r
     }

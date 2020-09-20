@@ -44,4 +44,5 @@ impl BoxConstruct {
     box_construct! {jinko_inst}
     box_construct! {any_loop}
     box_construct! {var_assignment}
+    box_construct! {if_else}
 }

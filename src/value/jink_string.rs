@@ -20,6 +20,6 @@ impl Instruction for JinkString {
     }
 
     fn print(&self) -> String {
-        self.0.clone()
+        format!("\"{}\"", self.0.clone())
     }
 }

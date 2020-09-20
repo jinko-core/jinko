@@ -77,6 +77,8 @@ impl Instruction for FunctionCall {
             }
         };
 
+        interpreter.debug("CALL", self.name());
+
         function.run(interpreter)
     }
 }

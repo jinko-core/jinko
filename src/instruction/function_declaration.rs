@@ -161,7 +161,13 @@ impl Instruction for FunctionDec {
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
-        interpreter.add_function(self.clone())
+        interpreter.debug_step("FUNCDEC ENTER");
+
+        interpreter.add_function(self.clone())?;
+
+        interpreter.debug_step("FUNCDEC EXIT");
+
+        Ok(())
     }
 
     fn print(&self) -> String {

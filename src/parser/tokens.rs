@@ -3,14 +3,14 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    branch::alt, bytes::complete::is_a, bytes::complete::is_not, bytes::complete::tag,
-    bytes::complete::take_until, bytes::complete::take_while, bytes::complete::take_while1,
-    character::complete::anychar, character::complete::char, character::is_alphabetic,
-    character::is_alphanumeric, character::is_digit, combinator::opt, error::ErrorKind,
-    sequence::delimited, IResult,
+    branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
+    bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
+    character::complete::char, character::is_alphabetic, character::is_alphanumeric,
+    character::is_digit, combinator::opt, combinator::peek, error::ErrorKind, sequence::delimited,
+    IResult,
 };
 
-/// Reserved Keywords by broccoli
+/// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: [&str; 10] = [
     "func", "test", "mock", "ext", "for", "while", "loop", "mut", "true", "false",
 ];
@@ -135,10 +135,16 @@ impl Token {
         Token::specific_token(input, "audit ")
     }
 
-    fn non_digit_nor_alpha<'i>(input: &'i str) -> IResult<&'i str, &'i str> {
+    fn non_digit_nor_alpha(input: &str) -> IResult<&str, char> {
         match input.len() {
-            0 => Ok((input, "")),
-            _ => is_a(" \t\r\n;")(input),
+            0 => Ok((input, '\0')),
+            _ => peek(alt((
+                char(';'),
+                char(' '),
+                char('\t'),
+                char('\r'),
+                char('\n'),
+            )))(input),
         }
     }
 
@@ -177,7 +183,7 @@ impl Token {
 
         match RESERVED_KEYWORDS.contains(&id) {
             true => {
-                return Err(nom::Err::Failure((
+                return Err(nom::Err::Error((
                     "Identifer cannot be keyword",
                     ErrorKind::OneOf,
                 )));
@@ -193,7 +199,7 @@ impl Token {
             }
         }
 
-        Err(nom::Err::Failure(("Invalid identifier", ErrorKind::Eof)))
+        Err(nom::Err::Error(("Invalid identifier", ErrorKind::Eof)))
     }
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
@@ -219,7 +225,7 @@ impl Token {
                 None => Ok((input, value)),
             },
             // FIXME: Return better error with err message
-            Err(_) => Err(nom::Err::Failure((
+            Err(_) => Err(nom::Err::Error((
                 "Invalid floating point number",
                 ErrorKind::OneOf,
             ))),
@@ -236,7 +242,7 @@ impl Token {
                 None => Ok((input, value)),
             },
             // FIXME: Return better error with err message
-            Err(_) => Err(nom::Err::Failure(("Invalid integer", ErrorKind::OneOf))),
+            Err(_) => Err(nom::Err::Error(("Invalid integer", ErrorKind::OneOf))),
         }
     }
 
@@ -415,7 +421,8 @@ mod tests {
     fn t_bool_valid() {
         assert_eq!(Token::bool_constant("true"), Ok(("", true)));
         assert_eq!(Token::bool_constant("false"), Ok(("", false)));
-        assert_eq!(Token::bool_constant("true a"), Ok(("a", true)));
+        assert_eq!(Token::bool_constant("true a"), Ok((" a", true)));
+        assert_eq!(Token::bool_constant("true; false"), Ok(("; false", true)));
     }
 
     #[test]

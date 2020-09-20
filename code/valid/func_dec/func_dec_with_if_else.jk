@@ -1,0 +1,12 @@
+func t() {}
+func f() {}
+
+func something() {
+    if true {
+        t()
+    } else {
+        f()
+    }
+}
+
+something()

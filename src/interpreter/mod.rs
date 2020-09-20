@@ -4,6 +4,8 @@
 //! source file returns an "Interpreter", which is really just a complex structure
 //! aggregating the necessary information to run a jinko program.
 
+use colored::Colorize;
+
 mod scope_map;
 use scope_map::ScopeMap;
 
@@ -22,6 +24,9 @@ const ENTRY_NAME: &str = "__entry";
 pub struct Interpreter {
     /// Is the interpreter in an audit block or not
     pub in_audit: bool,
+
+    /// Is the interpreter in debugging mode or not
+    pub debug_mode: bool,
 
     /// Entry point to the interpreter, the "main" function
     pub entry_point: FunctionDec,
@@ -50,6 +55,7 @@ impl Interpreter {
     pub fn new() -> Interpreter {
         let mut i = Interpreter {
             in_audit: false,
+            debug_mode: false,
 
             entry_point: Self::new_entry(),
             scope_map: ScopeMap::new(),
@@ -58,7 +64,6 @@ impl Interpreter {
             exts: HashMap::new(),
         };
 
-        // FIXME: Necessary?
         i.scope_enter();
 
         i
@@ -108,26 +113,34 @@ impl Interpreter {
         self.in_audit = false;
     }
 
-    // FIXME: This is not working
-    /// Run the interpreter once, altering its contents
-    pub fn run_once(&mut self) {
-        // Take ownership of the entry point, replacing it with a new one,
-        // and execute it
-        match std::mem::take(&mut self.entry_point)
-            .block()
-            .unwrap()
-            .execute(self)
-        {
-            Ok(_) => {}
-            Err(e) => e.exit(),
-        }
-
-        self.entry_point = Self::new_entry();
-    }
-
     /// Pretty-prints valid jinko code from a given interpreter
     pub fn print(&self) -> String {
         self.entry_point.print()
+    }
+
+    /// Print a debug message if the interpreter is in debug mode, according to the
+    /// following format:
+    ///
+    /// `<specifier>: <msg>`
+    pub fn debug(&self, specifier: &str, msg: &str) {
+        if self.debug_mode {
+            println!("{}: {}", specifier.purple(), msg);
+        }
+    }
+
+    /// Print a debugging step if the interpreter is in debug mode, according to the
+    /// following format:
+    ///
+    /// `<specifier>`
+    ///
+    /// This is used to indicate "steps" the interpreter is taking where adding a
+    /// secondary format is not necesarry. For example, when entering a block: There's
+    /// no way to name a block, so no necessity to have more information other than
+    /// "ENTER_BLOCK"
+    pub fn debug_step(&self, specifier: &str) {
+        if self.debug_mode {
+            println!("{}", specifier.yellow());
+        }
     }
 }
 

@@ -80,6 +80,7 @@ impl Instruction for Block {
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
         interpreter.scope_enter();
+        interpreter.debug_step("BLOCK ENTER");
 
         self.instructions()
             .iter()
@@ -87,6 +88,7 @@ impl Instruction for Block {
             .collect::<Result<Vec<()>, JinkoError>>()?;
 
         interpreter.scope_exit();
+        interpreter.debug_step("BLOCK EXIT");
 
         Ok(())
     }
