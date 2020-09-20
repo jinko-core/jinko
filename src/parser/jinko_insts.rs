@@ -11,6 +11,7 @@ use crate::interpreter::Interpreter;
 #[derive(Clone, Debug, PartialEq)]
 pub enum JinkoInst {
     Dump,
+    Quit,
 }
 
 impl JinkoInst {
@@ -24,12 +25,13 @@ impl JinkoInst {
     pub fn from_str(keyword: &str) -> Result<Self, JinkoError> {
         match keyword {
             "dump" => Ok(JinkoInst::Dump),
-            // FIXME: Fix error input
+            "quit" => Ok(JinkoInst::Quit),
+            // FIXME: Fix location
             _ => Err(JinkoError::new(
                 ErrKind::Parsing,
                 format!("unknown interpreter directive @{}", keyword),
                 None,
-                "".to_owned(),
+                keyword.to_owned(),
             )),
         }
     }
@@ -43,14 +45,18 @@ impl Instruction for JinkoInst {
     fn print(&self) -> String {
         match self {
             JinkoInst::Dump => "@dump",
+            JinkoInst::Quit => "@quit",
             _ => self.unreachable(),
         }
         .to_string()
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        interpreter.debug("JINKO_INST", &self.print());
+
         match self {
             JinkoInst::Dump => println!("{}", interpreter.print()),
+            JinkoInst::Quit => std::process::exit(0),
             _ => self.unreachable(),
         };
 
