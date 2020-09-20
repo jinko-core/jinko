@@ -183,7 +183,7 @@ impl Token {
 
         match RESERVED_KEYWORDS.contains(&id) {
             true => {
-                return Err(nom::Err::Failure((
+                return Err(nom::Err::Error((
                     "Identifer cannot be keyword",
                     ErrorKind::OneOf,
                 )));
@@ -199,7 +199,7 @@ impl Token {
             }
         }
 
-        Err(nom::Err::Failure(("Invalid identifier", ErrorKind::Eof)))
+        Err(nom::Err::Error(("Invalid identifier", ErrorKind::Eof)))
     }
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {

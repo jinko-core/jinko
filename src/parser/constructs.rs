@@ -25,35 +25,50 @@ use super::{box_construct::BoxConstruct, jinko_insts::JinkoInst, tokens::Token};
 pub struct Construct;
 
 impl Construct {
-    fn c_char_constant(input: &str) -> IResult<&str, Box<JinkChar>> {
+    fn c_char_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, char_value) = Token::char_constant(input)?;
 
         Ok((input, Box::new(JinkChar::from(char_value))))
     }
 
-    fn c_string_constant(input: &str) -> IResult<&str, Box<JinkString>> {
+    fn c_string_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, string_value) = Token::string_constant(input)?;
 
         Ok((input, Box::new(JinkString::from(string_value))))
     }
 
-    fn c_float_constant(input: &str) -> IResult<&str, Box<JinkFloat>> {
+    fn c_float_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, float_value) = Token::float_constant(input)?;
 
         Ok((input, Box::new(JinkFloat::from(float_value))))
     }
 
-    fn c_int_constant(input: &str) -> IResult<&str, Box<JinkInt>> {
+    fn c_int_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, int_value) = Token::int_constant(input)?;
 
         Ok((input, Box::new(JinkInt::from(int_value))))
+    }
+
+    fn c_bool_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, bool_value) = Token::bool_constant(input)?;
+
+        Ok((input, Box::new(JinkBool::from(bool_value))))
     }
 
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
     /// `0.5`.
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
-    pub fn constant(input: &str) -> IResult<&str, Box<dyn Value>> {
+    pub fn constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        alt((
+            Construct::c_char_constant,
+            Construct::c_string_constant,
+            Construct::c_float_constant,
+            Construct::c_int_constant,
+            Construct::c_bool_constant,
+        ))(input)
+
+        /*
         // FIXME: Use alt instead?
         match opt(Construct::c_char_constant)(input)? {
             (input, Some(value)) => return Ok((input, value)),
@@ -76,6 +91,7 @@ impl Construct {
         };
 
         Err(nom::Err::Failure((input, nom::error::ErrorKind::OneOf)))
+        */
     }
 
     /// Parse a function call with no arguments
@@ -209,11 +225,13 @@ impl Construct {
 
         let (input, value) = alt((
             BoxConstruct::function_declaration,
+            Construct::constant, // constant already returns a Box<dyn Instruction>
             BoxConstruct::function_call,
-            BoxConstruct::var_assignment,
+            BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
+            BoxConstruct::var_assignment,
             BoxConstruct::variable,
         ))(input)?;
 
@@ -825,6 +843,7 @@ mod tests {
         );
     }
 
+    #[test]
     fn t_id_type_valid() {
         assert_eq!(
             Construct::identifier_type("name: type").unwrap().1.name(),
@@ -920,8 +939,16 @@ mod tests {
             }"#;
 
         assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 4);
+
+        let input = r#"{
+                true;
+                false
+            }"#;
+
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 2);
     }
 
+    #[test]
     fn t_return_type_non_void() {
         assert_eq!(
             Construct::return_type("-> int"),
