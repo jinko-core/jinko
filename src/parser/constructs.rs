@@ -589,7 +589,7 @@ impl Construct {
     /// Parse an interpreter directive. There are only a few of them, listed in
     /// the `JinkoInst` module
     ///
-    /// `@<jinko_inst>`
+    /// `@<jinko_inst><args_list>`
     pub fn jinko_inst(input: &str) -> IResult<&str, JinkoInst> {
         let (input, _) = Token::at_sign(input)?;
         let (input, fc) = Construct::function_call(input)?;
@@ -1106,6 +1106,9 @@ mod tests {
     #[test]
     fn t_jinko_inst_valid() {
         assert_eq!(Construct::jinko_inst("@dump()"), Ok(("", JinkoInst::Dump)));
-        assert_eq!(Construct::jinko_inst("@quit(something, something_else)"), Ok(("", JinkoInst::Quit)));
+        assert_eq!(
+            Construct::jinko_inst("@quit(something, something_else)"),
+            Ok(("", JinkoInst::Quit))
+        );
     }
 }
