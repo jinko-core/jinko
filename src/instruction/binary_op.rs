@@ -15,7 +15,7 @@ use crate::{error::ErrKind, error::JinkoError, Instruction, instruction::InstrKi
 
 /// All the binary operators available
 #[repr(u8)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Operator {
     Add,
     Sub,
@@ -37,15 +37,11 @@ pub enum Operator {
 
 impl Operator {
     /// Create a new operator from a given character
-    pub fn new(c: &str) -> Result<Operator, JinkoError> {
-        match c {
-            "+" => Ok(Operator::Add),
-            _ => Err(JinkoError::new(
-                ErrKind::Parsing,
-                format!("Invalid operator: {}", c),
-                None,
-                format!("{}", c),
-            )),
+    pub fn new(op_str: &str) -> Operator {
+        match op_str {
+            "+" => Operator::Add,
+            ">>" => Operator::LeftShift,
+            _ => unreachable!("Invalid operator: {}", op_str)
         }
     }
 
@@ -105,10 +101,10 @@ mod tests {
     fn t_binop_add() {
         let l = Box::new(JinkInt::from(12));
         let r = Box::new(JinkInt::from(12));
-        let op = Operator::new("+").unwrap();
+        let op = Operator::new("+");
 
         let binop = BinaryOp::new(l, r, op);
 
-        assert_eq!(binop.compute().unwrap(), 24);
+        assert_eq!(binop.compute::<i64>().unwrap(), 24);
     }
 }

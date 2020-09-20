@@ -39,10 +39,6 @@ impl Token {
         char('"')(input)
     }
 
-    pub fn add(input: &str) -> IResult<&str, char> {
-        Token::specific_char(input, '+')
-    }
-
     pub fn equal(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, '=')
     }
@@ -133,6 +129,18 @@ impl Token {
 
     pub fn audit_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "audit ")
+    }
+
+    pub fn add(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "+")
+    }
+
+    pub fn sub(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "-")
+    }
+
+    pub fn left_shift(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "<<")
     }
 
     fn non_digit_nor_alpha(input: &str) -> IResult<&str, char> {

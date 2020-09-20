@@ -16,7 +16,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Loop, LoopKind, Var, VarAssign,
+    Loop, LoopKind, Var, VarAssign, BinaryOp, Operator,
 };
 use crate::value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString, Value};
 
@@ -599,6 +599,37 @@ impl Construct {
 
         Ok((input, inst))
     }
+
+    /// Parse any valid Jinko operator
+    pub fn operator(input: &str) -> IResult<&str, Operator> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, op_str) = alt((
+                Token::add,
+                Token::sub,
+                Token::left_shift,
+                ))(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Ok((input, Operator::new(op_str)))
+    }
+
+    /// Parse a binary operation. A binary operation is composed of an expression, an
+    /// operator and another expression
+    ///
+    /// `<expr> <op> <expr>`
+    ///
+    /// ```
+    /// x + y; // Add x and y together
+    /// a << 2; // Shift a by 2 bits
+    /// a > 2; // Is a greater than 2?
+    /// ```
+    pub fn binary_op(input: &str) -> IResult<&str, BinaryOp> {
+        let (input, lhs) = Construct::expression(input)?;
+        let (input, op) = Construct::operator(input)?;
+        let (input, rhs) = Construct::expression(input)?;
+
+        Ok((input, BinaryOp::new(lhs, rhs, op)))
+    }
 }
 
 #[cfg(test)]
@@ -1110,5 +1141,39 @@ mod tests {
             Construct::jinko_inst("@quit(something, something_else)"),
             Ok(("", JinkoInst::Quit))
         );
+    }
+
+    #[test]
+    fn t_operator_valid() {
+        assert_eq!(Construct::operator(" +    "), Ok(("", Operator::Add)));
+        assert_eq!(Construct::operator(" <<"), Ok(("", Operator::LeftShift)));
+    }
+
+    #[test]
+    fn t_operator_invalid() {
+        match Construct::operator(" ?") {
+            Ok(_) => assert!(false, "? is not a binop"),
+            Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_binary_op_valid() {
+        match Construct::binary_op("a +   12 ") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have multi spaces"),
+        };
+        match Construct::binary_op("some() + 12.1") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have multiple expression types"),
+        };
+    }
+
+    #[test]
+    fn t_binary_op_invalid() {
+        match Construct::binary_op("a ? 12") {
+            Ok(_) => assert!(false, "? is not a binop"),
+            Err(_) => assert!(true),
+        };
     }
 }
