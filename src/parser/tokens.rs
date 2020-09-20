@@ -7,7 +7,7 @@ use nom::{
     bytes::complete::take_until, bytes::complete::take_while, bytes::complete::take_while1,
     character::complete::anychar, character::complete::char, character::is_alphabetic,
     character::is_alphanumeric, character::is_digit, combinator::opt, error::ErrorKind,
-    sequence::delimited, IResult,
+    sequence::delimited, IResult, combinator::peek,
 };
 
 /// Reserved Keywords by jinko
@@ -135,10 +135,16 @@ impl Token {
         Token::specific_token(input, "audit ")
     }
 
-    fn non_digit_nor_alpha<'i>(input: &'i str) -> IResult<&'i str, &'i str> {
+    fn non_digit_nor_alpha(input: &str) -> IResult<&str, char> {
         match input.len() {
-            0 => Ok((input, "")),
-            _ => is_a(" \t\r\n;")(input),
+            0 => Ok((input, '\0')),
+            _ => peek(alt((
+                    char(';'),
+                    char(' '),
+                    char('\t'),
+                    char('\r'),
+                    char('\n'),
+            )))(input),
         }
     }
 
@@ -415,7 +421,8 @@ mod tests {
     fn t_bool_valid() {
         assert_eq!(Token::bool_constant("true"), Ok(("", true)));
         assert_eq!(Token::bool_constant("false"), Ok(("", false)));
-        assert_eq!(Token::bool_constant("true a"), Ok(("a", true)));
+        assert_eq!(Token::bool_constant("true a"), Ok((" a", true)));
+        assert_eq!(Token::bool_constant("true; false"), Ok(("; false", true)));
     }
 
     #[test]
