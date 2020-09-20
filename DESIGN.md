@@ -77,7 +77,7 @@ mock something() {
 }
 ```
 
-## Choosing between func and func
+## Choosing between func and fn
 
 jinko uses three keywords to define "functions":
 * `test` which are unit tests
@@ -86,7 +86,7 @@ jinko uses three keywords to define "functions":
 
 (Procedures return `Nothing`, while Functions return `Something`)
 
-`func` was chosen over `func` because this way, it looks pretty when next to a `test` or
+`func` was chosen over `fn` because this way, it looks pretty when next to a `test` or
 a `mock` :)
 
 ## The `Instruction` struct
