@@ -214,6 +214,7 @@ impl Construct {
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
+            BoxConstruct::binary_op,
             BoxConstruct::variable,
             Construct::constant, // constant already returns a Box<dyn Instruction>
         ))(input)?;
@@ -602,13 +603,11 @@ impl Construct {
 
     /// Parse any valid Jinko operator
     pub fn operator(input: &str) -> IResult<&str, Operator> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, op_str) = alt((
                 Token::add,
                 Token::sub,
                 Token::left_shift,
                 ))(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         Ok((input, Operator::new(op_str)))
     }
@@ -625,8 +624,12 @@ impl Construct {
     /// ```
     pub fn binary_op(input: &str) -> IResult<&str, BinaryOp> {
         let (input, lhs) = Construct::expression(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
         let (input, op) = Construct::operator(input)?;
-        let (input, rhs) = Construct::expression(input)?;
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, rhs) = Construct::constant(input)?;
 
         Ok((input, BinaryOp::new(lhs, rhs, op)))
     }

@@ -11,7 +11,7 @@
 //! Some of these operators are comparison operators while others are arithmetic operators.
 //! Comparison operators can evaluate to booleans while arithmetic ones cannot.
 
-use crate::{error::ErrKind, error::JinkoError, Instruction, instruction::InstrKind};
+use crate::{error::ErrKind, error::JinkoError, Instruction, instruction::InstrKind, interpreter::Interpreter};
 
 /// All the binary operators available
 #[repr(u8)]
@@ -89,6 +89,13 @@ impl Instruction for BinaryOp {
 
     fn print(&self) -> String {
         format!("{} {} {}", self.lhs.print(), self.op.to_str(), self.rhs.print())
+    }
+
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        // FIXME: Add logic
+        interpreter.debug_step("BINOP ENTER");
+
+        Ok(())
     }
 }
 
