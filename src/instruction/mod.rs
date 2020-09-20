@@ -5,6 +5,7 @@
 use colored::Colorize;
 
 mod audit;
+mod binary_op;
 mod block;
 mod function_call;
 mod function_declaration;
@@ -15,6 +16,7 @@ mod var_assignment;
 
 pub use audit::Audit;
 pub use block::Block;
+pub use binary_op:BinaryOp;
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
 pub use if_else::IfElse;
