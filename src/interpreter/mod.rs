@@ -53,7 +53,7 @@ impl Interpreter {
 
     /// Create a new empty interpreter. Starts in non-audit mode
     pub fn new() -> Interpreter {
-        let mut i = Interpreter {
+        Interpreter {
             in_audit: false,
             debug_mode: false,
 
@@ -62,12 +62,7 @@ impl Interpreter {
 
             tests: HashMap::new(),
             exts: HashMap::new(),
-        };
-
-        // FIXME: Necessary?
-        i.scope_enter();
-
-        i
+        }
     }
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
@@ -122,10 +117,26 @@ impl Interpreter {
     /// Print a debug message if the interpreter is in debug mode, according to the
     /// following format:
     ///
-    /// <specifier>: <msg>
+    /// `<specifier>: <msg>`
     pub fn debug(&self, specifier: &str, msg: &str) {
         if self.debug_mode {
             println!("{}: {}", specifier.purple(), msg);
+        }
+    }
+
+    /// Print a debugging step if the interpreter is in debug mode, according to the
+    /// following format:
+    ///
+    /// `<specifier>`
+    ///
+    /// This is used to indicate "steps" the interpreter is taking where adding a
+    /// secondary format is not necesarry. For example, when entering a block: There's
+    /// no way to name a block, so no necessity to have more information other than
+    /// "ENTER_BLOCK"
+    pub fn debug_step(&self, specifier: &str)
+    {
+        if self.debug_mode {
+            println!("{}", specifier.yellow());
         }
     }
 }
