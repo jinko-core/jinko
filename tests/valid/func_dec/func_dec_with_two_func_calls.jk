@@ -1,7 +1,8 @@
 func hey() {
-    }
+}
+
 func ho() {
-    }
+}
 
 func heyho() {
     hey();
