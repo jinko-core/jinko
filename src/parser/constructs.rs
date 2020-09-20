@@ -100,6 +100,20 @@ impl Construct {
         Ok((input, constant))
     }
 
+    /// Parse a list of arguments separated by comma
+    fn args_list(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
+        // Get 1 or more arguments with a comma to the function call
+        let (input, mut arg_vec) = many0(Construct::arg_and_comma)(input)?;
+
+        // Parse the last argument, which does not have a comma. There needs to be
+        // at least one argument, which can be this one
+        let (input, last_arg) = Construct::arg(input)?;
+
+        arg_vec.push(last_arg);
+
+        Ok((input, arg_vec))
+    }
+
     /// Parse a function call with arguments
     fn function_call_args(input: &str) -> IResult<&str, FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
@@ -107,16 +121,10 @@ impl Construct {
 
         let mut fn_call = FunctionCall::new(fn_id.to_owned());
 
-        // Get 1 or more arguments with a comma to the function call
-        let (input, mut arg_vec) = many0(Construct::arg_and_comma)(input)?;
-
-        // Parse the last argument, which does not have a comma. There needs to be
-        // at least one argument, which can be this one
-        let (input, last_arg) = Construct::arg(input)?;
+        let (input, mut arg_vec) = Construct::args_list(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
 
         arg_vec.drain(0..).for_each(|arg| fn_call.add_arg(arg));
-        fn_call.add_arg(last_arg);
 
         Ok((input, fn_call))
     }
@@ -584,12 +592,10 @@ impl Construct {
     /// `@<jinko_inst>`
     pub fn jinko_inst(input: &str) -> IResult<&str, JinkoInst> {
         let (input, _) = Token::at_sign(input)?;
-        let (input, id) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::semicolon(input)?;
+        let (input, fc) = Construct::function_call(input)?;
 
-        // FIXME: No unwrap()
-        let inst = JinkoInst::from_str(id).unwrap();
+        // FIXME: No unwrap(), use something else than just the name
+        let inst = JinkoInst::from_str(fc.name()).unwrap();
 
         Ok((input, inst))
     }
@@ -1099,6 +1105,7 @@ mod tests {
 
     #[test]
     fn t_jinko_inst_valid() {
-        assert_eq!(Construct::jinko_inst("@dump;"), Ok(("", JinkoInst::Dump)));
+        assert_eq!(Construct::jinko_inst("@dump()"), Ok(("", JinkoInst::Dump)));
+        assert_eq!(Construct::jinko_inst("@quit(something, something_else)"), Ok(("", JinkoInst::Quit)));
     }
 }
