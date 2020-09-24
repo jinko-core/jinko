@@ -626,7 +626,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn t_var_assign_valid() {
         assert_eq!(
             Construct::var_assignment("x = 12;").unwrap().1.mutable(),
@@ -680,6 +679,14 @@ mod tests {
                 .1
                 .symbol(),
             "mut_x_99"
+        );
+
+        assert_eq!(
+            Construct::var_assignment("mut\nname = 129;")
+                .unwrap()
+                .1
+                .mutable(),
+            true
         );
 
         match Construct::var_assignment("mut x=12;") {
