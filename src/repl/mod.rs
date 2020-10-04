@@ -1,4 +1,4 @@
-//! The REPL module implements an interactive mode for the broccoli interpreter. You can
+//! The REPL module implements an interactive mode for the jinko interpreter. You can
 //! use it as is, or run a file and then enter the interactive mode.
 
 mod prompt;

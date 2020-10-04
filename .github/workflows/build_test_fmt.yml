@@ -1,4 +1,4 @@
-name: broccoli-test
+name: jinko-test
 
 on: pull_request
 
@@ -18,7 +18,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Build broccoli
+    - name: Build jinko
       run: |
           cargo build
 
