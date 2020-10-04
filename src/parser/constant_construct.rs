@@ -1,9 +1,9 @@
 //! The ConstantConstruct module helps when parsing constant values in jinko source code
 
-use nom::IResult;
 use super::tokens::Token;
 use crate::instruction::Instruction;
 use crate::value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString};
+use nom::IResult;
 
 pub struct ConstantConstruct;
 

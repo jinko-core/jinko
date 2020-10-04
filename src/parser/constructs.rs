@@ -14,11 +14,14 @@
 
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
+use super::{
+    box_construct::BoxConstruct, constant_construct::ConstantConstruct, jinko_insts::JinkoInst,
+    tokens::Token,
+};
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
     Loop, LoopKind, Var, VarAssign,
 };
-use super::{box_construct::BoxConstruct, constant_construct::ConstantConstruct, jinko_insts::JinkoInst, tokens::Token};
 
 pub struct Construct;
 
