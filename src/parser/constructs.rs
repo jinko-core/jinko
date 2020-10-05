@@ -12,13 +12,15 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, multi::many0, IResult};
+use nom::{
+    branch::alt, combinator::opt, error::ErrorKind, multi::many0, sequence::delimited, IResult,
+};
 
 use crate::instruction::{
-    Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Loop, LoopKind, Var, VarAssign, BinaryOp, Operator,
+    Audit, BinaryOp, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse,
+    Instruction, Loop, LoopKind, Operator, Var, VarAssign,
 };
-use crate::value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString, Value};
+use crate::value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString};
 
 use super::{box_construct::BoxConstruct, jinko_insts::JinkoInst, tokens::Token};
 
@@ -601,15 +603,52 @@ impl Construct {
         Ok((input, inst))
     }
 
-    /// Parse any valid Jinko operator
-    pub fn operator(input: &str) -> IResult<&str, Operator> {
-        let (input, op_str) = alt((
-                Token::add,
-                Token::sub,
-                Token::left_shift,
-                ))(input)?;
+    /// Parse an expression between parentheses and return it, consuming the parentheses
+    fn parentheses(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        delimited(
+            Token::left_parenthesis,
+            Construct::expression,
+            Token::right_parenthesis,
+        )(input)
+    }
 
-        Ok((input, Operator::new(op_str)))
+    /// Parse a number in a multiplicative or divisive operation
+    fn factor(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        let (input, value) = alt((
+            // BoxConstruct::function_declaration,
+            BoxConstruct::function_call,
+            BoxConstruct::if_else,
+            BoxConstruct::any_loop,
+            // BoxConstruct::jinko_inst,
+            BoxConstruct::block,
+            // BoxConstruct::var_assignment,
+            // BoxConstruct::binary_op,
+            BoxConstruct::variable,
+            Construct::constant, // constant already returns a Box<dyn Instruction>
+        ))(input)?;
+
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+
+        Ok((input, value))
+    }
+
+    fn term(input: &str) -> IResult<&str, BinaryOp> {
+        let (input, lhs) = Construct::factor(input)?;
+
+        let (input, op) = alt((Token::mul, Token::div))(input)?;
+
+        let (input, rhs) = Construct::factor(input)?;
+
+        match op {
+            "*" => Ok((input, BinaryOp::new(lhs, rhs, Operator::Mul))),
+            "/" => Ok((input, BinaryOp::new(lhs, rhs, Operator::Div))),
+            _ => Err(nom::Err::Error((
+                "Invalid term for operation * or /",
+                ErrorKind::OneOf,
+            ))),
+        }
     }
 
     /// Parse a binary operation. A binary operation is composed of an expression, an
@@ -623,15 +662,26 @@ impl Construct {
     /// a > 2; // Is a greater than 2?
     /// ```
     pub fn binary_op(input: &str) -> IResult<&str, BinaryOp> {
-        let (input, lhs) = Construct::expression(input)?;
+        let (input, lhs) = Construct::term(input)?;
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, op) = Construct::operator(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, op) = alt((Token::add, Token::sub))(input)?;
 
-        let (input, rhs) = Construct::constant(input)?;
+        let (input, rhs) = Construct::term(input)?;
 
-        Ok((input, BinaryOp::new(lhs, rhs, op)))
+        match op {
+            "+" => Ok((
+                input,
+                BinaryOp::new(Box::new(lhs), Box::new(rhs), Operator::Add),
+            )),
+            "-" => Ok((
+                input,
+                BinaryOp::new(Box::new(lhs), Box::new(rhs), Operator::Sub),
+            )),
+            _ => Err(nom::Err::Error((
+                "Invalid member for operation + or -",
+                ErrorKind::OneOf,
+            ))),
+        }
     }
 }
 
@@ -1147,20 +1197,6 @@ mod tests {
     }
 
     #[test]
-    fn t_operator_valid() {
-        assert_eq!(Construct::operator(" +    "), Ok(("", Operator::Add)));
-        assert_eq!(Construct::operator(" <<"), Ok(("", Operator::LeftShift)));
-    }
-
-    #[test]
-    fn t_operator_invalid() {
-        match Construct::operator(" ?") {
-            Ok(_) => assert!(false, "? is not a binop"),
-            Err(_) => assert!(true),
-        };
-    }
-
-    #[test]
     fn t_binary_op_valid() {
         match Construct::binary_op("a +   12 ") {
             Ok(_) => assert!(true),
@@ -1178,5 +1214,37 @@ mod tests {
             Ok(_) => assert!(false, "? is not a binop"),
             Err(_) => assert!(true),
         };
+    }
+
+    #[test]
+    fn t_parentheses_valid() {
+        match Construct::parentheses("(a)") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Expressions can be stuck to the parentheses"),
+        }
+
+        match Construct::parentheses("( a        )") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(
+                false,
+                "There can be any number of spaces inside parentheses"
+            ),
+        }
+    }
+
+    #[test]
+    fn t_term_valid() {
+        match Construct::term("(a)") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Expressions can be stuck to the parentheses"),
+        }
+
+        match Construct::parentheses("( a        )") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(
+                false,
+                "There can be any number of spaces inside parentheses"
+            ),
+        }
     }
 }

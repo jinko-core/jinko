@@ -11,7 +11,10 @@
 //! Some of these operators are comparison operators while others are arithmetic operators.
 //! Comparison operators can evaluate to booleans while arithmetic ones cannot.
 
-use crate::{error::ErrKind, error::JinkoError, Instruction, instruction::InstrKind, interpreter::Interpreter};
+use crate::{
+    error::ErrKind, error::JinkoError, instruction::InstrKind, interpreter::Interpreter,
+    Instruction,
+};
 
 /// All the binary operators available
 #[repr(u8)]
@@ -41,7 +44,7 @@ impl Operator {
         match op_str {
             "+" => Operator::Add,
             ">>" => Operator::LeftShift,
-            _ => unreachable!("Invalid operator: {}", op_str)
+            _ => unreachable!("Invalid operator: {}", op_str),
         }
     }
 
@@ -73,11 +76,11 @@ impl BinaryOp {
     pub fn compute<T>(&self) -> Result<T, JinkoError> {
         match &self.op {
             _ => Err(JinkoError::new(
-                    ErrKind::Interpreter,
-                    format!("Unknown operator: {:?}", self.op),
-                    None,
-                    self.print(),
-                    )),
+                ErrKind::Interpreter,
+                format!("Unknown operator: {:?}", self.op),
+                None,
+                self.print(),
+            )),
         }
     }
 }
@@ -88,7 +91,12 @@ impl Instruction for BinaryOp {
     }
 
     fn print(&self) -> String {
-        format!("{} {} {}", self.lhs.print(), self.op.to_str(), self.rhs.print())
+        format!(
+            "{} {} {}",
+            self.lhs.print(),
+            self.op.to_str(),
+            self.rhs.print()
+        )
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {

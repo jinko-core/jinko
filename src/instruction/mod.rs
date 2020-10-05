@@ -15,8 +15,8 @@ mod var;
 mod var_assignment;
 
 pub use audit::Audit;
-pub use block::Block;
 pub use binary_op::{BinaryOp, Operator};
+pub use block::Block;
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
 pub use if_else::IfElse;

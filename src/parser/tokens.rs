@@ -139,6 +139,14 @@ impl Token {
         Token::specific_token(input, "-")
     }
 
+    pub fn mul(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "/")
+    }
+
+    pub fn div(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "/")
+    }
+
     pub fn left_shift(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "<<")
     }
