@@ -279,7 +279,6 @@ impl Construct {
     /// in the block.
     ///
     /// `{ [ <expression> ; ]* [ <expression> ] }`
-    // FIXME: Fix grammar and description
     pub fn block(input: &str) -> IResult<&str, Block> {
         let (input, instructions) = Construct::instructions(input)?;
 
@@ -708,7 +707,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn t_var_assign_valid() {
         assert_eq!(
             Construct::var_assignment("x = 12;").unwrap().1.mutable(),
@@ -807,13 +805,16 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn t_function_call_valid() {
         assert_eq!(Construct::function_call("fn(2)").unwrap().1.name(), "fn");
         assert_eq!(Construct::function_call("fn(2)").unwrap().1.args().len(), 1);
 
         assert_eq!(
             Construct::function_call("fn(1, 2, 3)").unwrap().1.name(),
+            "fn"
+        );
+        assert_eq!(
+            Construct::function_call("fn(a, hey(), 3.12)").unwrap().1.name(),
             "fn"
         );
         assert_eq!(
@@ -837,8 +838,6 @@ mod tests {
                 .len(),
             3
         );
-
-        // FIXME: Add constants and expressions
     }
 
     #[test]
@@ -1182,7 +1181,10 @@ mod tests {
             Err(_) => assert!(true),
         };
 
-        // FIXME: Add fun tests like `for x in { some_range_stuff() } {}`
+        match Construct::for_block("for x99 in { { { inner_block() } } }") {
+            Ok(_) => assert!(false, "A range is required"),
+            Err(_) => assert!(true),
+        };
     }
 
     #[test]
