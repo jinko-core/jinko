@@ -17,10 +17,13 @@ pub struct Repl;
 
 impl Repl {
     /// Parse a new input, adding it to an existing interpreter
-    fn parse_instruction(input: &str) -> Result<Box<dyn Instruction>, JinkoError> {
-        match Construct::expression(input) {
-            Ok((_, value)) => Ok(value),
-            Err(e) => Err(JinkoError::from(e)),
+    fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, JinkoError> {
+        match input.is_empty() {
+            true => Ok(None),
+            false => match Construct::expression(input) {
+                Ok((_, value)) => Ok(Some(value)),
+                Err(e) => Err(JinkoError::from(e)),
+            },
         }
     }
 
@@ -40,6 +43,11 @@ impl Repl {
                     println!("{}", e.to_string());
                     continue;
                 }
+            };
+
+            let inst = match inst {
+                Some(i) => i,
+                None => continue,
             };
 
             match inst.execute(&mut interpreter) {
