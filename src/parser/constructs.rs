@@ -216,9 +216,10 @@ impl Construct {
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
-            BoxConstruct::binary_op,
+            Construct::parentheses,
             BoxConstruct::variable,
-            Construct::constant, // constant already returns a Box<dyn Instruction>
+            BoxConstruct::binary_op,
+            Construct::constant,
         ))(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
@@ -605,11 +606,11 @@ impl Construct {
 
     /// Parse an expression between parentheses and return it, consuming the parentheses
     fn parentheses(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        delimited(
-            Token::left_parenthesis,
-            Construct::expression,
-            Token::right_parenthesis,
-        )(input)
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, inst) = Construct::factor(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        Ok((input, inst))
     }
 
     /// Parse a number in a multiplicative or divisive operation
@@ -617,16 +618,13 @@ impl Construct {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         let (input, value) = alt((
-            // BoxConstruct::function_declaration,
             BoxConstruct::function_call,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
-            // BoxConstruct::jinko_inst,
             BoxConstruct::block,
-            // BoxConstruct::var_assignment,
-            // BoxConstruct::binary_op,
             BoxConstruct::variable,
-            Construct::constant, // constant already returns a Box<dyn Instruction>
+            Construct::parentheses,
+            Construct::constant,
         ))(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
@@ -1198,11 +1196,11 @@ mod tests {
 
     #[test]
     fn t_binary_op_valid() {
-        match Construct::binary_op("a +   12 ") {
+        match Construct::expression("a +   12 ") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have multi spaces"),
         };
-        match Construct::binary_op("some() + 12.1") {
+        match Construct::expression("some() + 12.1") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have multiple expression types"),
         };
@@ -1234,11 +1232,18 @@ mod tests {
 
     #[test]
     fn t_term_valid() {
-        match Construct::term("(a)") {
+        match Construct::parentheses("(a)") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Expressions can be stuck to the parentheses"),
         }
-
+        match Construct::parentheses("(call())") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Function calls can be inside parentheses"),
+        }
+        match Construct::parentheses("(12.5)") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Constants can be inside parentheses"),
+        }
         match Construct::parentheses("( a        )") {
             Ok(_) => assert!(true),
             Err(_) => assert!(
