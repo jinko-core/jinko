@@ -178,7 +178,6 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         // FIXME: If input is empty, return an error or do nothing */
-
         let (input, value) = alt((
             BoxConstruct::function_declaration,
             BoxConstruct::function_call,
