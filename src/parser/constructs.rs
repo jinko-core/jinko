@@ -46,7 +46,7 @@ impl Construct {
     fn function_call_no_args(input: &str) -> IResult<&str, FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
         let (input, _) = Token::left_parenthesis(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
 
         Ok((input, FunctionCall::new(fn_id.to_owned())))
@@ -55,11 +55,11 @@ impl Construct {
     /// Parse an argument given to a function. Consumes the whitespaces before and after
     /// the argument
     fn arg(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, constant) = Construct::expression(input)?;
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, constant))
     }
@@ -148,7 +148,7 @@ impl Construct {
     /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
     pub fn var_assignment(input: &str) -> IResult<&str, VarAssign> {
         let (input, mut_opt) = opt(Token::mut_tok)(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, id) = Token::identifier(input)?;
         let (input, _) = opt(Token::consume_whitespaces)(input)?;
@@ -175,7 +175,9 @@ impl Construct {
     /// Parse any valid jinko expression. This can be a function call, a variable,
     /// a block declaration...
     pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        // FIXME: If input is empty, return an error or do nothing */
 
         let (input, value) = alt((
             BoxConstruct::function_declaration,
@@ -189,17 +191,17 @@ impl Construct {
             Construct::constant, // constant already returns a Box<dyn Instruction>
         ))(input)?;
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, value))
     }
 
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, expr) = Construct::expression(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::semicolon(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, expr))
     }
@@ -207,7 +209,7 @@ impl Construct {
     /// Parses the statements in a block as well as a possible last expression
     fn instructions(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
         let (input, _) = Token::left_curly_bracket(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, mut instructions) = many0(Construct::stmt_semicolon)(input)?;
         let (input, last_expr) = opt(Construct::expression)(input)?;
@@ -217,7 +219,7 @@ impl Construct {
             None => {}
         }
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
 
         Ok((input, instructions))
@@ -258,7 +260,7 @@ impl Construct {
 
     fn args_dec_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
 
         Ok((input, vec![]))
@@ -269,18 +271,18 @@ impl Construct {
     /// `<identifier> : <identifier>
     fn identifier_type(input: &str) -> IResult<&str, FunctionDecArg> {
         let (input, id) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::colon(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
 
         Ok((input, FunctionDecArg::new(id.to_owned(), ty.to_owned())))
     }
 
     fn identifier_type_comma(input: &str) -> IResult<&str, FunctionDecArg> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arg) = Construct::identifier_type(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::comma(input)?;
 
         Ok((input, arg))
@@ -288,10 +290,10 @@ impl Construct {
 
     fn args_dec_non_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, mut args) = many0(Construct::identifier_type_comma)(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         // Parse the last argument which does not have a comma
         let (input, last_arg) = Construct::identifier_type(input)?;
@@ -308,7 +310,7 @@ impl Construct {
     }
 
     fn return_type_void(input: &str) -> IResult<&str, Option<String>> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arrow) = opt(Token::arrow)(input)?;
 
         match arrow {
@@ -319,11 +321,11 @@ impl Construct {
 
     /// Parse a non-void return type
     fn return_type_non_void(input: &str) -> IResult<&str, Option<String>> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::arrow(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, Some(ty.to_owned())))
     }
@@ -334,9 +336,9 @@ impl Construct {
     }
 
     fn function_content(input: &str) -> IResult<&str, FunctionDec> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, fn_name) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, args) = Construct::args_dec(input)?;
         let (input, ty) = Construct::return_type(input)?;
@@ -387,9 +389,9 @@ impl Construct {
     /// `<test> <identifier> ( ) <block>
     pub fn test_declaration(input: &str) -> IResult<&str, FunctionDec> {
         let (input, _) = Token::test_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, fn_name) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, args) = Construct::args_dec(input)?;
         let (input, ty) = Construct::return_type_void(input)?;
@@ -433,16 +435,16 @@ impl Construct {
     /// `<ext> <func> <identifier> ( <typed_arg_list> ) [ -> <type> ] ;`
     pub fn ext_declaration(input: &str) -> IResult<&str, FunctionDec> {
         let (input, _) = Token::ext_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::func_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, fn_name) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, args) = Construct::args_dec(input)?;
         let (input, ty) = Construct::return_type(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::semicolon(input)?;
 
         let mut function = FunctionDec::new(fn_name.to_owned(), ty);
@@ -456,9 +458,9 @@ impl Construct {
 
     /// Parse an `else` plus the associated block
     fn else_block(input: &str) -> IResult<&str, Block> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::else_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Construct::block(input)
     }
@@ -468,12 +470,12 @@ impl Construct {
     ///
     /// `<if> <block> [ <else> <block> ]`
     pub fn if_else(input: &str) -> IResult<&str, IfElse> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::if_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, condition) = Construct::expression(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, if_body) = Construct::block(input)?;
 
@@ -490,9 +492,9 @@ impl Construct {
     ///
     /// `<audit> <block>`
     pub fn audit(input: &str) -> IResult<&str, Audit> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::audit_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Audit::new(block)))
@@ -502,9 +504,9 @@ impl Construct {
     ///
     /// `<loop> <block>`
     pub fn loop_block(input: &str) -> IResult<&str, Loop> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::loop_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Loop::new(LoopKind::Loop, block)))
@@ -515,11 +517,11 @@ impl Construct {
     ///
     /// `<while> <expression> <block>`
     pub fn while_block(input: &str) -> IResult<&str, Loop> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::while_tok(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, condition) = Construct::expression(input)?;
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Loop::new(LoopKind::While(condition), block)))
@@ -530,19 +532,19 @@ impl Construct {
     ///
     /// `<for> <variable> <in> <expression> <block>`
     pub fn for_block(input: &str) -> IResult<&str, Loop> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::for_tok(input)?;
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, variable) = Construct::variable(input)?;
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::in_tok(input)?;
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, expression) = Construct::expression(input)?;
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Loop::new(LoopKind::For(variable, expression), block)))
