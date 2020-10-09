@@ -22,7 +22,9 @@ use crate::instruction::{
 };
 use crate::value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString};
 
-use super::{box_construct::BoxConstruct, jinko_insts::JinkoInst, tokens::Token};
+use super::{
+    box_construct::BoxConstruct, jinko_insts::JinkoInst, shunting_yard::ShuntingYard, tokens::Token,
+};
 
 pub struct Construct;
 
@@ -209,6 +211,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         let (input, value) = alt((
+            Construct::binary_op,
             BoxConstruct::function_declaration,
             BoxConstruct::function_call,
             BoxConstruct::if_else,
@@ -218,7 +221,6 @@ impl Construct {
             BoxConstruct::var_assignment,
             Construct::parentheses,
             BoxConstruct::variable,
-            BoxConstruct::binary_op,
             Construct::constant,
         ))(input)?;
 
@@ -606,46 +608,10 @@ impl Construct {
     /// Parse an expression between parentheses and return it, consuming the parentheses
     fn parentheses(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, _) = Token::left_parenthesis(input)?;
-        let (input, inst) = Construct::factor(input)?;
+        let (input, inst) = Construct::expression(input)?; // FIXME: See if we can use expr here
         let (input, _) = Token::right_parenthesis(input)?;
 
         Ok((input, inst))
-    }
-
-    /// Parse a number in a multiplicative or divisive operation
-    fn factor(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-
-        let (input, value) = alt((
-            BoxConstruct::function_call,
-            BoxConstruct::if_else,
-            BoxConstruct::any_loop,
-            BoxConstruct::block,
-            BoxConstruct::variable,
-            Construct::parentheses,
-            Construct::constant,
-        ))(input)?;
-
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-
-        Ok((input, value))
-    }
-
-    fn term(input: &str) -> IResult<&str, BinaryOp> {
-        let (input, lhs) = Construct::factor(input)?;
-
-        let (input, op) = alt((Token::mul, Token::div))(input)?;
-
-        let (input, rhs) = Construct::factor(input)?;
-
-        match op {
-            "*" => Ok((input, BinaryOp::new(lhs, rhs, Operator::Mul))),
-            "/" => Ok((input, BinaryOp::new(lhs, rhs, Operator::Div))),
-            _ => Err(nom::Err::Error((
-                "Invalid term for operation * or /",
-                ErrorKind::OneOf,
-            ))),
-        }
     }
 
     /// Parse a binary operation. A binary operation is composed of an expression, an
@@ -658,27 +624,11 @@ impl Construct {
     /// a << 2; // Shift a by 2 bits
     /// a > 2; // Is a greater than 2?
     /// ```
-    pub fn binary_op(input: &str) -> IResult<&str, BinaryOp> {
-        let (input, lhs) = Construct::term(input)?;
+    pub fn binary_op(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        ShuntingYard::parse(input);
 
-        let (input, op) = alt((Token::add, Token::sub))(input)?;
-
-        let (input, rhs) = Construct::term(input)?;
-
-        match op {
-            "+" => Ok((
-                input,
-                BinaryOp::new(Box::new(lhs), Box::new(rhs), Operator::Add),
-            )),
-            "-" => Ok((
-                input,
-                BinaryOp::new(Box::new(lhs), Box::new(rhs), Operator::Sub),
-            )),
-            _ => Err(nom::Err::Error((
-                "Invalid member for operation + or -",
-                ErrorKind::OneOf,
-            ))),
-        }
+        // FIXME: Implement shunting yard
+        todo!()
     }
 }
 
@@ -814,7 +764,10 @@ mod tests {
             "fn"
         );
         assert_eq!(
-            Construct::function_call("fn(a, hey(), 3.12)").unwrap().1.name(),
+            Construct::function_call("fn(a, hey(), 3.12)")
+                .unwrap()
+                .1
+                .name(),
             "fn"
         );
         assert_eq!(
@@ -1198,11 +1151,11 @@ mod tests {
 
     #[test]
     fn t_binary_op_valid() {
-        match Construct::expression("a +   12 ") {
+        match Construct::binary_op("a *   12 ") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have multi spaces"),
         };
-        match Construct::expression("some() + 12.1") {
+        match Construct::binary_op("some() + 12.1") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have multiple expression types"),
         };

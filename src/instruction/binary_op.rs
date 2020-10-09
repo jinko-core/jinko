@@ -18,7 +18,7 @@ use crate::{
 
 /// All the binary operators available
 #[repr(u8)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Operator {
     Add,
     Sub,
@@ -82,6 +82,26 @@ impl BinaryOp {
                 self.print(),
             )),
         }
+    }
+
+    /// Return the operator used by the BinaryOp
+    pub fn operator(&self) -> Operator {
+        self.op
+    }
+
+    /// Set the operator of a BinaryOp
+    pub fn set_op(&mut self, op: Operator) {
+        self.op = op;
+    }
+
+    /// Set the left side member of a BinaryOp
+    pub fn set_lhs(&mut self, lhs: Box<dyn Instruction>) {
+        self.lhs = lhs;
+    }
+
+    /// Set the right side member of a BinaryOp
+    pub fn set_rhs(&mut self, rhs: Box<dyn Instruction>) {
+        self.rhs = rhs;
     }
 }
 
