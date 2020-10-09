@@ -103,6 +103,13 @@ impl Instruction for BinaryOp {
         // FIXME: Add logic
         interpreter.debug_step("BINOP ENTER");
 
+        interpreter.debug("OP", self.op.to_str());
+
+        self.lhs.execute(interpreter)?;
+        self.rhs.execute(interpreter)?;
+
+        interpreter.debug_step("BINOP EXIT");
+
         Ok(())
     }
 }

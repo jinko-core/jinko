@@ -13,6 +13,9 @@ use std::fs;
 
 use instruction::Instruction;
 
+pub use interpreter::Interpreter;
+pub use error::JinkoError;
+
 fn main() {
     let args = Args::handle();
 

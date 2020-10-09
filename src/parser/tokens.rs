@@ -140,7 +140,7 @@ impl Token {
     }
 
     pub fn mul(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "/")
+        Token::specific_token(input, "*")
     }
 
     pub fn div(input: &str) -> IResult<&str, &str> {
