@@ -36,6 +36,8 @@ pub enum Operator {
     GreaterOrEqualThan,
     LeftShift,
     RightShift,
+    LeftParenthesis,
+    RightParenthesis,
 }
 
 impl Operator {
@@ -43,7 +45,10 @@ impl Operator {
     pub fn new(op_str: &str) -> Operator {
         match op_str {
             "+" => Operator::Add,
+            "*" => Operator::Mul,
             ">>" => Operator::LeftShift,
+            "(" => Operator::LeftParenthesis,
+            ")" => Operator::RightParenthesis,
             _ => unreachable!("Invalid operator: {}", op_str),
         }
     }
@@ -53,6 +58,15 @@ impl Operator {
         match self {
             Operator::Add => "+",
             _ => "???",
+        }
+    }
+
+    /// Return the operator's precedence according to the Shunting Yard algorithm
+    pub fn precedence(&self) -> u8 {
+        match self {
+            Operator::Mul | Operator::Div => 3,
+            Operator::Add | Operator::Sub => 2,
+            _ => unreachable!("Invalid operator has no precedence: {:#?}", self),
         }
     }
 }
@@ -87,6 +101,16 @@ impl BinaryOp {
     /// Return the operator used by the BinaryOp
     pub fn operator(&self) -> Operator {
         self.op
+    }
+
+    /// Get a reference on the left side member of a BinaryOp
+    pub fn lhs(&self) -> &Box<dyn Instruction> {
+        &self.lhs
+    }
+
+    /// Get a reference on the right side member of a BinaryOp
+    pub fn rhs(&self) -> &Box<dyn Instruction> {
+        &self.rhs
     }
 
     /// Set the operator of a BinaryOp
