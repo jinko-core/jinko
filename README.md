@@ -3,7 +3,7 @@
 unit tests, mocking and FFI.
 
 <p align="center">
-<img src="misc/logo_small.png" />
+<img src="misc/logo_small.png" width="50%" height="50%" />
 </p>
 
 ## Requirements
