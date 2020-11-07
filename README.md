@@ -2,6 +2,10 @@
 `jinko` is a small and safe interpreted language written in Rust, with integrated
 unit tests, mocking and FFI.
 
+<p align="center">
+<img src="misc/logo_small.png" width="50%" height="50%" />
+</p>
+
 ## Requirements
 
 * [ ] If a function does not return `void`, its return value should always be used.
