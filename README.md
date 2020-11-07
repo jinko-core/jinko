@@ -2,7 +2,9 @@
 `jinko` is a small and safe interpreted language written in Rust, with integrated
 unit tests, mocking and FFI.
 
-![jinko logo](misc/logo_small.png)
+<p align="center">
+<img src="misc/logo_small.png" />
+</p>
 
 ## Requirements
 
