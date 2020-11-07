@@ -501,7 +501,7 @@ mod tests {
 
     #[test]
     fn t_multi_comment_invalid() {
-        match Token::maybe_consume_comment("/*") {
+        match Token::consume_multi_comment("/*") {
             Ok(_) => assert!(false, "Unclosed start delimiter"),
             Err(_) => assert!(true),
         };
