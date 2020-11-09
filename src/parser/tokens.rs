@@ -15,6 +15,10 @@ const RESERVED_KEYWORDS: [&str; 10] = [
     "func", "test", "mock", "ext", "for", "while", "loop", "mut", "true", "false",
 ];
 
+const OPERATORS: [&str; 4] = [
+    "+", "-", "*", "/",
+];
+
 pub struct Token;
 
 impl Token {
@@ -281,6 +285,19 @@ impl Token {
 
     fn is_whitespace(c: char) -> bool {
         c == ' ' || c == '\t' || c == '\n'
+    }
+
+    // FIXME: Documentation
+    pub fn is_operator(c: char) -> bool {
+        // FIXME: Ugly
+        for op in OPERATORS.iter() {
+            // We can unwrap since all operators have at least one character
+            if op.chars().next().unwrap() == c {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Consumes 1 or more whitespaces in an input. A whitespace is a space or a tab
