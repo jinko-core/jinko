@@ -9,7 +9,7 @@ use super::box_construct::BoxConstruct;
 use super::constructs::Construct;
 use super::tokens::Token;
 
-use nom::{branch::alt, combinator::opt, IResult};
+use nom::{branch::alt, error::ErrorKind, Err, IResult};
 
 type Stack<T> = LinkedList<T>;
 
@@ -21,20 +21,25 @@ pub struct ShuntingYard {
 }
 
 impl ShuntingYard {
+    fn is_valid(&self) -> bool {
+        match self.value {
+            None => self.operators.len() >= 1 && self.operands.len() >= 2,
+            Some(_) => self.operators.len() >= 1 && self.operands.len() >= 1,
+        }
+    }
+
     fn add_to_output(&mut self) {
+        let first_v = self.operands.pop_front().unwrap();
+        let op = self.operators.pop_front().unwrap();
+
         // "Take" the value to replace it, if it exists
         self.value = match self.value.take() {
             None => {
-                let rhs = self.operands.pop_front().unwrap();
-                let lhs = self.operands.pop_front().unwrap();
-                let op = self.operators.pop_front().unwrap();
-                Some(BinaryOp::new(lhs, rhs, op))
+                // We don't always want to pop this one
+                let second_v = self.operands.pop_front().unwrap();
+                Some(BinaryOp::new(second_v, first_v, op))
             }
-            Some(val) => {
-                let rhs = self.operands.pop_front().unwrap();
-                let op = self.operators.pop_front().unwrap();
-                Some(BinaryOp::new(Box::new(val), rhs, op))
-            }
+            Some(val) => Some(BinaryOp::new(Box::new(val), first_v, op)),
         }
     }
 
@@ -60,18 +65,36 @@ impl ShuntingYard {
             && self.operators.front().unwrap().precedence() > op.precedence()
             && self.operators.front().unwrap() != &Operator::LeftParenthesis
         {
+            if !self.is_valid() {
+                return Err(Err::Error((
+                    "Not a valid binary expression",
+                    ErrorKind::Many1,
+                )));
+            }
+
             self.add_to_output();
         }
 
         if op == Operator::LeftParenthesis {
             self.operators.push_front(op);
         } else if op == Operator::RightParenthesis {
-            while self.operators.front().unwrap() != &Operator::LeftParenthesis {
+            while self.operators.front() != Some(&Operator::LeftParenthesis) {
+                if !self.is_valid() {
+                    return Err(Err::Error((
+                        "Not a valid binary expression",
+                        ErrorKind::Many1,
+                    )));
+                }
                 self.add_to_output();
             }
 
-            // Discard the left parenthesis
-            self.operators.pop_front();
+            // Discard the left parenthesis and check if it exists
+            if self.operators.pop_front() != Some(Operator::LeftParenthesis) {
+                return Err(Err::Error((
+                    "Unstarted right parenthesis - missing '('",
+                    ErrorKind::Many1,
+                )));
+            }
         } else {
             self.operators.push_front(op);
         }
@@ -80,7 +103,11 @@ impl ShuntingYard {
     }
 
     fn operand<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
-        let (input, expr) = alt((BoxConstruct::function_call, Construct::constant))(input)?;
+        let (input, expr) = alt((
+            BoxConstruct::function_call,
+            Construct::constant,
+            BoxConstruct::variable,
+        ))(input)?;
 
         self.operands.push_front(expr);
 
@@ -147,24 +174,23 @@ impl ShuntingYard {
 
         // We are done, pop everything from the different stacks
         while !sy.operators.is_empty() {
-            // "Take" the value to replace it
-            sy.value = match sy.value.take() {
-                None => {
-                    let rhs = sy.operands.pop_front().unwrap();
-                    let lhs = sy.operands.pop_front().unwrap();
-                    let op = sy.operators.pop_front().unwrap();
-                    Some(BinaryOp::new(lhs, rhs, op))
-                }
-                Some(val) => {
-                    let rhs = sy.operands.pop_front().unwrap();
-                    let op = sy.operators.pop_front().unwrap();
-                    Some(BinaryOp::new(Box::new(val), rhs, op))
-                }
+            if !sy.is_valid() {
+                return Err(Err::Error((
+                    "Not a valid binary expression",
+                    ErrorKind::Many1,
+                )));
             }
+
+            sy.add_to_output();
         }
 
-        // FIXME: No unwrap
-        Ok((input, sy.value.take().unwrap()))
+        match sy.value.take() {
+            Some(v) => Ok((input, v)),
+            None => Err(Err::Error((
+                "Not a valid binary expression",
+                ErrorKind::Many1,
+            ))),
+        }
     }
 }
 
@@ -235,4 +261,6 @@ mod tests {
 
         assert_eq!(output.operator(), reference.operator());
     }
+
+    // FIXME: Add more tests with more operators
 }

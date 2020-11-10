@@ -65,7 +65,7 @@ impl Operator {
     pub fn precedence(&self) -> u8 {
         match self {
             // Special operators. They don't really have a precendence value
-            Operator::LeftParenthesis  => 0,
+            Operator::LeftParenthesis => 0,
             Operator::RightParenthesis => 255,
 
             // Classic SY operator precedence

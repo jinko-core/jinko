@@ -211,7 +211,6 @@ impl Construct {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         let (input, value) = alt((
-            Construct::binary_op,
             BoxConstruct::function_declaration,
             BoxConstruct::function_call,
             BoxConstruct::if_else,
@@ -219,7 +218,7 @@ impl Construct {
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
-            Construct::parentheses,
+            BoxConstruct::binary_op,
             BoxConstruct::variable,
             Construct::constant,
         ))(input)?;
@@ -605,15 +604,6 @@ impl Construct {
         Ok((input, inst))
     }
 
-    /// Parse an expression between parentheses and return it, consuming the parentheses
-    fn parentheses(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, _) = Token::left_parenthesis(input)?;
-        let (input, inst) = Construct::expression(input)?; // FIXME: See if we can use expr here
-        let (input, _) = Token::right_parenthesis(input)?;
-
-        Ok((input, inst))
-    }
-
     /// Parse a binary operation. A binary operation is composed of an expression, an
     /// operator and another expression
     ///
@@ -624,11 +614,8 @@ impl Construct {
     /// a << 2; // Shift a by 2 bits
     /// a > 2; // Is a greater than 2?
     /// ```
-    pub fn binary_op(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        ShuntingYard::parse(input);
-
-        // FIXME: Implement shunting yard
-        todo!()
+    pub fn binary_op(input: &str) -> IResult<&str, BinaryOp> {
+        ShuntingYard::parse(input)
     }
 }
 
@@ -1167,44 +1154,5 @@ mod tests {
             Ok(_) => assert!(false, "? is not a binop"),
             Err(_) => assert!(true),
         };
-    }
-
-    #[test]
-    fn t_parentheses_valid() {
-        match Construct::parentheses("(a)") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Expressions can be stuck to the parentheses"),
-        }
-
-        match Construct::parentheses("( a        )") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(
-                false,
-                "There can be any number of spaces inside parentheses"
-            ),
-        }
-    }
-
-    #[test]
-    fn t_term_valid() {
-        match Construct::parentheses("(a)") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Expressions can be stuck to the parentheses"),
-        }
-        match Construct::parentheses("(call())") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Function calls can be inside parentheses"),
-        }
-        match Construct::parentheses("(12.5)") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Constants can be inside parentheses"),
-        }
-        match Construct::parentheses("( a        )") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(
-                false,
-                "There can be any number of spaces inside parentheses"
-            ),
-        }
     }
 }
