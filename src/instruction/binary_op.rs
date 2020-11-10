@@ -64,6 +64,11 @@ impl Operator {
     /// Return the operator's precedence according to the Shunting Yard algorithm
     pub fn precedence(&self) -> u8 {
         match self {
+            // Special operators. They don't really have a precendence value
+            Operator::LeftParenthesis  => 0,
+            Operator::RightParenthesis => 255,
+
+            // Classic SY operator precedence
             Operator::Mul | Operator::Div => 3,
             Operator::Add | Operator::Sub => 2,
             _ => unreachable!("Invalid operator has no precedence: {:#?}", self),

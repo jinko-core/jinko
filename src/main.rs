@@ -1,3 +1,4 @@
+#[warn(missing_docs)]
 mod args;
 mod error;
 mod instruction;

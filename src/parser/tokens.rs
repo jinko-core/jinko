@@ -15,9 +15,7 @@ const RESERVED_KEYWORDS: [&str; 10] = [
     "func", "test", "mock", "ext", "for", "while", "loop", "mut", "true", "false",
 ];
 
-const OPERATORS: [&str; 4] = [
-    "+", "-", "*", "/",
-];
+const OPERATORS: [&str; 6] = ["+", "-", "*", "/", "(", ")"];
 
 pub struct Token;
 
@@ -49,14 +47,6 @@ impl Token {
 
     pub fn comma(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, ',')
-    }
-
-    pub fn left_parenthesis(input: &str) -> IResult<&str, char> {
-        Token::specific_char(input, '(')
-    }
-
-    pub fn right_parenthesis(input: &str) -> IResult<&str, char> {
-        Token::specific_char(input, ')')
     }
 
     pub fn left_curly_bracket(input: &str) -> IResult<&str, char> {
@@ -149,6 +139,14 @@ impl Token {
 
     pub fn div(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "/")
+    }
+
+    pub fn left_parenthesis(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "(")
+    }
+
+    pub fn right_parenthesis(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, ")")
     }
 
     pub fn left_shift(input: &str) -> IResult<&str, &str> {
@@ -289,15 +287,12 @@ impl Token {
 
     // FIXME: Documentation
     pub fn is_operator(c: char) -> bool {
-        // FIXME: Ugly
-        for op in OPERATORS.iter() {
-            // We can unwrap since all operators have at least one character
-            if op.chars().next().unwrap() == c {
-                return true;
-            }
-        }
-
-        false
+        // We can unwrap since all operators are at least one character wide
+        OPERATORS
+            .iter()
+            .map(|op| op.chars().next().unwrap())
+            .collect::<Vec<char>>()
+            .contains(&c)
     }
 
     /// Consumes 1 or more whitespaces in an input. A whitespace is a space or a tab

@@ -21,10 +21,35 @@ pub struct ShuntingYard {
 }
 
 impl ShuntingYard {
+    fn add_to_output(&mut self) {
+        // "Take" the value to replace it, if it exists
+        self.value = match self.value.take() {
+            None => {
+                let rhs = self.operands.pop_front().unwrap();
+                let lhs = self.operands.pop_front().unwrap();
+                let op = self.operators.pop_front().unwrap();
+                Some(BinaryOp::new(lhs, rhs, op))
+            }
+            Some(val) => {
+                let rhs = self.operands.pop_front().unwrap();
+                let op = self.operators.pop_front().unwrap();
+                Some(BinaryOp::new(Box::new(val), rhs, op))
+            }
+        }
+    }
+
     fn operator<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
+        // FIXME: Don't unwrap?
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
-        let (input, op) = alt((Token::add, Token::sub, Token::mul, Token::div))(input)?;
+        let (input, op) = alt((
+            Token::add,
+            Token::sub,
+            Token::mul,
+            Token::div,
+            Token::left_parenthesis,
+            Token::right_parenthesis,
+        ))(input)?;
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
@@ -34,34 +59,28 @@ impl ShuntingYard {
         while !self.operators.is_empty()
             && self.operators.front().unwrap().precedence() > op.precedence()
             && self.operators.front().unwrap() != &Operator::LeftParenthesis
-            // FIXME: Handle right parenthesis
         {
-            // "Take" the value to replace it
-            self.value = match self.value.take() {
-                None => {
-                    let rhs = self.operands.pop_front().unwrap();
-                    let lhs = self.operands.pop_front().unwrap();
-                    let op = self.operators.pop_front().unwrap();
-                    Some(BinaryOp::new(lhs, rhs, op))
-                }
-                Some(val) => {
-                    let rhs = self.operands.pop_front().unwrap();
-                    let op = self.operators.pop_front().unwrap();
-                    Some(BinaryOp::new(Box::new(val), rhs, op))
-                }
-            }
+            self.add_to_output();
         }
 
-        self.operators.push_front(op);
+        if op == Operator::LeftParenthesis {
+            self.operators.push_front(op);
+        } else if op == Operator::RightParenthesis {
+            while self.operators.front().unwrap() != &Operator::LeftParenthesis {
+                self.add_to_output();
+            }
+
+            // Discard the left parenthesis
+            self.operators.pop_front();
+        } else {
+            self.operators.push_front(op);
+        }
 
         Ok((input, ()))
     }
 
     fn operand<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
-        let (input, expr) = alt((
-                BoxConstruct::function_call,
-                Construct::constant,
-        ))(input)?;
+        let (input, expr) = alt((BoxConstruct::function_call, Construct::constant))(input)?;
 
         self.operands.push_front(expr);
 
@@ -77,7 +96,7 @@ impl ShuntingYard {
             Some(c) => match Token::is_operator(c) {
                 true => self.operator(input)?,
                 false => self.operand(input)?,
-            }
+            },
         };
 
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
@@ -103,7 +122,9 @@ impl ShuntingYard {
 
         match sy.handle_token(input) {
             // FIXME: Don't say fuck
-            Err(nom::Err::Error(_)) => return Err(nom::Err::Error(("fuck", nom::error::ErrorKind::Many1))),
+            Err(nom::Err::Error(_)) => {
+                return Err(nom::Err::Error(("fuck", nom::error::ErrorKind::Many1)))
+            }
             Err(e) => return Err(e),
             Ok((new_i, _)) => {
                 input = new_i;
