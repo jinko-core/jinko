@@ -27,7 +27,9 @@ impl Operator {
     pub fn new(op_str: &str) -> Operator {
         match op_str {
             "+" => Operator::Add,
+            "-" => Operator::Sub,
             "*" => Operator::Mul,
+            "/" => Operator::Div,
             "(" => Operator::LeftParenthesis,
             ")" => Operator::RightParenthesis,
             _ => unreachable!("Invalid operator: {}", op_str),
@@ -38,7 +40,11 @@ impl Operator {
     pub fn to_str(&self) -> &str {
         match self {
             Operator::Add => "+",
-            _ => "???",
+            Operator::Sub => "-",
+            Operator::Mul => "*",
+            Operator::Div => "/",
+            Operator::LeftParenthesis => "(",
+            Operator::RightParenthesis => ")",
         }
     }
 

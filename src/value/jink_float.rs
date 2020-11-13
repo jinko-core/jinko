@@ -3,6 +3,7 @@
 
 use super::{Value, ValueType};
 use crate::instruction::{InstrKind, Instruction, Operator};
+use crate::{Interpreter, JinkoError};
 
 #[derive(Clone)]
 pub struct JinkFloat(f64);
@@ -36,5 +37,12 @@ impl Instruction for JinkFloat {
 
     fn print(&self) -> String {
         self.0.to_string()
+    }
+
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        // FIXME: Add logic
+        interpreter.debug("FLOAT", &self.0.to_string());
+
+        Ok(())
     }
 }

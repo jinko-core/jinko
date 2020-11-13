@@ -2,6 +2,7 @@
 
 use super::{Value, ValueType};
 use crate::instruction::{InstrKind, Instruction};
+use crate::{Interpreter, JinkoError};
 
 #[derive(Clone)]
 pub struct JinkString(String);
@@ -25,5 +26,11 @@ impl Instruction for JinkString {
 
     fn print(&self) -> String {
         format!("\"{}\"", self.0.clone())
+    }
+
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        interpreter.debug("STR", &self.0.to_string());
+
+        Ok(())
     }
 }
