@@ -2,14 +2,8 @@
 //! 1 + 2, a BinaryOp will be created containing "1" as a left hand side operand, "2" as
 //! a right hand side operand and "+" as the operator.
 //!
-//! The available operators are `+`, `-`, `*`, `/`, `%`, `&`, `|`, `&&`, `||`, `and`, `or`, `<`,
-//! `>`, `==`, `<=`, `>=`, `<<` and `>>`, that is
-//! `Add`, `Substract`, `Multiply`, `Divide`, `Modulo`, `BinaryAnd`, `BinaryOr`, `And`,
-//! `Or`, `And`, `Or`, `Less than`, `Greater than`, `Equal to`, `Less than or equal to`,
-//! `Greater than or equal to`, `Left shift` and `Right shift`.
-//!
-//! Some of these operators are comparison operators while others are arithmetic operators.
-//! Comparison operators can evaluate to booleans while arithmetic ones cannot.
+//! The available operators are `+`, `-`, `*` and `/`.
+//! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
     error::ErrKind, error::JinkoError, instruction::InstrKind, interpreter::Interpreter,
@@ -24,18 +18,6 @@ pub enum Operator {
     Sub,
     Mul,
     Div,
-    Mod,
-    BinAnd,
-    BinOr,
-    And,
-    Or,
-    Equal,
-    LessThan,
-    LessOrEqualThan,
-    GreaterThan,
-    GreaterOrEqualThan,
-    LeftShift,
-    RightShift,
     LeftParenthesis,
     RightParenthesis,
 }
@@ -46,7 +28,6 @@ impl Operator {
         match op_str {
             "+" => Operator::Add,
             "*" => Operator::Mul,
-            ">>" => Operator::LeftShift,
             "(" => Operator::LeftParenthesis,
             ")" => Operator::RightParenthesis,
             _ => unreachable!("Invalid operator: {}", op_str),
