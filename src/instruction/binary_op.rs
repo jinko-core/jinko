@@ -52,7 +52,6 @@ impl Operator {
             // Classic SY operator precedence
             Operator::Mul | Operator::Div => 3,
             Operator::Add | Operator::Sub => 2,
-            _ => unreachable!("Invalid operator has no precedence: {:#?}", self),
         }
     }
 }
@@ -64,16 +63,25 @@ pub struct BinaryOp {
     lhs: Box<dyn Instruction>,
     rhs: Box<dyn Instruction>,
     op: Operator,
+
+    value: Option<Box<dyn Instruction>>,
 }
 
 impl BinaryOp {
     /// Create a new `BinaryOp` from two instructions and an operator
     pub fn new(lhs: Box<dyn Instruction>, rhs: Box<dyn Instruction>, op: Operator) -> Self {
-        BinaryOp { lhs, rhs, op }
+        BinaryOp {
+            lhs,
+            rhs,
+            op,
+            value: None,
+        }
     }
 
     /// Compute the result of the binary operation
-    pub fn compute<T>(&self) -> Result<T, JinkoError> {
+    pub fn compute(&self) -> Result<Box<dyn Instruction>, JinkoError> {
+        // FIXME: Typecheck self before computing
+
         match &self.op {
             _ => Err(JinkoError::new(
                 ErrKind::Interpreter,
@@ -158,6 +166,11 @@ mod tests {
 
         let binop = BinaryOp::new(l, r, op);
 
-        assert_eq!(binop.compute::<i64>().unwrap(), 24);
+        let res = binop.compute();
+
+        match res {
+            Err(e) => assert!(false, format!("12 + 12 is a valid operation: {}", e)),
+            Ok(v) => assert!(true),
+        }
     }
 }

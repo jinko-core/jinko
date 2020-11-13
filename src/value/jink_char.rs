@@ -1,6 +1,6 @@
 //! Represents a single character in Jinko
 
-use super::Value;
+use super::{Value, ValueType};
 use crate::instruction::{InstrKind, Instruction};
 
 #[derive(Clone)]
@@ -12,7 +12,11 @@ impl From<char> for JinkChar {
     }
 }
 
-impl Value for JinkChar {}
+impl Value for JinkChar {
+    fn vtype(&self) -> ValueType {
+        ValueType::Bool
+    }
+}
 
 impl Instruction for JinkChar {
     fn kind(&self) -> InstrKind {

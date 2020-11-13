@@ -1,6 +1,6 @@
 //! Represents a resizeable string in Jinko
 
-use super::Value;
+use super::{Value, ValueType};
 use crate::instruction::{InstrKind, Instruction};
 
 #[derive(Clone)]
@@ -12,7 +12,11 @@ impl From<&str> for JinkString {
     }
 }
 
-impl Value for JinkString {}
+impl Value for JinkString {
+    fn vtype(&self) -> ValueType {
+        ValueType::Bool
+    }
+}
 
 impl Instruction for JinkString {
     fn kind(&self) -> InstrKind {

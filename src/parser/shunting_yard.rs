@@ -119,7 +119,12 @@ impl ShuntingYard {
 
         let (input, _) = match input.chars().next() {
             // FIXME: Don't panic here
-            None => return Err(Err::Error(("Not a valid binary expression", nom::error::ErrorKind::OneOf))),
+            None => {
+                return Err(Err::Error((
+                    "Not a valid binary expression",
+                    nom::error::ErrorKind::OneOf,
+                )))
+            }
             Some(c) => match Token::is_operator(c) {
                 true => self.operator(input)?,
                 false => self.operand(input)?,
@@ -150,7 +155,10 @@ impl ShuntingYard {
         match sy.handle_token(input) {
             // FIXME: Don't say fuck
             Err(nom::Err::Error(_)) => {
-                return Err(Err::Error(("Not a valid binary expression", nom::error::ErrorKind::Many1)))
+                return Err(Err::Error((
+                    "Not a valid binary expression",
+                    nom::error::ErrorKind::Many1,
+                )))
             }
             Err(e) => return Err(e),
             Ok((new_i, _)) => {

@@ -1,3 +1,4 @@
+#![feature(box_syntax)]
 #[warn(missing_docs)]
 mod args;
 mod error;
