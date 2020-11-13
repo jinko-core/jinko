@@ -1,6 +1,6 @@
 //! Represents an integer in Jinko. All integers are signed 64 bytes
 
-use super::{Value, ValueType, JinkFloat};
+use super::{JinkFloat, Value, ValueType};
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::{Interpreter, JinkoError};
 

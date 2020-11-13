@@ -191,3 +191,9 @@ be best.
 The jinko interpreter should keep track of variables and functions. Therefore, at
 least two hashmaps are required, one for variables and one for functions. Each of these
 elements need to have a unique name to identify them.
+
+## Using rust crates
+
+The `crate` keyword should be used to signify to the interpreter to download and compile
+a specific crate, with a specific version for example. The crate will be compiled in
+release mode and placed in a specific directory, which has yet to be determined.

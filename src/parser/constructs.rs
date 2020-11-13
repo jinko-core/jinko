@@ -12,64 +12,31 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{
-    branch::alt, combinator::opt, error::ErrorKind, multi::many0, sequence::delimited, IResult,
-};
-
-use crate::instruction::{
-    Audit, BinaryOp, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse,
-    Instruction, Loop, LoopKind, Operator, Var, VarAssign,
-};
-use crate::value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString};
+use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use super::{
-    box_construct::BoxConstruct, jinko_insts::JinkoInst, shunting_yard::ShuntingYard, tokens::Token,
+    box_construct::BoxConstruct, constant_construct::ConstantConstruct, jinko_insts::JinkoInst,
+    shunting_yard::ShuntingYard, tokens::Token,
+};
+use crate::instruction::{
+    Audit, BinaryOp, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse,
+    Instruction, Loop, LoopKind, Var, VarAssign,
 };
 
 pub struct Construct;
 
 impl Construct {
-    fn c_char_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, char_value) = Token::char_constant(input)?;
-
-        Ok((input, Box::new(JinkChar::from(char_value))))
-    }
-
-    fn c_string_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, string_value) = Token::string_constant(input)?;
-
-        Ok((input, Box::new(JinkString::from(string_value))))
-    }
-
-    fn c_float_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, float_value) = Token::float_constant(input)?;
-
-        Ok((input, Box::new(JinkFloat::from(float_value))))
-    }
-
-    fn c_int_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, int_value) = Token::int_constant(input)?;
-
-        Ok((input, Box::new(JinkInt::from(int_value))))
-    }
-
-    fn c_bool_constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, bool_value) = Token::bool_constant(input)?;
-
-        Ok((input, Box::new(JinkBool::from(bool_value))))
-    }
-
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
     /// `0.5`.
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
     pub fn constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         alt((
-            Construct::c_char_constant,
-            Construct::c_string_constant,
-            Construct::c_float_constant,
-            Construct::c_int_constant,
-            Construct::c_bool_constant,
+            ConstantConstruct::c_char_constant,
+            ConstantConstruct::c_string_constant,
+            ConstantConstruct::c_float_constant,
+            ConstantConstruct::c_int_constant,
+            ConstantConstruct::c_bool_constant,
         ))(input)
     }
 
@@ -697,6 +664,14 @@ mod tests {
                 .1
                 .symbol(),
             "mut_x_99"
+        );
+
+        assert_eq!(
+            Construct::var_assignment("mut\nname = 129;")
+                .unwrap()
+                .1
+                .mutable(),
+            true
         );
 
         match Construct::var_assignment("mut x=12;") {

@@ -30,7 +30,21 @@ impl Token {
     /// When a function calls specific_token(_, "token"), that means it's trying to
     /// recognize specifically the word "token".
     fn specific_token<'tok>(input: &'tok str, token: &'tok str) -> IResult<&'tok str, &'tok str> {
-        tag(token)(input)
+        let (input, tag) = tag(token)(input)?;
+        match input.len() {
+            0 => Ok((input, tag)),
+            _ => {
+                peek(alt((
+                    char('\t'),
+                    char('\r'),
+                    char('\n'),
+                    char(' '),
+                    char('{'),
+                    char(';'),
+                )))(input)?;
+                Ok((input, tag))
+            }
+        }
     }
 
     pub fn single_quote(input: &str) -> IResult<&str, char> {
@@ -78,47 +92,47 @@ impl Token {
     }
 
     pub fn func_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "func ")
+        Token::specific_token(input, "func")
     }
 
     pub fn ext_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "ext ")
+        Token::specific_token(input, "ext")
     }
 
     pub fn test_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "test ")
+        Token::specific_token(input, "test")
     }
 
     pub fn mock_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "mock ")
+        Token::specific_token(input, "mock")
     }
 
     pub fn loop_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "loop ")
+        Token::specific_token(input, "loop")
     }
 
     pub fn while_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "while ")
+        Token::specific_token(input, "while")
     }
 
     pub fn for_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "for ")
+        Token::specific_token(input, "for")
     }
 
     pub fn in_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "in ")
+        Token::specific_token(input, "in")
     }
 
     pub fn mut_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "mut ")
+        Token::specific_token(input, "mut")
     }
 
     pub fn if_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "if ")
+        Token::specific_token(input, "if")
     }
 
     pub fn else_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "else ")
+        Token::specific_token(input, "else")
     }
 
     pub fn audit_tok(input: &str) -> IResult<&str, &str> {
@@ -168,14 +182,12 @@ impl Token {
 
     pub fn true_tok(input: &str) -> IResult<&str, &str> {
         let (input, t) = Token::specific_token(input, "true")?;
-        let (input, _) = Token::non_digit_nor_alpha(input)?;
 
         Ok((input, t))
     }
 
     pub fn false_tok(input: &str) -> IResult<&str, &str> {
         let (input, f) = Token::specific_token(input, "false")?;
-        let (input, _) = Token::non_digit_nor_alpha(input)?;
 
         Ok((input, f))
     }
@@ -185,15 +197,15 @@ impl Token {
     }
 
     pub fn comment_multi_start(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "/*")
+        tag("/*")(input)
     }
 
     pub fn comment_multi_end(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "*/")
+        tag("*/")(input)
     }
 
     pub fn comment_single(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "//")
+        tag("//")(input)
     }
 
     pub fn identifier(input: &str) -> IResult<&str, &str> {
@@ -522,5 +534,10 @@ mod tests {
             Ok(_) => assert!(false, "Unclosed start delimiter"),
             Err(_) => assert!(true),
         };
+    }
+
+    #[test]
+    fn t_keyword_next_to_curly() {
+        assert_eq!(Token::loop_tok("loop{}"), Ok(("{}", "loop")));
     }
 }
