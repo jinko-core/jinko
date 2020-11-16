@@ -272,17 +272,17 @@ impl Token {
     }
 
     /// Consumes 0 or more whitespaces in an input. A whitespace is a space or a tab
-    pub fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
+    fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
         take_while(|c| Token::is_whitespace(c))(input)
     }
 
-    fn maybe_consume_multi_comment(input: &str) -> IResult<&str, &str> {
+    fn consume_multi_comment(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::comment_multi_start(input)?;
         let (input, _) = take_until("*/")(input)?;
         Token::comment_multi_end(input)
     }
 
-    fn maybe_consume_single_comment(input: &str) -> IResult<&str, &str> {
+    fn consume_single_comment(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::comment_single(input)?;
         let (input, _) = take_while(|c| c != '\n' && c != '\0')(input)?;
         match opt(char('\n'))(input) {
@@ -292,11 +292,23 @@ impl Token {
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
-    pub fn maybe_consume_comment(input: &str) -> IResult<&str, &str> {
-        alt((
-            Token::maybe_consume_single_comment,
-            Token::maybe_consume_multi_comment,
-        ))(input)
+    fn maybe_consume_comment(input: &str) -> IResult<&str, &str> {
+        let (input, _) = alt((
+            opt(Token::consume_single_comment),
+            opt(Token::consume_multi_comment),
+        ))(input)?;
+
+        Ok((input, ""))
+    }
+
+    /// Consumes what is considered as "extra": Whitespaces, comments...
+    pub fn maybe_consume_extra(input: &str) -> IResult<&str, &str> {
+        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_comment(input)?;
+
+        // Last thing to do after clearing the extra, to make sure the next thing
+        // we parse is actual code
+        Token::maybe_consume_whitespaces(input)
     }
 }
 
@@ -489,7 +501,7 @@ mod tests {
 
     #[test]
     fn t_multi_comment_invalid() {
-        match Token::maybe_consume_comment("/*") {
+        match Token::consume_multi_comment("/*") {
             Ok(_) => assert!(false, "Unclosed start delimiter"),
             Err(_) => assert!(true),
         };
