@@ -73,7 +73,7 @@ mod tests {
     use super::*;
 
     #[test]
-    
+
     fn non_mutable() {
         /*
         let var_assignment = VarAssign::new(
@@ -87,7 +87,7 @@ mod tests {
     }
 
     #[test]
-    
+
     fn mutable() {
         /*
         let var_assignment = VarAssign::new(

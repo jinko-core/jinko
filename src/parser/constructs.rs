@@ -592,7 +592,7 @@ mod tests {
     use super::*;
 
     #[test]
-    
+
     fn t_constant_valid() {
         /*
         assert_eq!(Construct::constant("12").unwrap().1.kind(), ConstKind::Int);

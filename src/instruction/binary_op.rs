@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     #[ignore]
-     // FIXME: Don't ignore as soon as we can get a value from lhs and rhs
+    // FIXME: Don't ignore as soon as we can get a value from lhs and rhs
     fn t_binop_add() {
         let l = Box::new(JinkInt::from(12));
         let r = Box::new(JinkInt::from(12));
