@@ -71,32 +71,27 @@ impl Instruction for VarAssign {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::value::{JinkInt, JinkString};
 
     #[test]
-
     fn non_mutable() {
-        /*
         let var_assignment = VarAssign::new(
             false,
             "x".to_owned(),
-            Constant::new(ConstKind::Int).with_iv(12),
+            box JinkInt::from(12),
         );
 
         assert_eq!(var_assignment.print(), "x = 12");
-        */
     }
 
     #[test]
-
     fn mutable() {
-        /*
         let var_assignment = VarAssign::new(
             true,
             "some_id_99".to_owned(),
-            Constant::new(ConstKind::Str).with_sv("Hey there".to_owned()),
+            box JinkString::from("Hey there"),
         );
 
         assert_eq!(var_assignment.print(), "mut some_id_99 = \"Hey there\"");
-        */
     }
 }
