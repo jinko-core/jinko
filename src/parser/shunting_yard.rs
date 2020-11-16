@@ -142,7 +142,8 @@ impl ShuntingYard {
 
                 loop {
                     match sy.handle_token(input) {
-                        Err(nom::Err::Error(_)) => break,
+                        // FIXME: Maybe don't use OneOf as error type?
+                        Err(nom::Err::Error((_, nom::error::ErrorKind::OneOf))) => break,
                         Err(e) => return Err(e),
                         Ok((new_i, _)) => {
                             if new_i == input {
