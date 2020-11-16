@@ -16,18 +16,30 @@ pub struct ShuntingYard {
 }
 
 impl ShuntingYard {
+    // FIXME: Ugly to take input as parameter just for the lifetime
+    fn reduce_output<'i>(&mut self, _: &'i str) -> IResult<&'i str, ()> {
+        // FIXME: Cleanup
+        let lhs = match self.output.pop() {
+            Some(lhs) => lhs,
+            None => return Err(nom::Err::Error(("Invalid binary expression", nom::error::ErrorKind::OneOf))),
+        };
 
-    fn reduce_output(&mut self) {
-        // FIXME: No unwrap
-        let rhs = self.output.pop().unwrap();
-        let lhs = self.output.pop().unwrap();
-        let op = self.operators.pop().unwrap();
+        let rhs = match self.output.pop() {
+            Some(rhs) => rhs,
+            None => return Err(nom::Err::Error(("Invalid binary expression", nom::error::ErrorKind::OneOf))),
+        };
 
-        self.output.push(Box::new(BinaryOp::new(lhs, rhs, op)))
+        let op = match self.operators.pop() {
+            Some(op) => op,
+            None => return Err(nom::Err::Error(("Invalid binary expression", nom::error::ErrorKind::OneOf))),
+        };
+
+        self.output.push(Box::new(BinaryOp::new(lhs, rhs, op)));
+
+        Ok(("", ()))
     }
 
     fn operator<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
-        // FIXME: Don't unwrap?
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         let (input, op) = alt((
@@ -50,21 +62,20 @@ impl ShuntingYard {
             && (self.operators.peek().unwrap().precedence() > op.precedence()
             || (self.operators.peek().unwrap().precedence() == op.precedence() && op.is_left_associative()))
             {
-                self.reduce_output()
+                self.reduce_output(input)?;
             }
             self.operators.push(op)
         } else if op == Operator::LeftParenthesis {
             self.operators.push(op);
         } else if op == Operator::RightParenthesis {
-            // FIXME: Don't unwrap
-            while self.operators.peek().unwrap() != &Operator::LeftParenthesis {
-                self.reduce_output()
+            while self.operators.peek() != Some(&Operator::LeftParenthesis) {
+                self.reduce_output(input)?;
             }
 
-            if self.operators.peek().unwrap() == &Operator::LeftParenthesis {
-                // Discard the parenthesis
-                self.operators.pop();
-            }
+            match self.operators.peek() {
+                Some(&Operator::LeftParenthesis) => self.operators.pop(),
+                _ => return Err(nom::Err::Error(("Unclosed right parenthesis", nom::error::ErrorKind::OneOf))),
+            };
         }
 
         Ok((input, ()))
@@ -119,7 +130,6 @@ impl ShuntingYard {
         let mut input = i.clone();
 
         match sy.handle_token(input) {
-            // FIXME: Don't say fuck
             Err(nom::Err::Error(_)) => {
                 return Err(Err::Error((
                     "Not a valid binary expression",
@@ -148,11 +158,13 @@ impl ShuntingYard {
 
         // We are done, pop everything from the different stacks
         while !sy.operators.is_empty() {
-            sy.reduce_output();
+            sy.reduce_output(input)?;
         }
 
-        // FIXME: Don't unwrap, check length and stuff
-        Ok((input, sy.output.pop().unwrap()))
+        match sy.output.pop() {
+            Some(binop) => Ok((input, binop)),
+            _ => Err(nom::Err::Error(("Invalid binary expression", nom::error::ErrorKind::OneOf))),
+        }
     }
 }
 
