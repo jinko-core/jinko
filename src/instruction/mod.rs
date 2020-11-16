@@ -34,6 +34,8 @@ pub enum InstrKind {
     Expression,
 }
 
+/// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
+/// node that can be executed needs to implement it
 pub trait Instruction: InstructionClone + Downcast {
     /// Execute the instruction, altering the state of the program
     fn execute(&self, _: &mut Interpreter) -> Result<(), JinkoError> {
