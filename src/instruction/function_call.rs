@@ -95,7 +95,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    
     fn pretty_print_simple() {
         /*
         let c0 = Constant::new(ConstKind::Int).with_iv(12);
