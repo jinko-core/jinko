@@ -55,7 +55,7 @@ impl ShuntingYard {
     }
 
     fn operator<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, op) = alt((
             Token::add,
@@ -66,7 +66,7 @@ impl ShuntingYard {
             Token::right_parenthesis,
         ))(input)?;
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let op = Operator::new(op);
 
@@ -114,7 +114,7 @@ impl ShuntingYard {
     }
 
     fn handle_token<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, _) = match input.chars().next() {
             None => {
@@ -129,7 +129,7 @@ impl ShuntingYard {
             },
         };
 
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, ()))
     }
