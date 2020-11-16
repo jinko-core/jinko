@@ -25,11 +25,11 @@ p = args::Parser::new();
  * Add two arguments so that the program can be executed this way:
  * jinko yes.jk [ <str> ] [ -n|--number <n> ]
  */
-p.add_argument().name("str").help("String to echo").default("y");
-p.add_argument()
+p.add_argument("str").help("String to echo").default("y");
+p.add_argument("number")
     .help("Number of times for which the string should be printed")
-    .short("n")
-    .long("number")
+    .short("n")     // These two would have been determined by default from
+    .long("number") // the argument's name (parameter of add_argument()
     .fn(int::from_str())
     .default(0);
 
