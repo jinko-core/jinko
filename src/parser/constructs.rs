@@ -108,7 +108,7 @@ impl Construct {
     /// x = fn(); // Assign the result of the function call to the variable x
     /// ```
     ///
-    /// `<arg_list> := [(<constant> | <variable> | <expression>)*]
+    /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
     /// `<identifier> ( <arg_list> )`
     pub fn function_call(input: &str) -> IResult<&str, FunctionCall> {
         alt((
@@ -376,7 +376,7 @@ impl Construct {
     /// Parse a test declaration. This returns a FunctionDec as well, but of
     /// kind `FunctionDec::Test`.
     /// test functions are non-callable by the programmer. Only the interpreter can
-    /// invoke them. Thererfore, naming the test the same as the tested function is fine
+    /// invoke them. Therefore, naming the test the same as the tested function is fine
     /// and is not any form of overloading whatsoever.
     ///
     /// ```
