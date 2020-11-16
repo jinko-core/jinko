@@ -21,17 +21,32 @@ impl ShuntingYard {
         // FIXME: Cleanup
         let lhs = match self.output.pop() {
             Some(lhs) => lhs,
-            None => return Err(nom::Err::Error(("Invalid binary expression", nom::error::ErrorKind::OneOf))),
+            None => {
+                return Err(nom::Err::Error((
+                    "Invalid binary expression",
+                    nom::error::ErrorKind::OneOf,
+                )))
+            }
         };
 
         let rhs = match self.output.pop() {
             Some(rhs) => rhs,
-            None => return Err(nom::Err::Error(("Invalid binary expression", nom::error::ErrorKind::OneOf))),
+            None => {
+                return Err(nom::Err::Error((
+                    "Invalid binary expression",
+                    nom::error::ErrorKind::OneOf,
+                )))
+            }
         };
 
         let op = match self.operators.pop() {
             Some(op) => op,
-            None => return Err(nom::Err::Error(("Invalid binary expression", nom::error::ErrorKind::OneOf))),
+            None => {
+                return Err(nom::Err::Error((
+                    "Invalid binary expression",
+                    nom::error::ErrorKind::OneOf,
+                )))
+            }
         };
 
         self.output.push(Box::new(BinaryOp::new(lhs, rhs, op)));
@@ -74,7 +89,12 @@ impl ShuntingYard {
 
             match self.operators.peek() {
                 Some(&Operator::LeftParenthesis) => self.operators.pop(),
-                _ => return Err(nom::Err::Error(("Unclosed right parenthesis", nom::error::ErrorKind::OneOf))),
+                _ => {
+                    return Err(nom::Err::Error((
+                        "Unclosed right parenthesis",
+                        nom::error::ErrorKind::OneOf,
+                    )))
+                }
             };
         }
 
@@ -164,7 +184,10 @@ impl ShuntingYard {
 
         match sy.output.pop() {
             Some(binop) => Ok((input, binop)),
-            _ => Err(nom::Err::Error(("Invalid binary expression", nom::error::ErrorKind::OneOf))),
+            _ => Err(nom::Err::Error((
+                "Invalid binary expression",
+                nom::error::ErrorKind::OneOf,
+            ))),
         }
     }
 }
