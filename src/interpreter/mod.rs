@@ -41,7 +41,6 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    // FIXME: Remove this function
     fn new_entry() -> FunctionDec {
         let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None);
 
@@ -71,14 +70,12 @@ impl Interpreter {
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
-    // FIXME: Add semantics error type
     pub fn add_function(&mut self, function: FunctionDec) -> Result<(), JinkoError> {
         self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
-    // FIXME: Add semantics error type
     pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         self.scope_map.add_variable(var)
     }

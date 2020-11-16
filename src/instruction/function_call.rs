@@ -1,4 +1,4 @@
-//! FunctionCalls are used when calling a function. The argument lists is given to the
+//! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
 use super::{InstrKind, Instruction};
