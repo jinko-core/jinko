@@ -16,20 +16,6 @@ pub struct ShuntingYard {
 }
 
 impl ShuntingYard {
-    //fn add_to_output(&mut self) {
-    //    let first_v = self.operands.pop_front().unwrap();
-    //    let op = self.operators.pop_front().unwrap();
-
-    //    // "Take" the value to replace it, if it exists
-    //    self.value = match self.value.take() {
-    //        None => {
-    //            // We don't always want to pop this one
-    //            let second_v = self.operands.pop_front().unwrap();
-    //            Some(BinaryOp::new(second_v, first_v, op))
-    //        }
-    //        Some(val) => Some(BinaryOp::new(Box::new(val), first_v, op)),
-    //    }
-    //}
 
     fn reduce_output(&mut self) {
         // FIXME: No unwrap
@@ -100,7 +86,6 @@ impl ShuntingYard {
         let (input, _) = Token::maybe_consume_whitespaces(input)?;
 
         let (input, _) = match input.chars().next() {
-            // FIXME: Don't panic here
             None => {
                 return Err(Err::Error((
                     "Not a valid binary expression",
@@ -175,7 +160,6 @@ impl ShuntingYard {
 mod tests {
     use super::*;
     use crate::value::*;
-    use downcast_rs::Downcast;
 
     #[test]
     fn t_sy_valid_add() {
