@@ -185,7 +185,7 @@ impl Construct {
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
-            BoxConstruct::binary_op,
+            Construct::binary_op,
             BoxConstruct::variable,
             Construct::constant,
         ))(input)?;
@@ -581,7 +581,7 @@ impl Construct {
     /// a << 2; // Shift a by 2 bits
     /// a > 2; // Is a greater than 2?
     /// ```
-    pub fn binary_op(input: &str) -> IResult<&str, BinaryOp> {
+    pub fn binary_op(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         ShuntingYard::parse(input)
     }
 }

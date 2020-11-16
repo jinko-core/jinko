@@ -26,6 +26,12 @@ impl Token {
         char(character)(input)
     }
 
+    /// Match a simple token. No rules apply to the characters following it, unlike
+    /// specific_token
+    fn token<'tok>(input: &'tok str, token: &'tok str) -> IResult<&'tok str, &'tok str> {
+        tag(token)(input)
+    }
+
     /// Function used to recognize a specific string token such as "func" or "ext"
     /// When a function calls specific_token(_, "token"), that means it's trying to
     /// recognize specifically the word "token".
@@ -140,31 +146,31 @@ impl Token {
     }
 
     pub fn add(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "+")
+        Token::token(input, "+")
     }
 
     pub fn sub(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "-")
+        Token::token(input, "-")
     }
 
     pub fn mul(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "*")
+        Token::token(input, "*")
     }
 
     pub fn div(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "/")
+        Token::token(input, "/")
     }
 
     pub fn left_parenthesis(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "(")
+        Token::token(input, "(")
     }
 
     pub fn right_parenthesis(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, ")")
+        Token::token(input, ")")
     }
 
     pub fn left_shift(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "<<")
+        Token::token(input, "<<")
     }
 
     fn non_digit_nor_alpha(input: &str) -> IResult<&str, char> {

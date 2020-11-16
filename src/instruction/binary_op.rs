@@ -60,6 +60,11 @@ impl Operator {
             Operator::Add | Operator::Sub => 2,
         }
     }
+
+    /// Is the operator a left associative one
+    pub fn is_left_associative(&self) -> bool {
+        self.precedence() == 0
+    }
 }
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic

@@ -1,9 +1,8 @@
 //! ShuntingYard parses operators and operands according to operator precedence,
 //! returning a BinaryOp in the end
 
-use std::collections::LinkedList;
-
 use crate::instruction::{BinaryOp, Instruction, Operator};
+use crate::utils::{Queue, Stack};
 
 use super::box_construct::BoxConstruct;
 use super::constructs::Construct;
@@ -11,36 +10,34 @@ use super::tokens::Token;
 
 use nom::{branch::alt, error::ErrorKind, Err, IResult};
 
-type Stack<T> = LinkedList<T>;
-
 pub struct ShuntingYard {
-    operands: Stack<Box<dyn Instruction>>,
     operators: Stack<Operator>,
-
-    value: Option<BinaryOp>,
+    output: Queue<Box<dyn Instruction>>,
 }
 
 impl ShuntingYard {
-    fn is_valid(&self) -> bool {
-        match self.value {
-            None => self.operators.len() >= 1 && self.operands.len() >= 2,
-            Some(_) => self.operators.len() >= 1 && self.operands.len() >= 1,
-        }
-    }
+    //fn add_to_output(&mut self) {
+    //    let first_v = self.operands.pop_front().unwrap();
+    //    let op = self.operators.pop_front().unwrap();
 
-    fn add_to_output(&mut self) {
-        let first_v = self.operands.pop_front().unwrap();
-        let op = self.operators.pop_front().unwrap();
+    //    // "Take" the value to replace it, if it exists
+    //    self.value = match self.value.take() {
+    //        None => {
+    //            // We don't always want to pop this one
+    //            let second_v = self.operands.pop_front().unwrap();
+    //            Some(BinaryOp::new(second_v, first_v, op))
+    //        }
+    //        Some(val) => Some(BinaryOp::new(Box::new(val), first_v, op)),
+    //    }
+    //}
 
-        // "Take" the value to replace it, if it exists
-        self.value = match self.value.take() {
-            None => {
-                // We don't always want to pop this one
-                let second_v = self.operands.pop_front().unwrap();
-                Some(BinaryOp::new(second_v, first_v, op))
-            }
-            Some(val) => Some(BinaryOp::new(Box::new(val), first_v, op)),
-        }
+    fn reduce_output(&mut self) {
+        // FIXME: No unwrap
+        let rhs = self.output.pop().unwrap();
+        let lhs = self.output.pop().unwrap();
+        let op = self.operators.pop().unwrap();
+
+        self.output.push(Box::new(BinaryOp::new(lhs, rhs, op)))
     }
 
     fn operator<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
@@ -61,42 +58,27 @@ impl ShuntingYard {
         let op = Operator::new(op);
 
         // We can unwrap since we check that the stack is not empty
-        while !self.operators.is_empty()
-            && self.operators.front().unwrap().precedence() > op.precedence()
-            && self.operators.front().unwrap() != &Operator::LeftParenthesis
-        {
-            if !self.is_valid() {
-                return Err(Err::Error((
-                    "Not a valid binary expression",
-                    ErrorKind::Many1,
-                )));
+        if op != Operator::LeftParenthesis && op != Operator::RightParenthesis {
+            while !self.operators.is_empty()
+            // FIXME: Cleanup
+            && (self.operators.peek().unwrap().precedence() > op.precedence()
+            || (self.operators.peek().unwrap().precedence() == op.precedence() && op.is_left_associative()))
+            {
+                self.reduce_output()
             }
-
-            self.add_to_output();
-        }
-
-        if op == Operator::LeftParenthesis {
-            self.operators.push_front(op);
+            self.operators.push(op)
+        } else if op == Operator::LeftParenthesis {
+            self.operators.push(op);
         } else if op == Operator::RightParenthesis {
-            while self.operators.front() != Some(&Operator::LeftParenthesis) {
-                if !self.is_valid() {
-                    return Err(Err::Error((
-                        "Unfinished parenthesis - missing ')'",
-                        ErrorKind::Many1,
-                    )));
-                }
-                self.add_to_output();
+            // FIXME: Don't unwrap
+            while self.operators.peek().unwrap() != &Operator::LeftParenthesis {
+                self.reduce_output()
             }
 
-            // Discard the left parenthesis and check if it exists
-            if self.operators.pop_front() != Some(Operator::LeftParenthesis) {
-                return Err(Err::Error((
-                    "Unstarted right parenthesis - missing '('",
-                    ErrorKind::Many1,
-                )));
+            if self.operators.peek().unwrap() == &Operator::LeftParenthesis {
+                // Discard the parenthesis
+                self.operators.pop();
             }
-        } else {
-            self.operators.push_front(op);
         }
 
         Ok((input, ()))
@@ -109,7 +91,7 @@ impl ShuntingYard {
             BoxConstruct::variable,
         ))(input)?;
 
-        self.operands.push_front(expr);
+        self.output.push(expr);
 
         Ok((input, ()))
     }
@@ -140,14 +122,13 @@ impl ShuntingYard {
     fn new() -> ShuntingYard {
         ShuntingYard {
             operators: Stack::new(),
-            operands: Stack::new(),
-            value: None,
+            output: Queue::new(),
         }
     }
 
     /// Create a BinaryOp from an input string, executing the shunting yard
     /// algorithm
-    pub fn parse(i: &str) -> IResult<&str, BinaryOp> {
+    pub fn parse(i: &str) -> IResult<&str, Box<dyn Instruction>> {
         let mut sy = ShuntingYard::new();
 
         let mut input = i.clone();
@@ -182,23 +163,11 @@ impl ShuntingYard {
 
         // We are done, pop everything from the different stacks
         while !sy.operators.is_empty() {
-            if !sy.is_valid() {
-                return Err(Err::Error((
-                    "Not a valid binary expression",
-                    ErrorKind::Many1,
-                )));
-            }
-
-            sy.add_to_output();
+            sy.reduce_output();
         }
 
-        match sy.value.take() {
-            Some(v) => Ok((input, v)),
-            None => Err(Err::Error((
-                "Not a valid binary expression",
-                ErrorKind::Many1,
-            ))),
-        }
+        // FIXME: Don't unwrap, check length and stuff
+        Ok((input, sy.output.pop().unwrap()))
     }
 }
 
@@ -206,10 +175,12 @@ impl ShuntingYard {
 mod tests {
     use super::*;
     use crate::value::*;
+    use downcast_rs::Downcast;
 
     #[test]
     fn t_sy_valid_add() {
-        let output = ShuntingYard::parse("1 + 2").unwrap().1;
+        let boxed_output = ShuntingYard::parse("1 + 2").unwrap().1;
+        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
         let reference = BinaryOp::new(
             Box::new(JinkInt::from(1)),
             Box::new(JinkInt::from(2)),
@@ -221,7 +192,8 @@ mod tests {
 
     #[test]
     fn t_sy_valid_mul() {
-        let output = ShuntingYard::parse("1 * 2").unwrap().1;
+        let boxed_output = ShuntingYard::parse("1 * 2").unwrap().1;
+        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
         let reference = BinaryOp::new(
             Box::new(JinkInt::from(1)),
             Box::new(JinkInt::from(2)),
@@ -233,7 +205,8 @@ mod tests {
 
     #[test]
     fn t_sy_valid_normal_priority() {
-        let output = ShuntingYard::parse("1 * 2 + 3").unwrap().1;
+        let boxed_output = ShuntingYard::parse("1 * 2 + 3").unwrap().1;
+        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
         let l_ref = BinaryOp::new(
             Box::new(JinkInt::from(1)),
             Box::new(JinkInt::from(2)),
@@ -246,7 +219,8 @@ mod tests {
 
     #[test]
     fn t_sy_valid_back_priority() {
-        let output = ShuntingYard::parse("3 + 1 * 2").unwrap().1;
+        let boxed_output = ShuntingYard::parse("3 + 1 * 2").unwrap().1;
+        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
         let l_ref = BinaryOp::new(
             Box::new(JinkInt::from(1)),
             Box::new(JinkInt::from(2)),
@@ -259,7 +233,22 @@ mod tests {
 
     #[test]
     fn t_sy_valid_parentheses_priority() {
-        let output = ShuntingYard::parse("(3 + 1) * 2").unwrap().1;
+        let boxed_output = ShuntingYard::parse("(3 + 1) * 2").unwrap().1;
+        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
+        let l_ref = BinaryOp::new(
+            Box::new(JinkInt::from(1)),
+            Box::new(JinkInt::from(3)),
+            Operator::Add,
+        );
+        let reference = BinaryOp::new(Box::new(l_ref), Box::new(JinkInt::from(2)), Operator::Mul);
+
+        assert_eq!(output.operator(), reference.operator());
+    }
+
+    #[test]
+    fn t_sy_valid_parentheses_priority_reverse() {
+        let boxed_output = ShuntingYard::parse("2 * (3 + 1)").unwrap().1;
+        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
         let l_ref = BinaryOp::new(
             Box::new(JinkInt::from(1)),
             Box::new(JinkInt::from(3)),

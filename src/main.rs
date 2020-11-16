@@ -6,6 +6,7 @@ mod instruction;
 mod interpreter;
 mod parser;
 mod repl;
+mod utils;
 mod value;
 
 use args::Args;
