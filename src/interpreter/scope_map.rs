@@ -27,15 +27,17 @@ impl Scope {
         }
     }
 
+    /// Get a reference on a variable from the scope map if is has been inserted already
     pub fn get_variable(&self, name: &str) -> Option<&Var> {
         self.variables.get(name)
     }
 
+    /// Get a reference on a function from the scope map if is has been inserted already
     pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         self.functions.get(name)
     }
 
-    // FIXME: Add doc
+    /// Add a variable to the most recently created scope, if it doesn't already exist
     pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         match self.get_variable(var.name()) {
             Some(_) => Err(JinkoError::new(
@@ -50,7 +52,7 @@ impl Scope {
         }
     }
 
-    // FIXME: Add doc
+    /// Add a variable to the most recently created scope, if it doesn't already exist
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JinkoError> {
         match self.get_function(func.name()) {
             Some(_) => Err(JinkoError::new(
