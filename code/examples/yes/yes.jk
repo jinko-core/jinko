@@ -1,0 +1,38 @@
+incl args
+
+func print_str(str: string) {
+    print("{str}\n")
+}
+
+func loop_print(str: string, n: int) {
+    if n == 0 {
+        loop {
+            print_str(str)
+        }
+    } else {
+        i = 0;
+        while i < n {
+            i++;
+            print_str(str)
+        }
+    }
+}
+
+p = args::parser();
+
+p.add_argument().name("str").help("String to echo");
+p.add_argument()
+    .help("Number of times for which the string should be printed")
+    .short("n")
+    .long("number")
+    .fn(int::from_str());
+
+args = p.parse();
+
+mut n = args.get("number");
+mut str = args.get("str");
+
+if str.is_none() { str = "y"; };
+if n.is_none() { n = 0; };
+
+loop_print(str, n)
