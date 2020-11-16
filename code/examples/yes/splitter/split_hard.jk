@@ -1,0 +1,44 @@
+/**
+ * Split a string based on an iterator
+ */
+func split_iter(str: string) -> vec<string> {
+    mut res = vec<string>::new();
+    mut tmp = string::new(); /* Or `mut tmp = "";` */
+
+    for c in str.chars() {
+        if c == ' ' {
+            if tmp.len() > 0 {
+                res.push_back(tmp);
+            }
+        } else {
+            tmp.append(letter);
+        }
+    }
+
+    res
+}
+
+/**
+ * Split a string based on an index
+ */
+func split_idx(str: string) -> vec<string> {
+    mut res = vec<string>::new();
+    mut tmp = string::new(); /* Or `mut tmp = "";` */
+
+    for i in 0..str.len() {
+        letter = str.at(i);
+        if letter.is_none() {
+            break;
+        } else {
+            if letter == ' ' {
+                if tmp.len() > 0 {
+                    res.push_back(tmp);
+                }
+            } else {
+                tmp.append(letter);
+            }
+        }
+    }
+
+    res
+}
