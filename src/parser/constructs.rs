@@ -16,11 +16,11 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use super::{
     box_construct::BoxConstruct, constant_construct::ConstantConstruct, jinko_insts::JinkoInst,
-    tokens::Token,
+    shunting_yard::ShuntingYard, tokens::Token,
 };
 use crate::instruction::{
-    Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Loop, LoopKind, Var, VarAssign,
+    Audit, BinaryOp, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse,
+    Instruction, Loop, LoopKind, Var, VarAssign,
 };
 
 pub struct Construct;
@@ -186,8 +186,9 @@ impl Construct {
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
+            Construct::binary_op,
             BoxConstruct::variable,
-            Construct::constant, // constant already returns a Box<dyn Instruction>
+            Construct::constant,
         ))(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -247,7 +248,6 @@ impl Construct {
     /// in the block.
     ///
     /// `{ [ <expression> ; ]* [ <expression> ] }`
-    // FIXME: Fix grammar and description
     pub fn block(input: &str) -> IResult<&str, Block> {
         let (input, instructions) = Construct::instructions(input)?;
 
@@ -571,6 +571,20 @@ impl Construct {
 
         Ok((input, inst))
     }
+
+    /// Parse a binary operation. A binary operation is composed of an expression, an
+    /// operator and another expression
+    ///
+    /// `<expr> <op> <expr>`
+    ///
+    /// ```
+    /// x + y; // Add x and y together
+    /// a << 2; // Shift a by 2 bits
+    /// a > 2; // Is a greater than 2?
+    /// ```
+    pub fn binary_op(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        ShuntingYard::parse(input)
+    }
 }
 
 #[cfg(test)]
@@ -704,13 +718,19 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn t_function_call_valid() {
         assert_eq!(Construct::function_call("fn(2)").unwrap().1.name(), "fn");
         assert_eq!(Construct::function_call("fn(2)").unwrap().1.args().len(), 1);
 
         assert_eq!(
             Construct::function_call("fn(1, 2, 3)").unwrap().1.name(),
+            "fn"
+        );
+        assert_eq!(
+            Construct::function_call("fn(a, hey(), 3.12)")
+                .unwrap()
+                .1
+                .name(),
             "fn"
         );
         assert_eq!(
@@ -734,8 +754,6 @@ mod tests {
                 .len(),
             3
         );
-
-        // FIXME: Add constants and expressions
     }
 
     #[test]
@@ -1079,7 +1097,10 @@ mod tests {
             Err(_) => assert!(true),
         };
 
-        // FIXME: Add fun tests like `for x in { some_range_stuff() } {}`
+        match Construct::for_block("for x99 in { { { inner_block() } } }") {
+            Ok(_) => assert!(false, "A range is required"),
+            Err(_) => assert!(true),
+        };
     }
 
     #[test]
@@ -1089,5 +1110,25 @@ mod tests {
             Construct::jinko_inst("@quit(something, something_else)"),
             Ok(("", JinkoInst::Quit))
         );
+    }
+
+    #[test]
+    fn t_binary_op_valid() {
+        match Construct::binary_op("a *   12 ") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have multi spaces"),
+        };
+        match Construct::binary_op("some() + 12.1") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to have multiple expression types"),
+        };
+    }
+
+    #[test]
+    fn t_binary_op_invalid() {
+        match Construct::binary_op("a ? 12") {
+            Ok(_) => assert!(false, "? is not a binop"),
+            Err(_) => assert!(true),
+        };
     }
 }

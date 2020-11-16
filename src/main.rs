@@ -1,9 +1,12 @@
+#![feature(box_syntax)]
+#[warn(missing_docs)]
 mod args;
 mod error;
 mod instruction;
 mod interpreter;
 mod parser;
 mod repl;
+mod utils;
 mod value;
 
 use args::Args;
@@ -12,6 +15,9 @@ use repl::Repl;
 use std::fs;
 
 use instruction::Instruction;
+
+pub use error::JinkoError;
+pub use interpreter::Interpreter;
 
 fn main() {
     let args = Args::handle();

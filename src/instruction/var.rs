@@ -2,6 +2,7 @@
 //! a block.
 
 use super::{InstrKind, Instruction};
+use crate::{Interpreter, JinkoError};
 
 #[derive(Clone)]
 pub struct Var {
@@ -28,6 +29,14 @@ impl Instruction for Var {
 
     fn print(&self) -> String {
         self.name.clone()
+    }
+
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+        // FIXME: Add logic
+
+        interpreter.debug("VAR", self.name());
+
+        Ok(())
     }
 }
 

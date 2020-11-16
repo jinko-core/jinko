@@ -15,6 +15,8 @@ const RESERVED_KEYWORDS: [&str; 10] = [
     "func", "test", "mock", "ext", "for", "while", "loop", "mut", "true", "false",
 ];
 
+const OPERATORS: [&str; 6] = ["+", "-", "*", "/", "(", ")"];
+
 pub struct Token;
 
 impl Token {
@@ -22,6 +24,12 @@ impl Token {
     /// calling this is specifically trying to recognize the given character
     fn specific_char(input: &str, character: char) -> IResult<&str, char> {
         char(character)(input)
+    }
+
+    /// Match a simple token. No rules apply to the characters following it, unlike
+    /// specific_token
+    fn token<'tok>(input: &'tok str, token: &'tok str) -> IResult<&'tok str, &'tok str> {
+        tag(token)(input)
     }
 
     /// Function used to recognize a specific string token such as "func" or "ext"
@@ -53,24 +61,12 @@ impl Token {
         char('"')(input)
     }
 
-    pub fn add(input: &str) -> IResult<&str, char> {
-        Token::specific_char(input, '+')
-    }
-
     pub fn equal(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, '=')
     }
 
     pub fn comma(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, ',')
-    }
-
-    pub fn left_parenthesis(input: &str) -> IResult<&str, char> {
-        Token::specific_char(input, '(')
-    }
-
-    pub fn right_parenthesis(input: &str) -> IResult<&str, char> {
-        Token::specific_char(input, ')')
     }
 
     pub fn left_curly_bracket(input: &str) -> IResult<&str, char> {
@@ -146,7 +142,48 @@ impl Token {
     }
 
     pub fn audit_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "audit")
+        Token::specific_token(input, "audit ")
+    }
+
+    pub fn add(input: &str) -> IResult<&str, &str> {
+        Token::token(input, "+")
+    }
+
+    pub fn sub(input: &str) -> IResult<&str, &str> {
+        Token::token(input, "-")
+    }
+
+    pub fn mul(input: &str) -> IResult<&str, &str> {
+        Token::token(input, "*")
+    }
+
+    pub fn div(input: &str) -> IResult<&str, &str> {
+        Token::token(input, "/")
+    }
+
+    pub fn left_parenthesis(input: &str) -> IResult<&str, &str> {
+        Token::token(input, "(")
+    }
+
+    pub fn right_parenthesis(input: &str) -> IResult<&str, &str> {
+        Token::token(input, ")")
+    }
+
+    pub fn left_shift(input: &str) -> IResult<&str, &str> {
+        Token::token(input, "<<")
+    }
+
+    fn non_digit_nor_alpha(input: &str) -> IResult<&str, char> {
+        match input.len() {
+            0 => Ok((input, '\0')),
+            _ => peek(alt((
+                char(';'),
+                char(' '),
+                char('\t'),
+                char('\r'),
+                char('\n'),
+            )))(input),
+        }
     }
 
     pub fn true_tok(input: &str) -> IResult<&str, &str> {
@@ -264,6 +301,16 @@ impl Token {
 
     fn is_whitespace(c: char) -> bool {
         c == ' ' || c == '\t' || c == '\n'
+    }
+
+    // FIXME: Documentation
+    pub fn is_operator(c: char) -> bool {
+        // We can unwrap since all operators are at least one character wide
+        OPERATORS
+            .iter()
+            .map(|op| op.chars().next().unwrap())
+            .collect::<Vec<char>>()
+            .contains(&c)
     }
 
     /// Consumes 1 or more whitespaces in an input. A whitespace is a space or a tab

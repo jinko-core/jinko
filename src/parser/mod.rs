@@ -6,6 +6,7 @@ mod box_construct;
 mod constant_construct;
 mod constructs;
 mod jinko_insts;
+mod shunting_yard;
 mod tokens;
 
 use nom::multi::many0;
