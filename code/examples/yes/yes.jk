@@ -1,5 +1,6 @@
 incl args
 
+/* print is part of the standard library */
 func print_str(str: string) {
     print("{str}\n")
 }
@@ -18,21 +19,33 @@ func loop_print(str: string, n: int) {
     }
 }
 
-p = args::parser();
+p = args::Parser::new();
 
-p.add_argument().name("str").help("String to echo");
+/**
+ * Add two arguments so that the program can be executed this way:
+ * jinko yes.jk [ <str> ] [ -n|--number <n> ]
+ */
+p.add_argument().name("str").help("String to echo").default("y");
 p.add_argument()
     .help("Number of times for which the string should be printed")
     .short("n")
     .long("number")
-    .fn(int::from_str());
+    .fn(int::from_str())
+    .default(0);
 
 args = p.parse();
 
-mut n = args.get("number");
-mut str = args.get("str");
-
-if str.is_none() { str = "y"; };
-if n.is_none() { n = 0; };
+/**
+ * Since there are defaults, we know that there will always be something so we can
+ * open away. If we hadn't added the defaults, this might have caused an error
+ *
+ * Since we have to handle Options and Results, just typing
+ * ```
+ * args.get("number");
+ * ```
+ * would have caused an error
+ */
+mut n = args.get("number").open();
+mut str = args.get("str").open();
 
 loop_print(str, n)
