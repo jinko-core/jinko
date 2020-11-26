@@ -180,7 +180,7 @@ your option types or `unwrap()` on them, which will cause a panic in case of a `
 
 While these two approaches both have advantages and inconvenient, the Rust approach is,
 in my opinion for Jinko, significantly better for a simple reason: Even if Options are
-part of the standard library and "included" by default, they do not relie on some obscure
+part of the standard library and "included" by default, they do not rely on some obscure
 compiler magic: They are just a type. Therefore, they are being understood by the compiler
 as just a type. And I think that keeping `jinko` simple also means keeping the interpreter
 simple. Therefore, I think that simply using `Option`s (or some other nomenclature) would
