@@ -2,11 +2,9 @@
 <p>
 <img align="right" src="misc/logo_small.png" width="10%" height="10%" />
 
-`jinko` is a small and safe interpreted language written in Rust, 
+`jinko` is a small and safe interpreted language written in Rust,<br/>
 with integratedunit tests, mocking and FFI.
 </p>
-
-
 
 ## Requirements
 
