@@ -1,6 +1,6 @@
 # jinko
 <div>
-<img align="right" src="misc/logo_small.png" width="5%" height="5%" />
+<img align="right" src="misc/logo_small.png" width="10%" height="10%" />
 
 `jinko` is a small and safe interpreted language written in Rust, with integrated
 unit tests, mocking and FFI.
