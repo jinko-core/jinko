@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use super::{InstrKind, Instruction};
+use super::{InstrKind, Instruction, VarAssign};
 use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
 
@@ -78,6 +78,14 @@ impl Instruction for FunctionCall {
         };
 
         interpreter.debug("CALL", self.name());
+
+        function.args().iter().for_each(|arg| {
+        });
+
+        for i in 0..function.args().len() {
+            // FIXME: Do not always mark the variable as immutable
+            let var = VarAssign::new(false, function.args()[i].name(), self.args()[i]);
+        }
 
         function.run(interpreter)
     }

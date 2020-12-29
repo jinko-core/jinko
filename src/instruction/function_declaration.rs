@@ -54,7 +54,7 @@ impl FunctionDecArg {
 
 impl FunctionDec {
     /// Create a new function declaration with a given name, no args and no code block
-    pub fn new(name: String, ty: Option<String>) -> FunctionDec {
+    pub fn new(name: String, ty: Option<Ty>) -> FunctionDec {
         FunctionDec {
             name,
             ty,
@@ -94,11 +94,8 @@ impl FunctionDec {
     }
 
     /// Return a reference to the function's return type
-    pub fn ty(&self) -> Option<&str> {
-        match &self.ty {
-            Some(ty) => Some(&ty),
-            None => None,
-        }
+    pub fn ty(&self) -> Option<&Ty> {
+        self.ty.as_ref()
     }
 
     /// Return the kind of a function
