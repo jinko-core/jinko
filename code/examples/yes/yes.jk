@@ -37,7 +37,7 @@ args = p.parse();
 
 /**
  * Since there are defaults, we know that there will always be something so we can
- * open away. If we hadn't added the defaults, this might have caused an error
+ * `unwrap` away. If we hadn't added the defaults, this might have caused an error
  *
  * Since we have to handle Options and Results, just typing
  * ```
@@ -45,7 +45,7 @@ args = p.parse();
  * ```
  * would have caused an error
  */
-mut n = args.get("number").open();
-mut str = args.get("str").open();
+mut n = args.get("number").ok();
+mut str = args.get("str").ok();
 
 loop_print(str, n)
