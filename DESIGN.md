@@ -197,3 +197,204 @@ elements need to have a unique name to identify them.
 The `crate` keyword should be used to signify to the interpreter to download and compile
 a specific crate, with a specific version for example. The crate will be compiled in
 release mode and placed in a specific directory, which has yet to be determined.
+
+## Structure Types
+
+Allowing user defined types makes for cleaner as well as stricter code. One thing that
+jinko really has to focus about is "zero-cost types", as in custom types that englobe
+a single, other type without penalty. In the mean time, the interpreter should also focus
+on simple parsing and fonctionality. Let's split this section in two:
+
+### Simple type parsing
+
+In order to keep the parsing simple, as much code as possible should be reused. At this
+point, the parser is already around 1500 lines big, and that's big enough. In a way, types
+are a sort of function: They take arguments, and create a new custom type. Let's examine
+C custom types:
+
+```c
+struct custom_type {
+    int int_value;
+    char some_character;
+    float f;
+};
+
+// And to initialize it, one way is to do the following
+struct custom_type value = { .int_value = 4, .char = 'J', .float = 27.07};
+```
+
+This is similar to creating and calling a function, only that the syntax differs. I
+believe jinko could keep the same syntax for both custom types and custom functions, as
+they aim to achieve the same "kind" of result: A custom, user-made behavior that produces
+cleaner and more readable code.
+
+Thus, the following syntax should be adopted at first:
+
+```rust
+// This is similar to a function declaration, without a block
+type CustomType(int_value: int, some_character: char, f: float);
+
+// Let's create one
+let value = CustomType(4, 'J', 27.07);
+```
+
+The "default constructor" is thus all the compounded types, in order. If your types get
+too big, then just like function defintions, multilines are supported.
+
+```rust
+type CustomType(
+    int_value: int,
+    some_character: char,
+    f: float
+);
+```
+
+The only difference between a function definition and a type definition is the keyword:
+`type` or `func`.
+
+#### Methods and functions in Jinko
+
+Let's say you define your custom type in C. If you do "object oriented C", you'll probably
+end up with the following:
+
+```c
+/* Simple linked list node */
+struct ll {
+    int value;
+    struct ll *next;
+};
+
+/* Create a new node */
+struct ll *ll_new(int value, struct ll *next);
+
+/* Destroy a previously created node */
+void ll_del(struct ll *head);
+
+/* Get the next node */
+struct ll *ll_next(struct ll *node);
+
+/* Get the value from the node */
+int ll_value(struct ll *node);
+
+/* Push some node to the list */
+void ll_push(struct ll *node, struct ll *next);
+
+/* Implementation is not important */
+
+int main(void) {
+    // Create our head
+    struct ll *last = ll_new(3, NULL);
+    struct ll *mid = ll_new(2, last);
+    struct ll *head = ll_new(1, mid);
+
+    struct ll *rand = ll_new(67, NULL);
+    ll_push(head, rand);
+
+    // Make sure the positions and values are correct
+    assert(ll_value(ll_next(head)) == 2);
+
+    // We're done with the list
+    ll_del(head);
+}
+```
+
+The "object oriented" approach does not really work in C, and is cumbersome. Compare it
+to any actual OOP language, where we could do `head.del()`, or `head.next().value()`.
+
+However, the object oriented approach brings in a lot of complexity, too much for jinko.
+A struct model, in a C way should be prefered. But that doesn't mean we can't add
+some syntactic sugar to it.
+
+Let's consider a custom type with its "methods" and a simple function.
+
+```rust
+// There's already a "default constructor", so we don't need to define new(). Also, there
+// is no NULL in jinko
+type LinkedList(value: int, next: Option<LinkedList>);
+
+func del(head: LinkedList) {
+    /* Walk the whole list, deleting stuff as it comes */
+}
+
+func value(node: LinkedList) -> int {
+    node.value
+}
+
+func next(node: LinkedList) -> LinkedList {
+    node.next
+}
+
+func push(node: LinkedList, next: LinkedList) {
+    /* Some code to add next to the end of the list or whatever */
+}
+
+let last = LinkedList(3, None);
+let mid = LinkedList(2, Some(last));
+let head = LinkedList(1, Some(mid));
+
+head.push(LinkedList(67, None));
+
+/* Or ... */
+
+push(head, LinkedList(67, None));
+
+assert_eq(head.next().value(), 2);
+
+/* Or ... */
+
+assert_eq(value(next(head)), 2);
+
+/* We're done with the list */
+
+head.del();
+```
+
+Both calling methods are valid. In the end, to keep things simple, the first argument
+will always act similarly to `self` in Rust, or `this` in most OOP languages. This also
+means that the following is possible
+
+```rust
+func add(a: int, b: int) -> {
+    a + b
+}
+
+12.add(15);
+add(12, 15);
+```
+
+So the concept of methods doesn't really exist in Jinko. The calling method is just
+syntactic sugar over regular function calling.
+
+### No-cost custom types
+
+Let's say you're using an API, and using some complex custom made function. For example,
+`add_friend`, which takes a last name, a first name, and a nickname. Let's say you're not
+using an IDE or a language server: You remember the function name, but not the order of
+the arguments: Is it `add_friend(first_name, name, nickname)`?
+`add_friend(nickname, first_name, name)`?
+If the API was designed by a japanese coder, maybe it's `add_friend(name, first_name, nickname)`?
+
+There is no way to know without checking the documentation. Now, this is good, since it
+forces you to check the documentation. But we can also enforce type safety and data safety
+through the interpreter.
+
+```rust
+// The friend type, that already existed
+type Friend(/* Some values */);
+
+// Define three "custom" types
+type Name(the_name: str);
+type FirstName(value: str);
+type Nickname(hidden: str);
+
+// And define the API function like so:
+func add_friend(name: Name, f_name: FirstName, n_name: Nickname) -> Friend {
+    /* Some code */
+}
+```
+
+The default "constructors" for these types are simple: `Name("Ritchie")` to create a new
+name, `FirstName("Dennis")` for a first name, and `Nickname("GOAT")`.
+Now, if you pass the arguments in the wrong order, the function won't compile. However,
+the performance hit must be inexistant. If the actual values are hidden behind a reference,
+then speed is lost.
