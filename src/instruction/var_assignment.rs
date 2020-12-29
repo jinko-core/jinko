@@ -75,11 +75,7 @@ mod tests {
 
     #[test]
     fn non_mutable() {
-        let var_assignment = VarAssign::new(
-            false,
-            "x".to_owned(),
-            box JinkInt::from(12),
-        );
+        let var_assignment = VarAssign::new(false, "x".to_owned(), box JinkInt::from(12));
 
         assert_eq!(var_assignment.print(), "x = 12");
     }
