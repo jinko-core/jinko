@@ -1,6 +1,7 @@
 //! A `Construct` is a complex set of tokens. For example, `fn()` is an identifier, a
 //! left parenthesis and a right parenthesis. Together, they constitute a function call.
-//! In the same vein, `x = 12;` is 4 tokens used to represent variable assignment.  Therefore, constructs use tokens while the parser only uses constructs. This is an
+//! In the same vein, `x = 12;` is 4 tokens used to represent variable assignment.
+//! Therefore, constructs use tokens while the parser only uses constructs. This is an
 //! abstraction for all possible ways to parse a line in jinko.
 //!
 //! Each of the functions in that module contain the grammar they represent above their
@@ -585,6 +586,23 @@ impl Construct {
     pub fn binary_op(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         ShuntingYard::parse(input)
     }
+
+    /// Parse a user-defined custom type
+    ///
+    /// `<type> <TypeName> ( <typed_arg_list> ) ;`
+    pub fn custom_type(input: &str) -> IResult<&str, &str> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::type_tok(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, type_name) = Token::identifier(input)?;
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, fields) = Construct::args_dec_non_empty(input)?;
+
+        Ok((input, ""))
+    }
 }
 
 #[cfg(test)]
@@ -1130,5 +1148,42 @@ mod tests {
             Ok(_) => assert!(false, "? is not a binop"),
             Err(_) => assert!(true),
         };
+    }
+
+    #[test]
+    fn t_custom_type_simple() {
+        match Construct::custom_type("type Int(v: int);") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Just one int is valid"),
+        };
+        match Construct::custom_type("type Ints(a: int, b: int);") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Two integers is valid"),
+        };
+        match Construct::custom_type("type Compound(i: int, s: str);") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Different types are valid"),
+        };
+        match Construct::custom_type("type Custom(v: int, a: SomeType, b: Another, c: lower_case);")
+        {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Custom types in custom types are valid"),
+        };
+    }
+
+    #[test]
+    fn t_custom_type_empty() {
+        match Construct::custom_type("type Empty();") {
+            Ok(_) => assert!(false, "Can't have empty types"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_custom_type_invalid() {
+        match Construct::custom_type("type ExtraComma(a: int, b: int,);") {
+            Ok(_) => assert!(false, "Extra comma in type definition"),
+            Err(_) => assert!(true),
+        }
     }
 }
