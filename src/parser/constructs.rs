@@ -842,24 +842,33 @@ mod tests {
     #[test]
     fn t_id_type_valid() {
         assert_eq!(
-            Construct::identifier_type("name: type").unwrap().1.name(),
-            "name"
-        );
-        assert_eq!(
-            Construct::identifier_type("name: type").unwrap().1.ty(),
-            "type"
-        );
-
-        assert_eq!(
-            Construct::identifier_type("name     :type")
+            Construct::identifier_type("name: some_type")
                 .unwrap()
                 .1
                 .name(),
             "name"
         );
         assert_eq!(
-            Construct::identifier_type("name     :type").unwrap().1.ty(),
-            "type"
+            Construct::identifier_type("name: some_type")
+                .unwrap()
+                .1
+                .ty(),
+            "some_type"
+        );
+
+        assert_eq!(
+            Construct::identifier_type("name     :some_type")
+                .unwrap()
+                .1
+                .name(),
+            "name"
+        );
+        assert_eq!(
+            Construct::identifier_type("name     :some_type")
+                .unwrap()
+                .1
+                .ty(),
+            "some_type"
         );
     }
 
@@ -870,13 +879,13 @@ mod tests {
 
     #[test]
     fn t_args_dec_one_arg() {
-        assert_eq!(Construct::args_dec("(name :type)").unwrap().1.len(), 1);
+        assert_eq!(Construct::args_dec("(name :ty)").unwrap().1.len(), 1);
     }
 
     #[test]
     fn t_args_dec_valid() {
         assert_eq!(
-            Construct::args_dec("(name :type, name1      : type1)")
+            Construct::args_dec("(name :ty, name1      : type1)")
                 .unwrap()
                 .1
                 .len(),
@@ -970,12 +979,12 @@ mod tests {
 
     #[test]
     fn t_function_declaration_valid() {
-        let func = Construct::function_declaration("func add(lhs: type, rhs: type) -> type {}")
+        let func = Construct::function_declaration("func add(lhs: ty, rhs: ty) -> ty {}")
             .unwrap()
             .1;
 
         assert_eq!(func.name(), "add");
-        assert_eq!(func.ty(), Some("type"));
+        assert_eq!(func.ty(), Some("ty"));
         assert_eq!(func.args().len(), 2);
         assert_eq!(func.fn_kind(), FunctionKind::Func);
     }
@@ -999,7 +1008,7 @@ mod tests {
 
     #[test]
     fn t_mock_valid() {
-        let test = Construct::mock_declaration("mock add(lhs: type, rhs: type) {}")
+        let test = Construct::mock_declaration("mock add(lhs: ty, rhs: ty) {}")
             .unwrap()
             .1;
 
@@ -1010,12 +1019,12 @@ mod tests {
 
     #[test]
     fn t_ext_valid() {
-        let test = Construct::ext_declaration("ext func add(lhs: type, rhs: type) -> type;")
+        let test = Construct::ext_declaration("ext func add(lhs: ty, rhs: ty) -> ty;")
             .unwrap()
             .1;
 
         assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), Some("type"));
+        assert_eq!(test.ty(), Some("ty"));
         assert_eq!(test.fn_kind(), FunctionKind::Ext);
     }
 
