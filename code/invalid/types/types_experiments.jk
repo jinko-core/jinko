@@ -1,0 +1,153 @@
+type LinkedList(value: int, next: Option<LinkedList>) {
+    func push(head: LinkedList, node: LinkedList) {
+        /* Some code */
+    }
+
+    func value(node: LinkedList) -> int {
+        node.value
+    }
+
+    func next(node: LinkedList) -> Option<LinkedList> {
+        node.next
+    }
+
+    func new_other(value: int, next: Option<LinkedList>) {
+        /* Some code */
+    }
+
+    // 1.new_other(head); Ugly
+}
+
+head = LinkedList(1, None);
+last = LinkedList(2, Some(head));
+
+head.push(last);
+
+LinkedList::push(head, last);
+
+LinkedList::new_other(1, None);
+LinkedList::new_other(2, Some(last));
+
+mid = 2.new_other(Some(last)); // ?
+int::new_other(2, Some(last)); // -> Not exist
+
+head.new_other(2, Some(last)); // ?
+LinkedList::new_other(head, 2, Some(last)); // -> Not exist
+
+type StringColored(v: string) {
+    func red(self: string) -> string {
+        "\x33 {self} \x0"
+    }
+
+    func (self: string) green() -> string { /* ? */
+        "\x35 {self} \x0"
+    }
+}
+
+// Gets desugared in
+type string {
+    func red(self: string) -> string {
+        "\x33 {self} \x0"
+    }
+
+    func (self: string) green() -> string {
+        "\x35 {self} \x0"
+    }
+}
+
+"machin".green();
+
+"machin".green().blink().concat("truc");
+
+2.add(16);
+
+string::green("machin");
+StringColored::green("machin");
+
+func red(s: string) -> string {
+    "\x33 {s} \x0"
+}
+
+func green(s: string) -> string {
+    "\x35 {s} \x0"
+}
+
+"hey".green();
+green("hey");
+
+// In other modules that include `colored`
+colored::green("hey");
+"hey".green();
+
+// Include `termcolor` module
+"hey".green(); // Ambiguity: termcolor or colored?
+
+// Force to use the unsugared version
+termcolor::green("hey");
+colored::green("hey");
+
+type StringColored(v: string) as string;
+type StringColored(v: string) as SomeCustomType;
+type StringColored(v: string);
+
+// Add module scope to functiond declarations
+func string::green(v: string) -> string {
+}
+
+// No as if more than one field
+type Custom(v: string, a: int, f: float) as string {
+    func whatever(s: string) {
+    }
+}
+
+// colored module
+func green(s: string) -> string {}
+func red(s: string) -> string {}
+
+// termcolor module
+func green(s: string) -> string {}
+func red(s: string) -> string {}
+
+incl <one of them>
+
+"hey".green();
+
+incl termcolor
+incl colored
+
+"hey".green(); // BIG ERROR
+
+colored::green("hey");
+termcolor::green("hey");
+
+type LinkedList(v: int, next: LinkedList);
+
+func some(n: LinkedList) {};
+func other(n: LinkedList) {};
+func functions(n: LinkedList) {};
+
+0.to(15); // Returns an iterator
+
+ll_reverse();
+vec_reverse();
+
+v.reverse();
+std::vec::reverse(v);
+
+ll.reverse();
+std::linked_list::reverse(ll);
+
+std::linked_list::LinkedList::reverse(ll);
+
+"hey".green();
+colored::green("hey");
+
+// Range module
+func to(start: int, end: int) -> [int] {}
+func to(start: float, end: float, precision: float) -> [float] {}
+
+func to<T>(start: T, end: T) -> [T] {}
+
+// Generics "desugaring"
+func to_int(start: int, end: int) -> [int] {}
+func to_char(start: char, end: char) -> [char] {}

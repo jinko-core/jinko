@@ -1,0 +1,108 @@
+#!/usr/bin/jinko
+
+/**
+ * Right now, the suckit speed regression test is written in Python. Let's rewrite it!
+ *
+ * [Reference](https://github.com/Skallwar/suckit/blob/master/tests/speed_regression.py)
+ */
+
+incl args
+incl csv
+incl color
+incl file
+incl dir
+incl time
+incl cmd
+
+func load_best_result(filename: string) -> [float] {
+    results = file::open(filename, file::Read).ok();
+
+    # Starting minimum values
+    mut res = [float::inf(), float::inf(), float::inf()]
+
+    # There has to be at least a line of '1's in the file
+    line = results.read_lines().last();
+
+    reader = csv::Reader([line], ',')
+
+    for row in reader.rows() {
+        for value in row.values() {
+            candidate = float::from_str(value);
+            if candidate < res[i] {
+                res[i] = candidate;
+            }
+        }
+    }
+
+    res
+}
+
+func write_new_results(filename: string, result: [int]) {
+    output = file::open(filename, file::Append).ok();
+
+    output.write("{results[0]}, {results[1]}, {results[2]}")
+}
+
+func compute_new_results(binary: string, path: string, url: string) -> [float] {
+    thread_counts = ["1", "2", "4"];
+    mut res = [];
+    test_retries = 10
+
+    for count in thread_counts {
+        time_total = 0;
+        for i in 0..test_retries {
+            start_time = time::now();
+
+            suckit_pid = cmd::Command(["{binary}", "-j", "{count}", "-o", "{path}", "{url}"]);
+            suckit_pid.wait();
+
+            end_time = time::now();
+
+            time_total += end_time - start_time;
+
+            print("Completed {i + 1} iterations for job with {count} thread(s)\r")
+        }
+
+        res.push(time_total / test_retries);
+        println("")
+    }
+
+    res
+}
+
+func main() {
+    p = args::Parser::new();
+    path = "/tmp/suckit_speed";
+    url = "http://books.toscrape.com";
+
+    p.add_argument("f").help("result file").default("speed.csv");
+    p.add_argument("s").help("path to the suckit binary").default("suckit");
+
+    args = p.parse();
+
+    # Create the directory if it doesn't exist
+    dir::maybe_create(path).ok();
+
+    test_names = ["Single thread", "Two threads", "Four threads"];
+    old_result = load_best_result(args.get("filename"));
+
+    new_result = compute_new_results(args.get("binary"), path, url);
+
+    for i in 0..test_names.len() {
+        speed_up = new_result[i] * 100 / old_result[i] - 100;
+
+        mut str_speed_up = "{speed_up}".green();
+
+        if speed_up > 0 {
+            str_speed_up = "{speed_up}".red();
+        }
+
+        println("{test_names[i]} was {str_speed_up} slower");
+    }
+
+    write_new_results(args.get("filename"), new_result);
+
+    dir::remove(path).ok();
+}
+
+main()

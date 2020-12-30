@@ -1,0 +1,3 @@
+type Vec<T>(size: int, cap: int, buf: [T]);
+type Node<T>(value: T, next: Option<Node>, prev: Option<Node>);
+type Queue<T>(data: Vec<Node<T>>);

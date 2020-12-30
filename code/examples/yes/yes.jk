@@ -1,0 +1,51 @@
+incl args
+
+/* print is part of the standard library */
+func print_str(str: string) {
+    print("{str}\n")
+}
+
+func loop_print(str: string, n: int) {
+    if n == 0 {
+        loop {
+            print_str(str)
+        }
+    } else {
+        i = 0;
+        while i < n {
+            i++;
+            print_str(str)
+        }
+    }
+}
+
+p = args::Parser::new();
+
+/**
+ * Add two arguments so that the program can be executed this way:
+ * jinko yes.jk [ <str> ] [ -n|--number <n> ]
+ */
+p.add_argument("str").help("String to echo").default("y");
+p.add_argument("number")
+    .help("Number of times for which the string should be printed")
+    .short("n")     // These two would have been determined by default from
+    .long("number") // the argument's name (parameter of add_argument()
+    .fn(int::from_str())
+    .default(0);
+
+args = p.parse();
+
+/**
+ * Since there are defaults, we know that there will always be something so we can
+ * `unwrap` away. If we hadn't added the defaults, this might have caused an error
+ *
+ * Since we have to handle Options and Results, just typing
+ * ```
+ * args.get("number");
+ * ```
+ * would have caused an error
+ */
+mut n = args.get("number").ok();
+mut str = args.get("str").ok();
+
+loop_print(str, n)

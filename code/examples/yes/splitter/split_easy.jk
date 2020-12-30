@@ -1,0 +1,6 @@
+/**
+ * Split a string using the standard library
+ */
+func split(str: string) -> vec<string> {
+    str.split(' ')
+}

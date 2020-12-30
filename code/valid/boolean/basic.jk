@@ -1,0 +1,15 @@
+if true {
+    return 0;
+}
+
+if false {
+    return 1;
+}
+
+func get_false() -> bool {
+    false
+}
+
+func get_true() -> bool {
+    true
+}

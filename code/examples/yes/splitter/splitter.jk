@@ -1,0 +1,22 @@
+/* Split a string into a vector of smaller strings */
+
+incl file
+incl split_easy
+incl split_hard
+
+/* Open input file */
+file = file::read("in");
+
+for line in file.lines() {
+    v = split_easy::split(line);
+
+    /**
+     * Or choose another option:
+     * v = split_hard::split_idx(line);
+     * v = split_hard::split_iter(line);
+     */
+
+    for word in v.iter() {
+        print("{word}\n")
+    }
+}
