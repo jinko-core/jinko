@@ -601,6 +601,7 @@ impl Construct {
 
         let (input, fields) = Construct::args_dec_non_empty(input)?;
 
+        // FIXME: Add Type creation and return it
         Ok((input, ""))
     }
 }
