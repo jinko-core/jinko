@@ -1,0 +1,8 @@
+type Str(bytes: Vec<char>);
+type StringWrapper(v: string);
+type StringWrapperWrapper(value: StringWrapper);
+type ComplexType(int: hash, value: StringWrapper);
+
+func on_type(t: ComplexType) -> StringWrapper {
+    return t.value.value;
+}
