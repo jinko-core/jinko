@@ -1,9 +1,10 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use super::{InstrKind, Instruction, VarAssign};
+use super::{FunctionDec, InstrKind, Instruction, Var, VarAssign};
 use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct FunctionCall {
@@ -37,6 +38,77 @@ impl FunctionCall {
     pub fn args(&self) -> &Vec<Box<dyn Instruction>> {
         &self.args
     }
+
+    // Check if the arguments received and the arguments expected match
+    fn check_args_count(&self, function: &FunctionDec) -> Result<(), JinkoError> {
+        match self.args().len() == function.args().len() {
+            true => Ok(()),
+            false => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!(
+                    "Wrong number of arguments \
+                    for call to function `{}`: Expected {}, got {}",
+                    self.name(),
+                    function.args().len(),
+                    self.args().len()
+                ),
+                None,
+                "".to_owned(),
+                // FIXME: Add input and location
+            )),
+        }
+    }
+
+    // Map each argument to its corresponding instruction
+    fn map_args(
+        &self,
+        function: &FunctionDec,
+        interpreter: &mut Interpreter,
+    ) -> Result<(), JinkoError> {
+        for i in 0..function.args().len() {
+            interpreter.debug(
+                "VAR MAP",
+                format!(
+                    "Mapping `{}` to `{}`",
+                    function.args()[i].name(),
+                    self.args()[i].print()
+                )
+                .as_ref(),
+            );
+
+            interpreter.add_variable(Var::new(function.args()[i].name().to_owned()))?;
+
+            // FIXME: Do not always mark the variable as immutable
+            // TODO: Remove clone?
+            let var = VarAssign::new(
+                false,
+                function.args()[i].name().to_owned(),
+                self.args()[i].clone(),
+            );
+
+            var.execute(interpreter)?;
+        }
+
+        Ok(())
+    }
+
+    // Get the corresponding declaration from an interpreter
+    fn get_declaration(
+        &self,
+        interpreter: &mut Interpreter,
+    ) -> Result<Rc<FunctionDec>, JinkoError> {
+        match interpreter.get_function(self.name()) {
+            // get_function() return a Rc, so this clones the Rc, not the FunctionDec
+            Some(f) => Ok(f.clone()),
+            // FIXME: Fix Location and input
+            None => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!("Cannot find function {}", self.name()),
+                None,
+                self.name().to_owned(),
+            )),
+        }
+    }
 }
 
 impl Instruction for FunctionCall {
@@ -63,29 +135,16 @@ impl Instruction for FunctionCall {
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
-        let function = match interpreter.get_function(self.name()) {
-            // get_function() return a Rc, so this clones the Rc, not the FunctionDec
-            Some(f) => f.clone(),
-            // FIXME: Fix Location and input
-            None => {
-                return Err(JinkoError::new(
-                    ErrKind::Interpreter,
-                    format!("cannot find function {}", self.name()),
-                    None,
-                    self.name().to_owned(),
-                ))
-            }
-        };
+        let function = self.get_declaration(interpreter)?;
+
+        self.check_args_count(&function)?;
 
         interpreter.debug("CALL", self.name());
+        interpreter.scope_enter();
 
-        function.args().iter().for_each(|arg| {
-        });
+        self.map_args(&function, interpreter)?;
 
-        for i in 0..function.args().len() {
-            // FIXME: Do not always mark the variable as immutable
-            let var = VarAssign::new(false, function.args()[i].name(), self.args()[i]);
-        }
+        interpreter.scope_exit();
 
         function.run(interpreter)
     }
@@ -96,15 +155,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn pretty_print_empty() {
+    fn t_pretty_print_empty() {
         let function = FunctionCall::new("something".to_owned());
 
         assert_eq!(function.print(), "something()");
     }
 
     #[test]
-
-    fn pretty_print_simple() {
+    #[ignore]
+    fn t_pretty_print_simple() {
         /*
         let c0 = Constant::new(ConstKind::Int).with_iv(12);
         let c1 = Constant::new(ConstKind::Int).with_iv(13);
@@ -118,5 +177,46 @@ mod tests {
 
         assert_eq!(function.print(), "fn_name(12, 13, 14)");
         */
+    }
+
+    // Don't ignore once variable execution is implemented
+
+    #[test]
+    #[ignore]
+    fn t_invalid_args_number() {
+        use super::super::{FunctionDec, FunctionDecArg};
+        use crate::value::JinkInt;
+
+        let mut interpreter = Interpreter::new();
+
+        // Create a new function with two integers arguments
+        let mut f = FunctionDec::new("func0".to_owned(), None);
+        f.set_args(vec![
+            FunctionDecArg::new("a".to_owned(), "int".to_owned()),
+            FunctionDecArg::new("b".to_owned(), "int".to_owned()),
+        ]);
+
+        interpreter.add_function(f).unwrap();
+
+        let mut f_call = FunctionCall::new("func0".to_string());
+
+        match f_call.execute(&mut interpreter) {
+            Ok(_) => assert!(false, "Given 0 arguments to 2 arguments function"),
+            Err(_) => assert!(true),
+        }
+
+        f_call.add_arg(box JinkInt::from(12));
+
+        match f_call.execute(&mut interpreter) {
+            Ok(_) => assert!(false, "Given 1 arguments to 2 arguments function"),
+            Err(_) => assert!(true),
+        }
+
+        f_call.add_arg(box JinkInt::from(24));
+
+        match f_call.execute(&mut interpreter) {
+            Ok(_) => assert!(true),
+            Err(e) => assert!(false, "{}: Given 2 arguments to 2 arguments function", e),
+        }
     }
 }
