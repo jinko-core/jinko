@@ -985,7 +985,7 @@ mod tests {
             .1;
 
         assert_eq!(func.name(), "add");
-        assert_eq!(func.ty(), Some("ty"));
+        assert_eq!(func.ty(), Some(&"ty".to_owned()));
         assert_eq!(func.args().len(), 2);
         assert_eq!(func.fn_kind(), FunctionKind::Func);
     }
@@ -1025,7 +1025,7 @@ mod tests {
             .1;
 
         assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), Some("ty"));
+        assert_eq!(test.ty(), Some(&"ty".to_owned()));
         assert_eq!(test.fn_kind(), FunctionKind::Ext);
     }
 
