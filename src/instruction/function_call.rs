@@ -39,7 +39,25 @@ impl FunctionCall {
         &self.args
     }
 
-    // Check if the arguments received and the arguments expected match
+    /// Get the corresponding declaration from an interpreter
+    fn get_declaration(
+        &self,
+        interpreter: &mut Interpreter,
+    ) -> Result<Rc<FunctionDec>, JinkoError> {
+        match interpreter.get_function(self.name()) {
+            // get_function() return a Rc, so this clones the Rc, not the FunctionDec
+            Some(f) => Ok(f.clone()),
+            // FIXME: Fix Location and input
+            None => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!("Cannot find function {}", self.name()),
+                None,
+                self.name().to_owned(),
+            )),
+        }
+    }
+
+    /// Check if the arguments received and the arguments expected match
     fn check_args_count(&self, function: &FunctionDec) -> Result<(), JinkoError> {
         match self.args().len() == function.args().len() {
             true => Ok(()),
@@ -59,55 +77,30 @@ impl FunctionCall {
         }
     }
 
-    // Map each argument to its corresponding instruction
+    /// Map each argument to its corresponding instruction
     fn map_args(
         &self,
         function: &FunctionDec,
         interpreter: &mut Interpreter,
     ) -> Result<(), JinkoError> {
-        for i in 0..function.args().len() {
+        for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
             interpreter.debug(
                 "VAR MAP",
-                format!(
-                    "Mapping `{}` to `{}`",
-                    function.args()[i].name(),
-                    self.args()[i].print()
-                )
-                .as_ref(),
+                format!("Mapping `{}` to `{}`", func_arg.name(), call_arg.print()).as_ref(),
             );
 
-            interpreter.add_variable(Var::new(function.args()[i].name().to_owned()))?;
+            interpreter.add_variable(Var::new(func_arg.name().to_owned()))?;
 
-            // FIXME: Do not always mark the variable as immutable
-            // TODO: Remove clone?
             let var = VarAssign::new(
-                false,
-                function.args()[i].name().to_owned(),
-                self.args()[i].clone(),
+                false, // FIXME: Do not always mark the variable as immutable
+                func_arg.name().to_owned(),
+                call_arg.clone(), // TODO: Remove clone?
             );
 
             var.execute(interpreter)?;
         }
 
         Ok(())
-    }
-
-    // Get the corresponding declaration from an interpreter
-    fn get_declaration(
-        &self,
-        interpreter: &mut Interpreter,
-    ) -> Result<Rc<FunctionDec>, JinkoError> {
-        match interpreter.get_function(self.name()) {
-            // get_function() return a Rc, so this clones the Rc, not the FunctionDec
-            Some(f) => Ok(f.clone()),
-            // FIXME: Fix Location and input
-            None => Err(JinkoError::new(
-                ErrKind::Interpreter,
-                format!("Cannot find function {}", self.name()),
-                None,
-                self.name().to_owned(),
-            )),
-        }
     }
 }
 
