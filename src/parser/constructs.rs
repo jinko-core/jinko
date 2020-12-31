@@ -181,6 +181,7 @@ impl Construct {
         // FIXME: If input is empty, return an error or do nothing
         let (input, value) = alt((
             BoxConstruct::function_declaration,
+            BoxConstruct::ext_declaration,
             BoxConstruct::function_call,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
@@ -1026,6 +1027,17 @@ mod tests {
 
         assert_eq!(test.name(), "add");
         assert_eq!(test.ty(), Some(&"ty".to_owned()));
+        assert_eq!(test.fn_kind(), FunctionKind::Ext);
+    }
+
+    #[test]
+    fn t_ext_valid_void() {
+        let test = Construct::ext_declaration("ext func add(lhs: type, rhs: type);")
+            .unwrap()
+            .1;
+
+        assert_eq!(test.name(), "add");
+        assert_eq!(test.ty(), None);
         assert_eq!(test.fn_kind(), FunctionKind::Ext);
     }
 
