@@ -1032,7 +1032,7 @@ mod tests {
 
     #[test]
     fn t_ext_valid_void() {
-        let test = Construct::ext_declaration("ext func add(lhs: type, rhs: type);")
+        let test = Construct::ext_declaration("ext func add(lhs: ty, rhs: ty);")
             .unwrap()
             .1;
 
