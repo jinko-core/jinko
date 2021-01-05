@@ -4,10 +4,8 @@
 use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
 
+use super::dec_arg::{DecArg, Ty};
 use super::{Block, InstrKind, Instruction};
-
-// FIXME: Shouldn't be a String
-type Ty = String;
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -21,35 +19,12 @@ pub enum FunctionKind {
 }
 
 #[derive(Clone)]
-pub struct FunctionDecArg {
-    name: String,
-    ty: Ty,
-}
-
-#[derive(Clone)]
 pub struct FunctionDec {
     name: String,
     ty: Option<Ty>,
     kind: FunctionKind,
-    args: Vec<FunctionDecArg>,
+    args: Vec<DecArg>,
     block: Option<Block>,
-}
-
-impl FunctionDecArg {
-    /// Create a new function declaration argument with a name and a type
-    pub fn new(name: String, ty: String) -> FunctionDecArg {
-        FunctionDecArg { name, ty }
-    }
-
-    /// Return a reference to the argument's name
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Return a reference to the argument's type
-    pub fn ty(&self) -> &Ty {
-        &self.ty
-    }
 }
 
 impl FunctionDec {
@@ -110,12 +85,12 @@ impl FunctionDec {
     }
 
     /// Return a reference to the function's arguments
-    pub fn args(&self) -> &Vec<FunctionDecArg> {
+    pub fn args(&self) -> &Vec<DecArg> {
         &self.args
     }
 
     /// Set the vector of arguments that the function should handle
-    pub fn set_args(&mut self, args: Vec<FunctionDecArg>) {
+    pub fn set_args(&mut self, args: Vec<DecArg>) {
         self.args = args
     }
 

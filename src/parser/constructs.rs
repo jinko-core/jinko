@@ -20,13 +20,39 @@ use super::{
     shunting_yard::ShuntingYard, tokens::Token,
 };
 use crate::instruction::{
-    Audit, BinaryOp, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse,
+    Audit, BinaryOp, Block, CustomType, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse,
     Instruction, Loop, LoopKind, Var, VarAssign,
 };
 
 pub struct Construct;
 
 impl Construct {
+    /// Parse any valid jinko expression. This can be a function call, a variable,
+    /// a block declaration...
+    pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        // FIXME: If input is empty, return an error or do nothing
+        let (input, value) = alt((
+            BoxConstruct::ext_declaration,
+            BoxConstruct::function_call,
+            BoxConstruct::if_else,
+            BoxConstruct::any_loop,
+            BoxConstruct::jinko_inst,
+            BoxConstruct::block,
+            BoxConstruct::var_assignment,
+            Construct::binary_op,
+            BoxConstruct::variable,
+            Construct::constant,
+            BoxConstruct::function_declaration,
+            BoxConstruct::custom_type,
+        ))(input)?;
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        Ok((input, value))
+    }
+
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
     /// `0.5`.
     ///
@@ -173,31 +199,6 @@ impl Construct {
         Ok((input, Var::new(name.to_owned())))
     }
 
-    /// Parse any valid jinko expression. This can be a function call, a variable,
-    /// a block declaration...
-    pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
-
-        // FIXME: If input is empty, return an error or do nothing
-        let (input, value) = alt((
-            BoxConstruct::function_declaration,
-            BoxConstruct::ext_declaration,
-            BoxConstruct::function_call,
-            BoxConstruct::if_else,
-            BoxConstruct::any_loop,
-            BoxConstruct::jinko_inst,
-            BoxConstruct::block,
-            BoxConstruct::var_assignment,
-            Construct::binary_op,
-            BoxConstruct::variable,
-            Construct::constant,
-        ))(input)?;
-
-        let (input, _) = Token::maybe_consume_extra(input)?;
-
-        Ok((input, value))
-    }
-
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, expr) = Construct::expression(input)?;
@@ -259,7 +260,7 @@ impl Construct {
         Ok((input, block))
     }
 
-    fn args_dec_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+    fn args_dec_empty(input: &str) -> IResult<&str, Vec<DecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
@@ -270,17 +271,17 @@ impl Construct {
     /// Parse an identifier then its type
     ///
     /// `<identifier> : <identifier>
-    fn identifier_type(input: &str) -> IResult<&str, FunctionDecArg> {
+    fn identifier_type(input: &str) -> IResult<&str, DecArg> {
         let (input, id) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::colon(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
 
-        Ok((input, FunctionDecArg::new(id.to_owned(), ty.to_owned())))
+        Ok((input, DecArg::new(id.to_owned(), ty.to_owned())))
     }
 
-    fn identifier_type_comma(input: &str) -> IResult<&str, FunctionDecArg> {
+    fn identifier_type_comma(input: &str) -> IResult<&str, DecArg> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arg) = Construct::identifier_type(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -289,7 +290,7 @@ impl Construct {
         Ok((input, arg))
     }
 
-    fn args_dec_non_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+    fn args_dec_non_empty(input: &str) -> IResult<&str, Vec<DecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -306,7 +307,7 @@ impl Construct {
     }
 
     /// Parse a list (maybe empty) of argument declarations
-    fn args_dec(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+    fn args_dec(input: &str) -> IResult<&str, Vec<DecArg>> {
         alt((Construct::args_dec_empty, Construct::args_dec_non_empty))(input)
     }
 
@@ -591,7 +592,7 @@ impl Construct {
     /// Parse a user-defined custom type
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
-    pub fn custom_type(input: &str) -> IResult<&str, &str> {
+    pub fn custom_type(input: &str) -> IResult<&str, CustomType> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -602,8 +603,9 @@ impl Construct {
 
         let (input, fields) = Construct::args_dec_non_empty(input)?;
 
-        // FIXME: Add Type creation and return it
-        Ok((input, ""))
+        let custom_type = CustomType::new(type_name.to_owned(), fields);
+
+        Ok((input, custom_type))
     }
 }
 
