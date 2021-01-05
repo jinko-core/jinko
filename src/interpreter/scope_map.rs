@@ -9,13 +9,14 @@ use std::rc::Rc;
 
 use crate::{
     error::{ErrKind, JinkoError},
-    instruction::{FunctionDec, Var},
+    instruction::{CustomType, FunctionDec, Var},
 };
 
 /// A scope contains a set of available variables and functions
 struct Scope {
     variables: HashMap<String, Var>,
     functions: HashMap<String, Rc<FunctionDec>>,
+    types: HashMap<String, CustomType>,
 }
 
 impl Scope {
@@ -24,6 +25,7 @@ impl Scope {
         Scope {
             variables: HashMap::new(),
             functions: HashMap::new(),
+            types: HashMap::new(),
         }
     }
 
@@ -35,6 +37,11 @@ impl Scope {
     /// Get a reference on a function from the scope map if is has been inserted already
     pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         self.functions.get(name)
+    }
+
+    /// Get a reference on a type from the scope map if is has been inserted already
+    pub fn get_type(&self, name: &str) -> Option<&CustomType> {
+        self.types.get(name)
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
@@ -63,6 +70,22 @@ impl Scope {
             )),
             None => Ok({
                 self.functions.insert(func.name().to_owned(), Rc::new(func));
+            }),
+        }
+    }
+
+    /// Add a type to the most recently created scope, if it doesn't already exist
+    pub fn add_type(&mut self, custom_type: CustomType) -> Result<(), JinkoError> {
+        match self.get_type(custom_type.name()) {
+            Some(_) => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!("type already declared: {}", custom_type.name()),
+                None,
+                custom_type.name().to_owned(),
+            )),
+            None => Ok({
+                self.types
+                    .insert(custom_type.name().to_owned(), custom_type);
             }),
         }
     }
@@ -123,6 +146,19 @@ impl ScopeMap {
         None
     }
 
+    /// Maybe get a type in any available scopes
+    pub fn get_type(&self, name: &str) -> Option<&CustomType> {
+        // FIXME: Use find for code quality?
+        for scope in self.scopes.iter() {
+            match scope.get_type(name) {
+                Some(v) => return Some(v),
+                None => continue,
+            };
+        }
+
+        None
+    }
+
     /// Add a variable to the current scope if it hasn't been added before
     pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
         match self.scopes.front_mut() {
@@ -145,6 +181,19 @@ impl ScopeMap {
                 String::from("Adding function to empty scopemap"),
                 None,
                 func.name().to_owned(),
+            )),
+        }
+    }
+
+    /// Add a type to the current scope if it hasn't been added before
+    pub fn add_type(&mut self, custom_type: CustomType) -> Result<(), JinkoError> {
+        match self.scopes.front_mut() {
+            Some(head) => head.add_type(custom_type),
+            None => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                String::from("Adding custom_type to empty scopemap"),
+                None,
+                custom_type.name().to_owned(),
             )),
         }
     }

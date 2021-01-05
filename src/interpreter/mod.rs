@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::error::JinkoError;
-use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, Var};
+use crate::instruction::{Block, CustomType, FunctionDec, FunctionKind, Instruction, Var};
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -80,6 +80,12 @@ impl Interpreter {
         self.scope_map.add_variable(var)
     }
 
+    /// Add a type to the interpreter. Returns `Ok` if the type was added, `Err`
+    /// if it existed already and was not.
+    pub fn add_type(&mut self, custom_type: CustomType) -> Result<(), JinkoError> {
+        self.scope_map.add_type(custom_type)
+    }
+
     /// Get a mutable reference on an existing function
     pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         self.scope_map.get_function(name)
@@ -88,6 +94,11 @@ impl Interpreter {
     /// Get a reference on an existing variable
     pub fn get_variable(&self, name: &str) -> Option<&Var> {
         self.scope_map.get_variable(name)
+    }
+
+    /// Get a reference on an existing type
+    pub fn get_type(&self, name: &str) -> Option<&CustomType> {
+        self.scope_map.get_type(name)
     }
 
     /// Create a new empty scope
