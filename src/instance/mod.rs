@@ -21,6 +21,16 @@ pub struct Instance {
 }
 
 impl Instance {
+    /// Create a new instance
+    pub fn new(ty: Option<Ty>, size: usize, data: Vec<u8>) -> Instance {
+        Instance { ty, size, data }
+    }
+
+    /// Create a new instance from raw bytes instead of a vector
+    pub fn from_bytes(ty: Option<Ty>, size: usize, data: &[u8]) -> Instance {
+        Instance::new(ty, size, data.to_vec())
+    }
+
     /// Get a reference to the type of the instance
     pub fn ty(&self) -> Option<&Ty> {
         self.ty.as_ref()
@@ -30,4 +40,16 @@ impl Instance {
     pub fn set_ty(&mut self, ty: Option<Ty>) {
         self.ty = ty;
     }
+}
+
+/// Convert a Jinko type to an instance. This is handled by jinko's primitive types
+/// as well as user defined ones
+pub trait ToInstance {
+    fn to_instance(&self) -> Instance;
+}
+
+/// Convert an instance to a jinko type. This is handled by jinko's primitive types
+/// as well as user defined ones
+pub trait FromInstance {
+    fn from_instance(i: &Instance) -> Self;
 }
