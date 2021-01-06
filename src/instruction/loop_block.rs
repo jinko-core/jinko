@@ -49,7 +49,7 @@ impl Instruction for Loop {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         match &self.kind {
             LoopKind::Loop => loop {
                 interpreter.debug_step("LOOP ENTER");
@@ -86,7 +86,8 @@ impl Instruction for Loop {
             }
         }
 
-        Ok(())
+        // FIXME: Add logic. Right now they only return on error, not the actual value
+        Ok(InstrKind::Statement)
     }
 }
 

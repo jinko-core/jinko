@@ -58,7 +58,7 @@ impl Instruction for IfElse {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug_step("IF_ELSE ENTER");
 
         let cond = self.condition.as_bool();
@@ -71,7 +71,9 @@ impl Instruction for IfElse {
             interpreter.debug_step("ELSE ENTER");
             match &self.else_body {
                 Some(b) => b.execute(interpreter),
-                None => Ok(()),
+                // FIXME: Fix logic: If an `if` returns something, the else should too.
+                // if there is no else, then error out
+                None => Ok(InstrKind::Statement),
             }
         }
     }

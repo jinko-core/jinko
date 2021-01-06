@@ -2,6 +2,7 @@
 #[warn(missing_docs)]
 mod args;
 mod error;
+mod instance;
 mod instruction;
 mod interpreter;
 mod parser;
@@ -17,6 +18,7 @@ use std::fs;
 use instruction::Instruction;
 
 pub use error::JinkoError;
+pub use instance::{FromInstance, Instance, ToInstance};
 pub use interpreter::Interpreter;
 
 fn main() {

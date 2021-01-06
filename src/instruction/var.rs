@@ -31,12 +31,11 @@ impl Instruction for Var {
         self.name.clone()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
-        // FIXME: Add logic
-
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug("VAR", self.name());
 
-        Ok(())
+        // FIXME: Add logic
+        Ok(InstrKind::Statement)
     }
 }
 

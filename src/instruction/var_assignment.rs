@@ -48,7 +48,7 @@ impl Instruction for VarAssign {
         format!("{}{} = {}", base, self.symbol, self.value.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug("ASSIGN VAR", self.symbol());
 
         match interpreter.get_variable(&self.symbol) {

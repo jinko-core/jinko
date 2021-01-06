@@ -70,7 +70,7 @@ impl Instruction for Block {
             base = format!("{}    {}", base, &instr.print());
             base.push_str(match instr.kind() {
                 InstrKind::Statement => ";\n",
-                InstrKind::Expression => "\n",
+                InstrKind::Expression(_) => "\n",
             });
         }
 
@@ -78,19 +78,20 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.scope_enter();
         interpreter.debug_step("BLOCK ENTER");
 
         self.instructions()
             .iter()
             .map(|inst| inst.execute(interpreter))
-            .collect::<Result<Vec<()>, JinkoError>>()?;
+            .collect::<Result<Vec<InstrKind>, JinkoError>>()?;
 
         interpreter.scope_exit();
         interpreter.debug_step("BLOCK EXIT");
 
-        Ok(())
+        // FIXME: Add logic
+        Ok(InstrKind::Expression(None))
     }
 }
 
@@ -139,7 +140,7 @@ mod tests {
 
         b.set_instructions(instrs);
 
-        assert_eq!(b.kind(), InstrKind::Expression);
+        assert_eq!(b.kind(), InstrKind::Expression(None));
         assert_eq!(
             b.print(),
             r#"{

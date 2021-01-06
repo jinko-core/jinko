@@ -21,16 +21,17 @@ impl Value for JinkString {
 
 impl Instruction for JinkString {
     fn kind(&self) -> InstrKind {
-        InstrKind::Expression
+        InstrKind::Expression(None)
     }
 
     fn print(&self) -> String {
         format!("\"{}\"", self.0.clone())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug("STR", &self.0.to_string());
 
-        Ok(())
+        // FIXME: Add logic
+        Ok(InstrKind::Expression(None))
     }
 }

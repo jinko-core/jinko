@@ -107,7 +107,7 @@ impl FunctionCall {
 impl Instruction for FunctionCall {
     fn kind(&self) -> InstrKind {
         // FIXME: Add logic
-        InstrKind::Expression
+        InstrKind::Expression(None)
     }
 
     fn print(&self) -> String {
@@ -127,7 +127,7 @@ impl Instruction for FunctionCall {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         let function = self.get_declaration(interpreter)?;
 
         self.check_args_count(&function)?;
