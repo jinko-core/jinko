@@ -40,6 +40,11 @@ impl Instance {
     pub fn set_ty(&mut self, ty: Option<Ty>) {
         self.ty = ty;
     }
+
+    /// Get a reference to the raw data bytes of the Instance
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
 }
 
 /// Convert a Jinko type to an instance. This is handled by jinko's primitive types

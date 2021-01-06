@@ -1,6 +1,7 @@
-use super::{Value, JinkInt, JinkChar, JinkBool, JinkFloat, JinkString};
+use super::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString, Value};
 use crate::instruction::{InstrKind, Instruction, Operator};
-use crate::{Instance, Interpreter, JinkoError, ToInstance};
+use crate::{FromInstance, Instance, Interpreter, JinkoError, ToInstance};
+use std::convert::TryFrom;
 
 #[derive(Clone)]
 pub struct JinkConstant<T>(T);
@@ -138,7 +139,7 @@ impl ToInstance for JinkInt {
 
         unsafe {
             Instance::from_bytes(
-                None,
+                Some("int".to_string()), // FIXME
                 size_of::<i64>(),
                 &transmute::<i64, [u8; size_of::<i64>()]>(self.0),
             )
@@ -152,7 +153,7 @@ impl ToInstance for JinkFloat {
 
         unsafe {
             Instance::from_bytes(
-                None,
+                Some("float".to_string()), // FIXME
                 size_of::<f64>(),
                 &transmute::<f64, [u8; size_of::<f64>()]>(self.0),
             )
@@ -202,6 +203,100 @@ impl ToInstance for JinkString {
         }
     }
 }
+
+// In the same vein, we also have to implement FromInstance this way...
+
+impl FromInstance for JinkInt {
+    fn from_instance(i: &Instance) -> Self {
+        use std::mem::{size_of, transmute};
+
+        unsafe {
+            JinkInt::from(transmute::<[u8; size_of::<i64>()], i64>(
+                TryFrom::try_from(i.data()).unwrap(),
+            ))
+        }
+    }
+}
+
+impl FromInstance for JinkFloat {
+    fn from_instance(i: &Instance) -> Self {
+        use std::mem::{size_of, transmute};
+
+        unsafe {
+            JinkFloat::from(transmute::<[u8; size_of::<f64>()], f64>(
+                TryFrom::try_from(i.data()).unwrap(),
+            ))
+        }
+    }
+}
+
+impl FromInstance for JinkBool {
+    fn from_instance(i: &Instance) -> Self {
+        use std::mem::{size_of, transmute};
+
+        unsafe {
+            JinkBool::from(transmute::<[u8; size_of::<bool>()], bool>(
+                TryFrom::try_from(i.data()).unwrap(),
+            ))
+        }
+    }
+}
+
+impl FromInstance for JinkChar {
+    fn from_instance(i: &Instance) -> Self {
+        use std::mem::{size_of, transmute};
+
+        unsafe {
+            JinkChar::from(transmute::<[u8; size_of::<char>()], char>(
+                TryFrom::try_from(i.data()).unwrap(),
+            ))
+        }
+    }
+}
+
+impl FromInstance for JinkString {
+    fn from_instance(i: &Instance) -> Self {
+        use std::mem::{size_of, transmute};
+
+        unsafe {
+            JinkString::from(transmute::<[u8; size_of::<String>()], String>(
+                TryFrom::try_from(i.data()).unwrap(),
+            ))
+        }
+    }
+}
+
+// impl FromInstance for JinkFloat {
+//     fn from_instance(i: &Instance) -> Self {
+//         use std::mem::{transmute, size_of};
+//
+//         JinkFloat::from(transmute::<[u8; size_of::<f64>()], f64>(i.data()))
+//     }
+// }
+//
+// impl FromInstance for JinkBool {
+//     fn from_instance(i: &Instance) -> Self {
+//         use std::mem::{transmute, size_of};
+//
+//         JinkBool::from(transmute::<[u8; size_of::<bool>()], bool>(i.data()))
+//     }
+// }
+//
+// impl FromInstance for JinkChar {
+//     fn from_instance(i: &Instance) -> Self {
+//         use std::mem::{transmute, size_of};
+//
+//         JinkChar::from(transmute::<[u8; size_of::<char>()], char>(i.data()))
+//     }
+// }
+//
+// impl FromInstance for JinkString {
+//     fn from_instance(i: &Instance) -> Self {
+//         use std::mem::{transmute, size_of};
+//
+//         JinkString::from(transmute::<[u8; size_of::<String>()], String>(i.data()))
+//     }
+// }
 
 impl Value for JinkConstant<i64> {
     fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JinkoError> {

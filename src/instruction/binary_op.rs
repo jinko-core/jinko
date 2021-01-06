@@ -5,9 +5,10 @@
 //! The available operators are `+`, `-`, `*` and `/`.
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
+use crate::value::{JinkFloat, JinkInt, Value};
 use crate::{
     error::ErrKind, error::JinkoError, instruction::InstrKind, interpreter::Interpreter,
-    Instruction,
+    FromInstance, Instance, Instruction,
 };
 
 /// All the binary operators available
@@ -132,6 +133,26 @@ impl BinaryOp {
     pub fn set_rhs(&mut self, rhs: Box<dyn Instruction>) {
         self.rhs = rhs;
     }
+
+    /// Execute a node of the binary operation
+    fn execute_node(
+        &self,
+        node: &Box<dyn Instruction>,
+        interpreter: &mut Interpreter,
+    ) -> Result<Instance, JinkoError> {
+        match node.execute(interpreter)? {
+            InstrKind::Statement | InstrKind::Expression(None) => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!(
+                    "Invalid use of statement in binary operation: {}",
+                    self.lhs.print()
+                ),
+                None,
+                self.print(),
+            )),
+            InstrKind::Expression(Some(v)) => Ok(v),
+        }
+    }
 }
 
 impl Instruction for BinaryOp {
@@ -153,13 +174,48 @@ impl Instruction for BinaryOp {
 
         interpreter.debug("OP", self.op.to_str());
 
-        self.lhs.execute(interpreter)?;
-        self.rhs.execute(interpreter)?;
+        let l_value = self.execute_node(&self.lhs, interpreter)?;
+        let r_value = self.execute_node(&self.rhs, interpreter)?;
+
+        if l_value.ty() != r_value.ty() {
+            return Err(JinkoError::new(
+                ErrKind::Interpreter, // FIXME: Should be a type error
+                format!(
+                    "Trying to do binary operation on invalid types: {:#?} {} {:#?}",
+                    l_value.ty(),
+                    self.op.to_str(),
+                    r_value.ty() // FIXME: Display correctly
+                ),
+                None, // FIXME: Fix Location
+                self.print(),
+            ));
+        }
+
+        let return_value;
+
+        // FIXME: DISGUSTING and do not unwap
+        match l_value.ty().unwrap().as_str() {
+            // FIXME: Absolutely DISGUSTING
+            "int" => {
+                return_value = InstrKind::Expression(Some(
+                    JinkInt::from_instance(&l_value)
+                        .do_op(&JinkInt::from_instance(&r_value), self.op)?,
+                ));
+            }
+
+            "float" => {
+                return_value = InstrKind::Expression(Some(
+                    JinkFloat::from_instance(&l_value)
+                        .do_op(&JinkFloat::from_instance(&r_value), self.op)?,
+                ));
+            }
+            _ => todo!("Implement empty types?")
+        }
 
         interpreter.debug_step("BINOP EXIT");
 
         // FIXME: Add logic
-        Ok(InstrKind::Statement)
+        Ok(return_value)
     }
 }
 
