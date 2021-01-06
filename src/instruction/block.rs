@@ -78,19 +78,20 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.scope_enter();
         interpreter.debug_step("BLOCK ENTER");
 
         self.instructions()
             .iter()
             .map(|inst| inst.execute(interpreter))
-            .collect::<Result<Vec<()>, JinkoError>>()?;
+            .collect::<Result<Vec<InstrKind>, JinkoError>>()?;
 
         interpreter.scope_exit();
         interpreter.debug_step("BLOCK EXIT");
 
-        Ok(())
+        // FIXME: Add logic
+        Ok(InstrKind::Expression(None))
     }
 }
 

@@ -32,9 +32,10 @@ impl Instruction for JinkBool {
         self.0
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug("BOOL", &self.0.to_string());
 
-        Ok(())
+        // FIXME: Add logic
+        Ok(InstrKind::Expression(None))
     }
 }

@@ -38,10 +38,10 @@ impl Instruction for JinkInt {
         self.0.to_string()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
-        // FIXME: Add logic
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug("INT", &self.0.to_string());
 
-        Ok(())
+        // FIXME: Add logic
+        Ok(InstrKind::Expression(None))
     }
 }

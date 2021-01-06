@@ -27,7 +27,7 @@ impl Instruction for Audit {
         format!("audit {}", self.block.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.audit_enter();
         interpreter.debug_step("AUDIT ENTER");
 

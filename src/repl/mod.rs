@@ -51,7 +51,8 @@ impl Repl {
             };
 
             match inst.execute(&mut interpreter) {
-                Ok(()) => {}
+                // FIXME: Handle statements and expressions differently
+                Ok(_) => {}
                 Err(e) => println!("{}", e.to_string()),
             };
 

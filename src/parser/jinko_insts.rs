@@ -51,7 +51,7 @@ impl Instruction for JinkoInst {
         .to_string()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug("JINKO_INST", &self.print());
 
         match self {
@@ -60,6 +60,8 @@ impl Instruction for JinkoInst {
             _ => self.unreachable(),
         };
 
-        Ok(())
+        // JinkInsts cannot return anything. They simply act directly from the interpreter,
+        // on the interpreter.
+        Ok(InstrKind::Statement)
     }
 }

@@ -148,8 +148,7 @@ impl Instruction for BinaryOp {
         )
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
-        // FIXME: Add logic
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug_step("BINOP ENTER");
 
         interpreter.debug("OP", self.op.to_str());
@@ -159,7 +158,8 @@ impl Instruction for BinaryOp {
 
         interpreter.debug_step("BINOP EXIT");
 
-        Ok(())
+        // FIXME: Add logic
+        Ok(InstrKind::Statement)
     }
 }
 
