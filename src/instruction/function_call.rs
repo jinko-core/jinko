@@ -107,7 +107,7 @@ impl FunctionCall {
 impl Instruction for FunctionCall {
     fn kind(&self) -> InstrKind {
         // FIXME: Add logic
-        InstrKind::Expression
+        InstrKind::Expression(None)
     }
 
     fn print(&self) -> String {

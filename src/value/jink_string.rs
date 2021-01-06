@@ -21,7 +21,7 @@ impl Value for JinkString {
 
 impl Instruction for JinkString {
     fn kind(&self) -> InstrKind {
-        InstrKind::Expression
+        InstrKind::Expression(None)
     }
 
     fn print(&self) -> String {

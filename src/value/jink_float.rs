@@ -32,7 +32,7 @@ impl Value for JinkFloat {
 
 impl Instruction for JinkFloat {
     fn kind(&self) -> InstrKind {
-        InstrKind::Expression
+        InstrKind::Expression(None)
     }
 
     fn print(&self) -> String {

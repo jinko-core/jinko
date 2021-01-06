@@ -70,7 +70,7 @@ impl Instruction for Block {
             base = format!("{}    {}", base, &instr.print());
             base.push_str(match instr.kind() {
                 InstrKind::Statement => ";\n",
-                InstrKind::Expression => "\n",
+                InstrKind::Expression(_) => "\n",
             });
         }
 
@@ -139,7 +139,7 @@ mod tests {
 
         b.set_instructions(instrs);
 
-        assert_eq!(b.kind(), InstrKind::Expression);
+        assert_eq!(b.kind(), InstrKind::Expression(None));
         assert_eq!(
             b.print(),
             r#"{
