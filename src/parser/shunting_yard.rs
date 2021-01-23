@@ -19,8 +19,9 @@ impl ShuntingYard {
     // FIXME: Ugly to take input as parameter just for the lifetime
     fn reduce_output<'i>(&mut self, _: &'i str) -> IResult<&'i str, ()> {
         // FIXME: Cleanup
-        let lhs = match self.output.pop() {
-            Some(lhs) => lhs,
+        // FIXME: Order, lhs should be before rhs
+        let rhs = match self.output.pop() {
+            Some(rhs) => rhs,
             None => {
                 return Err(nom::Err::Error((
                     "Invalid binary expression",
@@ -29,8 +30,8 @@ impl ShuntingYard {
             }
         };
 
-        let rhs = match self.output.pop() {
-            Some(rhs) => rhs,
+        let lhs = match self.output.pop() {
+            Some(lhs) => lhs,
             None => {
                 return Err(nom::Err::Error((
                     "Invalid binary expression",
