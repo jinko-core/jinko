@@ -20,10 +20,10 @@ impl Value for JinkInt {
 
     fn do_op(&self, other: &Self, op: Operator) -> Box<dyn Instruction> {
         match op {
-            Operator::Add => box JinkInt::from(self.0 + other.0),
-            Operator::Sub => box JinkInt::from(self.0 - other.0),
-            Operator::Mul => box JinkInt::from(self.0 * other.0),
-            Operator::Div => box JinkInt::from(self.0 / other.0),
+            Operator::Add => Box::new(JinkInt::from(self.0 + other.0)),
+            Operator::Sub => Box::new(JinkInt::from(self.0 - other.0)),
+            Operator::Mul => Box::new(JinkInt::from(self.0 * other.0)),
+            Operator::Div => Box::new(JinkInt::from(self.0 / other.0)),
             _ => self.no_op(other, op),
         }
     }

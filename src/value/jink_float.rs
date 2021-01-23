@@ -21,10 +21,10 @@ impl Value for JinkFloat {
 
     fn do_op(&self, other: &Self, op: Operator) -> Box<dyn Instruction> {
         match op {
-            Operator::Add => box JinkFloat::from(self.0 + other.0),
-            Operator::Sub => box JinkFloat::from(self.0 - other.0),
-            Operator::Mul => box JinkFloat::from(self.0 * other.0),
-            Operator::Div => box JinkFloat::from(self.0 / other.0),
+            Operator::Add => Box::new(JinkFloat::from(self.0 + other.0)),
+            Operator::Sub => Box::new(JinkFloat::from(self.0 - other.0)),
+            Operator::Mul => Box::new(JinkFloat::from(self.0 * other.0)),
+            Operator::Div => Box::new(JinkFloat::from(self.0 / other.0)),
             _ => self.no_op(other, op),
         }
     }
