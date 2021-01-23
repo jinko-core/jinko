@@ -198,14 +198,14 @@ mod tests {
             Err(_) => assert!(true),
         }
 
-        f_call.add_arg(box JinkInt::from(12));
+        f_call.add_arg(Box::new(JinkInt::from(12)));
 
         match f_call.execute(&mut interpreter) {
             Ok(_) => assert!(false, "Given 1 arguments to 2 arguments function"),
             Err(_) => assert!(true),
         }
 
-        f_call.add_arg(box JinkInt::from(24));
+        f_call.add_arg(Box::new(JinkInt::from(24)));
 
         match f_call.execute(&mut interpreter) {
             Ok(_) => assert!(true),
