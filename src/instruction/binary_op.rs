@@ -209,7 +209,7 @@ impl Instruction for BinaryOp {
                         .do_op(&JinkFloat::from_instance(&r_value), self.op)?,
                 ));
             }
-            _ => todo!("Implement empty types?")
+            _ => todo!("Implement empty types?"),
         }
 
         interpreter.debug_step("BINOP EXIT");

@@ -15,10 +15,9 @@ use parser::Parser;
 use repl::Repl;
 use std::fs;
 
-use instruction::Instruction;
-
 pub use error::JinkoError;
 pub use instance::{FromInstance, Instance, ToInstance};
+pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
 
 fn main() {
