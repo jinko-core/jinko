@@ -77,6 +77,7 @@ impl std::fmt::Display for Instance {
                     "float" => JinkConstant::<f64>::from_instance(self).print(),
                     "char" => JinkConstant::<char>::from_instance(self).print(),
                     "string" => JinkConstant::<String>::from_instance(self).print(),
+                    "bool" => JinkConstant::<bool>::from_instance(self).print(),
                     _ => format!("{:?}", self),
                 },
                 None => format!(""),

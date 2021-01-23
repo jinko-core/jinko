@@ -167,7 +167,7 @@ impl ToInstance for JinkBool {
 
         unsafe {
             Instance::from_bytes(
-                None,
+                Some("bool".to_string()), // FIXME
                 size_of::<bool>(),
                 &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
             )
@@ -181,7 +181,7 @@ impl ToInstance for JinkChar {
 
         unsafe {
             Instance::from_bytes(
-                None,
+                Some("char".to_string()), // FIXME
                 size_of::<char>(),
                 &transmute::<char, [u8; size_of::<char>()]>(self.0),
             )
@@ -195,7 +195,7 @@ impl ToInstance for JinkString {
 
         unsafe {
             Instance::from_bytes(
-                None,
+                Some("string".to_string()), // FIXME
                 size_of::<String>(),
                 // FIXME: Avoid cloning
                 &transmute::<String, [u8; size_of::<String>()]>(self.0.clone()),
