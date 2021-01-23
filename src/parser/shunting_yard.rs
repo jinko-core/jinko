@@ -8,7 +8,7 @@ use super::box_construct::BoxConstruct;
 use super::constructs::Construct;
 use super::tokens::Token;
 
-use nom::{branch::alt, error::ErrorKind, Err, IResult};
+use nom::{branch::alt, Err, IResult};
 
 pub struct ShuntingYard {
     operators: Stack<Operator>,
@@ -19,8 +19,8 @@ impl ShuntingYard {
     // FIXME: Ugly to take input as parameter just for the lifetime
     fn reduce_output<'i>(&mut self, _: &'i str) -> IResult<&'i str, ()> {
         // FIXME: Cleanup
-        let lhs = match self.output.pop() {
-            Some(lhs) => lhs,
+        let rhs = match self.output.pop() {
+            Some(rhs) => rhs,
             None => {
                 return Err(nom::Err::Error((
                     "Invalid binary expression",
@@ -29,8 +29,8 @@ impl ShuntingYard {
             }
         };
 
-        let rhs = match self.output.pop() {
-            Some(rhs) => rhs,
+        let lhs = match self.output.pop() {
+            Some(lhs) => lhs,
             None => {
                 return Err(nom::Err::Error((
                     "Invalid binary expression",
@@ -280,4 +280,38 @@ mod tests {
     }
 
     // FIXME: Add more tests with more operators
+
+    fn sy_assert_l(input: &str, result: i64) {
+        use crate::instance::ToInstance;
+        use crate::{InstrKind, Interpreter};
+
+        let boxed_output = ShuntingYard::parse(input).unwrap().1;
+        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(
+            output.lhs().execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JinkInt::from(result).to_instance()))
+        );
+    }
+
+    #[test]
+    fn t_sy_execute_natural_order() {
+        sy_assert_l("4 + 7 + 3", 11);
+    }
+
+    // FIXME: Don't ignore once ShuntingYard is fixed
+
+    #[test]
+    #[ignore]
+    fn t_sy_execute_mult_priority() {
+        sy_assert_l("4 + 2 * 3", 6);
+    }
+
+    #[test]
+    #[ignore]
+    fn t_sy_execute_mult_natural_priority() {
+        sy_assert_l("2 * 3 + 4", 6);
+    }
 }

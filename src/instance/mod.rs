@@ -7,6 +7,9 @@
 //! the instance is always there. The type of the Instance might be resolved later, after
 //! different passes of the typechecker.
 
+use super::value::JinkConstant;
+use crate::Instruction;
+
 // FIXME: Use CustomType once @Skallwar's PR is merged
 type Ty = String;
 
@@ -40,6 +43,11 @@ impl Instance {
     pub fn set_ty(&mut self, ty: Option<Ty>) {
         self.ty = ty;
     }
+
+    /// Get a reference to the raw data bytes of the Instance
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
 }
 
 /// Convert a Jinko type to an instance. This is handled by jinko's primitive types
@@ -52,4 +60,27 @@ pub trait ToInstance {
 /// as well as user defined ones
 pub trait FromInstance {
     fn from_instance(i: &Instance) -> Self;
+}
+
+// FIXME:
+// - Is Display really how we want to go about it?
+// - Should the implementation reside here and not in the repl crate?
+// - Cleanup the code
+impl std::fmt::Display for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self.ty() {
+                Some(ty) => match ty.as_ref() {
+                    "int" => JinkConstant::<i64>::from_instance(self).print(),
+                    "float" => JinkConstant::<f64>::from_instance(self).print(),
+                    "char" => JinkConstant::<char>::from_instance(self).print(),
+                    "string" => JinkConstant::<String>::from_instance(self).print(),
+                    _ => format!("{:?}", self),
+                },
+                None => format!(""),
+            }
+        )
+    }
 }
