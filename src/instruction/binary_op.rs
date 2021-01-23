@@ -223,22 +223,51 @@ impl Instruction for BinaryOp {
 mod tests {
     use super::*;
     use crate::value::JinkInt;
+    use crate::Interpreter;
+    use crate::ToInstance;
 
-    #[test]
-    #[ignore]
-    // FIXME: Don't ignore as soon as we can get a value from lhs and rhs
-    fn t_binop_add() {
-        let l = Box::new(JinkInt::from(12));
-        let r = Box::new(JinkInt::from(12));
-        let op = Operator::new("+");
+    fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
+        let l = Box::new(JinkInt::from(l_num));
+        let r = Box::new(JinkInt::from(r_num));
+        let op = Operator::new(op_string);
 
         let binop = BinaryOp::new(l, r, op);
 
-        let res = binop.compute();
+        let mut i = Interpreter::new();
 
-        match res {
-            Err(e) => assert!(false, format!("12 + 12 is a valid operation: {}", e)),
-            Ok(v) => assert!(true),
-        }
+        assert_eq!(
+            binop.execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JinkInt::from(res).to_instance()))
+        );
+    }
+
+    #[test]
+    fn t_binop_add_same() {
+        binop_assert(12, 12, "+", 24);
+    }
+
+    #[test]
+    fn t_binop_add_l_diff() {
+        binop_assert(12, 2, "+", 14);
+    }
+
+    #[test]
+    fn t_binop_add_r_diff() {
+        binop_assert(2, 99, "+", 101);
+    }
+
+    #[test]
+    fn t_binop_mul_same() {
+        binop_assert(12, 12, "*", 144);
+    }
+
+    #[test]
+    fn t_binop_mul_l_diff() {
+        binop_assert(12, 2, "*", 24);
+    }
+
+    #[test]
+    fn t_binop_mul_r_diff() {
+        binop_assert(2, 99, "*", 198);
     }
 }
