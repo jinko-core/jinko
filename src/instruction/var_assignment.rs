@@ -25,12 +25,15 @@ impl VarAssign {
         }
     }
 
-    pub fn mutable(&self) -> bool {
-        self.mutable
-    }
-
+    /// Get a reference to the symbol of the variable declaration
     pub fn symbol(&self) -> &str {
         &self.symbol
+    }
+
+    /// Is a variable is declared as mutable or not
+    #[cfg(test)]
+    pub fn mutable(&self) -> bool {
+        self.mutable
     }
 }
 

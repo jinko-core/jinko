@@ -15,12 +15,6 @@ pub enum JinkoInst {
 }
 
 impl JinkoInst {
-    /// Traps the interpretation when encountering an unknown interpreter instruction.
-    /// This function is just a shorthand wrapper around `unreachable!`
-    fn unreachable(&self) -> ! {
-        unreachable!("Unknown JinkoInst {:#?}. This is a bug", self)
-    }
-
     /// Construct a `JinkoInst` from a given keyword
     pub fn from_str(keyword: &str) -> Result<Self, JinkoError> {
         match keyword {
@@ -46,7 +40,6 @@ impl Instruction for JinkoInst {
         match self {
             JinkoInst::Dump => "@dump",
             JinkoInst::Quit => "@quit",
-            _ => self.unreachable(),
         }
         .to_string()
     }
@@ -57,7 +50,6 @@ impl Instruction for JinkoInst {
         match self {
             JinkoInst::Dump => println!("{}", interpreter.print()),
             JinkoInst::Quit => std::process::exit(0),
-            _ => self.unreachable(),
         };
 
         // JinkInsts cannot return anything. They simply act directly from the interpreter,

@@ -12,7 +12,7 @@ use scope_map::ScopeMap;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::error::JinkoError;
+use crate::error::{ErrKind, JinkoError};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, Var};
 
 /// Type the interpreter uses for keys
@@ -137,6 +137,38 @@ impl Interpreter {
     pub fn debug_step(&self, specifier: &str) {
         if self.debug_mode {
             println!("{}", specifier.yellow());
+        }
+    }
+
+    /// Register a test to be executed by the interpreter
+    pub fn add_test(&mut self, test: FunctionDec) -> Result<(), JinkoError> {
+        match self.tests.get(test.name()) {
+            Some(test) => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!("test function already declared: {}", test.name()),
+                None,
+                test.name().to_owned(),
+            )),
+            None => {
+                self.tests.insert(test.name().to_owned(), test);
+                Ok(())
+            }
+        }
+    }
+
+    /// Register an external function definition
+    pub fn add_ext(&mut self, ext: FunctionDec) -> Result<(), JinkoError> {
+        match self.exts.get(ext.name()) {
+            Some(ext) => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!("external function already declared: {}", ext.name()),
+                None,
+                ext.name().to_owned(),
+            )),
+            None => {
+                self.exts.insert(ext.name().to_owned(), ext);
+                Ok(())
+            }
         }
     }
 }
