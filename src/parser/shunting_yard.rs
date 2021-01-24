@@ -10,51 +10,20 @@ use super::tokens::Token;
 
 use nom::{branch::alt, Err, IResult};
 
+/// SyPairs are contained in the ShuntingYard's output queue. When building the parser,
+/// this queue is created in an "infix" way, but using SyPair instead of traditional
+/// strings. This infix notation is then transformed into an AST
+enum SyPair {
+    Op(Operator),
+    Num(Box<dyn Instruction>),
+}
+
 pub struct ShuntingYard {
     operators: Stack<Operator>,
-    output: Queue<Box<dyn Instruction>>,
+    output: Queue<SyPair>,
 }
 
 impl ShuntingYard {
-    // FIXME: Ugly to take input as parameter just for the lifetime
-    fn reduce_output<'i>(&mut self, _: &'i str) -> IResult<&'i str, ()> {
-        // FIXME: Cleanup
-        // FIXME: Order, lhs should be before rhs
-        let rhs = match self.output.pop() {
-            Some(rhs) => rhs,
-            None => {
-                return Err(nom::Err::Error((
-                    "Invalid binary expression",
-                    nom::error::ErrorKind::OneOf,
-                )))
-            }
-        };
-
-        let lhs = match self.output.pop() {
-            Some(lhs) => lhs,
-            None => {
-                return Err(nom::Err::Error((
-                    "Invalid binary expression",
-                    nom::error::ErrorKind::OneOf,
-                )))
-            }
-        };
-
-        let op = match self.operators.pop() {
-            Some(op) => op,
-            None => {
-                return Err(nom::Err::Error((
-                    "Invalid binary expression",
-                    nom::error::ErrorKind::OneOf,
-                )))
-            }
-        };
-
-        self.output.push(Box::new(BinaryOp::new(lhs, rhs, op)));
-
-        Ok(("", ()))
-    }
-
     fn operator<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -71,32 +40,38 @@ impl ShuntingYard {
 
         let op = Operator::new(op);
 
-        // We can unwrap since we check that the stack is not empty
         if op != Operator::LeftParenthesis && op != Operator::RightParenthesis {
             while !self.operators.is_empty()
-            // FIXME: Cleanup
-            && (self.operators.peek().unwrap().precedence() > op.precedence()
-            || (self.operators.peek().unwrap().precedence() == op.precedence() && op.is_left_associative()))
+                && (self.operators.peek().unwrap().precedence() > op.precedence()
+                    || (self.operators.peek().unwrap().precedence() == op.precedence()
+                        && op.is_left_associative()))
+                && (self.operators.peek() != Some(&Operator::LeftParenthesis))
             {
-                self.reduce_output(input)?;
+                // We can unwrap safely since we checked that self.operators is not
+                // empty
+                self.output.push(SyPair::Op(self.operators.pop().unwrap()));
             }
-            self.operators.push(op)
+
+            self.operators.push(op);
         } else if op == Operator::LeftParenthesis {
             self.operators.push(op);
         } else if op == Operator::RightParenthesis {
             while self.operators.peek() != Some(&Operator::LeftParenthesis) {
-                self.reduce_output(input)?;
+                match self.operators.pop() {
+                    None => {
+                        return Err(nom::Err::Error((
+                            "Unclosed right parenthesis",
+                            nom::error::ErrorKind::OneOf,
+                        )))
+                    }
+
+                    Some(op) => self.output.push(SyPair::Op(op)),
+                }
             }
 
-            match self.operators.peek() {
-                Some(&Operator::LeftParenthesis) => self.operators.pop(),
-                _ => {
-                    return Err(nom::Err::Error((
-                        "Unclosed right parenthesis",
-                        nom::error::ErrorKind::OneOf,
-                    )))
-                }
-            };
+            if self.operators.peek() == Some(&Operator::LeftParenthesis) {
+                self.operators.pop();
+            }
         }
 
         Ok((input, ()))
@@ -109,7 +84,7 @@ impl ShuntingYard {
             BoxConstruct::variable,
         ))(input)?;
 
-        self.output.push(expr);
+        self.output.push(SyPair::Num(expr));
 
         Ok((input, ()))
     }
@@ -153,6 +128,35 @@ impl ShuntingYard {
         }
     }
 
+    /// Reduce the RPN produced by the ShuntingYard to an Expression
+    fn reduce<'i>(input: &'i str, rpn: Queue<SyPair>) -> IResult<&'i str, Box<dyn Instruction>> {
+        let mut stack = Stack::new();
+
+        for sy_pair in rpn.into_iter() {
+            match sy_pair {
+                SyPair::Num(num) => {
+                    stack.push(num);
+                }
+                SyPair::Op(op) => {
+                    if let Some(rhs) = stack.pop() {
+                        if let Some(lhs) = stack.pop() {
+                            stack.push(Box::new(BinaryOp::new(lhs, rhs, op)));
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+
+        match stack.pop() {
+            Some(value) => Ok((input, value)),
+            None => Err(nom::Err::Error((
+                "Unclosed right parenthesis",
+                nom::error::ErrorKind::OneOf,
+            ))),
+        }
+    }
+
     /// Create a BinaryOp from an input string, executing the shunting yard
     /// algorithm
     pub fn parse(i: &str) -> IResult<&str, Box<dyn Instruction>> {
@@ -188,18 +192,12 @@ impl ShuntingYard {
             }
         }
 
-        // We are done, pop everything from the different stacks
+        // We are done, pop everything from the operator stack
         while !sy.operators.is_empty() {
-            sy.reduce_output(input)?;
+            sy.output.push(SyPair::Op(sy.operators.pop().unwrap()));
         }
 
-        match sy.output.pop() {
-            Some(binop) => Ok((input, binop)),
-            _ => Err(nom::Err::Error((
-                "Invalid binary expression",
-                nom::error::ErrorKind::OneOf,
-            ))),
-        }
+        ShuntingYard::reduce(input, sy.output)
     }
 }
 
@@ -208,91 +206,9 @@ mod tests {
     use super::*;
     use crate::value::*;
 
-    #[test]
-    fn t_sy_valid_add() {
-        let boxed_output = ShuntingYard::parse("1 + 2").unwrap().1;
-        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
-        let reference = BinaryOp::new(
-            Box::new(JinkInt::from(1)),
-            Box::new(JinkInt::from(2)),
-            Operator::Add,
-        );
-
-        assert_eq!(output.operator(), reference.operator());
-    }
-
-    #[test]
-    fn t_sy_valid_mul() {
-        let boxed_output = ShuntingYard::parse("1 * 2").unwrap().1;
-        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
-        let reference = BinaryOp::new(
-            Box::new(JinkInt::from(1)),
-            Box::new(JinkInt::from(2)),
-            Operator::Mul,
-        );
-
-        assert_eq!(output.operator(), reference.operator());
-    }
-
-    #[test]
-    fn t_sy_valid_normal_priority() {
-        let boxed_output = ShuntingYard::parse("1 * 2 + 3").unwrap().1;
-        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
-        let l_ref = BinaryOp::new(
-            Box::new(JinkInt::from(1)),
-            Box::new(JinkInt::from(2)),
-            Operator::Mul,
-        );
-        let reference = BinaryOp::new(Box::new(l_ref), Box::new(JinkInt::from(3)), Operator::Add);
-
-        assert_eq!(output.operator(), reference.operator());
-    }
-
-    #[test]
-    fn t_sy_valid_back_priority() {
-        let boxed_output = ShuntingYard::parse("3 + 1 * 2").unwrap().1;
-        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
-        let l_ref = BinaryOp::new(
-            Box::new(JinkInt::from(1)),
-            Box::new(JinkInt::from(2)),
-            Operator::Mul,
-        );
-        let reference = BinaryOp::new(Box::new(l_ref), Box::new(JinkInt::from(3)), Operator::Add);
-
-        assert_eq!(output.operator(), reference.operator());
-    }
-
-    #[test]
-    fn t_sy_valid_parentheses_priority() {
-        let boxed_output = ShuntingYard::parse("(3 + 1) * 2").unwrap().1;
-        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
-        let l_ref = BinaryOp::new(
-            Box::new(JinkInt::from(1)),
-            Box::new(JinkInt::from(3)),
-            Operator::Add,
-        );
-        let reference = BinaryOp::new(Box::new(l_ref), Box::new(JinkInt::from(2)), Operator::Mul);
-
-        assert_eq!(output.operator(), reference.operator());
-    }
-
-    #[test]
-    fn t_sy_valid_parentheses_priority_reverse() {
-        let boxed_output = ShuntingYard::parse("2 * (3 + 1)").unwrap().1;
-        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
-        let l_ref = BinaryOp::new(
-            Box::new(JinkInt::from(1)),
-            Box::new(JinkInt::from(3)),
-            Operator::Add,
-        );
-        let reference = BinaryOp::new(Box::new(l_ref), Box::new(JinkInt::from(2)), Operator::Mul);
-
-        assert_eq!(output.operator(), reference.operator());
-    }
-
     // FIXME: Add more tests with more operators
 
-    fn sy_assert_l(input: &str, result: i64) {
+    fn sy_assert(input: &str, result: i64) {
         use crate::instance::ToInstance;
         use crate::{InstrKind, Interpreter};
 
@@ -302,27 +218,71 @@ mod tests {
         let mut i = Interpreter::new();
 
         assert_eq!(
-            output.lhs().execute(&mut i).unwrap(),
+            output.execute(&mut i).unwrap(),
             InstrKind::Expression(Some(JinkInt::from(result).to_instance()))
         );
     }
 
     #[test]
     fn t_sy_execute_natural_order() {
-        sy_assert_l("4 + 7 + 3", 11);
+        sy_assert("4 + 7 + 3", 14);
     }
 
-    // FIXME: Don't ignore once ShuntingYard is fixed
-
     #[test]
-    #[ignore]
     fn t_sy_execute_mult_priority() {
-        sy_assert_l("4 + 2 * 3", 6);
+        sy_assert("4 + 2 * 3", 10);
     }
 
     #[test]
-    #[ignore]
     fn t_sy_execute_mult_natural_priority() {
-        sy_assert_l("2 * 3 + 4", 6);
+        sy_assert("2 * 3 + 4", 10);
+    }
+
+    #[test]
+    fn t_sy_valid_add() {
+        sy_assert("1 + 2", 3);
+    }
+
+    #[test]
+    fn t_sy_valid_mul() {
+        sy_assert("1 * 2", 2);
+    }
+
+    #[test]
+    fn t_sy_valid_normal_priority() {
+        sy_assert("1 * 2 + 3", 5);
+    }
+
+    #[test]
+    fn t_sy_valid_back_priority() {
+        sy_assert("3 + 1 * 2", 5);
+    }
+
+    #[test]
+    fn t_sy_valid_parentheses_priority() {
+        sy_assert("(3 + 1) * 2", 8);
+    }
+
+    #[test]
+    fn t_sy_valid_parentheses_priority_reverse() {
+        sy_assert("2 * (3 + 1)", 8);
+    }
+
+    #[test]
+    fn t_sy_valid_complex_expr() {
+        sy_assert("1 + 4 * 2 - 1 + 2", 1 + 4 * 2 - 1 + 2);
+    }
+
+    #[test]
+    fn t_sy_valid_multi_expr() {
+        sy_assert("3 + 4 * 2 + 5", 3 + 4 * 2 + 5);
+    }
+
+    #[test]
+    fn t_sy_valid_extremely_complex_expr() {
+        sy_assert(
+            "1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2",
+            1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2,
+        );
     }
 }
