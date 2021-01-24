@@ -99,10 +99,20 @@ impl ShuntingYard {
                     nom::error::ErrorKind::OneOf,
                 )))
             }
-            Some(c) => match Token::is_operator(c) {
-                true => self.operator(input)?,
-                false => self.operand(input)?,
-            },
+            Some(c) => {
+                // Return early if a finishing character is found
+                if c == '}' || c == ';' {
+                    return Err(nom::Err::Error((
+                        "Finished binary expression",
+                        nom::error::ErrorKind::OneOf,
+                    )));
+                }
+
+                match Token::is_operator(c) {
+                    true => self.operator(input)?,
+                    false => self.operand(input)?,
+                }
+            }
         };
 
         let (input, _) = Token::maybe_consume_extra(input)?;

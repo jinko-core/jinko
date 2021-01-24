@@ -80,6 +80,19 @@ impl Interpreter {
         self.scope_map.add_variable(var)
     }
 
+    /// Remove a variable from the interpreter
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JinkoError> {
+        self.scope_map.remove_variable(var)
+    }
+
+    /// Replace a variable or create it if it does not exist
+    pub fn replace_variable(&mut self, var: Var) -> Result<(), JinkoError> {
+        // Remove the variable if it exists
+        let _ = self.remove_variable(&var);
+
+        self.add_variable(var)
+    }
+
     /// Get a mutable reference on an existing function
     pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         self.scope_map.get_function(name)
@@ -112,6 +125,7 @@ impl Interpreter {
 
     /// Pretty-prints valid jinko code from a given interpreter
     pub fn print(&self) -> String {
+        self.scope_map.print();
         self.entry_point.print()
     }
 

@@ -3,7 +3,7 @@
 use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
 
-use super::{InstrKind, Instruction};
+use super::{InstrKind, Instruction, Var};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -31,7 +31,6 @@ impl VarAssign {
     }
 
     /// Is a variable is declared as mutable or not
-    #[cfg(test)]
     pub fn mutable(&self) -> bool {
         self.mutable
     }
@@ -54,27 +53,73 @@ impl Instruction for VarAssign {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug("ASSIGN VAR", self.symbol());
 
-        match interpreter.get_variable(&self.symbol) {
-            Some(v) => match self.mutable {
-                // FIXME: Add logic once constant type is cleaned up
-                true => unreachable!("Mutating mutable variable {}", v.print()),
-                false => Err(JinkoError::new(
-                    ErrKind::Interpreter,
-                    format!("Trying to mutate immutable variable {}", self.symbol),
-                    None,
-                    self.print(),
-                )),
+        // Are we creating the variable or not
+        let mut var_creation = false;
+
+        let mut var = match interpreter.get_variable(&self.symbol) {
+            Some(v) => {
+                // If `self` is mutable, then it means that we are creating the variable
+                // for the first time. However, we entered the match arm because the variable
+                // is already present in the interpreter. Error out appropriately.
+                if self.mutable() {
+                    return Err(JinkoError::new(
+                        ErrKind::Interpreter,
+                        format!("Trying to redefine already defined variable: {}", v.name()),
+                        None,
+                        self.print(),
+                    ));
+                }
+
+                v.clone()
+            }
+            None => {
+                let mut new_v = Var::new(self.symbol().to_string());
+                new_v.set_mutable(self.mutable());
+
+                var_creation = true;
+
+                new_v
+            }
+        };
+
+        match var_creation {
+            true => var.set_instance(self.value.execute_expression(interpreter)?),
+            false => match var.mutable() {
+                false => {
+                    // The variable already exists. So we need to error out if it isn't
+                    // mutable
+                    if !var_creation {
+                        return Err(JinkoError::new(
+                            ErrKind::Interpreter,
+                            format!(
+                                "Trying to assign value to non mutable variable `{}`: `{}`",
+                                var.name(),
+                                self.value.print()
+                            ),
+                            None,
+                            self.print(),
+                        ));
+                    }
+                }
+                true => var.set_instance(self.value.execute_expression(interpreter)?),
             },
-            // FIXME: Add logic once constant type is cleaned up
-            None => unreachable!("First assignment for variable {}", self.symbol),
-        }
+        };
+
+        // We can unwrap safely since we checked that the variable does not
+        // exist
+        interpreter.replace_variable(var).unwrap();
+
+        // A variable assignment is always a statement
+        Ok(InstrKind::Statement)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::Construct;
     use crate::value::{JinkInt, JinkString};
+    use crate::ToInstance;
 
     #[test]
     fn non_mutable() {
@@ -92,5 +137,47 @@ mod tests {
         );
 
         assert_eq!(var_assignment.print(), "mut some_id_99 = \"Hey there\"");
+    }
+
+    #[test]
+    fn assign_mutable() {
+        let mut i = Interpreter::new();
+        let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
+        let va_0 = Construct::var_assignment("a = 15").unwrap().1;
+
+        va_init.execute(&mut i).unwrap();
+        va_0.execute(&mut i).unwrap();
+
+        let va_get = Construct::variable("a").unwrap().1;
+        assert_eq!(
+            va_get.execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JinkInt::from(15).to_instance()))
+        );
+    }
+
+    #[test]
+    fn assign_immutable() {
+        let mut i = Interpreter::new();
+        let va_init = Construct::var_assignment("a = 13").unwrap().1;
+        let va_0 = Construct::var_assignment("a = 15").unwrap().1;
+
+        va_init.execute(&mut i).unwrap();
+        match va_0.execute(&mut i) {
+            Ok(_) => assert!(false, "Can't assign twice to immutable variables"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn create_mutable_twice() {
+        let mut i = Interpreter::new();
+        let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
+        let va_0 = Construct::var_assignment("mut a = 15").unwrap().1;
+
+        va_init.execute(&mut i).unwrap();
+        match va_0.execute(&mut i) {
+            Ok(_) => assert!(false, "Can't create variables twice"),
+            Err(_) => assert!(true),
+        }
     }
 }

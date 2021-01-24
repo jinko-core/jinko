@@ -8,6 +8,7 @@ use crate::{ErrKind, Instance, InstrKind, Instruction, Interpreter, JinkoError};
 #[derive(Clone)]
 pub struct Var {
     name: String,
+    mutable: bool,
     instance: Instance,
 }
 
@@ -16,6 +17,7 @@ impl Var {
     pub fn new(name: String) -> Var {
         Var {
             name,
+            mutable: false,
             instance: Instance::empty(),
         }
     }
@@ -30,10 +32,19 @@ impl Var {
         self.instance.clone()
     }
 
+    /// Is a variable mutable or not
+    pub fn mutable(&self) -> bool {
+        self.mutable
+    }
+
     /// Set the instance contained in a variable
-    #[cfg(test)]
     pub fn set_instance(&mut self, instance: Instance) {
         self.instance = instance
+    }
+
+    /// Change the mutability of a variable
+    pub fn set_mutable(&mut self, mutable: bool) {
+        self.mutable = mutable
     }
 }
 
@@ -43,12 +54,15 @@ impl Instruction for Var {
     }
 
     fn print(&self) -> String {
-        self.name.clone()
+        format!(
+            "{} // : {} = {}",
+            self.name.clone(),
+            self.instance.ty().unwrap_or(&"".to_owned()),
+            self.instance
+        )
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
-        interpreter.debug("VAR", self.name());
-
         let var = match interpreter.get_variable(self.name()) {
             Some(v) => v,
             None => {
@@ -60,6 +74,8 @@ impl Instruction for Var {
                 ))
             }
         };
+
+        interpreter.debug("VAR", var.print().as_ref());
 
         Ok(InstrKind::Expression(Some(var.instance())))
     }

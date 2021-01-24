@@ -156,7 +156,6 @@ impl Construct {
         let (input, _) = Token::equal(input)?;
         let (input, _) = opt(Token::consume_whitespaces)(input)?;
         let (input, value) = Construct::expression(input)?;
-        let (input, _) = Token::semicolon(input)?;
 
         match mut_opt {
             Some(_) => Ok((input, VarAssign::new(true, id.to_owned(), value))),
@@ -716,14 +715,6 @@ mod tests {
             Ok(_) => assert!(false, "Mutable isn't mut"),
             Err(_) => assert!(true),
         }
-        match Construct::var_assignment("mut x = 12") {
-            Ok(_) => assert!(false, "No semicolon"),
-            Err(_) => assert!(true),
-        }
-        match Construct::var_assignment("mut_x = 12") {
-            Ok(_) => assert!(false, "No semicolon"),
-            Err(_) => assert!(true),
-        }
     }
 
     #[test]
@@ -1212,6 +1203,50 @@ mod tests {
         match Construct::custom_type("type ExtraComma(a: int, b: int,);") {
             Ok(_) => assert!(false, "Extra comma in type definition"),
             Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_binop() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { a + b }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to directly return a binop"),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_return_arg() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { a }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to directly return an argument"),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_return_arg_plus_stmt() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { something(); a }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(
+                false,
+                "Valid to directly return an argument after a statement"
+            ),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_return_binop_plus_stmt() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { something(); a + b }")
+        {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to directly return a binop after a statement"),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_return_binop_as_var() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { res = a + b; res }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to directly return a binop as a variable"),
         }
     }
 }
