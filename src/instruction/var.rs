@@ -8,6 +8,7 @@ use crate::{ErrKind, Instance, InstrKind, Instruction, Interpreter, JinkoError};
 #[derive(Clone)]
 pub struct Var {
     name: String,
+    mutable: bool,
     instance: Instance,
 }
 
@@ -16,6 +17,7 @@ impl Var {
     pub fn new(name: String) -> Var {
         Var {
             name,
+            mutable: false,
             instance: Instance::empty(),
         }
     }
@@ -31,9 +33,18 @@ impl Var {
     }
 
     /// Set the instance contained in a variable
-    #[cfg(test)]
     pub fn set_instance(&mut self, instance: Instance) {
         self.instance = instance
+    }
+
+    /// Is a variable mutable or not
+    pub fn mutable(&self) -> bool {
+        self.mutable
+    }
+
+    /// Change the mutability of a variable
+    pub fn set_mutable(&mut self, mutable: bool) {
+        self.mutable = mutable
     }
 }
 
