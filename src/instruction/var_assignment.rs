@@ -56,8 +56,6 @@ impl Instruction for VarAssign {
         // Are we creating the variable or not
         let mut var_creation = false;
 
-        // FIXME:
-        // - Cleanup
         let mut var = match interpreter.get_variable(&self.symbol) {
             Some(v) => {
                 // If `self` is mutable, then it means that we are creating the variable
@@ -85,25 +83,7 @@ impl Instruction for VarAssign {
         };
 
         match var_creation {
-            true => {
-                let v_value = self.value.execute(interpreter)?;
-
-                match v_value {
-                    InstrKind::Expression(Some(instance)) => var.set_instance(instance),
-                    InstrKind::Expression(None) | InstrKind::Statement => {
-                        return Err(JinkoError::new(
-                            ErrKind::Interpreter,
-                            format!(
-                                "Trying to assign statement `{}` to variable `{}`",
-                                self.value.print(),
-                                self.symbol()
-                            ),
-                            None,
-                            self.print(),
-                        ))
-                    }
-                };
-            }
+            true => var.set_instance(self.value.execute_expression(interpreter)?),
             false => match var.mutable() {
                 false => {
                     // The variable already exists. So we need to error out if it isn't
@@ -121,25 +101,7 @@ impl Instruction for VarAssign {
                         ));
                     }
                 }
-                true => {
-                    let v_value = self.value.execute(interpreter)?;
-
-                    match v_value {
-                        InstrKind::Expression(Some(instance)) => var.set_instance(instance),
-                        InstrKind::Expression(None) | InstrKind::Statement => {
-                            return Err(JinkoError::new(
-                                ErrKind::Interpreter,
-                                format!(
-                                    "Trying to assign statement `{}` to variable `{}`",
-                                    self.value.print(),
-                                    self.symbol()
-                                ),
-                                None,
-                                self.print(),
-                            ))
-                        }
-                    };
-                }
+                true => var.set_instance(self.value.execute_expression(interpreter)?),
             },
         };
 
@@ -155,7 +117,9 @@ impl Instruction for VarAssign {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::Construct;
     use crate::value::{JinkInt, JinkString};
+    use crate::ToInstance;
 
     #[test]
     fn non_mutable() {
@@ -173,5 +137,47 @@ mod tests {
         );
 
         assert_eq!(var_assignment.print(), "mut some_id_99 = \"Hey there\"");
+    }
+
+    #[test]
+    fn assign_mutable() {
+        let mut i = Interpreter::new();
+        let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
+        let va_0 = Construct::var_assignment("a = 15").unwrap().1;
+
+        va_init.execute(&mut i).unwrap();
+        va_0.execute(&mut i).unwrap();
+
+        let va_get = Construct::variable("a").unwrap().1;
+        assert_eq!(
+            va_get.execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JinkInt::from(15).to_instance()))
+        );
+    }
+
+    #[test]
+    fn assign_immutable() {
+        let mut i = Interpreter::new();
+        let va_init = Construct::var_assignment("a = 13").unwrap().1;
+        let va_0 = Construct::var_assignment("a = 15").unwrap().1;
+
+        va_init.execute(&mut i).unwrap();
+        match va_0.execute(&mut i) {
+            Ok(_) => assert!(false, "Can't assign twice to immutable variables"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn create_mutable_twice() {
+        let mut i = Interpreter::new();
+        let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
+        let va_0 = Construct::var_assignment("mut a = 15").unwrap().1;
+
+        va_init.execute(&mut i).unwrap();
+        match va_0.execute(&mut i) {
+            Ok(_) => assert!(false, "Can't create variables twice"),
+            Err(_) => assert!(true),
+        }
     }
 }

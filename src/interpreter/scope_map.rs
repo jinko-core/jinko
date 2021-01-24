@@ -56,7 +56,9 @@ impl Scope {
     /// Remove a variable from the most recently created scope, if it exists
     pub fn remove_variable(&mut self, var: &Var) -> Result<(), JinkoError> {
         match self.get_variable(var.name()) {
-            Some(_) => Ok({ self.variables.remove(var.name()).unwrap(); }),
+            Some(_) => Ok({
+                self.variables.remove(var.name()).unwrap();
+            }),
             None => Err(JinkoError::new(
                 ErrKind::Interpreter,
                 format!("variable does not exist: {}", var.name()),
