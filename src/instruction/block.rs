@@ -166,4 +166,42 @@ mod tests {
     }
 
 // FIXME: Add execution unit tests
+
+    #[test]
+    fn block_execute_empty() {
+        let b = Block::new();
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(b.execute(&mut i).unwrap(), InstrKind::Statement);
+    }
+
+    #[test]
+    fn block_execute_no_last() {
+        let mut b = Block::new();
+
+        let instr: Vec<Box<dyn Instruction>> = vec![Box::new(JinkInt::from(12)), Box::new(JinkInt::from(15))];
+        b.set_instructions(instr);
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(b.execute(&mut i).unwrap(), InstrKind::Statement);
+    }
+
+    #[test]
+    fn block_execute_with_last() {
+        use crate::instance::ToInstance;
+
+        let mut b = Block::new();
+
+        let instr: Vec<Box<dyn Instruction>> = vec![Box::new(JinkInt::from(12)), Box::new(JinkInt::from(15))];
+        b.set_instructions(instr);
+
+        let last = Box::new(JinkInt::from(18));
+        b.set_last(Some(last));
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(b.execute(&mut i).unwrap(), InstrKind::Expression(Some(JinkInt::from(18).to_instance())));
+    }
 }
