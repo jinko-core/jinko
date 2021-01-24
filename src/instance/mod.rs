@@ -24,6 +24,11 @@ pub struct Instance {
 }
 
 impl Instance {
+    /// Create a new, empty instance without a type or a size
+    pub fn empty() -> Instance {
+        Instance::new(None, 0, vec![])
+    }
+
     /// Create a new instance
     pub fn new(ty: Option<Ty>, size: usize, data: Vec<u8>) -> Instance {
         Instance { ty, size, data }

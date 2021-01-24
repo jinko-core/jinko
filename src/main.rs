@@ -14,7 +14,7 @@ use parser::Parser;
 use repl::Repl;
 use std::fs;
 
-pub use error::JinkoError;
+pub use error::{ErrKind, JinkoError};
 pub use instance::{FromInstance, Instance, ToInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
