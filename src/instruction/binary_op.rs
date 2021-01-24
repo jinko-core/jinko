@@ -52,19 +52,22 @@ impl Operator {
     /// Return the operator's precedence according to the Shunting Yard algorithm
     pub fn precedence(&self) -> u8 {
         match self {
-            // Special operators. They don't really have a precendence value
-            Operator::LeftParenthesis => 0,
-            Operator::RightParenthesis => 255,
-
             // Classic SY operator precedence
             Operator::Mul | Operator::Div => 3,
             Operator::Add | Operator::Sub => 2,
+
+            // Special operators. They don't really have a precedence value, and it's
+            // never used
+            Operator::LeftParenthesis | Operator::RightParenthesis => 0,
         }
     }
 
     /// Is the operator a left associative one
     pub fn is_left_associative(&self) -> bool {
-        self.precedence() == 0
+        // FIXME: Not entirely true
+        match self {
+            _ => true,
+        }
     }
 }
 
