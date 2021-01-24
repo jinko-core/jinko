@@ -53,6 +53,19 @@ impl Scope {
         }
     }
 
+    /// Remove a variable from the most recently created scope, if it exists
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JinkoError> {
+        match self.get_variable(var.name()) {
+            Some(_) => Ok({ self.variables.remove(var.name()).unwrap(); }),
+            None => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!("variable does not exist: {}", var.name()),
+                None,
+                var.name().to_owned(),
+            )),
+        }
+    }
+
     /// Add a variable to the most recently created scope, if it doesn't already exist
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JinkoError> {
         match self.get_function(func.name()) {
@@ -142,6 +155,19 @@ impl ScopeMap {
             None => Err(JinkoError::new(
                 ErrKind::Interpreter,
                 String::from("Adding variable to empty scopemap"),
+                None,
+                var.name().to_owned(),
+            )),
+        }
+    }
+
+    /// Remove a variable from the current scope if it hasn't been added before
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JinkoError> {
+        match self.scopes.front_mut() {
+            Some(head) => head.remove_variable(var),
+            None => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                String::from("Removing variable from empty scopemap"),
                 None,
                 var.name().to_owned(),
             )),
