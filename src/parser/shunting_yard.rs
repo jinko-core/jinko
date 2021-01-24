@@ -151,9 +151,9 @@ impl ShuntingYard {
         match stack.pop() {
             Some(value) => Ok((input, value)),
             None => Err(nom::Err::Error((
-                            "Unclosed right parenthesis",
-                            nom::error::ErrorKind::OneOf,
-                        )))
+                "Unclosed right parenthesis",
+                nom::error::ErrorKind::OneOf,
+            ))),
         }
     }
 
@@ -276,5 +276,13 @@ mod tests {
     #[test]
     fn t_sy_valid_multi_expr() {
         sy_assert("3 + 4 * 2 + 5", 3 + 4 * 2 + 5);
+    }
+
+    #[test]
+    fn t_sy_valid_extremely_complex_expr() {
+        sy_assert(
+            "1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2",
+            1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2,
+        );
     }
 }
