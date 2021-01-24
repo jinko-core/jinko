@@ -69,7 +69,7 @@ impl Block {
 
 impl Instruction for Block {
     fn kind(&self) -> InstrKind {
-        match self.instructions.last() {
+        match self.last() {
             Some(last) => last.as_ref().kind(),
             None => InstrKind::Statement,
         }
@@ -151,8 +151,10 @@ mod tests {
             Box::new(Var::new("n".to_owned())),
             Box::new(JinkInt::from(14)),
         ];
+        let last = Box::new(JinkInt::from(12));
 
         b.set_instructions(instrs);
+        b.set_last(Some(last));
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
         assert_eq!(
