@@ -16,7 +16,7 @@ type Ty = String;
 /// The type is optional. At first, the type might not be known, and will only be
 /// revealed during the typechecking phase. `size` is the size of the instance in bytes.
 /// It's the same as `data.len()`. `data` is the raw byte value of the instance.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Instance {
     ty: Option<Ty>,
     size: usize,
@@ -24,6 +24,11 @@ pub struct Instance {
 }
 
 impl Instance {
+    /// Create a new, empty instance without a type or a size
+    pub fn empty() -> Instance {
+        Instance::new(None, 0, vec![])
+    }
+
     /// Create a new instance
     pub fn new(ty: Option<Ty>, size: usize, data: Vec<u8>) -> Instance {
         Instance { ty, size, data }
