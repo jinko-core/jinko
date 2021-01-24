@@ -209,22 +209,19 @@ impl Construct {
     }
 
     /// Parses the statements in a block as well as a possible last expression
-    fn instructions(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
+    fn instructions(
+        input: &str,
+    ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, _) = Token::left_curly_bracket(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, mut instructions) = many0(Construct::stmt_semicolon)(input)?;
+        let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
         let (input, last_expr) = opt(Construct::expression)(input)?;
-
-        match last_expr {
-            Some(expr) => instructions.push(expr),
-            None => {}
-        }
 
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
 
-        Ok((input, instructions))
+        Ok((input, (instructions, last_expr)))
     }
 
     /// A block of code is a new inner scope that contains instructions. You can use
@@ -251,10 +248,11 @@ impl Construct {
     ///
     /// `{ [ <expression> ; ]* [ <expression> ] }`
     pub fn block(input: &str) -> IResult<&str, Block> {
-        let (input, instructions) = Construct::instructions(input)?;
+        let (input, (instructions, last)) = Construct::instructions(input)?;
 
         let mut block = Block::new();
         block.set_instructions(instructions);
+        block.set_last(last);
 
         Ok((input, block))
     }
@@ -837,8 +835,13 @@ mod tests {
                 .1
                 .instructions()
                 .len(),
-            2
+            1
         );
+
+        match Construct::block("{ 12a; 14a }").unwrap().1.last() {
+            Some(_) => assert!(true),
+            None => assert!(false, "Last expression here is valid")
+        }
     }
 
     #[test]
@@ -945,14 +948,14 @@ mod tests {
                 14a
             }"#;
 
-        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 4);
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 3);
 
         let input = r#"{
                 true;
                 false
             }"#;
 
-        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 2);
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 1);
     }
 
     #[test]

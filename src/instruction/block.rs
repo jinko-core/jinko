@@ -24,6 +24,7 @@ use crate::{error::JinkoError, interpreter::Interpreter};
 #[derive(Clone)]
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
+    last: Option<Box<dyn Instruction>>,
 }
 
 impl Block {
@@ -31,6 +32,7 @@ impl Block {
     pub fn new() -> Block {
         Block {
             instructions: Vec::new(),
+            last: None,
         }
     }
 
@@ -47,6 +49,16 @@ impl Block {
     /// Gives a set of instructions to the block
     pub fn set_instructions(&mut self, instructions: Vec<Box<dyn Instruction>>) {
         self.instructions = instructions;
+    }
+
+    /// Returns a reference to the last expression of the block, if it exists
+    pub fn last(&self) -> Option<&Box<dyn Instruction>> {
+        self.last.as_ref()
+    }
+
+    /// Gives a last expression to the block
+    pub fn set_last(&mut self, last: Option<Box<dyn Instruction>>) {
+        self.last = last;
     }
 
     /// Add an instruction for the block to execute
@@ -90,8 +102,10 @@ impl Instruction for Block {
         interpreter.scope_exit();
         interpreter.debug_step("BLOCK EXIT");
 
-        // FIXME: Add logic
-        Ok(InstrKind::Expression(None))
+        match &self.last {
+            Some(e) => e.execute(interpreter),
+            None => Ok(InstrKind::Statement),
+        }
     }
 }
 
@@ -150,4 +164,6 @@ mod tests {
 }"#
         );
     }
+
+// FIXME: Add execution unit tests
 }
