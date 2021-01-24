@@ -24,6 +24,7 @@ use crate::{error::JinkoError, interpreter::Interpreter};
 #[derive(Clone)]
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
+    last: Option<Box<dyn Instruction>>,
 }
 
 impl Block {
@@ -31,6 +32,7 @@ impl Block {
     pub fn new() -> Block {
         Block {
             instructions: Vec::new(),
+            last: None,
         }
     }
 
@@ -49,6 +51,16 @@ impl Block {
         self.instructions = instructions;
     }
 
+    /// Returns a reference to the last expression of the block, if it exists
+    pub fn last(&self) -> Option<&Box<dyn Instruction>> {
+        self.last.as_ref()
+    }
+
+    /// Gives a last expression to the block
+    pub fn set_last(&mut self, last: Option<Box<dyn Instruction>>) {
+        self.last = last;
+    }
+
     /// Add an instruction for the block to execute
     pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) {
         self.instructions.push(instruction)
@@ -57,7 +69,7 @@ impl Block {
 
 impl Instruction for Block {
     fn kind(&self) -> InstrKind {
-        match self.instructions.last() {
+        match self.last() {
             Some(last) => last.as_ref().kind(),
             None => InstrKind::Statement,
         }
@@ -90,8 +102,10 @@ impl Instruction for Block {
         interpreter.scope_exit();
         interpreter.debug_step("BLOCK EXIT");
 
-        // FIXME: Add logic
-        Ok(InstrKind::Expression(None))
+        match &self.last {
+            Some(e) => e.execute(interpreter),
+            None => Ok(InstrKind::Statement),
+        }
     }
 }
 
@@ -137,8 +151,10 @@ mod tests {
             Box::new(Var::new("n".to_owned())),
             Box::new(JinkInt::from(14)),
         ];
+        let last = Box::new(JinkInt::from(12));
 
         b.set_instructions(instrs);
+        b.set_last(Some(last));
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
         assert_eq!(
@@ -148,6 +164,51 @@ mod tests {
     n;
     14
 }"#
+        );
+    }
+
+    // FIXME: Add execution unit tests
+
+    #[test]
+    fn block_execute_empty() {
+        let b = Block::new();
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(b.execute(&mut i).unwrap(), InstrKind::Statement);
+    }
+
+    #[test]
+    fn block_execute_no_last() {
+        let mut b = Block::new();
+
+        let instr: Vec<Box<dyn Instruction>> =
+            vec![Box::new(JinkInt::from(12)), Box::new(JinkInt::from(15))];
+        b.set_instructions(instr);
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(b.execute(&mut i).unwrap(), InstrKind::Statement);
+    }
+
+    #[test]
+    fn block_execute_with_last() {
+        use crate::instance::ToInstance;
+
+        let mut b = Block::new();
+
+        let instr: Vec<Box<dyn Instruction>> =
+            vec![Box::new(JinkInt::from(12)), Box::new(JinkInt::from(15))];
+        b.set_instructions(instr);
+
+        let last = Box::new(JinkInt::from(18));
+        b.set_last(Some(last));
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(
+            b.execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JinkInt::from(18).to_instance()))
         );
     }
 }

@@ -32,7 +32,7 @@ use crate::{error::JinkoError, interpreter::Interpreter};
 /// expression. An expression contains an instance of a result. For example,
 /// `1 + 1` is an expression: It will contain the result of the addition of one and one.
 /// `print("jinko")` is a statement: There is no "return value"
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum InstrKind {
     Statement,
     Expression(Option<Instance>),
