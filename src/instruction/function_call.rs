@@ -133,11 +133,15 @@ impl Instruction for FunctionCall {
 
         self.check_args_count(&function)?;
 
+        interpreter.scope_enter();
+
         interpreter.debug("CALL", self.name());
 
         self.map_args(&function, interpreter)?;
 
         let ret_val = function.run(interpreter);
+
+        interpreter.scope_exit();
 
         ret_val
     }
