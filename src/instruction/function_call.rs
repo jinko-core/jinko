@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use super::{FunctionDec, InstrKind, Instruction, Var, VarAssign};
+use super::{FunctionDec, InstrKind, Instruction, Var};
 use crate::error::{ErrKind, JinkoError};
 use crate::interpreter::Interpreter;
 use std::rc::Rc;
@@ -89,15 +89,16 @@ impl FunctionCall {
                 format!("Mapping `{}` to `{}`", func_arg.name(), call_arg.print()).as_ref(),
             );
 
-            interpreter.add_variable(Var::new(func_arg.name().to_owned()))?;
+            // FIXME: Cleanup
+            // Create a new variable, and execute the content of the function argument
+            // passed to the call
+            let mut new_var = Var::new(func_arg.name().to_owned());
+            let mut instance = call_arg.execute_expression(interpreter)?;
+            instance.set_ty(Some(func_arg.ty().to_owned()));
 
-            let var = VarAssign::new(
-                false, // FIXME: Do not always mark the variable as immutable
-                func_arg.name().to_owned(),
-                call_arg.clone(), // TODO: Remove clone?
-            );
+            new_var.set_instance(instance);
 
-            var.execute(interpreter)?;
+            interpreter.add_variable(new_var)?;
         }
 
         Ok(())
@@ -133,13 +134,12 @@ impl Instruction for FunctionCall {
         self.check_args_count(&function)?;
 
         interpreter.debug("CALL", self.name());
-        interpreter.scope_enter();
 
         self.map_args(&function, interpreter)?;
 
-        interpreter.scope_exit();
+        let ret_val = function.run(interpreter);
 
-        function.run(interpreter)
+        ret_val
     }
 }
 
@@ -211,5 +211,65 @@ mod tests {
             Ok(_) => assert!(true),
             Err(e) => assert!(false, "{}: Given 2 arguments to 2 arguments function", e),
         }
+    }
+
+    #[test]
+    fn t_func_call_arg_return() {
+        use crate::parser::Construct;
+        use crate::value::JinkInt;
+        use crate::ToInstance;
+
+        let mut i = Interpreter::new();
+        let func_dec = Construct::expression("func second(f: int, s: int) -> int { s }")
+            .unwrap()
+            .1;
+        let func_call = Construct::expression("second(1, 2)").unwrap().1;
+
+        func_dec.execute(&mut i).unwrap();
+
+        assert_eq!(
+            func_call.execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JinkInt::from(2).to_instance()))
+        );
+    }
+
+    #[test]
+    fn t_func_call_arg_return_binop() {
+        use crate::parser::Construct;
+        use crate::value::JinkInt;
+        use crate::ToInstance;
+
+        let mut i = Interpreter::new();
+        let func_dec = Construct::expression("func add(a: int, b: int) -> int { a + b }")
+            .unwrap()
+            .1;
+        let func_call = Construct::expression("add(1, 2)").unwrap().1;
+
+        func_dec.execute(&mut i).unwrap();
+
+        assert_eq!(
+            func_call.execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JinkInt::from(3).to_instance()))
+        );
+    }
+
+    #[test]
+    fn t_func_call_variable_return() {
+        use crate::parser::Construct;
+        use crate::value::JinkInt;
+        use crate::ToInstance;
+
+        let mut i = Interpreter::new();
+        let func_dec = Construct::expression("func one() -> int { one = 1; one }")
+            .unwrap()
+            .1;
+        let func_call = Construct::expression("one()").unwrap().1;
+
+        func_dec.execute(&mut i).unwrap();
+
+        assert_eq!(
+            func_call.execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JinkInt::from(1).to_instance()))
+        );
     }
 }

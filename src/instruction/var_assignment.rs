@@ -68,22 +68,19 @@ impl Instruction for VarAssign {
         match interpreter.get_variable(&self.symbol) {
             Some(v) => {
                 // If `self` is mutable, then it means that we are creating the variable
-                // for the first time. However, we entered that arm because the variable
+                // for the first time. However, we entered the match arm because the variable
                 // is already present in the interpreter. Error out appropriately.
                 if self.mutable() {
-                        return Err(JinkoError::new(
-                            ErrKind::Interpreter,
-                            format!(
-                                "Trying to redefine already defined variable: {}",
-                                v.name()
-                            ),
-                            None,
-                            self.print(),
-                        ))
+                    return Err(JinkoError::new(
+                        ErrKind::Interpreter,
+                        format!("Trying to redefine already defined variable: {}", v.name()),
+                        None,
+                        self.print(),
+                    ));
                 }
 
                 match v.mutable() {
-                    false =>
+                    false => {
                         return Err(JinkoError::new(
                             ErrKind::Interpreter,
                             format!(
@@ -93,7 +90,8 @@ impl Instruction for VarAssign {
                             ),
                             None,
                             self.print(),
-                        )),
+                        ))
+                    }
                     true => {
                         todo!()
                         // let v_value = self.value.execute(interpreter)?;

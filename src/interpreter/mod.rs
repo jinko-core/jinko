@@ -112,6 +112,7 @@ impl Interpreter {
 
     /// Pretty-prints valid jinko code from a given interpreter
     pub fn print(&self) -> String {
+        self.scope_map.print();
         self.entry_point.print()
     }
 

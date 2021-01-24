@@ -10,6 +10,7 @@ use std::rc::Rc;
 use crate::{
     error::{ErrKind, JinkoError},
     instruction::{FunctionDec, Var},
+    Instruction,
 };
 
 /// A scope contains a set of available variables and functions
@@ -64,6 +65,17 @@ impl Scope {
             None => Ok({
                 self.functions.insert(func.name().to_owned(), Rc::new(func));
             }),
+        }
+    }
+
+    /// Display all contained information on stdout
+    pub fn print(&self) {
+        for (_, var) in &self.variables {
+            println!("{}", var.print());
+        }
+
+        for (_, f) in &self.functions {
+            println!("{}", f.print());
         }
     }
 }
@@ -146,6 +158,13 @@ impl ScopeMap {
                 None,
                 func.name().to_owned(),
             )),
+        }
+    }
+
+    /// Display all contained information on stdout
+    pub fn print(&self) {
+        for stack in &self.scopes {
+            stack.print()
         }
     }
 }

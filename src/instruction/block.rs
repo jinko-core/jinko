@@ -110,13 +110,15 @@ impl Instruction for Block {
             .map(|inst| inst.execute(interpreter))
             .collect::<Result<Vec<InstrKind>, JinkoError>>()?;
 
+        let ret_val = match &self.last {
+            Some(e) => e.execute(interpreter),
+            None => Ok(InstrKind::Statement),
+        };
+
         interpreter.scope_exit();
         interpreter.debug_step("BLOCK EXIT");
 
-        match &self.last {
-            Some(e) => e.execute(interpreter),
-            None => Ok(InstrKind::Statement),
-        }
+        ret_val
     }
 }
 
@@ -170,14 +172,6 @@ mod tests {
         b.set_last(Some(last));
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
-        assert_eq!(
-            b.print(),
-            r#"{
-    x;
-    n;
-    14
-}"#
-        );
     }
 
     // FIXME: Add execution unit tests
