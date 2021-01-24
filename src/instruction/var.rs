@@ -29,6 +29,12 @@ impl Var {
     pub fn instance(&self) -> Instance {
         self.instance.clone()
     }
+
+    /// Set the instance contained in a variable
+    #[cfg(test)]
+    pub fn set_instance(&mut self, instance: Instance) {
+        self.instance = instance
+    }
 }
 
 impl Instruction for Var {
@@ -62,5 +68,28 @@ impl Instruction for Var {
 impl Default for Var {
     fn default() -> Self {
         Var::new(String::new())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::value::JinkInt;
+    use crate::ToInstance;
+
+    #[test]
+    fn keep_instance() {
+        let mut i = Interpreter::new();
+        let mut v = Var::new("a".to_string());
+
+        let instance = JinkInt::from(15).to_instance();
+        v.set_instance(instance.clone());
+
+        i.add_variable(v.clone()).unwrap();
+
+        assert_eq!(
+            v.execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(instance))
+        );
     }
 }
