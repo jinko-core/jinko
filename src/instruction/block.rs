@@ -78,21 +78,16 @@ impl Instruction for Block {
     fn print(&self) -> String {
         let mut base = String::from("{\n");
 
-        // FIXME: Fix once #110 is merged
         for instr in &self
             .instructions
             .iter()
-            .rev()
-            .skip(1)
-            .rev()
             .collect::<Vec<&Box<dyn Instruction>>>()
         {
             base = format!("{}    {}", base, &instr.print());
             base.push_str(";\n");
         }
 
-        match self.instructions().last() {
-            // FIXME: Use self.last() once #110 is merged
+        match self.last() {
             Some(l) => base = format!("{}    {}\n", base, l.print()),
             None => {}
         }
@@ -110,13 +105,15 @@ impl Instruction for Block {
             .map(|inst| inst.execute(interpreter))
             .collect::<Result<Vec<InstrKind>, JinkoError>>()?;
 
+        let ret_val = match &self.last {
+            Some(e) => e.execute(interpreter),
+            None => Ok(InstrKind::Statement),
+        };
+
         interpreter.scope_exit();
         interpreter.debug_step("BLOCK EXIT");
 
-        match &self.last {
-            Some(e) => e.execute(interpreter),
-            None => Ok(InstrKind::Statement),
-        }
+        ret_val
     }
 }
 
@@ -134,9 +131,7 @@ mod tests {
         assert_eq!(b.print(), "{\n}");
     }
 
-    // FIXME: Don't ignore once #110 is merged
     #[test]
-    #[ignore]
     fn all_stmts() {
         let mut b = Block::new();
         let instrs: Vec<Box<dyn Instruction>> = vec![
@@ -147,13 +142,6 @@ mod tests {
         b.set_instructions(instrs);
 
         assert_eq!(b.kind(), InstrKind::Statement);
-        assert_eq!(
-            b.print(),
-            r#"{
-    x;
-    n;
-}"#
-        );
     }
 
     #[test]
@@ -170,17 +158,7 @@ mod tests {
         b.set_last(Some(last));
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
-        assert_eq!(
-            b.print(),
-            r#"{
-    x;
-    n;
-    14
-}"#
-        );
     }
-
-    // FIXME: Add execution unit tests
 
     #[test]
     fn block_execute_empty() {

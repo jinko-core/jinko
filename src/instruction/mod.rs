@@ -2,7 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use crate::instance::Instance;
+use crate::{ErrKind, Instance};
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
 
@@ -50,6 +50,40 @@ pub trait Instruction: InstructionClone + Downcast {
             self.print(),
             "The execution of this instruction is not implemented yet. This is a bug".red(),
         )
+    }
+
+    /// Execute the instruction, hoping for an InstrKind::Expression(Some(...)) to be
+    /// returned. If an invalid value is returned, error out.
+    fn execute_expression(&self, i: &mut Interpreter) -> Result<Instance, JinkoError> {
+        match self.execute(i)? {
+            InstrKind::Expression(Some(result)) => Ok(result),
+            _ => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!(
+                    "statement found when expression was expected: {}",
+                    self.print()
+                ),
+                None,
+                self.print(),
+            )),
+        }
+    }
+
+    /// Execute the instruction, hoping for an InstrKind::Statement to be
+    /// returned. If an invalid value is returned, error out.
+    fn execute_statement(&self, i: &mut Interpreter) -> Result<(), JinkoError> {
+        match self.execute(i)? {
+            InstrKind::Statement => Ok(()),
+            _ => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!(
+                    "expression found when statement was expected: {}",
+                    self.print()
+                ),
+                None,
+                self.print(),
+            )),
+        }
     }
 
     /// Maybe execute the instruction, transforming it in a Rust bool if possible. It's
