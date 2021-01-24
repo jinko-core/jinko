@@ -90,48 +90,22 @@ impl BinaryOp {
         }
     }
 
-    /// Compute the result of the binary operation
-    pub fn compute(&self) -> Result<Box<dyn Instruction>, JinkoError> {
-        // FIXME: Typecheck self before computing
-
-        match &self.op {
-            _ => Err(JinkoError::new(
-                ErrKind::Interpreter,
-                format!("Unknown operator: {:?}", self.op),
-                None,
-                self.print(),
-            )),
-        }
-    }
-
     /// Return the operator used by the BinaryOp
+    #[cfg(test)]
     pub fn operator(&self) -> Operator {
         self.op
     }
 
     /// Get a reference on the left side member of a BinaryOp
+    #[cfg(test)]
     pub fn lhs(&self) -> &Box<dyn Instruction> {
         &self.lhs
     }
 
     /// Get a reference on the right side member of a BinaryOp
+    #[cfg(test)]
     pub fn rhs(&self) -> &Box<dyn Instruction> {
         &self.rhs
-    }
-
-    /// Set the operator of a BinaryOp
-    pub fn set_op(&mut self, op: Operator) {
-        self.op = op;
-    }
-
-    /// Set the left side member of a BinaryOp
-    pub fn set_lhs(&mut self, lhs: Box<dyn Instruction>) {
-        self.lhs = lhs;
-    }
-
-    /// Set the right side member of a BinaryOp
-    pub fn set_rhs(&mut self, rhs: Box<dyn Instruction>) {
-        self.rhs = rhs;
     }
 
     /// Execute a node of the binary operation
@@ -223,8 +197,8 @@ impl Instruction for BinaryOp {
 mod tests {
     use super::*;
     use crate::value::JinkInt;
-    use crate::Interpreter;
     use crate::ToInstance;
+    use crate::{InstrKind, Interpreter};
 
     fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
         let l = Box::new(JinkInt::from(l_num));
@@ -269,5 +243,26 @@ mod tests {
     #[test]
     fn t_binop_mul_r_diff() {
         binop_assert(2, 99, "*", 198);
+    }
+
+    #[test]
+    fn t_binop_rhs_execute() {
+        let r_bin = BinaryOp::new(
+            Box::new(JinkInt::from(12)),
+            Box::new(JinkInt::from(3)),
+            Operator::new("*"),
+        );
+        let binary_op = BinaryOp::new(
+            Box::new(JinkInt::from(9)),
+            Box::new(r_bin),
+            Operator::new("-"),
+        );
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(
+            binary_op.rhs().execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JinkInt::from(36).to_instance()))
+        );
     }
 }

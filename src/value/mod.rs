@@ -19,7 +19,7 @@ pub type JinkString = JinkConstant<String>;
 pub trait Value: Instruction {
     /// Call this function when an operation is not implemented, rather than implementing
     /// your own. This will format the error nicely.
-    fn no_op(&self, other: &Self, op: Operator) -> Result<Instance, JinkoError> {
+    fn no_op(&self, _other: &Self, _op: Operator) -> Result<Instance, JinkoError> {
         unreachable!("NOP") // FIXME
     }
 

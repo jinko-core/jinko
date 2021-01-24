@@ -160,7 +160,19 @@ impl Instruction for FunctionDec {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug_step("FUNCDEC ENTER");
 
-        interpreter.add_function(self.clone())?;
+        match self.fn_kind() {
+            FunctionKind::Func => interpreter.add_function(self.clone())?,
+            FunctionKind::Test => interpreter.add_test(self.clone())?,
+            FunctionKind::Ext => interpreter.add_ext(self.clone())?,
+            FunctionKind::Mock | FunctionKind::Unknown => {
+                return Err(JinkoError::new(
+                    ErrKind::Interpreter,
+                    format!("unknown type for function {}", self.name()),
+                    None,
+                    self.name().to_owned(),
+                ))
+            }
+        }
 
         interpreter.debug_step("FUNCDEC EXIT");
 

@@ -20,8 +20,8 @@ use super::{
     shunting_yard::ShuntingYard, tokens::Token,
 };
 use crate::instruction::{
-    Audit, BinaryOp, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse,
-    Instruction, Loop, LoopKind, Var, VarAssign,
+    Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
+    Loop, LoopKind, Var, VarAssign,
 };
 
 pub struct Construct;
@@ -182,10 +182,13 @@ impl Construct {
         let (input, value) = alt((
             BoxConstruct::function_declaration,
             BoxConstruct::ext_declaration,
+            BoxConstruct::test_declaration,
+            BoxConstruct::mock_declaration,
             BoxConstruct::function_call,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
+            BoxConstruct::audit,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
             Construct::binary_op,
@@ -594,11 +597,11 @@ impl Construct {
         let (input, _) = Token::type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, type_name) = Token::identifier(input)?;
+        let (input, _type_name) = Token::identifier(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, fields) = Construct::args_dec_non_empty(input)?;
+        let (input, _fields) = Construct::args_dec_non_empty(input)?;
 
         // FIXME: Add Type creation and return it
         Ok((input, ""))
