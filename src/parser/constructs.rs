@@ -840,7 +840,7 @@ mod tests {
 
         match Construct::block("{ 12a; 14a }").unwrap().1.last() {
             Some(_) => assert!(true),
-            None => assert!(false, "Last expression here is valid")
+            None => assert!(false, "Last expression here is valid"),
         }
     }
 
