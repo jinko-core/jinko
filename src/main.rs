@@ -18,7 +18,7 @@ pub use error::{ErrKind, JinkoError};
 pub use instance::{FromInstance, Instance, ToInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
-pub use value::{JinkInt, JinkChar, JinkFloat, JinkBool, JinkString};
+pub use value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString};
 
 fn handle_exit_code(result: InstrKind) {
     match result {
@@ -40,9 +40,9 @@ fn handle_exit_code(result: InstrKind) {
                     }
                 }
                 _ => std::process::exit(0),
-            }
+            },
             None => std::process::exit(0),
-        }
+        },
     }
 }
 

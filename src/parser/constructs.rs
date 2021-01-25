@@ -211,7 +211,9 @@ impl Construct {
     }
 
     /// Parse multiple statements and a possible return Instruction
-    pub fn stmts_and_maybe_last(input: &str) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)>  {
+    pub fn stmts_and_maybe_last(
+        input: &str,
+    ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
         let (input, last_expr) = opt(Construct::expression)(input)?;
 
