@@ -4,7 +4,7 @@ use crate::{FromInstance, Instance, Interpreter, JinkoError, ToInstance};
 use std::convert::TryFrom;
 
 #[derive(Clone)]
-pub struct JinkConstant<T>(T);
+pub struct JinkConstant<T>(pub(crate) T);
 
 impl Instruction for JinkInt {
     fn kind(&self) -> InstrKind {
