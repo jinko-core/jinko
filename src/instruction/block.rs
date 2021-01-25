@@ -51,6 +51,11 @@ impl Block {
         self.instructions = instructions;
     }
 
+    /// Add an instruction at the end of the block's instructions
+    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) {
+        self.instructions.push(instruction)
+    }
+
     /// Returns a reference to the last expression of the block, if it exists
     pub fn last(&self) -> Option<&Box<dyn Instruction>> {
         self.last.as_ref()
@@ -59,11 +64,6 @@ impl Block {
     /// Gives a last expression to the block
     pub fn set_last(&mut self, last: Option<Box<dyn Instruction>>) {
         self.last = last;
-    }
-
-    /// Add an instruction for the block to execute
-    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) {
-        self.instructions.push(instruction)
     }
 }
 

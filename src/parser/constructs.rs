@@ -210,6 +210,16 @@ impl Construct {
         Ok((input, expr))
     }
 
+    /// Parse multiple statements and a possible return Instruction
+    pub fn stmts_and_maybe_last(
+        input: &str,
+    ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
+        let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
+        let (input, last_expr) = opt(Construct::expression)(input)?;
+
+        Ok((input, (instructions, last_expr)))
+    }
+
     /// Parses the statements in a block as well as a possible last expression
     fn instructions(
         input: &str,
@@ -217,13 +227,12 @@ impl Construct {
         let (input, _) = Token::left_curly_bracket(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
-        let (input, last_expr) = opt(Construct::expression)(input)?;
+        let (input, (instructions, last)) = Construct::stmts_and_maybe_last(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
 
-        Ok((input, (instructions, last_expr)))
+        Ok((input, (instructions, last)))
     }
 
     /// A block of code is a new inner scope that contains instructions. You can use
