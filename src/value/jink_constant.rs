@@ -51,6 +51,10 @@ impl Instruction for JinkBool {
         self.0.to_string()
     }
 
+    fn as_bool(&self) -> bool {
+        self.0
+    }
+
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
