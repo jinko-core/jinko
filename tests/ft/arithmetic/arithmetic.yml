@@ -28,3 +28,21 @@ tests:
     args:
       - "tests/ft/arithmetic/multiple_stmts.jk"
     exit_code: 0
+
+  - name: "Float simple"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/arithmetic/float.jk"
+    exit_code: 9
+
+  - name: "Bool true"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/arithmetic/true.jk"
+    exit_code: 0
+
+  - name: "Bool false"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/arithmetic/false.jk"
+    exit_code: 1
