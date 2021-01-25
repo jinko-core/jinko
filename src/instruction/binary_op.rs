@@ -5,6 +5,8 @@
 //! The available operators are `+`, `-`, `*` and `/`.
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
+// FIXME: Separate Operator from BinOp
+
 use crate::value::{JinkFloat, JinkInt, Value};
 use crate::{
     error::ErrKind, error::JinkoError, instruction::InstrKind, interpreter::Interpreter,
@@ -65,6 +67,7 @@ impl Operator {
     /// Is the operator a left associative one
     pub fn is_left_associative(&self) -> bool {
         // FIXME: Not entirely true
+        // - Changes once we add more operators such as the Power one
         match self {
             _ => true,
         }
@@ -99,7 +102,7 @@ impl BinaryOp {
         self.op
     }
 
-    /// Get a reference on the left side member of a BinaryOp
+    // Get a reference on the left side member of a BinaryOp
     #[cfg(test)]
     pub fn lhs(&self) -> &Box<dyn Instruction> {
         &self.lhs
@@ -111,6 +114,7 @@ impl BinaryOp {
         &self.rhs
     }
 
+    // FIXME: Use Interpreter::execute_expression
     /// Execute a node of the binary operation
     fn execute_node(
         &self,
@@ -191,7 +195,6 @@ impl Instruction for BinaryOp {
 
         interpreter.debug_step("BINOP EXIT");
 
-        // FIXME: Add logic
         Ok(return_value)
     }
 }
