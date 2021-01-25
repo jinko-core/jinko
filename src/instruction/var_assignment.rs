@@ -83,23 +83,24 @@ impl Instruction for VarAssign {
         };
 
         match var_creation {
+            // FIXME:
+            // - Cleanup
+            // - Merge two true arms together if possible
             true => var.set_instance(self.value.execute_expression(interpreter)?),
             false => match var.mutable() {
                 false => {
                     // The variable already exists. So we need to error out if it isn't
                     // mutable
-                    if !var_creation {
-                        return Err(JinkoError::new(
-                            ErrKind::Interpreter,
-                            format!(
-                                "Trying to assign value to non mutable variable `{}`: `{}`",
-                                var.name(),
-                                self.value.print()
-                            ),
-                            None,
-                            self.print(),
-                        ));
-                    }
+                    return Err(JinkoError::new(
+                        ErrKind::Interpreter,
+                        format!(
+                            "Trying to assign value to non mutable variable `{}`: `{}`",
+                            var.name(),
+                            self.value.print()
+                        ),
+                        None,
+                        self.print(),
+                    ));
                 }
                 true => var.set_instance(self.value.execute_expression(interpreter)?),
             },

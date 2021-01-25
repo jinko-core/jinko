@@ -39,12 +39,12 @@ impl Var {
 
     /// Set the instance contained in a variable
     pub fn set_instance(&mut self, instance: Instance) {
-        self.instance = instance
+        self.instance = instance;
     }
 
     /// Change the mutability of a variable
     pub fn set_mutable(&mut self, mutable: bool) {
-        self.mutable = mutable
+        self.mutable = mutable;
     }
 }
 
