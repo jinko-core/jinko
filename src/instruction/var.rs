@@ -55,7 +55,7 @@ impl Instruction for Var {
 
     fn print(&self) -> String {
         format!(
-            "{} // : {} = {}",
+            "{} /* : {} = {} */",
             self.name.clone(),
             self.instance.ty().unwrap_or(&"".to_owned()),
             self.instance
