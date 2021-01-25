@@ -40,5 +40,5 @@ jobs:
     - uses: actions/checkout@v2
     - name: Run Unit Tests and Documentation examples
       run: |
-          cargo install https://github.com/cohenarthur/ft
+          cargo install --git https://github.com/cohenarthur/ft
           tests/func_tests.sh
