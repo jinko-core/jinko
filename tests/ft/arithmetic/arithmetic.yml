@@ -1,0 +1,30 @@
+tests:
+  - name: "Return int"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/arithmetic/simple.jk"
+    exit_code: 9
+
+  - name: "Return arithmetic expression"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/arithmetic/addition.jk"
+    exit_code: 5
+
+  - name: "Stmt + return value"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/arithmetic/multiple.jk"
+    exit_code: 12
+
+  - name: "Multiple stmts + return value"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/arithmetic/multiple_long.jk"
+    exit_code: 18
+
+  - name: "All stmts"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/arithmetic/multiple_stmts.jk"
+    exit_code: 0
