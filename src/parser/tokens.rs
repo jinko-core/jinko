@@ -77,11 +77,11 @@ impl Token {
         Token::specific_char(input, '}')
     }
 
-    pub fn left_bracket(input: &str) -> IResult<&str, char> {
+    pub fn _left_bracket(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, '[')
     }
 
-    pub fn right_bracket(input: &str) -> IResult<&str, char> {
+    pub fn _right_bracket(input: &str) -> IResult<&str, char> {
         Token::specific_char(input, ']')
     }
 
@@ -145,7 +145,7 @@ impl Token {
         Token::specific_token(input, "audit ")
     }
 
-    pub fn type_tok(input: &str) -> IResult<&str, &str> {
+    pub fn _type_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "type")
     }
 
@@ -173,21 +173,8 @@ impl Token {
         Token::token(input, ")")
     }
 
-    pub fn left_shift(input: &str) -> IResult<&str, &str> {
+    pub fn _left_shift(input: &str) -> IResult<&str, &str> {
         Token::token(input, "<<")
-    }
-
-    fn non_digit_nor_alpha(input: &str) -> IResult<&str, char> {
-        match input.len() {
-            0 => Ok((input, '\0')),
-            _ => peek(alt((
-                char(';'),
-                char(' '),
-                char('\t'),
-                char('\r'),
-                char('\n'),
-            )))(input),
-        }
     }
 
     pub fn true_tok(input: &str) -> IResult<&str, &str> {

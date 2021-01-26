@@ -15,8 +15,13 @@ impl<T> Queue<T> {
     pub fn push(&mut self, elt: T) {
         self.data.push_back(elt)
     }
+}
 
-    pub fn pop(&mut self) -> Option<T> {
-        self.data.pop_front()
+impl<T> IntoIterator for Queue<T> {
+    type Item = T;
+    type IntoIter = std::collections::vec_deque::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.into_iter()
     }
 }

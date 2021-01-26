@@ -20,8 +20,8 @@ use super::{
     shunting_yard::ShuntingYard, tokens::Token,
 };
 use crate::instruction::{
-    Audit, BinaryOp, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse,
-    Instruction, Loop, LoopKind, Var, VarAssign,
+    Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
+    Loop, LoopKind, Var, VarAssign,
 };
 
 pub struct Construct;
@@ -156,7 +156,6 @@ impl Construct {
         let (input, _) = Token::equal(input)?;
         let (input, _) = opt(Token::consume_whitespaces)(input)?;
         let (input, value) = Construct::expression(input)?;
-        let (input, _) = Token::semicolon(input)?;
 
         match mut_opt {
             Some(_) => Ok((input, VarAssign::new(true, id.to_owned(), value))),
@@ -182,10 +181,13 @@ impl Construct {
         let (input, value) = alt((
             BoxConstruct::function_declaration,
             BoxConstruct::ext_declaration,
+            BoxConstruct::test_declaration,
+            BoxConstruct::mock_declaration,
             BoxConstruct::function_call,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
+            BoxConstruct::audit,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
             Construct::binary_op,
@@ -208,23 +210,29 @@ impl Construct {
         Ok((input, expr))
     }
 
+    /// Parse multiple statements and a possible return Instruction
+    pub fn stmts_and_maybe_last(
+        input: &str,
+    ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
+        let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
+        let (input, last_expr) = opt(Construct::expression)(input)?;
+
+        Ok((input, (instructions, last_expr)))
+    }
+
     /// Parses the statements in a block as well as a possible last expression
-    fn instructions(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
+    fn instructions(
+        input: &str,
+    ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, _) = Token::left_curly_bracket(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, mut instructions) = many0(Construct::stmt_semicolon)(input)?;
-        let (input, last_expr) = opt(Construct::expression)(input)?;
-
-        match last_expr {
-            Some(expr) => instructions.push(expr),
-            None => {}
-        }
+        let (input, (instructions, last)) = Construct::stmts_and_maybe_last(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
 
-        Ok((input, instructions))
+        Ok((input, (instructions, last)))
     }
 
     /// A block of code is a new inner scope that contains instructions. You can use
@@ -251,10 +259,11 @@ impl Construct {
     ///
     /// `{ [ <expression> ; ]* [ <expression> ] }`
     pub fn block(input: &str) -> IResult<&str, Block> {
-        let (input, instructions) = Construct::instructions(input)?;
+        let (input, (instructions, last)) = Construct::instructions(input)?;
 
         let mut block = Block::new();
         block.set_instructions(instructions);
+        block.set_last(last);
 
         Ok((input, block))
     }
@@ -591,16 +600,17 @@ impl Construct {
     /// Parse a user-defined custom type
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
-    pub fn custom_type(input: &str) -> IResult<&str, &str> {
+    // FIXME: Un-underscore for 0.1.1
+    pub fn _custom_type(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::type_tok(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-
-        let (input, type_name) = Token::identifier(input)?;
-
+        let (input, _) = Token::_type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, fields) = Construct::args_dec_non_empty(input)?;
+        let (input, _type_name) = Token::identifier(input)?;
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, _fields) = Construct::args_dec_non_empty(input)?;
 
         // FIXME: Add Type creation and return it
         Ok((input, ""))
@@ -713,14 +723,6 @@ mod tests {
     fn t_var_assign_invalid() {
         match Construct::var_assignment("mutable x = 12") {
             Ok(_) => assert!(false, "Mutable isn't mut"),
-            Err(_) => assert!(true),
-        }
-        match Construct::var_assignment("mut x = 12") {
-            Ok(_) => assert!(false, "No semicolon"),
-            Err(_) => assert!(true),
-        }
-        match Construct::var_assignment("mut_x = 12") {
-            Ok(_) => assert!(false, "No semicolon"),
             Err(_) => assert!(true),
         }
     }
@@ -837,8 +839,13 @@ mod tests {
                 .1
                 .instructions()
                 .len(),
-            2
+            1
         );
+
+        match Construct::block("{ 12a; 14a }").unwrap().1.last() {
+            Some(_) => assert!(true),
+            None => assert!(false, "Last expression here is valid"),
+        }
     }
 
     #[test]
@@ -945,14 +952,14 @@ mod tests {
                 14a
             }"#;
 
-        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 4);
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 3);
 
         let input = r#"{
                 true;
                 false
             }"#;
 
-        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 2);
+        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 1);
     }
 
     #[test]
@@ -1174,20 +1181,21 @@ mod tests {
 
     #[test]
     fn t_custom_type_simple() {
-        match Construct::custom_type("type Int(v: int);") {
+        match Construct::_custom_type("type Int(v: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Just one int is valid"),
         };
-        match Construct::custom_type("type Ints(a: int, b: int);") {
+        match Construct::_custom_type("type Ints(a: int, b: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Two integers is valid"),
         };
-        match Construct::custom_type("type Compound(i: int, s: str);") {
+        match Construct::_custom_type("type Compound(i: int, s: str);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Different types are valid"),
         };
-        match Construct::custom_type("type Custom(v: int, a: SomeType, b: Another, c: lower_case);")
-        {
+        match Construct::_custom_type(
+            "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
+        ) {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Custom types in custom types are valid"),
         };
@@ -1195,7 +1203,7 @@ mod tests {
 
     #[test]
     fn t_custom_type_empty() {
-        match Construct::custom_type("type Empty();") {
+        match Construct::_custom_type("type Empty();") {
             Ok(_) => assert!(false, "Can't have empty types"),
             Err(_) => assert!(true),
         }
@@ -1203,9 +1211,53 @@ mod tests {
 
     #[test]
     fn t_custom_type_invalid() {
-        match Construct::custom_type("type ExtraComma(a: int, b: int,);") {
+        match Construct::_custom_type("type ExtraComma(a: int, b: int,);") {
             Ok(_) => assert!(false, "Extra comma in type definition"),
             Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_binop() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { a + b }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to directly return a binop"),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_return_arg() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { a }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to directly return an argument"),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_return_arg_plus_stmt() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { something(); a }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(
+                false,
+                "Valid to directly return an argument after a statement"
+            ),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_return_binop_plus_stmt() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { something(); a + b }")
+        {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to directly return a binop after a statement"),
+        }
+    }
+
+    #[test]
+    fn t_func_dec_return_binop_as_var() {
+        match Construct::function_declaration("func a(a: int, b:int) -> int { res = a + b; res }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Valid to directly return a binop as a variable"),
         }
     }
 }

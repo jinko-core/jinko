@@ -2,6 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
+use crate::{ErrKind, Instance};
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
 
@@ -27,23 +28,62 @@ pub use var_assignment::VarAssign;
 
 use crate::{error::JinkoError, interpreter::Interpreter};
 
-/// The type of instructions available
-#[derive(Debug, PartialEq)]
+/// The type of instructions available. An Instruction either is a statement, or an
+/// expression. An expression contains an instance of a result. For example,
+/// `1 + 1` is an expression: It will contain the result of the addition of one and one.
+/// `print("jinko")` is a statement: There is no "return value"
+#[derive(Debug, PartialEq, Clone)]
 pub enum InstrKind {
     Statement,
-    Expression,
+    Expression(Option<Instance>),
 }
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
 pub trait Instruction: InstructionClone + Downcast {
-    /// Execute the instruction, altering the state of the program
-    fn execute(&self, _: &mut Interpreter) -> Result<(), JinkoError> {
+    /// Execute the instruction, altering the state of the interpreter. Executing
+    /// this method returns an InstrKind, so either a statement or an expression
+    /// containing a "return value".
+    fn execute(&self, _: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         unreachable!(
             "\n{}\n --> {}",
             self.print(),
             "The execution of this instruction is not implemented yet. This is a bug".red(),
         )
+    }
+
+    /// Execute the instruction, hoping for an InstrKind::Expression(Some(...)) to be
+    /// returned. If an invalid value is returned, error out.
+    fn execute_expression(&self, i: &mut Interpreter) -> Result<Instance, JinkoError> {
+        match self.execute(i)? {
+            InstrKind::Expression(Some(result)) => Ok(result),
+            _ => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!(
+                    "statement found when expression was expected: {}",
+                    self.print()
+                ),
+                None,
+                self.print(),
+            )),
+        }
+    }
+
+    /// Execute the instruction, hoping for an InstrKind::Statement to be
+    /// returned. If an invalid value is returned, error out.
+    fn execute_statement(&self, i: &mut Interpreter) -> Result<(), JinkoError> {
+        match self.execute(i)? {
+            InstrKind::Statement => Ok(()),
+            _ => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!(
+                    "expression found when statement was expected: {}",
+                    self.print()
+                ),
+                None,
+                self.print(),
+            )),
+        }
     }
 
     /// Maybe execute the instruction, transforming it in a Rust bool if possible. It's
@@ -57,7 +97,10 @@ pub trait Instruction: InstructionClone + Downcast {
         )
     }
 
-    /// What is the type of the instruction: a Statement or an Expression
+    /// What is the type of the instruction: a Statement or an Expression.
+    /// This method will always return Expression(None) if the instruction is an
+    /// expression. This method does not care about the return value or the execution
+    /// of the instruction, just the kind of it.
     fn kind(&self) -> InstrKind;
 
     /// Pretty-print the instruction to valid jinko code

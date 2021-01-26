@@ -8,7 +8,7 @@ use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
 use crate::error::JinkoError;
-use crate::instruction::Instruction;
+use crate::instruction::{InstrKind, Instruction};
 use crate::interpreter::Interpreter;
 use crate::parser::Construct;
 
@@ -51,7 +51,9 @@ impl Repl {
             };
 
             match inst.execute(&mut interpreter) {
-                Ok(()) => {}
+                // FIXME: Handle statements and expressions differently
+                Ok(InstrKind::Expression(None)) | Ok(InstrKind::Statement) => {}
+                Ok(InstrKind::Expression(Some(result))) => println!("{}", result),
                 Err(e) => println!("{}", e.to_string()),
             };
 

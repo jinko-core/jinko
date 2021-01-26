@@ -9,8 +9,6 @@ mod jinko_insts;
 mod shunting_yard;
 mod tokens;
 
-use nom::multi::many0;
-
 use crate::{error::JinkoError, interpreter::Interpreter};
 
 pub use constructs::Construct;
@@ -22,12 +20,12 @@ impl Parser {
     /// program
     pub fn parse(input: &str) -> Result<Interpreter, JinkoError> {
         let mut interpreter = Interpreter::new();
-        let (_, instructions) = many0(Construct::expression)(input)?;
-        interpreter
-            .entry_point
-            .block_mut()
-            .unwrap()
-            .set_instructions(instructions);
+        let (_, (instructions, last)) = Construct::stmts_and_maybe_last(input)?;
+
+        let entry_block = interpreter.entry_point.block_mut().unwrap();
+
+        entry_block.set_instructions(instructions);
+        entry_block.set_last(last);
 
         Ok(interpreter)
     }
