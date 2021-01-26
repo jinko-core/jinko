@@ -1270,4 +1270,14 @@ mod tests {
             Err(_) => assert!(false, "Valid to directly return a binop as a variable"),
         }
     }
+
+    #[test]
+    fn t_func_call_with_true_arg_is_func_call() {
+        let res = Construct::expression("h(true)").unwrap().1;
+        res.downcast_ref::<FunctionCall>().unwrap();
+
+        // There might be a bug that a function call with just a boolean argument gets
+        // parsed as a variable. This test aims at correcting that regression. If it
+        // fails, then it means the function call did not get parsed as a function call
+    }
 }
