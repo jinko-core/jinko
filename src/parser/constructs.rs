@@ -600,9 +600,10 @@ impl Construct {
     /// Parse a user-defined custom type
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
-    pub fn custom_type(input: &str) -> IResult<&str, &str> {
+    // FIXME: Un-underscore for 0.1.1
+    pub fn _custom_type(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::type_tok(input)?;
+        let (input, _) = Token::_type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, _type_name) = Token::identifier(input)?;
@@ -1180,20 +1181,21 @@ mod tests {
 
     #[test]
     fn t_custom_type_simple() {
-        match Construct::custom_type("type Int(v: int);") {
+        match Construct::_custom_type("type Int(v: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Just one int is valid"),
         };
-        match Construct::custom_type("type Ints(a: int, b: int);") {
+        match Construct::_custom_type("type Ints(a: int, b: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Two integers is valid"),
         };
-        match Construct::custom_type("type Compound(i: int, s: str);") {
+        match Construct::_custom_type("type Compound(i: int, s: str);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Different types are valid"),
         };
-        match Construct::custom_type("type Custom(v: int, a: SomeType, b: Another, c: lower_case);")
-        {
+        match Construct::_custom_type(
+            "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
+        ) {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Custom types in custom types are valid"),
         };
@@ -1201,7 +1203,7 @@ mod tests {
 
     #[test]
     fn t_custom_type_empty() {
-        match Construct::custom_type("type Empty();") {
+        match Construct::_custom_type("type Empty();") {
             Ok(_) => assert!(false, "Can't have empty types"),
             Err(_) => assert!(true),
         }
@@ -1209,7 +1211,7 @@ mod tests {
 
     #[test]
     fn t_custom_type_invalid() {
-        match Construct::custom_type("type ExtraComma(a: int, b: int,);") {
+        match Construct::_custom_type("type ExtraComma(a: int, b: int,);") {
             Ok(_) => assert!(false, "Extra comma in type definition"),
             Err(_) => assert!(true),
         }
