@@ -1,7 +1,0 @@
-func h(a: int) {}
-
-h();
-h(1, 2);
-h(1):
-
-ext func h(); // FIXME: Should error out, function already declared
