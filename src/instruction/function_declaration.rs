@@ -161,9 +161,8 @@ impl Instruction for FunctionDec {
         interpreter.debug_step("FUNCDEC ENTER");
 
         match self.fn_kind() {
-            FunctionKind::Func => interpreter.add_function(self.clone())?,
+            FunctionKind::Func | FunctionKind::Ext => interpreter.add_function(self.clone())?,
             FunctionKind::Test => interpreter.add_test(self.clone())?,
-            FunctionKind::Ext => interpreter.add_ext(self.clone())?,
             FunctionKind::Mock | FunctionKind::Unknown => {
                 return Err(JinkoError::new(
                     ErrKind::Interpreter,
