@@ -7,4 +7,4 @@ func get_zero_on_true(value: bool) -> int {
 }
 
 get_zero_on_true(true)
-// get_zero_on_true(false) // Will error out once #141 is merged
+// get_zero_on_true(false) // Errors out
