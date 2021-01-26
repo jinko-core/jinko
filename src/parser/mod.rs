@@ -9,7 +9,7 @@ mod jinko_insts;
 mod shunting_yard;
 mod tokens;
 
-use crate::{JinkoError, Interpreter, InstrKind};
+use crate::{InstrKind, Interpreter, JinkoError};
 use nom::multi::many0;
 
 pub use constructs::Construct;
