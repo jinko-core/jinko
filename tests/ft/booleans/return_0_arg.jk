@@ -1,0 +1,10 @@
+func get_zero_on_true(value: bool) -> int {
+    if value {
+        0
+    } else {
+        1
+    }
+}
+
+get_zero_on_true(true)
+// get_zero_on_true(false) // Will error out once #141 is merged
