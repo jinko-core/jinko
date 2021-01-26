@@ -60,6 +60,7 @@ jobs:
     needs: [build, build-without-warnings, tests, functional_tests]
 
     steps:
+    - uses: actions/checkout@v2
     - name: Check if jinko is release ready
       uses: katyo/publish-crates@v1
       with:
