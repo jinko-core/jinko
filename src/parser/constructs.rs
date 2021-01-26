@@ -600,9 +600,10 @@ impl Construct {
     /// Parse a user-defined custom type
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
-    pub fn custom_type(input: &str) -> IResult<&str, &str> {
+    // FIXME: Un-underscore for 0.1.1
+    pub fn _custom_type(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::type_tok(input)?;
+        let (input, _) = Token::_type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, _type_name) = Token::identifier(input)?;
