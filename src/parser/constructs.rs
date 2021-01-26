@@ -27,6 +27,44 @@ use crate::instruction::{
 pub struct Construct;
 
 impl Construct {
+    /// Parse any valid jinko expression. This can be a function call, a variable,
+    /// a block declaration...
+    pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        // FIXME: If input is empty, return an error or do nothing
+        let (input, value) = alt((
+            BoxConstruct::function_declaration,
+            BoxConstruct::ext_declaration,
+            BoxConstruct::test_declaration,
+            BoxConstruct::mock_declaration,
+            BoxConstruct::function_call,
+            BoxConstruct::if_else,
+            BoxConstruct::any_loop,
+            BoxConstruct::jinko_inst,
+            BoxConstruct::audit,
+            BoxConstruct::block,
+            BoxConstruct::var_assignment,
+            Construct::binary_op,
+            BoxConstruct::variable,
+            Construct::constant,
+        ))(input)?;
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        Ok((input, value))
+    }
+
+    /// Parse an expression and maybe the semicolon that follows.
+    ///
+    /// `<expression> [ ; ]`
+    pub fn expression_maybe_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, expr) = Construct::expression(input)?;
+        let (input, _) = opt(Token::semicolon)(input)?;
+
+        Ok((input, expr))
+    }
+
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
     /// `0.5`.
     ///
@@ -172,34 +210,6 @@ impl Construct {
         Ok((input, Var::new(name.to_owned())))
     }
 
-    /// Parse any valid jinko expression. This can be a function call, a variable,
-    /// a block declaration...
-    pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
-
-        // FIXME: If input is empty, return an error or do nothing
-        let (input, value) = alt((
-            BoxConstruct::function_declaration,
-            BoxConstruct::ext_declaration,
-            BoxConstruct::test_declaration,
-            BoxConstruct::mock_declaration,
-            BoxConstruct::function_call,
-            BoxConstruct::if_else,
-            BoxConstruct::any_loop,
-            BoxConstruct::jinko_inst,
-            BoxConstruct::audit,
-            BoxConstruct::block,
-            BoxConstruct::var_assignment,
-            Construct::binary_op,
-            BoxConstruct::variable,
-            Construct::constant,
-        ))(input)?;
-
-        let (input, _) = Token::maybe_consume_extra(input)?;
-
-        Ok((input, value))
-    }
-
     fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, expr) = Construct::expression(input)?;
@@ -211,7 +221,7 @@ impl Construct {
     }
 
     /// Parse multiple statements and a possible return Instruction
-    pub fn stmts_and_maybe_last(
+    fn stmts_and_maybe_last(
         input: &str,
     ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;

@@ -1,0 +1,6 @@
+tests:
+  - name: "Simple integer return"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/functions/simple_function.jk"
+    exit_code: 3

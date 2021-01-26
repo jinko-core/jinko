@@ -1,0 +1,5 @@
+func return_3() -> int {
+    3
+}
+
+return_3() // should return 3

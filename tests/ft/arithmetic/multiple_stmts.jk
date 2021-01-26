@@ -1,4 +1,4 @@
-1 + 9;
-12;
+1 + 10; // This will become an error in the future
+a = 12;
 
 // return 0
