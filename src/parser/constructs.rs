@@ -1181,20 +1181,21 @@ mod tests {
 
     #[test]
     fn t_custom_type_simple() {
-        match Construct::custom_type("type Int(v: int);") {
+        match Construct::_custom_type("type Int(v: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Just one int is valid"),
         };
-        match Construct::custom_type("type Ints(a: int, b: int);") {
+        match Construct::_custom_type("type Ints(a: int, b: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Two integers is valid"),
         };
-        match Construct::custom_type("type Compound(i: int, s: str);") {
+        match Construct::_custom_type("type Compound(i: int, s: str);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Different types are valid"),
         };
-        match Construct::custom_type("type Custom(v: int, a: SomeType, b: Another, c: lower_case);")
-        {
+        match Construct::_custom_type(
+            "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
+        ) {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Custom types in custom types are valid"),
         };
@@ -1202,7 +1203,7 @@ mod tests {
 
     #[test]
     fn t_custom_type_empty() {
-        match Construct::custom_type("type Empty();") {
+        match Construct::_custom_type("type Empty();") {
             Ok(_) => assert!(false, "Can't have empty types"),
             Err(_) => assert!(true),
         }
@@ -1210,7 +1211,7 @@ mod tests {
 
     #[test]
     fn t_custom_type_invalid() {
-        match Construct::custom_type("type ExtraComma(a: int, b: int,);") {
+        match Construct::_custom_type("type ExtraComma(a: int, b: int,);") {
             Ok(_) => assert!(false, "Extra comma in type definition"),
             Err(_) => assert!(true),
         }
