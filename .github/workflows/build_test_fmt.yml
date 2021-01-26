@@ -22,6 +22,17 @@ jobs:
       run: |
           cargo build
 
+  build-without-warnings:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Make sure that the build completes without any warnings
+      env:
+        RUSTFLAGS: "-D warnings" # Trigger an error on warnings
+      run: |
+        cargo build
+
   tests:
     runs-on: ubuntu-latest
     needs: coding-style
@@ -42,3 +53,19 @@ jobs:
       run: |
           cargo install --git https://github.com/cohenarthur/ft
           tests/func_tests.sh
+
+  test-publish:
+    runs-on: ubuntu-latest
+    needs: [build, build-without-warnings, tests, functional_tests]
+
+    publish:
+      - name: Check if jinko is release ready
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          dry-run: true
