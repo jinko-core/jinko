@@ -24,14 +24,15 @@ impl Instruction for CustomType {
         InstrKind::Statement
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug_step(&format!("CUSTOM TYPE {} ENTER", self.name));
 
         interpreter.add_type(self.clone())?;
 
         interpreter.debug_step(&format!("CUSTOM TYPE {} EXIT", self.name));
 
-        Ok(())
+        // Declaring a type is always a statement (for now)
+        Ok(InstrKind::Statement)
     }
 
     fn print(&self) -> String {

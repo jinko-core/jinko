@@ -3,43 +3,23 @@
 //! by an instruction
 
 use crate::instruction::{Instruction, Operator};
+use crate::{Instance, JinkoError};
 
-mod jink_bool;
-mod jink_char;
-mod jink_float;
-mod jink_int;
-mod jink_string;
+mod jink_constant;
 
-pub use jink_bool::JinkBool;
-pub use jink_char::JinkChar;
-pub use jink_float::JinkFloat;
-pub use jink_int::JinkInt;
-pub use jink_string::JinkString;
+pub use jink_constant::JinkConstant;
 
-/// Available primitive types
-#[derive(Debug)]
-#[repr(u8)]
-pub enum ValueType {
-    Bool,
-    Int,
-    Float,
-    Char,
-    Str,
-}
+pub type JinkBool = JinkConstant<bool>;
+pub type JinkInt = JinkConstant<i64>;
+pub type JinkFloat = JinkConstant<f64>;
+pub type JinkChar = JinkConstant<char>;
+pub type JinkString = JinkConstant<String>;
 
 /// C is the type contained inside the `Value`
 pub trait Value: Instruction {
-    /// Return the virtual type of the primitive value.
-    ///
-    /// ```
-    /// let some_int = JinkInt::from(160);
-    /// assert_eq!(some_int.vtype(), ValueType::Int);
-    /// ```
-    fn vtype(&self) -> ValueType;
-
     /// Call this function when an operation is not implemented, rather than implementing
     /// your own. This will format the error nicely.
-    fn no_op(&self, other: &Self, op: Operator) -> Box<dyn Instruction> {
+    fn no_op(&self, _other: &Self, _op: Operator) -> Result<Instance, JinkoError> {
         unreachable!("NOP") // FIXME
     }
 
@@ -49,19 +29,21 @@ pub trait Value: Instruction {
     /// return a new JinkFloat.
     ///
     /// ```
+    /// let interpreter = Interpreter::new();
+    ///
     /// let a = JinkInt::from(126);
     /// let b = JinkInt::from(4);
     ///
     /// let res = a.do_op(b, Operator::Add); // JinkInt(130)
-    /// assert_eq!(res.vtype(), ValueType::Int);
+    /// assert_eq!(res.ty(), interpreter.get_type("int"));
     ///
     /// let f = JinkFloat::from(4.0);
     ///
     /// let res = a.do_op(f, Operator::Add); // JinkFloat(130.0)
-    /// assert_eq!(res.vtype(), ValueType::Float);
+    /// assert_eq!(res.ty(), interpreter.get_type("float"));
     /// ```
     // FIXME: Implement behavior defined here ^
-    fn do_op(&self, other: &Self, op: Operator) -> Box<dyn Instruction> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JinkoError> {
         self.no_op(other, op)
     }
 }

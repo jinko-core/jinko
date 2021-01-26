@@ -106,7 +106,7 @@ impl FunctionDec {
 
     /// Run through the function as if it was called. This is useful for setting
     /// an entry point into the interpreter and executing it
-    pub fn run(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    pub fn run(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         let block = match self.block() {
             Some(b) => b,
             // FIXME: Fix Location and input
@@ -132,14 +132,26 @@ impl Instruction for FunctionDec {
         InstrKind::Statement
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<(), JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug_step("FUNCDEC ENTER");
 
-        interpreter.add_function(self.clone())?;
+        match self.fn_kind() {
+            FunctionKind::Func => interpreter.add_function(self.clone())?,
+            FunctionKind::Test => interpreter.add_test(self.clone())?,
+            FunctionKind::Ext => interpreter.add_ext(self.clone())?,
+            FunctionKind::Mock | FunctionKind::Unknown => {
+                return Err(JinkoError::new(
+                    ErrKind::Interpreter,
+                    format!("unknown type for function {}", self.name()),
+                    None,
+                    self.name().to_owned(),
+                ))
+            }
+        }
 
         interpreter.debug_step("FUNCDEC EXIT");
 
-        Ok(())
+        Ok(InstrKind::Statement)
     }
 
     fn print(&self) -> String {
@@ -199,8 +211,8 @@ mod tests {
         let mut function = FunctionDec::new("fn".to_owned(), Some("int".to_owned()));
         function.set_kind(FunctionKind::Func);
         let args = vec![
-            FunctionDecArg::new("arg0".to_owned(), "int".to_owned()),
-            FunctionDecArg::new("arg1".to_owned(), "int".to_owned()),
+            DecArg::new("arg0".to_owned(), "int".to_owned()),
+            DecArg::new("arg1".to_owned(), "int".to_owned()),
         ];
 
         function.set_args(args);

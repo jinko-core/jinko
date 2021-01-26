@@ -19,3 +19,7 @@ unit tests, mocking and FFI.
 Check out jinko's [syntax](SYNTAX.md)!
 
 For more information about how jinko is made, checkout its [design](DESIGN.md).
+
+## License
+
+Licensed under [GNU General Public License, version 2](LICENSE)

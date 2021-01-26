@@ -1,7 +1,7 @@
-#![feature(box_syntax)]
 #[warn(missing_docs)]
 mod args;
 mod error;
+mod instance;
 mod instruction;
 mod interpreter;
 mod parser;
@@ -14,10 +14,37 @@ use parser::Parser;
 use repl::Repl;
 use std::fs;
 
-use instruction::Instruction;
-
-pub use error::JinkoError;
+pub use error::{ErrKind, JinkoError};
+pub use instance::{FromInstance, Instance, ToInstance};
+pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
+pub use value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString};
+
+fn handle_exit_code(result: InstrKind) {
+    match result {
+        // A statement that completes succesfully returns 0
+        InstrKind::Statement | InstrKind::Expression(None) => std::process::exit(0),
+
+        // FIXME: Maybe return different stuff based on more types?
+
+        // If it's an expression, return if you can (if it's an int)
+        InstrKind::Expression(Some(i)) => match i.ty() {
+            Some(ty) => match ty.as_ref() {
+                "int" => std::process::exit(JinkInt::from_instance(&i).0 as i32),
+                "float" => std::process::exit(JinkFloat::from_instance(&i).0 as i32),
+                "bool" => {
+                    let b_value = JinkBool::from_instance(&i).0;
+                    match b_value {
+                        true => std::process::exit(0),
+                        false => std::process::exit(1),
+                    }
+                }
+                _ => std::process::exit(0),
+            },
+            None => std::process::exit(0),
+        },
+    }
+}
 
 fn main() {
     let args = Args::handle();
@@ -40,7 +67,7 @@ fn main() {
     // The entry point always has a block
     let ep = interpreter.entry_point.block().unwrap().clone();
     match ep.execute(&mut interpreter) {
-        Ok(_) => {}
+        Ok(result) => handle_exit_code(result),
         Err(e) => e.exit(),
     }
 }

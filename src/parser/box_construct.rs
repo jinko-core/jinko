@@ -47,4 +47,7 @@ impl BoxConstruct {
     box_construct! {var_assignment}
     box_construct! {if_else}
     box_construct! {custom_type}
+    box_construct! {audit}
+    box_construct! {test_declaration}
+    box_construct! {mock_declaration}
 }
