@@ -60,10 +60,6 @@ jobs:
 
     steps:
     - name: Check if jinko is release ready
-      uses: actions/checkout@v2
-      uses: actions-rs/toolchain@v1
       uses: katyo/publish-crates@v1
       with:
-        toolchain: stable
-        override: true
         dry-run: true
