@@ -24,11 +24,13 @@ impl Parser {
 
         let entry_block = interpreter.entry_point.block_mut().unwrap();
 
-        let (_, instructions) = many0(Construct::expression)(input)?;
+        let (_, instructions) = many0(Construct::expression_maybe_semicolon)(input)?;
 
         entry_block.set_instructions(instructions);
 
-        // We must create the block "manually"
+        // We must create the block "manually", by checking if the last parsed operation
+        // is an expression or not. If it is an expression, then use it as the return
+        // value. If not, simply execute it.
         match entry_block.pop_instruction() {
             Some(last) => match last.kind() {
                 InstrKind::Expression(_) => entry_block.set_last(Some(last)),

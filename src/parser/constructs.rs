@@ -55,6 +55,16 @@ impl Construct {
         Ok((input, value))
     }
 
+    /// Parse an expression and maybe the semicolon that follows.
+    ///
+    /// `<expression> [ ; ]`
+    pub fn expression_maybe_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, expr) = Construct::expression(input)?;
+        let (input, _) = opt(Token::semicolon)(input)?;
+
+        Ok((input, expr))
+    }
+
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
     /// `0.5`.
     ///
