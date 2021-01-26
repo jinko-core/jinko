@@ -9,7 +9,8 @@ mod jinko_insts;
 mod shunting_yard;
 mod tokens;
 
-use crate::{error::JinkoError, interpreter::Interpreter};
+use crate::{JinkoError, Interpreter, InstrKind};
+use nom::multi::many0;
 
 pub use constructs::Construct;
 
@@ -20,12 +21,21 @@ impl Parser {
     /// program
     pub fn parse(input: &str) -> Result<Interpreter, JinkoError> {
         let mut interpreter = Interpreter::new();
-        let (_, (instructions, last)) = Construct::stmts_and_maybe_last(input)?;
 
         let entry_block = interpreter.entry_point.block_mut().unwrap();
 
+        let (_, instructions) = many0(Construct::expression)(input)?;
+
         entry_block.set_instructions(instructions);
-        entry_block.set_last(last);
+
+        // We must create the block "manually"
+        match entry_block.pop_instruction() {
+            Some(last) => match last.kind() {
+                InstrKind::Expression(_) => entry_block.set_last(Some(last)),
+                InstrKind::Statement => entry_block.add_instruction(last),
+            },
+            None => {}
+        }
 
         Ok(interpreter)
     }
