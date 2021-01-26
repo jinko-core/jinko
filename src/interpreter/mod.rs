@@ -36,8 +36,6 @@ pub struct Interpreter {
 
     /// Tests registered in the interpreter
     tests: HashMap<IKey, FunctionDec>,
-    /// External functions registered in the interpreter
-    exts: HashMap<IKey, FunctionDec>,
 }
 
 impl Interpreter {
@@ -60,7 +58,6 @@ impl Interpreter {
             scope_map: ScopeMap::new(),
 
             tests: HashMap::new(),
-            exts: HashMap::new(),
         };
 
         i.scope_enter();
@@ -165,22 +162,6 @@ impl Interpreter {
             )),
             None => {
                 self.tests.insert(test.name().to_owned(), test);
-                Ok(())
-            }
-        }
-    }
-
-    /// Register an external function definition
-    pub fn add_ext(&mut self, ext: FunctionDec) -> Result<(), JinkoError> {
-        match self.exts.get(ext.name()) {
-            Some(ext) => Err(JinkoError::new(
-                ErrKind::Interpreter,
-                format!("external function already declared: {}", ext.name()),
-                None,
-                ext.name().to_owned(),
-            )),
-            None => {
-                self.exts.insert(ext.name().to_owned(), ext);
                 Ok(())
             }
         }
