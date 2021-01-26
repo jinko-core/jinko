@@ -2,7 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use crate::{ErrKind, Instance};
+use crate::{ErrKind, Instance, Interpreter, JinkoError};
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
 
@@ -26,8 +26,6 @@ pub use loop_block::{Loop, LoopKind};
 pub use var::Var;
 pub use var_assignment::VarAssign;
 
-use crate::{error::JinkoError, interpreter::Interpreter};
-
 /// The type of instructions available. An Instruction either is a statement, or an
 /// expression. An expression contains an instance of a result. For example,
 /// `1 + 1` is an expression: It will contain the result of the addition of one and one.
@@ -44,7 +42,7 @@ pub trait Instruction: InstructionClone + Downcast {
     /// Execute the instruction, altering the state of the interpreter. Executing
     /// this method returns an InstrKind, so either a statement or an expression
     /// containing a "return value".
-    fn execute(&self, _: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, _interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         unreachable!(
             "\n{}\n --> {}",
             self.print(),
@@ -89,12 +87,13 @@ pub trait Instruction: InstructionClone + Downcast {
     /// Maybe execute the instruction, transforming it in a Rust bool if possible. It's
     /// only possible to execute as_bool on boolean variables, boolean constants. blocks
     /// returning a boolean and functions returning a boolean.
-    fn as_bool(&self) -> bool {
-        unreachable!(
-            "\n{}\n --> {}",
+    fn as_bool(&self, _interpreter: &mut Interpreter) -> Result<bool, JinkoError> {
+        Err(JinkoError::new(
+            ErrKind::Interpreter,
+            format!("cannot be used as a boolean: {}", self.print()),
+            None,
             self.print(),
-            "Cannot get boolean from expression".red(),
-        )
+        ))
     }
 
     /// What is the type of the instruction: a Statement or an Expression.

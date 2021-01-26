@@ -58,7 +58,7 @@ impl Instruction for Loop {
             },
             LoopKind::While(cond) => {
                 interpreter.debug_step("WHILE ENTER");
-                while cond.as_bool() {
+                while cond.as_bool(interpreter)? {
                     self.block.execute(interpreter)?;
                 }
                 interpreter.debug_step("WHILE EXIT");
