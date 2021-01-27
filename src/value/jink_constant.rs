@@ -1,6 +1,6 @@
 use super::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString, Value};
 use crate::instruction::{InstrKind, Instruction, Operator};
-use crate::{FromInstance, Instance, Interpreter, JinkoError, ToInstance};
+use crate::{FromInstance, Instance, Interpreter, JkError, ToInstance};
 use std::convert::TryFrom;
 
 #[derive(Clone)]
@@ -15,7 +15,7 @@ impl Instruction for JinkInt {
         self.0.to_string()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
         // Since we cannot use the generic ToInstance implementation, we also have to
@@ -33,7 +33,7 @@ impl Instruction for JinkFloat {
         self.0.to_string()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
         // Since we cannot use the generic ToInstance implementation, we also have to
@@ -51,11 +51,11 @@ impl Instruction for JinkBool {
         self.0.to_string()
     }
 
-    fn as_bool(&self, _: &mut Interpreter) -> Result<bool, JinkoError> {
+    fn as_bool(&self, _: &mut Interpreter) -> Result<bool, JkError> {
         Ok(self.0)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
         // Since we cannot use the generic ToInstance implementation, we also have to
@@ -73,7 +73,7 @@ impl Instruction for JinkChar {
         self.0.to_string()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
         // Since we cannot use the generic ToInstance implementation, we also have to
@@ -91,7 +91,7 @@ impl Instruction for JinkString {
         format!("\"{}\"", self.0.clone())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
         // Since we cannot use the generic ToInstance implementation, we also have to
@@ -293,7 +293,7 @@ impl FromInstance for JinkString {
 // }
 
 impl Value for JinkConstant<i64> {
-    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JinkoError> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
         match op {
             Operator::Add => Ok(JinkConstant::from(self.0 + other.0).to_instance()),
             Operator::Sub => Ok(JinkConstant::from(self.0 - other.0).to_instance()),
@@ -306,7 +306,7 @@ impl Value for JinkConstant<i64> {
 
 // FIXME: Avoid this copy paste, find a better/cleaner way to do it
 impl Value for JinkConstant<f64> {
-    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JinkoError> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
         match op {
             Operator::Add => Ok(JinkConstant::from(self.0 + other.0).to_instance()),
             Operator::Sub => Ok(JinkConstant::from(self.0 - other.0).to_instance()),

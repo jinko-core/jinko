@@ -3,7 +3,7 @@
 //! really an `Instruction`, and therefore their implementation lives in the parser
 //! module. They are executed at "compile" time, when running through the code first.
 
-use crate::error::{ErrKind, JinkoError};
+use crate::error::{JkErrKind, JkError};
 use crate::instruction::{InstrKind, Instruction};
 use crate::interpreter::Interpreter;
 
@@ -16,13 +16,13 @@ pub enum JinkoInst {
 
 impl JinkoInst {
     /// Construct a `JinkoInst` from a given keyword
-    pub fn from_str(keyword: &str) -> Result<Self, JinkoError> {
+    pub fn from_str(keyword: &str) -> Result<Self, JkError> {
         match keyword {
             "dump" => Ok(JinkoInst::Dump),
             "quit" => Ok(JinkoInst::Quit),
             // FIXME: Fix location
-            _ => Err(JinkoError::new(
-                ErrKind::Parsing,
+            _ => Err(JkError::new(
+                JkErrKind::Parsing,
                 format!("unknown interpreter directive @{}", keyword),
                 None,
                 keyword.to_owned(),
@@ -44,7 +44,7 @@ impl Instruction for JinkoInst {
         .to_string()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("JINKO_INST", &self.print());
 
         match self {

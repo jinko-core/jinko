@@ -1,6 +1,6 @@
 //! The VarAssign struct is used when assigning values to variables.
 
-use crate::error::{ErrKind, JinkoError};
+use crate::error::{JkErrKind, JkError};
 use crate::interpreter::Interpreter;
 
 use super::{InstrKind, Instruction, Var};
@@ -50,7 +50,7 @@ impl Instruction for VarAssign {
         format!("{}{} = {}", base, self.symbol, self.value.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("ASSIGN VAR", self.symbol());
 
         // Are we creating the variable or not
@@ -62,8 +62,8 @@ impl Instruction for VarAssign {
                 // for the first time. However, we entered the match arm because the variable
                 // is already present in the interpreter. Error out appropriately.
                 if self.mutable() {
-                    return Err(JinkoError::new(
-                        ErrKind::Interpreter,
+                    return Err(JkError::new(
+                        JkErrKind::Interpreter,
                         format!("Trying to redefine already defined variable: {}", v.name()),
                         None,
                         self.print(),
@@ -91,8 +91,8 @@ impl Instruction for VarAssign {
                 false => {
                     // The variable already exists. So we need to error out if it isn't
                     // mutable
-                    return Err(JinkoError::new(
-                        ErrKind::Interpreter,
+                    return Err(JkError::new(
+                        JkErrKind::Interpreter,
                         format!(
                             "Trying to assign value to non mutable variable `{}`: `{}`",
                             var.name(),

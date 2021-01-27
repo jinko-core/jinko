@@ -9,7 +9,7 @@ mod jinko_insts;
 mod shunting_yard;
 mod tokens;
 
-use crate::{InstrKind, Interpreter, JinkoError};
+use crate::{InstrKind, Interpreter, JkError};
 use nom::multi::many0;
 
 pub use constructs::Construct;
@@ -19,7 +19,7 @@ pub struct Parser;
 impl Parser {
     /// Parses the entire user input and returns a hashmap corresponding to the user
     /// program
-    pub fn parse(input: &str) -> Result<Interpreter, JinkoError> {
+    pub fn parse(input: &str) -> Result<Interpreter, JkError> {
         let mut interpreter = Interpreter::new();
 
         let entry_block = interpreter.entry_point.block_mut().unwrap();

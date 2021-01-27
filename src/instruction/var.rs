@@ -3,7 +3,7 @@
 //! need to keep an option of an instance. A variable is either there, fully initialized,
 //! or it's not.
 
-use crate::{ErrKind, Instance, InstrKind, Instruction, Interpreter, JinkBool, JinkoError};
+use crate::{JkErrKind, Instance, InstrKind, Instruction, Interpreter, JinkBool, JkError};
 
 #[derive(Clone)]
 pub struct Var {
@@ -62,7 +62,7 @@ impl Instruction for Var {
         )
     }
 
-    fn as_bool(&self, i: &mut Interpreter) -> Result<bool, JinkoError> {
+    fn as_bool(&self, i: &mut Interpreter) -> Result<bool, JkError> {
         use crate::FromInstance;
 
         // FIXME: Cleanup
@@ -73,8 +73,8 @@ impl Instruction for Var {
                     // FIXME:
                     "bool" => Ok(JinkBool::from_instance(&instance).as_bool(i).unwrap()),
                     // We can safely unwrap since we checked the type of the variable
-                    _ => Err(JinkoError::new(
-                        ErrKind::Interpreter,
+                    _ => Err(JkError::new(
+                        JkErrKind::Interpreter,
                         format!("var {} cannot be interpreted as boolean", self.name),
                         None,
                         self.print(),
@@ -85,8 +85,8 @@ impl Instruction for Var {
                     typecheck it and call self.as_bool() again"
                 ),
             },
-            _ => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            _ => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!("var {} cannot be interpreted as boolean", self.name),
                 None,
                 self.print(),
@@ -94,12 +94,12 @@ impl Instruction for Var {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         let var = match interpreter.get_variable(self.name()) {
             Some(v) => v,
             None => {
-                return Err(JinkoError::new(
-                    ErrKind::Interpreter,
+                return Err(JkError::new(
+                    JkErrKind::Interpreter,
                     format!("variable has not been declared: {}", self.name),
                     None,
                     self.name().to_owned(),

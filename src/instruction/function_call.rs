@@ -2,7 +2,7 @@
 //! function on execution.
 
 use super::{FunctionDec, InstrKind, Instruction, Var};
-use crate::error::{ErrKind, JinkoError};
+use crate::error::{JkErrKind, JkError};
 use crate::interpreter::Interpreter;
 use std::rc::Rc;
 
@@ -43,13 +43,13 @@ impl FunctionCall {
     fn get_declaration(
         &self,
         interpreter: &mut Interpreter,
-    ) -> Result<Rc<FunctionDec>, JinkoError> {
+    ) -> Result<Rc<FunctionDec>, JkError> {
         match interpreter.get_function(self.name()) {
             // get_function() return a Rc, so this clones the Rc, not the FunctionDec
             Some(f) => Ok(f.clone()),
             // FIXME: Fix Location and input
-            None => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            None => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!("Cannot find function {}", self.name()),
                 None,
                 self.name().to_owned(),
@@ -58,11 +58,11 @@ impl FunctionCall {
     }
 
     /// Check if the arguments received and the arguments expected match
-    fn check_args_count(&self, function: &FunctionDec) -> Result<(), JinkoError> {
+    fn check_args_count(&self, function: &FunctionDec) -> Result<(), JkError> {
         match self.args().len() == function.args().len() {
             true => Ok(()),
-            false => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            false => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!(
                     "Wrong number of arguments \
                     for call to function `{}`: Expected {}, got {}",
@@ -82,7 +82,7 @@ impl FunctionCall {
         &self,
         function: &FunctionDec,
         interpreter: &mut Interpreter,
-    ) -> Result<(), JinkoError> {
+    ) -> Result<(), JkError> {
         for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
             interpreter.debug(
                 "VAR MAP",
@@ -128,7 +128,7 @@ impl Instruction for FunctionCall {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         let function = self.get_declaration(interpreter)?;
 
         self.check_args_count(&function)?;

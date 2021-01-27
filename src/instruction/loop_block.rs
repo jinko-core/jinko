@@ -1,7 +1,7 @@
 //! The Loop instruction is used for repeating instructions. They can be of three
 //! different kinds, `for`, `while` or `loop`.
 
-use crate::{ErrKind, Interpreter, JinkoError};
+use crate::{JkErrKind, Interpreter, JkError};
 
 use super::{Block, InstrKind, Instruction, Var};
 
@@ -49,7 +49,7 @@ impl Instruction for Loop {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         match &self.kind {
             LoopKind::Loop => loop {
                 interpreter.debug_step("LOOP ENTER");
@@ -77,8 +77,8 @@ impl Instruction for Loop {
                 // that that result, as a boolean, returns true. If it does, execute the
                 // body. If it does not, break from the for.
 
-                return Err(JinkoError::new(
-                    ErrKind::Interpreter,
+                return Err(JkError::new(
+                    JkErrKind::Interpreter,
                     format!("for loops are currently unimplemented"),
                     None,
                     self.print(),

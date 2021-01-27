@@ -8,7 +8,7 @@ use std::collections::{HashMap, LinkedList};
 use std::rc::Rc;
 
 use crate::{
-    error::{ErrKind, JinkoError},
+    error::{JkErrKind, JkError},
     instruction::{FunctionDec, Var},
     Instruction,
 };
@@ -39,10 +39,10 @@ impl Scope {
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), JkError> {
         match self.get_variable(var.name()) {
-            Some(_) => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            Some(_) => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!("variable already declared: {}", var.name()),
                 None,
                 var.name().to_owned(),
@@ -54,13 +54,13 @@ impl Scope {
     }
 
     /// Remove a variable from the most recently created scope, if it exists
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JinkoError> {
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JkError> {
         match self.get_variable(var.name()) {
             Some(_) => Ok({
                 self.variables.remove(var.name()).unwrap();
             }),
-            None => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            None => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!("variable does not exist: {}", var.name()),
                 None,
                 var.name().to_owned(),
@@ -69,10 +69,10 @@ impl Scope {
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JinkoError> {
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JkError> {
         match self.get_function(func.name()) {
-            Some(_) => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            Some(_) => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!("function already declared: {}", func.name()),
                 None,
                 func.name().to_owned(),
@@ -151,11 +151,11 @@ impl ScopeMap {
     }
 
     /// Add a variable to the current scope if it hasn't been added before
-    pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), JkError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(var),
-            None => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            None => Err(JkError::new(
+                JkErrKind::Interpreter,
                 String::from("Adding variable to empty scopemap"),
                 None,
                 var.name().to_owned(),
@@ -164,11 +164,11 @@ impl ScopeMap {
     }
 
     /// Remove a variable from the current scope if it hasn't been added before
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JinkoError> {
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JkError> {
         match self.scopes.front_mut() {
             Some(head) => head.remove_variable(var),
-            None => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            None => Err(JkError::new(
+                JkErrKind::Interpreter,
                 String::from("Removing variable from empty scopemap"),
                 None,
                 var.name().to_owned(),
@@ -177,11 +177,11 @@ impl ScopeMap {
     }
 
     /// Add a function to the current scope if it hasn't been added before
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JinkoError> {
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JkError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(func),
-            None => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            None => Err(JkError::new(
+                JkErrKind::Interpreter,
                 String::from("Adding function to empty scopemap"),
                 None,
                 func.name().to_owned(),

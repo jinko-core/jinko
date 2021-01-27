@@ -6,7 +6,7 @@ use colored::Colorize;
 /// What kind of error we are dealing with: Either a parsing error, or a behavioural one.
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-pub enum ErrKind {
+pub enum JkErrKind {
     Parsing,
     Interpreter,
     IO,
@@ -31,23 +31,23 @@ impl SpaceLocation {
 /// The actual error type
 // FIXME: Remove `Option` once input tracking is implemented
 #[derive(Debug, PartialEq)]
-pub struct JinkoError {
-    kind: ErrKind,
+pub struct JkError {
+    kind: JkErrKind,
     msg: String,
 
     loc: Option<SpaceLocation>,
     input: String,
 }
 
-impl JinkoError {
+impl JkError {
     /// Create a new error and return it
     pub fn new(
-        kind: ErrKind,
+        kind: JkErrKind,
         msg: String,
         loc: Option<SpaceLocation>,
         input: String,
-    ) -> JinkoError {
-        JinkoError {
+    ) -> JkError {
+        JkError {
             kind,
             msg,
             loc,
@@ -65,27 +65,27 @@ impl JinkoError {
 
     /// What kind of error the error is
     #[cfg(test)]
-    pub fn kind(&self) -> ErrKind {
+    pub fn kind(&self) -> JkErrKind {
         self.kind
     }
 }
 
-impl std::fmt::Display for JinkoError {
+impl std::fmt::Display for JkError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // FIXME: Add better formatting
         write!(f, "ErrorKind: {:?}\nInfo: {}", self.kind, self.msg.red())
     }
 }
 
-impl std::convert::From<std::io::Error> for JinkoError {
+impl std::convert::From<std::io::Error> for JkError {
     fn from(e: std::io::Error) -> Self {
-        JinkoError::new(ErrKind::IO, e.to_string(), None, "".to_owned())
+        JkError::new(JkErrKind::IO, e.to_string(), None, "".to_owned())
     }
 }
 
 // FIXME: Improve formatting, current output is barren
-impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for JinkoError {
+impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for JkError {
     fn from(e: nom::Err<(&str, nom::error::ErrorKind)>) -> Self {
-        JinkoError::new(ErrKind::Parsing, e.to_string(), None, "".to_owned())
+        JkError::new(JkErrKind::Parsing, e.to_string(), None, "".to_owned())
     }
 }

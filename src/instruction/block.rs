@@ -19,7 +19,7 @@
 //! Otherwise, it's `void`
 
 use super::{InstrKind, Instruction};
-use crate::{error::JinkoError, interpreter::Interpreter};
+use crate::{error::JkError, interpreter::Interpreter};
 
 #[derive(Clone)]
 pub struct Block {
@@ -101,14 +101,14 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.scope_enter();
         interpreter.debug_step("BLOCK ENTER");
 
         self.instructions()
             .iter()
             .map(|inst| inst.execute(interpreter))
-            .collect::<Result<Vec<InstrKind>, JinkoError>>()?;
+            .collect::<Result<Vec<InstrKind>, JkError>>()?;
 
         let ret_val = match &self.last {
             Some(e) => e.execute(interpreter),

@@ -7,7 +7,7 @@ use prompt::Prompt;
 use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
-use crate::error::JinkoError;
+use crate::error::JkError;
 use crate::instruction::{InstrKind, Instruction};
 use crate::interpreter::Interpreter;
 use crate::parser::Construct;
@@ -17,18 +17,18 @@ pub struct Repl;
 
 impl Repl {
     /// Parse a new input, adding it to an existing interpreter
-    fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, JinkoError> {
+    fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, JkError> {
         match input.is_empty() {
             true => Ok(None),
             false => match Construct::expression(input) {
                 Ok((_, value)) => Ok(Some(value)),
-                Err(e) => Err(JinkoError::from(e)),
+                Err(e) => Err(JkError::from(e)),
             },
         }
     }
 
     /// Launch the REPL
-    pub fn launch_repl(args: &Args) -> Result<(), JinkoError> {
+    pub fn launch_repl(args: &Args) -> Result<(), JkError> {
         let line_reader = Interface::new("jinko")?;
         let mut interpreter = Interpreter::new();
         interpreter.debug_mode = args.debug;

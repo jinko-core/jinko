@@ -3,7 +3,7 @@
 //! by an instruction
 
 use crate::instruction::{Instruction, Operator};
-use crate::{Instance, JinkoError};
+use crate::{Instance, JkError};
 
 mod jink_constant;
 
@@ -19,7 +19,7 @@ pub type JinkString = JinkConstant<String>;
 pub trait Value: Instruction {
     /// Call this function when an operation is not implemented, rather than implementing
     /// your own. This will format the error nicely.
-    fn no_op(&self, _other: &Self, _op: Operator) -> Result<Instance, JinkoError> {
+    fn no_op(&self, _other: &Self, _op: Operator) -> Result<Instance, JkError> {
         unreachable!("NOP") // FIXME
     }
 
@@ -43,7 +43,7 @@ pub trait Value: Instruction {
     /// assert_eq!(res.ty(), interpreter.get_type("float"));
     /// ```
     // FIXME: Implement behavior defined here ^
-    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JinkoError> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
         self.no_op(other, op)
     }
 }

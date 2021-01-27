@@ -9,7 +9,7 @@
 
 use crate::value::{JinkFloat, JinkInt, Value};
 use crate::{
-    error::ErrKind, error::JinkoError, instruction::InstrKind, interpreter::Interpreter,
+    error::JkErrKind, error::JkError, instruction::InstrKind, interpreter::Interpreter,
     FromInstance, Instance, Instruction,
 };
 
@@ -120,10 +120,10 @@ impl BinaryOp {
         &self,
         node: &Box<dyn Instruction>,
         interpreter: &mut Interpreter,
-    ) -> Result<Instance, JinkoError> {
+    ) -> Result<Instance, JkError> {
         match node.execute(interpreter)? {
-            InstrKind::Statement | InstrKind::Expression(None) => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            InstrKind::Statement | InstrKind::Expression(None) => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!(
                     "Invalid use of statement in binary operation: {}",
                     self.lhs.print()
@@ -150,7 +150,7 @@ impl Instruction for BinaryOp {
         )
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug_step("BINOP ENTER");
 
         interpreter.debug("OP", self.op.to_str());
@@ -159,8 +159,8 @@ impl Instruction for BinaryOp {
         let r_value = self.execute_node(&self.rhs, interpreter)?;
 
         if l_value.ty() != r_value.ty() {
-            return Err(JinkoError::new(
-                ErrKind::Interpreter, // FIXME: Should be a type error
+            return Err(JkError::new(
+                JkErrKind::Interpreter, // FIXME: Should be a type error
                 format!(
                     "Trying to do binary operation on invalid types: {:#?} {} {:#?}",
                     l_value.ty(),
