@@ -6,6 +6,7 @@ use prompt::Prompt;
 
 use linefeed::{Interface, ReadResult};
 
+use crate::{Instance, JinkConstant, FromInstance};
 use crate::args::Args;
 use crate::error::JkError;
 use crate::instruction::{InstrKind, Instruction};
@@ -14,6 +15,29 @@ use crate::parser::Construct;
 
 /// Empty struct for the Repl methods
 pub struct Repl;
+
+// FIXME:
+// - Is Display really how we want to go about it?
+// - Cleanup the code
+impl std::fmt::Display for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self.ty() {
+                Some(ty) => match ty.as_ref() {
+                    "int" => JinkConstant::<i64>::from_instance(self).print(),
+                    "float" => JinkConstant::<f64>::from_instance(self).print(),
+                    "char" => JinkConstant::<char>::from_instance(self).print(),
+                    "string" => JinkConstant::<String>::from_instance(self).print(),
+                    "bool" => JinkConstant::<bool>::from_instance(self).print(),
+                    _ => format!("{:?}", self),
+                },
+                None => format!(""),
+            }
+        )
+    }
+}
 
 impl Repl {
     /// Parse a new input, adding it to an existing interpreter

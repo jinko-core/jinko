@@ -18,7 +18,7 @@ pub use error::{JkErrKind, JkError};
 pub use instance::{FromInstance, Instance, ToInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
-pub use value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString};
+pub use value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString, JinkConstant};
 
 fn handle_exit_code(result: InstrKind) {
     match result {
