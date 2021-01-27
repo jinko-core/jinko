@@ -195,13 +195,11 @@ impl ToInstance for JinkChar {
 
 impl ToInstance for JinkString {
     fn to_instance(&self) -> Instance {
-        unsafe {
-            Instance::from_bytes(
-                Some("string".to_string()), // FIXME
-                self.0.as_bytes().len(),
-                self.0.as_bytes(),
-            )
-        }
+        Instance::from_bytes(
+            Some("string".to_string()), // FIXME
+            self.0.as_bytes().len(),
+            self.0.as_bytes(),
+        )
     }
 }
 
