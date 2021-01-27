@@ -70,11 +70,11 @@ impl Construct {
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
     pub(crate) fn constant(input: &str) -> ParseResult<Box<dyn Instruction>> {
         alt((
-            ConstantConstruct::c_char_constant,
-            ConstantConstruct::c_string_constant,
-            ConstantConstruct::c_float_constant,
-            ConstantConstruct::c_int_constant,
-            ConstantConstruct::c_bool_constant,
+            ConstantConstruct::char_constant,
+            ConstantConstruct::string_constant,
+            ConstantConstruct::float_constant,
+            ConstantConstruct::int_constant,
+            ConstantConstruct::bool_constant,
         ))(input)
     }
 
