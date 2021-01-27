@@ -14,6 +14,7 @@ use crate::{
 };
 
 /// A scope contains a set of available variables and functions
+#[derive(Clone)]
 struct Scope {
     variables: HashMap<String, Var>,
     functions: HashMap<String, Rc<FunctionDec>>,
@@ -100,6 +101,7 @@ type ScopeStack<T> = LinkedList<T>;
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
+#[derive(Clone)]
 pub struct ScopeMap {
     scopes: ScopeStack<Scope>,
 }

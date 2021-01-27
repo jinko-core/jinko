@@ -21,6 +21,7 @@ type IKey = String;
 /// Name of the entry point in jinko
 const ENTRY_NAME: &str = "__entry";
 
+#[derive(Clone)]
 pub struct Interpreter {
     /// Is the interpreter in an audit block or not
     pub in_audit: bool,
