@@ -34,8 +34,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url}}
-          asset_path: ./target/${{ matrix.target }}/release/suckit
-          asset_name: suckit-${{ steps.get_release.outputs.tag_name }}-${{ matrix.target }}
+          asset_path: ./target/${{ matrix.target }}/release/jinko
+          asset_name: jinko-${{ steps.get_release.outputs.tag_name }}-${{ matrix.target }}
           asset_content_type: application/x-elf
 
   publish:
