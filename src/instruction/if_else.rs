@@ -61,7 +61,7 @@ impl Instruction for IfElse {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug_step("IF_ELSE ENTER");
 
-        let cond = self.condition.as_bool();
+        let cond = self.condition.as_bool(interpreter)?;
         interpreter.debug("COND", &cond.to_string());
 
         if cond {

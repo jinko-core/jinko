@@ -46,6 +46,7 @@ impl Token {
                     char('\n'),
                     char(' '),
                     char('{'),
+                    char(')'),
                     char(';'),
                 )))(input)?;
                 Ok((input, tag))

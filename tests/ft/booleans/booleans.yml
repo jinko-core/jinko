@@ -1,0 +1,18 @@
+tests:
+  - name: "Return 0 on true"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/booleans/return_0_if_true.jk"
+    exit_code: 0
+
+  - name: "Return 0 on false"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/booleans/return_0_if_false.jk"
+    exit_code: 0
+
+  - name: "Return 0 on function argument to true"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/booleans/return_0_arg.jk"
+    exit_code: 0
