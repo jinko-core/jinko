@@ -4,6 +4,9 @@ use crate::{FromInstance, Instance, Interpreter, JkError, JkString, ToInstance, 
 use std::convert::TryFrom;
 
 #[derive(Clone)]
+/// A JkConstant represents a primitive type in Jinko. It is used in order to
+/// implement integers, floating point numbers, characters, booleans and strings, as
+/// well as raw byte values later for custom types.
 pub struct JkConstant<T>(pub(crate) T);
 
 // We can do a generic implementation instead of copy pasting it 5 times.
@@ -51,6 +54,56 @@ pub struct JkConstant<T>(pub(crate) T);
 /// jk_primitive!(i64, "int");
 /// ```
 macro_rules! jk_primitive {
+    // Special implementation for JkBool, in order to have as_bool()
+    (bool) => {
+        impl ToInstance for JkConstant<bool> {
+            fn to_instance(&self) -> Instance {
+                use std::mem::{size_of, transmute};
+
+                unsafe {
+                    Instance::from_bytes(
+                        Some("bool".to_string()), // FIXME
+                        size_of::<bool>(),
+                        &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
+                    )
+                }
+            }
+        }
+
+        impl FromInstance for JkConstant<bool> {
+            fn from_instance(i: &Instance) -> Self {
+                use std::mem::{size_of, transmute};
+
+                unsafe {
+                    Self::from(transmute::<[u8; size_of::<bool>()], bool>(
+                        TryFrom::try_from(i.data()).unwrap(),
+                    ))
+                }
+            }
+        }
+
+        impl Instruction for JkConstant<bool> {
+            fn kind(&self) -> InstrKind {
+                InstrKind::Expression(None)
+            }
+
+            fn print(&self) -> String {
+                self.0.to_string()
+            }
+
+            fn as_bool(&self, _interpreter: &mut Interpreter) -> Result<bool, JkError> {
+                Ok(self.0)
+            }
+
+            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+                interpreter.debug("CONSTANT", &self.0.to_string());
+
+                // Since we cannot use the generic ToInstance implementation, we also have to
+                // copy paste our four basic implementations for jinko's primitive types...
+                Ok(InstrKind::Expression(Some(self.to_instance())))
+            }
+        }
+    };
     ($t:ty, $s:expr) => {
         impl ToInstance for JkConstant<$t> {
             fn to_instance(&self) -> Instance {
@@ -96,62 +149,12 @@ macro_rules! jk_primitive {
             }
         }
     };
-    // Special implementation for JkBool, in order to have as_bool()
-    (bool, $s:expr) => {
-        impl ToInstance for JkConstant<$t> {
-            fn to_instance(&self) -> Instance {
-                use std::mem::{size_of, transmute};
-
-                unsafe {
-                    Instance::from_bytes(
-                        Some($s.to_string()), // FIXME
-                        size_of::<$t>(),
-                        &transmute::<$t, [u8; size_of::<$t>()]>(self.0),
-                    )
-                }
-            }
-        }
-
-        impl FromInstance for JkConstant<$t> {
-            fn from_instance(i: &Instance) -> Self {
-                use std::mem::{size_of, transmute};
-
-                unsafe {
-                    Self::from(transmute::<[u8; size_of::<$t>()], $t>(
-                        TryFrom::try_from(i.data()).unwrap(),
-                    ))
-                }
-            }
-        }
-
-        impl Instruction for JkConstant<$t> {
-            fn kind(&self) -> InstrKind {
-                InstrKind::Expression(None)
-            }
-
-            fn print(&self) -> String {
-                self.0.to_string()
-            }
-
-            fn as_bool(&self, _interpreter: &mut Interpreter) -> Result<bool, JkError> {
-                Ok(self.0)
-            }
-
-            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
-                interpreter.debug("CONSTANT", &self.0.to_string());
-
-                // Since we cannot use the generic ToInstance implementation, we also have to
-                // copy paste our four basic implementations for jinko's primitive types...
-                Ok(InstrKind::Expression(Some(self.to_instance())))
-            }
-        }
-    };
 }
 
 jk_primitive!(i64, "int");
 jk_primitive!(f64, "float");
 jk_primitive!(char, "char");
-jk_primitive!(bool, "bool");
+jk_primitive!(bool);
 
 impl Value for JkConstant<i64> {
     fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
