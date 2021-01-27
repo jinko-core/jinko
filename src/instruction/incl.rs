@@ -1,7 +1,7 @@
 //! This module is used to parse external code and make it available to other source
 //! files.
 
-use crate::{ErrKind, Instruction, Interpreter, JinkoError, InstrKind, Parser};
+use crate::{ErrKind, InstrKind, Instruction, Interpreter, JinkoError, Parser};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
 /// The interpreter is built from parsing the source file in the path.
@@ -55,7 +55,10 @@ impl Incl {
         };
 
         match interpreter {
-            Ok(i) => { self.content = Some(i); Ok(()) },
+            Ok(i) => {
+                self.content = Some(i);
+                Ok(())
+            }
             Err(e) => Err(e),
         }
     }
@@ -69,9 +72,9 @@ impl Instruction for Incl {
     fn print(&self) -> String {
         let mut base = format!("incl {}", self.path);
 
-        base = match self.alias {
+        base = match &self.alias {
             Some(alias) => format!("{} as {}", base, alias),
-            None => base
+            None => base,
         };
 
         base
