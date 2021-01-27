@@ -14,9 +14,9 @@ pub enum JkErrKind {
 
 /// Contains indications vis-a-vis the error's location in the source file
 #[derive(Debug, PartialEq)]
-pub struct SpaceLocation(pub usize, pub usize);
+pub struct JkErrSpaceLocation(pub usize, pub usize);
 
-impl SpaceLocation {
+impl JkErrSpaceLocation {
     /// Line of the error
     pub fn line(&self) -> usize {
         self.0
@@ -35,7 +35,7 @@ pub struct JkError {
     kind: JkErrKind,
     msg: String,
 
-    loc: Option<SpaceLocation>,
+    loc: Option<JkErrSpaceLocation>,
     input: String,
 }
 
@@ -44,7 +44,7 @@ impl JkError {
     pub fn new(
         kind: JkErrKind,
         msg: String,
-        loc: Option<SpaceLocation>,
+        loc: Option<JkErrSpaceLocation>,
         input: String,
     ) -> JkError {
         JkError {
