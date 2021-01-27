@@ -65,6 +65,8 @@ impl Instruction for Var {
     fn as_bool(&self, i: &mut Interpreter) -> Result<bool, JinkoError> {
         use crate::FromInstance;
 
+        // FIXME: Cleanup
+
         match self.execute(i)? {
             InstrKind::Expression(Some(instance)) => match instance.ty() {
                 Some(ty) => match ty.as_ref() {
