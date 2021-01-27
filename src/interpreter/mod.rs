@@ -21,6 +21,9 @@ type IKey = String;
 /// Name of the entry point in jinko
 const ENTRY_NAME: &str = "__entry";
 
+/// An interpreter represents the state of a jinko program. It contains functions,
+/// variables, tests... and can be optimized, typechecked, executed or
+/// serialized/deserialized to bytecode.
 pub struct Interpreter {
     /// Is the interpreter in an audit block or not
     pub in_audit: bool,
