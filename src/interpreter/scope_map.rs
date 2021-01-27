@@ -7,11 +7,8 @@
 use std::collections::{HashMap, LinkedList};
 use std::rc::Rc;
 
-use crate::{
-    error::{JkErrKind, JkError},
-    instruction::{FunctionDec, Var},
-    Instruction,
-};
+use crate::{JkErrKind, JkError, Instruction};
+use crate::instruction::{FunctionDec, Var};
 
 /// A scope contains a set of available variables and functions
 struct Scope {

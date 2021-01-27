@@ -12,7 +12,7 @@ use scope_map::ScopeMap;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::error::{JkErrKind, JkError};
+use crate::{JkErrKind, JkError};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, Var};
 
 /// Type the interpreter uses for keys

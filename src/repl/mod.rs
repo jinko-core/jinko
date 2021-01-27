@@ -6,12 +6,8 @@ use prompt::Prompt;
 
 use linefeed::{Interface, ReadResult};
 
-use crate::{Instance, JinkConstant, FromInstance};
 use crate::args::Args;
-use crate::error::JkError;
-use crate::instruction::{InstrKind, Instruction};
-use crate::interpreter::Interpreter;
-use crate::parser::Construct;
+use crate::{JkError, InstrKind, Instruction, Interpreter, parser::Construct, FromInstance, Instance, JkConstant};
 
 /// Empty struct for the Repl methods
 pub struct Repl;
@@ -26,11 +22,11 @@ impl std::fmt::Display for Instance {
             "{}",
             match self.ty() {
                 Some(ty) => match ty.as_ref() {
-                    "int" => JinkConstant::<i64>::from_instance(self).print(),
-                    "float" => JinkConstant::<f64>::from_instance(self).print(),
-                    "char" => JinkConstant::<char>::from_instance(self).print(),
-                    "string" => JinkConstant::<String>::from_instance(self).print(),
-                    "bool" => JinkConstant::<bool>::from_instance(self).print(),
+                    "int" => JkConstant::<i64>::from_instance(self).print(),
+                    "float" => JkConstant::<f64>::from_instance(self).print(),
+                    "char" => JkConstant::<char>::from_instance(self).print(),
+                    "string" => JkConstant::<String>::from_instance(self).print(),
+                    "bool" => JkConstant::<bool>::from_instance(self).print(),
                     _ => format!("{:?}", self),
                 },
                 None => format!(""),

@@ -15,10 +15,8 @@
 //! x = if condition { 12 } else { 13 };
 //! ```
 
-use crate::error::JkError;
-use crate::interpreter::Interpreter;
-
-use super::{Block, InstrKind, Instruction};
+use crate::{JkError, Interpreter};
+use crate::instruction::{Block, InstrKind, Instruction};
 
 #[derive(Clone)]
 pub struct IfElse {

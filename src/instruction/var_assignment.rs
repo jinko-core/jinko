@@ -1,9 +1,7 @@
 //! The VarAssign struct is used when assigning values to variables.
 
-use crate::error::{JkErrKind, JkError};
-use crate::interpreter::Interpreter;
-
-use super::{InstrKind, Instruction, Var};
+use crate::{JkErrKind, JkError, Instruction, Interpreter};
+use crate::instruction::{InstrKind, Var};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -119,12 +117,12 @@ impl Instruction for VarAssign {
 mod tests {
     use super::*;
     use crate::parser::Construct;
-    use crate::value::{JinkInt, JinkString};
+    use crate::value::{JkInt, JkString};
     use crate::ToInstance;
 
     #[test]
     fn non_mutable() {
-        let var_assignment = VarAssign::new(false, "x".to_owned(), Box::new(JinkInt::from(12)));
+        let var_assignment = VarAssign::new(false, "x".to_owned(), Box::new(JkInt::from(12)));
 
         assert_eq!(var_assignment.print(), "x = 12");
     }
@@ -134,7 +132,7 @@ mod tests {
         let var_assignment = VarAssign::new(
             true,
             "some_id_99".to_owned(),
-            Box::new(JinkString::from("Hey there")),
+            Box::new(JkString::from("Hey there")),
         );
 
         assert_eq!(var_assignment.print(), "mut some_id_99 = \"Hey there\"");
@@ -152,7 +150,7 @@ mod tests {
         let va_get = Construct::variable("a").unwrap().1;
         assert_eq!(
             va_get.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(15).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(15).to_instance()))
         );
     }
 

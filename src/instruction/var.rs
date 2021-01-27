@@ -3,7 +3,7 @@
 //! need to keep an option of an instance. A variable is either there, fully initialized,
 //! or it's not.
 
-use crate::{JkErrKind, Instance, InstrKind, Instruction, Interpreter, JinkBool, JkError};
+use crate::{Instance, InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError};
 
 #[derive(Clone)]
 pub struct Var {
@@ -71,7 +71,7 @@ impl Instruction for Var {
             InstrKind::Expression(Some(instance)) => match instance.ty() {
                 Some(ty) => match ty.as_ref() {
                     // FIXME:
-                    "bool" => Ok(JinkBool::from_instance(&instance).as_bool(i).unwrap()),
+                    "bool" => Ok(JkBool::from_instance(&instance).as_bool(i).unwrap()),
                     // We can safely unwrap since we checked the type of the variable
                     _ => Err(JkError::new(
                         JkErrKind::Interpreter,
@@ -122,7 +122,7 @@ impl Default for Var {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::value::JinkInt;
+    use crate::value::JkInt;
     use crate::ToInstance;
 
     #[test]
@@ -130,7 +130,7 @@ mod tests {
         let mut i = Interpreter::new();
         let mut v = Var::new("a".to_string());
 
-        let instance = JinkInt::from(15).to_instance();
+        let instance = JkInt::from(15).to_instance();
         v.set_instance(instance.clone());
 
         i.add_variable(v.clone()).unwrap();

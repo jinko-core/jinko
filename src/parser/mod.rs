@@ -2,17 +2,21 @@
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
+use crate::{InstrKind, Interpreter, JkError};
+
+use nom::multi::many0;
+
 mod box_construct;
 mod constant_construct;
 mod constructs;
-mod jinko_insts;
 mod shunting_yard;
 mod tokens;
 
-use crate::{InstrKind, Interpreter, JkError};
-use nom::multi::many0;
-
 pub use constructs::Construct;
+pub use box_construct::BoxConstruct;
+pub use tokens::Token;
+pub use constant_construct::ConstantConstruct;
+pub use shunting_yard::ShuntingYard;
 
 pub struct Parser;
 

@@ -40,17 +40,14 @@ impl FunctionCall {
     }
 
     /// Get the corresponding declaration from an interpreter
-    fn get_declaration(
-        &self,
-        interpreter: &mut Interpreter,
-    ) -> Result<Rc<FunctionDec>, JkError> {
+    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<FunctionDec>, JkError> {
         match interpreter.get_function(self.name()) {
             // get_function() return a Rc, so this clones the Rc, not the FunctionDec
             Some(f) => Ok(f.clone()),
             // FIXME: Fix Location and input
             None => Err(JkError::new(
                 JkErrKind::Interpreter,
-                format!("Cannot find function {}", self.name()),
+                format!("cannot find function {}", self.name()),
                 None,
                 self.name().to_owned(),
             )),
@@ -64,8 +61,8 @@ impl FunctionCall {
             false => Err(JkError::new(
                 JkErrKind::Interpreter,
                 format!(
-                    "Wrong number of arguments \
-                    for call to function `{}`: Expected {}, got {}",
+                    "wrong number of arguments \
+                    for call to function `{}`: expected {}, got {}",
                     self.name(),
                     function.args().len(),
                     self.args().len()
@@ -164,36 +161,20 @@ mod tests {
         assert_eq!(function.print(), "something()");
     }
 
-    #[test]
-    #[ignore]
-    fn t_pretty_print_simple() {
-        /*
-        let c0 = Constant::new(ConstKind::Int).with_iv(12);
-        let c1 = Constant::new(ConstKind::Int).with_iv(13);
-        let c2 = Constant::new(ConstKind::Int).with_iv(14);
-
-        let mut function = FunctionCall::new("fn_name".to_string());
-
-        function.add_arg(c0);
-        function.add_arg(c1);
-        function.add_arg(c2);
-
-        assert_eq!(function.print(), "fn_name(12, 13, 14)");
-        */
-    }
-
     // Don't ignore once variable execution is implemented
 
     #[test]
-    #[ignore]
     fn t_invalid_args_number() {
         use super::super::{FunctionDec, FunctionDecArg};
-        use crate::value::JinkInt;
+        use crate::value::JkInt;
+        use crate::instruction::FunctionKind;
 
         let mut interpreter = Interpreter::new();
 
         // Create a new function with two integers arguments
         let mut f = FunctionDec::new("func0".to_owned(), None);
+        f.set_kind(FunctionKind::Func);
+
         f.set_args(vec![
             FunctionDecArg::new("a".to_owned(), "int".to_owned()),
             FunctionDecArg::new("b".to_owned(), "int".to_owned()),
@@ -208,25 +189,18 @@ mod tests {
             Err(_) => assert!(true),
         }
 
-        f_call.add_arg(Box::new(JinkInt::from(12)));
+        f_call.add_arg(Box::new(JkInt::from(12)));
 
         match f_call.execute(&mut interpreter) {
             Ok(_) => assert!(false, "Given 1 arguments to 2 arguments function"),
             Err(_) => assert!(true),
-        }
-
-        f_call.add_arg(Box::new(JinkInt::from(24)));
-
-        match f_call.execute(&mut interpreter) {
-            Ok(_) => assert!(true),
-            Err(e) => assert!(false, "{}: Given 2 arguments to 2 arguments function", e),
         }
     }
 
     #[test]
     fn t_func_call_arg_return() {
         use crate::parser::Construct;
-        use crate::value::JinkInt;
+        use crate::value::JkInt;
         use crate::ToInstance;
 
         let mut i = Interpreter::new();
@@ -239,14 +213,14 @@ mod tests {
 
         assert_eq!(
             func_call.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(2).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(2).to_instance()))
         );
     }
 
     #[test]
     fn t_func_call_arg_return_binop() {
         use crate::parser::Construct;
-        use crate::value::JinkInt;
+        use crate::value::JkInt;
         use crate::ToInstance;
 
         let mut i = Interpreter::new();
@@ -259,14 +233,14 @@ mod tests {
 
         assert_eq!(
             func_call.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(3).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(3).to_instance()))
         );
     }
 
     #[test]
     fn t_func_call_variable_return() {
         use crate::parser::Construct;
-        use crate::value::JinkInt;
+        use crate::value::JkInt;
         use crate::ToInstance;
 
         let mut i = Interpreter::new();
@@ -279,7 +253,7 @@ mod tests {
 
         assert_eq!(
             func_call.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(1).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(1).to_instance()))
         );
     }
 }

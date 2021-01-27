@@ -5,74 +5,10 @@
 //! The available operators are `+`, `-`, `*` and `/`.
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
-// FIXME: Separate Operator from BinOp
-
-use crate::value::{JinkFloat, JinkInt, Value};
 use crate::{
-    error::JkErrKind, error::JkError, instruction::InstrKind, interpreter::Interpreter,
-    FromInstance, Instance, Instruction,
+    instruction::Operator, FromInstance, Instance, InstrKind, Instruction, Interpreter, JkErrKind,
+    JkError, JkFloat, JkInt, Value,
 };
-
-/// All the binary operators available
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Operator {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    LeftParenthesis,
-    RightParenthesis,
-}
-
-impl Operator {
-    /// Create a new operator from a given character
-    pub fn new(op_str: &str) -> Operator {
-        match op_str {
-            "+" => Operator::Add,
-            "-" => Operator::Sub,
-            "*" => Operator::Mul,
-            "/" => Operator::Div,
-            "(" => Operator::LeftParenthesis,
-            ")" => Operator::RightParenthesis,
-            _ => unreachable!("Invalid operator: {}", op_str),
-        }
-    }
-
-    /// Return the operator's representation
-    pub fn to_str(&self) -> &str {
-        match self {
-            Operator::Add => "+",
-            Operator::Sub => "-",
-            Operator::Mul => "*",
-            Operator::Div => "/",
-            Operator::LeftParenthesis => "(",
-            Operator::RightParenthesis => ")",
-        }
-    }
-
-    /// Return the operator's precedence according to the Shunting Yard algorithm
-    pub fn precedence(&self) -> u8 {
-        match self {
-            // Classic SY operator precedence
-            Operator::Mul | Operator::Div => 3,
-            Operator::Add | Operator::Sub => 2,
-
-            // Special operators. They don't really have a precedence value, and it's
-            // never used
-            Operator::LeftParenthesis | Operator::RightParenthesis => 0,
-        }
-    }
-
-    /// Is the operator a left associative one
-    pub fn is_left_associative(&self) -> bool {
-        // FIXME: Not entirely true
-        // - Changes once we add more operators such as the Power one
-        match self {
-            _ => true,
-        }
-    }
-}
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
 /// or a comparison one
@@ -179,15 +115,15 @@ impl Instruction for BinaryOp {
             // FIXME: Absolutely DISGUSTING
             "int" => {
                 return_value = InstrKind::Expression(Some(
-                    JinkInt::from_instance(&l_value)
-                        .do_op(&JinkInt::from_instance(&r_value), self.op)?,
+                    JkInt::from_instance(&l_value)
+                        .do_op(&JkInt::from_instance(&r_value), self.op)?,
                 ));
             }
 
             "float" => {
                 return_value = InstrKind::Expression(Some(
-                    JinkFloat::from_instance(&l_value)
-                        .do_op(&JinkFloat::from_instance(&r_value), self.op)?,
+                    JkFloat::from_instance(&l_value)
+                        .do_op(&JkFloat::from_instance(&r_value), self.op)?,
                 ));
             }
             _ => todo!("Implement empty types?"),
@@ -202,13 +138,13 @@ impl Instruction for BinaryOp {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::value::JinkInt;
+    use crate::value::JkInt;
     use crate::ToInstance;
     use crate::{InstrKind, Interpreter};
 
     fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
-        let l = Box::new(JinkInt::from(l_num));
-        let r = Box::new(JinkInt::from(r_num));
+        let l = Box::new(JkInt::from(l_num));
+        let r = Box::new(JkInt::from(r_num));
         let op = Operator::new(op_string);
 
         let binop = BinaryOp::new(l, r, op);
@@ -217,7 +153,7 @@ mod tests {
 
         assert_eq!(
             binop.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(res).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(res).to_instance()))
         );
     }
 
@@ -254,12 +190,12 @@ mod tests {
     #[test]
     fn t_binop_rhs_execute() {
         let r_bin = BinaryOp::new(
-            Box::new(JinkInt::from(12)),
-            Box::new(JinkInt::from(3)),
+            Box::new(JkInt::from(12)),
+            Box::new(JkInt::from(3)),
             Operator::new("*"),
         );
         let binary_op = BinaryOp::new(
-            Box::new(JinkInt::from(9)),
+            Box::new(JkInt::from(9)),
             Box::new(r_bin),
             Operator::new("-"),
         );
@@ -268,7 +204,7 @@ mod tests {
 
         assert_eq!(
             binary_op.rhs().execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(36).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(36).to_instance()))
         );
     }
 }

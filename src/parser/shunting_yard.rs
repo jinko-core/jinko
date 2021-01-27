@@ -3,10 +3,7 @@
 
 use crate::instruction::{BinaryOp, Instruction, Operator};
 use crate::utils::{Queue, Stack};
-
-use super::box_construct::BoxConstruct;
-use super::constructs::Construct;
-use super::tokens::Token;
+use crate::parser::{BoxConstruct, Construct, Token};
 
 use nom::{branch::alt, Err, IResult};
 
@@ -219,7 +216,7 @@ mod tests {
 
         assert_eq!(
             output.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(result).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(result).to_instance()))
         );
     }
 

@@ -1,10 +1,7 @@
 //! Audit blocks are more permissive than normal blocks. They allow ignoring a return
 //! value, for example.
 
-use crate::error::JkError;
-use crate::interpreter::Interpreter;
-
-use super::{Block, InstrKind, Instruction};
+use crate::{instruction::Block, InstrKind, Instruction, Interpreter, JkError};
 
 #[derive(Clone)]
 pub struct Audit {

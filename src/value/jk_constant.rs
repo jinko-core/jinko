@@ -1,12 +1,12 @@
-use super::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString, Value};
+use crate::{JkBool, JkChar, JkFloat, JkInt, JkString, Value, FromInstance, Instance, Interpreter, JkError, ToInstance};
 use crate::instruction::{InstrKind, Instruction, Operator};
-use crate::{FromInstance, Instance, Interpreter, JkError, ToInstance};
+
 use std::convert::TryFrom;
 
 #[derive(Clone)]
-pub struct JinkConstant<T>(pub(crate) T);
+pub struct JkConstant<T>(pub(crate) T);
 
-impl Instruction for JinkInt {
+impl Instruction for JkInt {
     fn kind(&self) -> InstrKind {
         InstrKind::Expression(None)
     }
@@ -24,7 +24,7 @@ impl Instruction for JinkInt {
     }
 }
 
-impl Instruction for JinkFloat {
+impl Instruction for JkFloat {
     fn kind(&self) -> InstrKind {
         InstrKind::Expression(None)
     }
@@ -42,7 +42,7 @@ impl Instruction for JinkFloat {
     }
 }
 
-impl Instruction for JinkBool {
+impl Instruction for JkBool {
     fn kind(&self) -> InstrKind {
         InstrKind::Expression(None)
     }
@@ -64,7 +64,7 @@ impl Instruction for JinkBool {
     }
 }
 
-impl Instruction for JinkChar {
+impl Instruction for JkChar {
     fn kind(&self) -> InstrKind {
         InstrKind::Expression(None)
     }
@@ -82,7 +82,7 @@ impl Instruction for JinkChar {
     }
 }
 
-impl Instruction for JinkString {
+impl Instruction for JkString {
     fn kind(&self) -> InstrKind {
         InstrKind::Expression(None)
     }
@@ -107,7 +107,7 @@ impl Instruction for JinkString {
 // Here is the generic implementation:
 //
 // ```
-// impl<T: Sized> ToInstance for JinkConstant<T> {
+// impl<T: Sized> ToInstance for JkConstant<T> {
 //     fn to_instance(&self) -> Instance {
 //         use std::mem::{size_of, transmute};
 //
@@ -121,7 +121,7 @@ impl Instruction for JinkString {
 //     }
 // }
 //
-// /* (Plus a specific implementation for JinkConstant<String>) */
+// /* (Plus a specific implementation for JkConstant<String>) */
 // ```
 //
 // which fails with the following error message:
@@ -130,14 +130,14 @@ impl Instruction for JinkString {
 // error[E0277]: the size for values of type `T` cannot be known at compilation time
 // --> src/value/jink_constant.rs:34:48
 //     |
-// 25  | impl <T: Sized> ToInstance for JinkConstant<T> {
+// 25  | impl <T: Sized> ToInstance for JkConstant<T> {
 //     |       - this type parameter needs to be `Sized`
 //     ...
 // 34  |         &transmute::<T, [u8; size_of::<T>()]>(self.0),
 //     |                                        ^ doesn't have a size known at compile-time
 // ```
 
-impl ToInstance for JinkInt {
+impl ToInstance for JkInt {
     fn to_instance(&self) -> Instance {
         use std::mem::{size_of, transmute};
 
@@ -151,7 +151,7 @@ impl ToInstance for JinkInt {
     }
 }
 
-impl ToInstance for JinkFloat {
+impl ToInstance for JkFloat {
     fn to_instance(&self) -> Instance {
         use std::mem::{size_of, transmute};
 
@@ -165,7 +165,7 @@ impl ToInstance for JinkFloat {
     }
 }
 
-impl ToInstance for JinkBool {
+impl ToInstance for JkBool {
     fn to_instance(&self) -> Instance {
         use std::mem::{size_of, transmute};
 
@@ -179,7 +179,7 @@ impl ToInstance for JinkBool {
     }
 }
 
-impl ToInstance for JinkChar {
+impl ToInstance for JkChar {
     fn to_instance(&self) -> Instance {
         use std::mem::{size_of, transmute};
 
@@ -193,7 +193,7 @@ impl ToInstance for JinkChar {
     }
 }
 
-impl ToInstance for JinkString {
+impl ToInstance for JkString {
     fn to_instance(&self) -> Instance {
         Instance::from_bytes(
             Some("string".to_string()), // FIXME
@@ -205,126 +205,126 @@ impl ToInstance for JinkString {
 
 // In the same vein, we also have to implement FromInstance this way...
 
-impl FromInstance for JinkInt {
+impl FromInstance for JkInt {
     fn from_instance(i: &Instance) -> Self {
         use std::mem::{size_of, transmute};
 
         unsafe {
-            JinkInt::from(transmute::<[u8; size_of::<i64>()], i64>(
+            JkInt::from(transmute::<[u8; size_of::<i64>()], i64>(
                 TryFrom::try_from(i.data()).unwrap(),
             ))
         }
     }
 }
 
-impl FromInstance for JinkFloat {
+impl FromInstance for JkFloat {
     fn from_instance(i: &Instance) -> Self {
         use std::mem::{size_of, transmute};
 
         unsafe {
-            JinkFloat::from(transmute::<[u8; size_of::<f64>()], f64>(
+            JkFloat::from(transmute::<[u8; size_of::<f64>()], f64>(
                 TryFrom::try_from(i.data()).unwrap(),
             ))
         }
     }
 }
 
-impl FromInstance for JinkBool {
+impl FromInstance for JkBool {
     fn from_instance(i: &Instance) -> Self {
         use std::mem::{size_of, transmute};
 
         unsafe {
-            JinkBool::from(transmute::<[u8; size_of::<bool>()], bool>(
+            JkBool::from(transmute::<[u8; size_of::<bool>()], bool>(
                 TryFrom::try_from(i.data()).unwrap(),
             ))
         }
     }
 }
 
-impl FromInstance for JinkChar {
+impl FromInstance for JkChar {
     fn from_instance(i: &Instance) -> Self {
         use std::mem::{size_of, transmute};
 
         unsafe {
-            JinkChar::from(transmute::<[u8; size_of::<char>()], char>(
+            JkChar::from(transmute::<[u8; size_of::<char>()], char>(
                 TryFrom::try_from(i.data()).unwrap(),
             ))
         }
     }
 }
 
-impl FromInstance for JinkString {
+impl FromInstance for JkString {
     fn from_instance(i: &Instance) -> Self {
         // unchecked is safe because this instance came from a utf8 string in ToInstance
-        unsafe { JinkString::from(String::from_utf8_unchecked(i.data().to_vec())) }
+        unsafe { JkString::from(String::from_utf8_unchecked(i.data().to_vec())) }
     }
 }
 
-// impl FromInstance for JinkFloat {
+// impl FromInstance for JkFloat {
 //     fn from_instance(i: &Instance) -> Self {
 //         use std::mem::{transmute, size_of};
 //
-//         JinkFloat::from(transmute::<[u8; size_of::<f64>()], f64>(i.data()))
+//         JkFloat::from(transmute::<[u8; size_of::<f64>()], f64>(i.data()))
 //     }
 // }
 //
-// impl FromInstance for JinkBool {
+// impl FromInstance for JkBool {
 //     fn from_instance(i: &Instance) -> Self {
 //         use std::mem::{transmute, size_of};
 //
-//         JinkBool::from(transmute::<[u8; size_of::<bool>()], bool>(i.data()))
+//         JkBool::from(transmute::<[u8; size_of::<bool>()], bool>(i.data()))
 //     }
 // }
 //
-// impl FromInstance for JinkChar {
+// impl FromInstance for JkChar {
 //     fn from_instance(i: &Instance) -> Self {
 //         use std::mem::{transmute, size_of};
 //
-//         JinkChar::from(transmute::<[u8; size_of::<char>()], char>(i.data()))
+//         JkChar::from(transmute::<[u8; size_of::<char>()], char>(i.data()))
 //     }
 // }
 //
-// impl FromInstance for JinkString {
+// impl FromInstance for JkString {
 //     fn from_instance(i: &Instance) -> Self {
 //         use std::mem::{transmute, size_of};
 //
-//         JinkString::from(transmute::<[u8; size_of::<String>()], String>(i.data()))
+//         JkString::from(transmute::<[u8; size_of::<String>()], String>(i.data()))
 //     }
 // }
 
-impl Value for JinkConstant<i64> {
+impl Value for JkConstant<i64> {
     fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
         match op {
-            Operator::Add => Ok(JinkConstant::from(self.0 + other.0).to_instance()),
-            Operator::Sub => Ok(JinkConstant::from(self.0 - other.0).to_instance()),
-            Operator::Mul => Ok(JinkConstant::from(self.0 * other.0).to_instance()),
-            Operator::Div => Ok(JinkConstant::from(self.0 / other.0).to_instance()),
+            Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
+            Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
+            Operator::Mul => Ok(JkConstant::from(self.0 * other.0).to_instance()),
+            Operator::Div => Ok(JkConstant::from(self.0 / other.0).to_instance()),
             _ => self.no_op(other, op),
         }
     }
 }
 
 // FIXME: Avoid this copy paste, find a better/cleaner way to do it
-impl Value for JinkConstant<f64> {
+impl Value for JkConstant<f64> {
     fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
         match op {
-            Operator::Add => Ok(JinkConstant::from(self.0 + other.0).to_instance()),
-            Operator::Sub => Ok(JinkConstant::from(self.0 - other.0).to_instance()),
-            Operator::Mul => Ok(JinkConstant::from(self.0 * other.0).to_instance()),
-            Operator::Div => Ok(JinkConstant::from(self.0 / other.0).to_instance()),
+            Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
+            Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
+            Operator::Mul => Ok(JkConstant::from(self.0 * other.0).to_instance()),
+            Operator::Div => Ok(JkConstant::from(self.0 / other.0).to_instance()),
             _ => self.no_op(other, op),
         }
     }
 }
 
-impl<T> From<T> for JinkConstant<T> {
+impl<T> From<T> for JkConstant<T> {
     fn from(rust_value: T) -> Self {
-        JinkConstant(rust_value)
+        JkConstant(rust_value)
     }
 }
 
-impl From<&str> for JinkConstant<String> {
+impl From<&str> for JkConstant<String> {
     fn from(s: &str) -> Self {
-        JinkConstant(s.to_string())
+        JkConstant(s.to_string())
     }
 }

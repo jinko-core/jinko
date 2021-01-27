@@ -1,19 +1,17 @@
-//! A `Value` is an instance in jinko. It refers to primitive types as well as
-//! complex ones. Any type can implement the `Value` trait if it wishes to be returned
-//! by an instruction
+//! A `Value` is a number instance in jinko. It refers to arithmetic primtive types, such
+//! as Ints and Floats
 
-use crate::instruction::{Instruction, Operator};
-use crate::{Instance, JkError};
+use crate::{instruction::Operator, Instance, Instruction, JkError};
 
 mod jink_constant;
 
-pub use jink_constant::JinkConstant;
+pub use jink_constant::JkConstant;
 
-pub type JinkBool = JinkConstant<bool>;
-pub type JinkInt = JinkConstant<i64>;
-pub type JinkFloat = JinkConstant<f64>;
-pub type JinkChar = JinkConstant<char>;
-pub type JinkString = JinkConstant<String>;
+pub type JkBool = JkConstant<bool>;
+pub type JkInt = JkConstant<i64>;
+pub type JkFloat = JkConstant<f64>;
+pub type JkChar = JkConstant<char>;
+pub type JkString = JkConstant<String>;
 
 /// C is the type contained inside the `Value`
 pub trait Value: Instruction {
@@ -26,20 +24,20 @@ pub trait Value: Instruction {
     /// Realize any operation implemented by the type, and return a new instance
     /// of a valid type. You cannot add multiple types together, except in one case:
     /// Adding a floating point number and an integer together. Doing that will
-    /// return a new JinkFloat.
+    /// return a new JkFloat.
     ///
     /// ```
     /// let interpreter = Interpreter::new();
     ///
-    /// let a = JinkInt::from(126);
-    /// let b = JinkInt::from(4);
+    /// let a = JkInt::from(126);
+    /// let b = JkInt::from(4);
     ///
-    /// let res = a.do_op(b, Operator::Add); // JinkInt(130)
+    /// let res = a.do_op(b, Operator::Add); // JkInt(130)
     /// assert_eq!(res.ty(), interpreter.get_type("int"));
     ///
-    /// let f = JinkFloat::from(4.0);
+    /// let f = JkFloat::from(4.0);
     ///
-    /// let res = a.do_op(f, Operator::Add); // JinkFloat(130.0)
+    /// let res = a.do_op(f, Operator::Add); // JkFloat(130.0)
     /// assert_eq!(res.ty(), interpreter.get_type("float"));
     /// ```
     // FIXME: Implement behavior defined here ^

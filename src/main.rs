@@ -18,7 +18,7 @@ pub use error::{JkErrKind, JkError};
 pub use instance::{FromInstance, Instance, ToInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
-pub use value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString, JinkConstant};
+pub use value::{JkConstant, JkBool, JkChar, JkFloat, JkInt, JkString, Value};
 
 fn handle_exit_code(result: InstrKind) {
     match result {
@@ -30,10 +30,10 @@ fn handle_exit_code(result: InstrKind) {
         // If it's an expression, return if you can (if it's an int)
         InstrKind::Expression(Some(i)) => match i.ty() {
             Some(ty) => match ty.as_ref() {
-                "int" => std::process::exit(JinkInt::from_instance(&i).0 as i32),
-                "float" => std::process::exit(JinkFloat::from_instance(&i).0 as i32),
+                "int" => std::process::exit(JkInt::from_instance(&i).0 as i32),
+                "float" => std::process::exit(JkFloat::from_instance(&i).0 as i32),
                 "bool" => {
-                    let b_value = JinkBool::from_instance(&i).0;
+                    let b_value = JkBool::from_instance(&i).0;
                     match b_value {
                         true => std::process::exit(0),
                         false => std::process::exit(1),

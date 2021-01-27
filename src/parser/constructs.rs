@@ -15,13 +15,10 @@
 
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
-use super::{
-    box_construct::BoxConstruct, constant_construct::ConstantConstruct, jinko_insts::JinkoInst,
-    shunting_yard::ShuntingYard, tokens::Token,
-};
+use crate::parser::{BoxConstruct, ConstantConstruct, Token, ShuntingYard};
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Loop, LoopKind, Var, VarAssign,
+    Loop, LoopKind, Var, VarAssign,JkInst, 
 };
 
 pub struct Construct;
@@ -580,15 +577,15 @@ impl Construct {
     }
 
     /// Parse an interpreter directive. There are only a few of them, listed in
-    /// the `JinkoInst` module
+    /// the `JkInst` module
     ///
     /// `@<jinko_inst><args_list>`
-    pub fn jinko_inst(input: &str) -> IResult<&str, JinkoInst> {
+    pub fn jinko_inst(input: &str) -> IResult<&str, JkInst> {
         let (input, _) = Token::at_sign(input)?;
         let (input, fc) = Construct::function_call(input)?;
 
         // FIXME: No unwrap(), use something else than just the name
-        let inst = JinkoInst::from_str(fc.name()).unwrap();
+        let inst = JkInst::from_str(fc.name()).unwrap();
 
         Ok((input, inst))
     }
@@ -1162,10 +1159,10 @@ mod tests {
 
     #[test]
     fn t_jinko_inst_valid() {
-        assert_eq!(Construct::jinko_inst("@dump()"), Ok(("", JinkoInst::Dump)));
+        assert_eq!(Construct::jinko_inst("@dump()"), Ok(("", JkInst::Dump)));
         assert_eq!(
             Construct::jinko_inst("@quit(something, something_else)"),
-            Ok(("", JinkoInst::Quit))
+            Ok(("", JkInst::Quit))
         );
     }
 
