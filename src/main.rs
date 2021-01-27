@@ -18,7 +18,7 @@ pub use error::{JkErrKind, JkError};
 pub use instance::{FromInstance, Instance, ToInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
-pub use value::{JkConstant, JkBool, JkChar, JkFloat, JkInt, JkString, Value};
+pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 fn handle_exit_code(result: InstrKind) {
     match result {

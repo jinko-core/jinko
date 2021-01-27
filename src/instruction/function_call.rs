@@ -166,8 +166,8 @@ mod tests {
     #[test]
     fn t_invalid_args_number() {
         use super::super::{FunctionDec, FunctionDecArg};
-        use crate::value::JkInt;
         use crate::instruction::FunctionKind;
+        use crate::value::JkInt;
 
         let mut interpreter = Interpreter::new();
 

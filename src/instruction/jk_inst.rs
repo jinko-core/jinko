@@ -3,8 +3,8 @@
 //! really an `Instruction`, and therefore their implementation lives in the parser
 //! module. They are executed at "compile" time, when running through the code first.
 
-use crate::{JkErrKind, JkError, Interpreter};
 use crate::instruction::{InstrKind, Instruction};
+use crate::{Interpreter, JkErrKind, JkError};
 
 /// The potential interpreter instructions
 #[derive(Clone, Debug, PartialEq)]

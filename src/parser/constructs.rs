@@ -15,11 +15,11 @@
 
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
-use crate::parser::{BoxConstruct, ConstantConstruct, Token, ShuntingYard};
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Loop, LoopKind, Var, VarAssign,JkInst, 
+    JkInst, Loop, LoopKind, Var, VarAssign,
 };
+use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
 pub struct Construct;
 

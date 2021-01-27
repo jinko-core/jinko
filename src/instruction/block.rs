@@ -18,7 +18,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{InstrKind, Instruction, JkError, Interpreter};
+use crate::{InstrKind, Instruction, Interpreter, JkError};
 
 #[derive(Clone)]
 pub struct Block {

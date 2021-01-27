@@ -1,104 +1,10 @@
-use crate::{JkBool, JkChar, JkFloat, JkInt, JkString, Value, FromInstance, Instance, Interpreter, JkError, ToInstance};
 use crate::instruction::{InstrKind, Instruction, Operator};
+use crate::{FromInstance, Instance, Interpreter, JkError, JkString, ToInstance, Value};
 
 use std::convert::TryFrom;
 
 #[derive(Clone)]
 pub struct JkConstant<T>(pub(crate) T);
-
-impl Instruction for JkInt {
-    fn kind(&self) -> InstrKind {
-        InstrKind::Expression(None)
-    }
-
-    fn print(&self) -> String {
-        self.0.to_string()
-    }
-
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
-        interpreter.debug("CONSTANT", &self.0.to_string());
-
-        // Since we cannot use the generic ToInstance implementation, we also have to
-        // copy paste our four basic implementations for jinko's primitive types...
-        Ok(InstrKind::Expression(Some(self.to_instance())))
-    }
-}
-
-impl Instruction for JkFloat {
-    fn kind(&self) -> InstrKind {
-        InstrKind::Expression(None)
-    }
-
-    fn print(&self) -> String {
-        self.0.to_string()
-    }
-
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
-        interpreter.debug("CONSTANT", &self.0.to_string());
-
-        // Since we cannot use the generic ToInstance implementation, we also have to
-        // copy paste our four basic implementations for jinko's primitive types...
-        Ok(InstrKind::Expression(Some(self.to_instance())))
-    }
-}
-
-impl Instruction for JkBool {
-    fn kind(&self) -> InstrKind {
-        InstrKind::Expression(None)
-    }
-
-    fn print(&self) -> String {
-        self.0.to_string()
-    }
-
-    fn as_bool(&self, _: &mut Interpreter) -> Result<bool, JkError> {
-        Ok(self.0)
-    }
-
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
-        interpreter.debug("CONSTANT", &self.0.to_string());
-
-        // Since we cannot use the generic ToInstance implementation, we also have to
-        // copy paste our four basic implementations for jinko's primitive types...
-        Ok(InstrKind::Expression(Some(self.to_instance())))
-    }
-}
-
-impl Instruction for JkChar {
-    fn kind(&self) -> InstrKind {
-        InstrKind::Expression(None)
-    }
-
-    fn print(&self) -> String {
-        self.0.to_string()
-    }
-
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
-        interpreter.debug("CONSTANT", &self.0.to_string());
-
-        // Since we cannot use the generic ToInstance implementation, we also have to
-        // copy paste our four basic implementations for jinko's primitive types...
-        Ok(InstrKind::Expression(Some(self.to_instance())))
-    }
-}
-
-impl Instruction for JkString {
-    fn kind(&self) -> InstrKind {
-        InstrKind::Expression(None)
-    }
-
-    fn print(&self) -> String {
-        format!("\"{}\"", self.0.clone())
-    }
-
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
-        interpreter.debug("CONSTANT", &self.0.to_string());
-
-        // Since we cannot use the generic ToInstance implementation, we also have to
-        // copy paste our four basic implementations for jinko's primitive types...
-        Ok(InstrKind::Expression(Some(self.to_instance())))
-    }
-}
 
 // We can do a generic implementation instead of copy pasting it 5 times.
 // However, this part of the rust compiler is still not ready
@@ -137,58 +43,136 @@ impl Instruction for JkString {
 //     |                                        ^ doesn't have a size known at compile-time
 // ```
 
-impl ToInstance for JkInt {
-    fn to_instance(&self) -> Instance {
-        use std::mem::{size_of, transmute};
+/// Circumvents the need for a generic implementation (see comment).
+/// Call it with the type contained in the JkConstant and the &str representation
+///
+/// ```
+/// // Implements a JkConstant<i64> with type displayed as "int"
+/// jk_primitive!(i64, "int");
+/// ```
+macro_rules! jk_primitive {
+    ($t:ty, $s:expr) => {
+        impl ToInstance for JkConstant<$t> {
+            fn to_instance(&self) -> Instance {
+                use std::mem::{size_of, transmute};
 
-        unsafe {
-            Instance::from_bytes(
-                Some("int".to_string()), // FIXME
-                size_of::<i64>(),
-                &transmute::<i64, [u8; size_of::<i64>()]>(self.0),
-            )
+                unsafe {
+                    Instance::from_bytes(
+                        Some($s.to_string()), // FIXME
+                        size_of::<$t>(),
+                        &transmute::<$t, [u8; size_of::<$t>()]>(self.0),
+                    )
+                }
+            }
+        }
+
+        impl FromInstance for JkConstant<$t> {
+            fn from_instance(i: &Instance) -> Self {
+                use std::mem::{size_of, transmute};
+
+                unsafe {
+                    Self::from(transmute::<[u8; size_of::<$t>()], $t>(
+                        TryFrom::try_from(i.data()).unwrap(),
+                    ))
+                }
+            }
+        }
+
+        impl Instruction for JkConstant<$t> {
+            fn kind(&self) -> InstrKind {
+                InstrKind::Expression(None)
+            }
+
+            fn print(&self) -> String {
+                self.0.to_string()
+            }
+
+            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+                interpreter.debug("CONSTANT", &self.0.to_string());
+
+                // Since we cannot use the generic ToInstance implementation, we also have to
+                // copy paste our four basic implementations for jinko's primitive types...
+                Ok(InstrKind::Expression(Some(self.to_instance())))
+            }
+        }
+    };
+    // Special implementation for JkBool, in order to have as_bool()
+    (bool, $s:expr) => {
+        impl ToInstance for JkConstant<$t> {
+            fn to_instance(&self) -> Instance {
+                use std::mem::{size_of, transmute};
+
+                unsafe {
+                    Instance::from_bytes(
+                        Some($s.to_string()), // FIXME
+                        size_of::<$t>(),
+                        &transmute::<$t, [u8; size_of::<$t>()]>(self.0),
+                    )
+                }
+            }
+        }
+
+        impl FromInstance for JkConstant<$t> {
+            fn from_instance(i: &Instance) -> Self {
+                use std::mem::{size_of, transmute};
+
+                unsafe {
+                    Self::from(transmute::<[u8; size_of::<$t>()], $t>(
+                        TryFrom::try_from(i.data()).unwrap(),
+                    ))
+                }
+            }
+        }
+
+        impl Instruction for JkConstant<$t> {
+            fn kind(&self) -> InstrKind {
+                InstrKind::Expression(None)
+            }
+
+            fn print(&self) -> String {
+                self.0.to_string()
+            }
+
+            fn as_bool(&self, _interpreter: &mut Interpreter) -> Result<bool, JkError> {
+                Ok(self.0)
+            }
+
+            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+                interpreter.debug("CONSTANT", &self.0.to_string());
+
+                // Since we cannot use the generic ToInstance implementation, we also have to
+                // copy paste our four basic implementations for jinko's primitive types...
+                Ok(InstrKind::Expression(Some(self.to_instance())))
+            }
+        }
+    };
+}
+
+jk_primitive!(i64, "int");
+jk_primitive!(f64, "float");
+jk_primitive!(char, "char");
+jk_primitive!(bool, "bool");
+
+impl Value for JkConstant<i64> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
+        match op {
+            Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
+            Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
+            Operator::Mul => Ok(JkConstant::from(self.0 * other.0).to_instance()),
+            Operator::Div => Ok(JkConstant::from(self.0 / other.0).to_instance()),
+            _ => self.no_op(other, op),
         }
     }
 }
 
-impl ToInstance for JkFloat {
-    fn to_instance(&self) -> Instance {
-        use std::mem::{size_of, transmute};
-
-        unsafe {
-            Instance::from_bytes(
-                Some("float".to_string()), // FIXME
-                size_of::<f64>(),
-                &transmute::<f64, [u8; size_of::<f64>()]>(self.0),
-            )
-        }
-    }
-}
-
-impl ToInstance for JkBool {
-    fn to_instance(&self) -> Instance {
-        use std::mem::{size_of, transmute};
-
-        unsafe {
-            Instance::from_bytes(
-                Some("bool".to_string()), // FIXME
-                size_of::<bool>(),
-                &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
-            )
-        }
-    }
-}
-
-impl ToInstance for JkChar {
-    fn to_instance(&self) -> Instance {
-        use std::mem::{size_of, transmute};
-
-        unsafe {
-            Instance::from_bytes(
-                Some("char".to_string()), // FIXME
-                size_of::<char>(),
-                &transmute::<char, [u8; size_of::<char>()]>(self.0),
-            )
+impl Value for JkConstant<f64> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
+        match op {
+            Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
+            Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
+            Operator::Mul => Ok(JkConstant::from(self.0 * other.0).to_instance()),
+            Operator::Div => Ok(JkConstant::from(self.0 / other.0).to_instance()),
+            _ => self.no_op(other, op),
         }
     }
 }
@@ -203,56 +187,6 @@ impl ToInstance for JkString {
     }
 }
 
-// In the same vein, we also have to implement FromInstance this way...
-
-impl FromInstance for JkInt {
-    fn from_instance(i: &Instance) -> Self {
-        use std::mem::{size_of, transmute};
-
-        unsafe {
-            JkInt::from(transmute::<[u8; size_of::<i64>()], i64>(
-                TryFrom::try_from(i.data()).unwrap(),
-            ))
-        }
-    }
-}
-
-impl FromInstance for JkFloat {
-    fn from_instance(i: &Instance) -> Self {
-        use std::mem::{size_of, transmute};
-
-        unsafe {
-            JkFloat::from(transmute::<[u8; size_of::<f64>()], f64>(
-                TryFrom::try_from(i.data()).unwrap(),
-            ))
-        }
-    }
-}
-
-impl FromInstance for JkBool {
-    fn from_instance(i: &Instance) -> Self {
-        use std::mem::{size_of, transmute};
-
-        unsafe {
-            JkBool::from(transmute::<[u8; size_of::<bool>()], bool>(
-                TryFrom::try_from(i.data()).unwrap(),
-            ))
-        }
-    }
-}
-
-impl FromInstance for JkChar {
-    fn from_instance(i: &Instance) -> Self {
-        use std::mem::{size_of, transmute};
-
-        unsafe {
-            JkChar::from(transmute::<[u8; size_of::<char>()], char>(
-                TryFrom::try_from(i.data()).unwrap(),
-            ))
-        }
-    }
-}
-
 impl FromInstance for JkString {
     fn from_instance(i: &Instance) -> Self {
         // unchecked is safe because this instance came from a utf8 string in ToInstance
@@ -260,71 +194,30 @@ impl FromInstance for JkString {
     }
 }
 
-// impl FromInstance for JkFloat {
-//     fn from_instance(i: &Instance) -> Self {
-//         use std::mem::{transmute, size_of};
-//
-//         JkFloat::from(transmute::<[u8; size_of::<f64>()], f64>(i.data()))
-//     }
-// }
-//
-// impl FromInstance for JkBool {
-//     fn from_instance(i: &Instance) -> Self {
-//         use std::mem::{transmute, size_of};
-//
-//         JkBool::from(transmute::<[u8; size_of::<bool>()], bool>(i.data()))
-//     }
-// }
-//
-// impl FromInstance for JkChar {
-//     fn from_instance(i: &Instance) -> Self {
-//         use std::mem::{transmute, size_of};
-//
-//         JkChar::from(transmute::<[u8; size_of::<char>()], char>(i.data()))
-//     }
-// }
-//
-// impl FromInstance for JkString {
-//     fn from_instance(i: &Instance) -> Self {
-//         use std::mem::{transmute, size_of};
-//
-//         JkString::from(transmute::<[u8; size_of::<String>()], String>(i.data()))
-//     }
-// }
-
-impl Value for JkConstant<i64> {
-    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
-        match op {
-            Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
-            Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
-            Operator::Mul => Ok(JkConstant::from(self.0 * other.0).to_instance()),
-            Operator::Div => Ok(JkConstant::from(self.0 / other.0).to_instance()),
-            _ => self.no_op(other, op),
-        }
+impl Instruction for JkString {
+    fn kind(&self) -> InstrKind {
+        InstrKind::Expression(None)
     }
-}
 
-// FIXME: Avoid this copy paste, find a better/cleaner way to do it
-impl Value for JkConstant<f64> {
-    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
-        match op {
-            Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
-            Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
-            Operator::Mul => Ok(JkConstant::from(self.0 * other.0).to_instance()),
-            Operator::Div => Ok(JkConstant::from(self.0 / other.0).to_instance()),
-            _ => self.no_op(other, op),
-        }
+    fn print(&self) -> String {
+        format!("\"{}\"", self.0.clone())
     }
-}
 
-impl<T> From<T> for JkConstant<T> {
-    fn from(rust_value: T) -> Self {
-        JkConstant(rust_value)
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+        interpreter.debug("CONSTANT", &self.0.to_string());
+
+        Ok(InstrKind::Expression(Some(self.to_instance())))
     }
 }
 
 impl From<&str> for JkConstant<String> {
     fn from(s: &str) -> Self {
         JkConstant(s.to_string())
+    }
+}
+
+impl<T> From<T> for JkConstant<T> {
+    fn from(rust_value: T) -> Self {
+        JkConstant(rust_value)
     }
 }

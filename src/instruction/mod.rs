@@ -13,11 +13,11 @@ mod block;
 mod function_call;
 mod function_declaration;
 mod if_else;
+mod jk_inst;
 mod loop_block;
 mod operator;
 mod var;
 mod var_assignment;
-mod jk_inst;
 
 pub use audit::Audit;
 pub use binary_op::BinaryOp;
@@ -25,11 +25,11 @@ pub use block::Block;
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
 pub use if_else::IfElse;
+pub use jk_inst::JkInst;
 pub use loop_block::{Loop, LoopKind};
 pub use operator::Operator;
 pub use var::Var;
 pub use var_assignment::VarAssign;
-pub use jk_inst::JkInst;
 
 /// The type of instructions available. An Instruction either is a statement, or an
 /// expression. An expression contains an instance of a result. For example,

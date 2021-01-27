@@ -12,11 +12,11 @@ mod constructs;
 mod shunting_yard;
 mod tokens;
 
-pub use constructs::Construct;
 pub use box_construct::BoxConstruct;
-pub use tokens::Token;
 pub use constant_construct::ConstantConstruct;
+pub use constructs::Construct;
 pub use shunting_yard::ShuntingYard;
+pub use tokens::Token;
 
 pub struct Parser;
 

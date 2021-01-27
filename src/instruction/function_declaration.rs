@@ -1,8 +1,8 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::{Interpreter, JkErrKind, JkError};
 use crate::instruction::{Block, InstrKind, Instruction};
+use crate::{Interpreter, JkErrKind, JkError};
 
 // FIXME: Shouldn't be a String
 type Ty = String;

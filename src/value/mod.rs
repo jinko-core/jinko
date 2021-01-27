@@ -3,9 +3,9 @@
 
 use crate::{instruction::Operator, Instance, Instruction, JkError};
 
-mod jink_constant;
+mod jk_constant;
 
-pub use jink_constant::JkConstant;
+pub use jk_constant::JkConstant;
 
 pub type JkBool = JkConstant<bool>;
 pub type JkInt = JkConstant<i64>;

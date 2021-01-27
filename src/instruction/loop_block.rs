@@ -1,8 +1,8 @@
 //! The Loop instruction is used for repeating instructions. They can be of three
 //! different kinds, `for`, `while` or `loop`.
 
-use crate::{Interpreter, JkErrKind, JkError};
 use crate::instruction::{Block, InstrKind, Instruction, Var};
+use crate::{Interpreter, JkErrKind, JkError};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound

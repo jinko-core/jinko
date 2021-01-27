@@ -2,8 +2,8 @@
 //! returning a BinaryOp in the end
 
 use crate::instruction::{BinaryOp, Instruction, Operator};
-use crate::utils::{Queue, Stack};
 use crate::parser::{BoxConstruct, Construct, Token};
+use crate::utils::{Queue, Stack};
 
 use nom::{branch::alt, Err, IResult};
 

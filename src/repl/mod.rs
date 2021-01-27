@@ -7,7 +7,10 @@ use prompt::Prompt;
 use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
-use crate::{JkError, InstrKind, Instruction, Interpreter, parser::Construct, FromInstance, Instance, JkConstant};
+use crate::{
+    parser::Construct, FromInstance, Instance, InstrKind, Instruction, Interpreter, JkConstant,
+    JkError,
+};
 
 /// Empty struct for the Repl methods
 pub struct Repl;

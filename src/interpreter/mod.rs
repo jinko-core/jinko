@@ -12,8 +12,8 @@ use scope_map::ScopeMap;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::{JkErrKind, JkError};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, Var};
+use crate::{JkErrKind, JkError};
 
 /// Type the interpreter uses for keys
 type IKey = String;
