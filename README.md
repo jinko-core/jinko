@@ -24,6 +24,11 @@ order to validate the design and the possibilities of the language.
 For now, installing jinko requires to use cargo's included package manager:
 
 `cargo install --git https://github.com/cohenarthur/jinko`
+will net you the latest version from git, using the `master` branch. This branch should
+always be stable.
+
+`cargo install jinko` will give you the latest release from `crates.io`. This is equivalent
+to downloading a release from the [release page](https://github.com/cohenarthur/jinko/releases)
 
 Once releases start getting interesting, packages for various distributions and
 systems will be added, as well as a crate on `crates.io`
