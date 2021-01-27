@@ -102,6 +102,7 @@ impl Construct {
         Ok((input, constant))
     }
 
+    /// Parse an argument and the comma that follows it
     fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, constant) = Construct::expression(input)?;
         let (input, _) = Token::comma(input)?;
@@ -209,6 +210,9 @@ impl Construct {
         Ok((input, Var::new(name.to_owned())))
     }
 
+    /// Parse a statement and the semicolon that follows
+    ///
+    /// `<expression> ;`
     fn stmt_semicolon(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, expr) = Construct::expression(input)?;
@@ -277,6 +281,9 @@ impl Construct {
         Ok((input, block))
     }
 
+    /// Parse an empty argument declaration list
+    ///
+    /// `( )`
     fn args_dec_empty(input: &str) -> ParseResult<Vec<FunctionDecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -287,7 +294,7 @@ impl Construct {
 
     /// Parse an identifier then its type
     ///
-    /// `<identifier> : <identifier>
+    /// `<identifier> : <type>`
     fn identifier_type(input: &str) -> ParseResult<FunctionDecArg> {
         let (input, id) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -298,6 +305,9 @@ impl Construct {
         Ok((input, FunctionDecArg::new(id.to_owned(), ty.to_owned())))
     }
 
+    /// Parse an identifer as well as the type and comma that follows
+    ///
+    /// `<identifer> : <type> ,`
     fn identifier_type_comma(input: &str) -> ParseResult<FunctionDecArg> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arg) = Construct::identifier_type(input)?;
@@ -307,6 +317,9 @@ impl Construct {
         Ok((input, arg))
     }
 
+    /// Parse a non empty argument declaration list
+    ///
+    /// `( [ <identifier> : <type> ]* )`
     fn args_dec_non_empty(input: &str) -> ParseResult<Vec<FunctionDecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -328,6 +341,7 @@ impl Construct {
         alt((Construct::args_dec_empty, Construct::args_dec_non_empty))(input)
     }
 
+    /// Parse the void return type of a function, checking that no arrow is present
     fn return_type_void(input: &str) -> ParseResult<Option<String>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arrow) = opt(Token::arrow)(input)?;
@@ -354,6 +368,9 @@ impl Construct {
         alt((Construct::return_type_non_void, Construct::return_type_void))(input)
     }
 
+    /// Parses the content of a function declaration
+    ///
+    /// `<identifier> <args_dec> <return_type> <block>`
     fn function_content(input: &str) -> ParseResult<FunctionDec> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, fn_name) = Token::identifier(input)?;
@@ -629,26 +646,6 @@ impl Construct {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-
-    fn t_constant_valid() {
-        /*
-        assert_eq!(Construct::constant("12").unwrap().1.kind(), ConstKind::Int);
-        assert_eq!(
-            Construct::constant("12.2").unwrap().1.kind(),
-            ConstKind::Float
-        );
-        assert_eq!(
-            Construct::constant("'a'").unwrap().1.kind(),
-            ConstKind::Char
-        );
-        assert_eq!(
-            Construct::constant("\"a\"").unwrap().1.kind(),
-            ConstKind::Str
-        );
-        */
-    }
 
     #[test]
     fn t_var_assign_valid() {
