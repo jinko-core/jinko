@@ -21,12 +21,14 @@ use crate::instruction::{
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
+type ParseResult<'i, T> = IResult<&'i str, T>;
+
 pub struct Construct;
 
 impl Construct {
     /// Parse any valid jinko expression. This can be a function call, a variable,
     /// a block declaration...
-    pub fn expression(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+    pub fn expression(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         // FIXME: If input is empty, return an error or do nothing
@@ -55,7 +57,7 @@ impl Construct {
     /// Parse an expression and maybe the semicolon that follows.
     ///
     /// `<expression> [ ; ]`
-    pub fn expression_maybe_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+    pub fn expression_maybe_semicolon(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, expr) = Construct::expression(input)?;
         let (input, _) = opt(Token::semicolon)(input)?;
 
@@ -66,7 +68,7 @@ impl Construct {
     /// `0.5`.
     ///
     /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
-    pub fn constant(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+    pub(crate) fn constant(input: &str) -> ParseResult<Box<dyn Instruction>> {
         alt((
             ConstantConstruct::c_char_constant,
             ConstantConstruct::c_string_constant,
@@ -79,7 +81,7 @@ impl Construct {
     /// Parse a function call with no arguments
     ///
     /// `<identifier> ( )`
-    fn function_call_no_args(input: &str) -> IResult<&str, FunctionCall> {
+    fn function_call_no_args(input: &str) -> ParseResult<FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -90,7 +92,7 @@ impl Construct {
 
     /// Parse an argument given to a function. Consumes the whitespaces before and after
     /// the argument
-    fn arg(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+    fn arg(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, constant) = Construct::expression(input)?;
@@ -100,7 +102,7 @@ impl Construct {
         Ok((input, constant))
     }
 
-    fn arg_and_comma(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+    fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, constant) = Construct::expression(input)?;
         let (input, _) = Token::comma(input)?;
 
@@ -108,7 +110,7 @@ impl Construct {
     }
 
     /// Parse a list of arguments separated by comma
-    fn args_list(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
+    fn args_list(input: &str) -> ParseResult<Vec<Box<dyn Instruction>>> {
         // Get 1 or more arguments with a comma to the function call
         let (input, mut arg_vec) = many0(Construct::arg_and_comma)(input)?;
 
@@ -122,7 +124,7 @@ impl Construct {
     }
 
     /// Parse a function call with arguments
-    fn function_call_args(input: &str) -> IResult<&str, FunctionCall> {
+    fn function_call_args(input: &str) -> ParseResult<FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
         let (input, _) = Token::left_parenthesis(input)?;
 
@@ -146,7 +148,7 @@ impl Construct {
     ///
     /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
     /// `<identifier> ( <arg_list> )`
-    pub fn function_call(input: &str) -> IResult<&str, FunctionCall> {
+    pub(crate) fn function_call(input: &str) -> ParseResult<FunctionCall> {
         alt((
             Construct::function_call_no_args,
             Construct::function_call_args,
@@ -182,7 +184,7 @@ impl Construct {
     /// ```
     ///
     /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
-    pub fn var_assignment(input: &str) -> IResult<&str, VarAssign> {
+    pub(crate) fn var_assignment(input: &str) -> ParseResult<VarAssign> {
         let (input, mut_opt) = opt(Token::mut_tok)(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -201,13 +203,13 @@ impl Construct {
     /// Parse a valid variable name
     ///
     /// `<identifier>`
-    pub fn variable(input: &str) -> IResult<&str, Var> {
+    pub(crate) fn variable(input: &str) -> ParseResult<Var> {
         let (input, name) = Token::identifier(input)?;
 
         Ok((input, Var::new(name.to_owned())))
     }
 
-    fn stmt_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+    fn stmt_semicolon(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, expr) = Construct::expression(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -220,7 +222,7 @@ impl Construct {
     /// Parse multiple statements and a possible return Instruction
     fn stmts_and_maybe_last(
         input: &str,
-    ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
+    ) -> ParseResult<(Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
         let (input, last_expr) = opt(Construct::expression)(input)?;
 
@@ -230,7 +232,7 @@ impl Construct {
     /// Parses the statements in a block as well as a possible last expression
     fn instructions(
         input: &str,
-    ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
+    ) -> ParseResult<(Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, _) = Token::left_curly_bracket(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -265,7 +267,7 @@ impl Construct {
     /// in the block.
     ///
     /// `{ [ <expression> ; ]* [ <expression> ] }`
-    pub fn block(input: &str) -> IResult<&str, Block> {
+    pub(crate) fn block(input: &str) -> ParseResult<Block> {
         let (input, (instructions, last)) = Construct::instructions(input)?;
 
         let mut block = Block::new();
@@ -275,7 +277,7 @@ impl Construct {
         Ok((input, block))
     }
 
-    fn args_dec_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+    fn args_dec_empty(input: &str) -> ParseResult<Vec<FunctionDecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
@@ -286,7 +288,7 @@ impl Construct {
     /// Parse an identifier then its type
     ///
     /// `<identifier> : <identifier>
-    fn identifier_type(input: &str) -> IResult<&str, FunctionDecArg> {
+    fn identifier_type(input: &str) -> ParseResult<FunctionDecArg> {
         let (input, id) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::colon(input)?;
@@ -296,7 +298,7 @@ impl Construct {
         Ok((input, FunctionDecArg::new(id.to_owned(), ty.to_owned())))
     }
 
-    fn identifier_type_comma(input: &str) -> IResult<&str, FunctionDecArg> {
+    fn identifier_type_comma(input: &str) -> ParseResult<FunctionDecArg> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arg) = Construct::identifier_type(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -305,7 +307,7 @@ impl Construct {
         Ok((input, arg))
     }
 
-    fn args_dec_non_empty(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+    fn args_dec_non_empty(input: &str) -> ParseResult<Vec<FunctionDecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -322,11 +324,11 @@ impl Construct {
     }
 
     /// Parse a list (maybe empty) of argument declarations
-    fn args_dec(input: &str) -> IResult<&str, Vec<FunctionDecArg>> {
+    fn args_dec(input: &str) -> ParseResult<Vec<FunctionDecArg>> {
         alt((Construct::args_dec_empty, Construct::args_dec_non_empty))(input)
     }
 
-    fn return_type_void(input: &str) -> IResult<&str, Option<String>> {
+    fn return_type_void(input: &str) -> ParseResult<Option<String>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arrow) = opt(Token::arrow)(input)?;
 
@@ -337,7 +339,7 @@ impl Construct {
     }
 
     /// Parse a non-void return type
-    fn return_type_non_void(input: &str) -> IResult<&str, Option<String>> {
+    fn return_type_non_void(input: &str) -> ParseResult<Option<String>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::arrow(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -348,11 +350,11 @@ impl Construct {
     }
 
     /// Parse the return type of a function. Can be void
-    fn return_type(input: &str) -> IResult<&str, Option<String>> {
+    fn return_type(input: &str) -> ParseResult<Option<String>> {
         alt((Construct::return_type_non_void, Construct::return_type_void))(input)
     }
 
-    fn function_content(input: &str) -> IResult<&str, FunctionDec> {
+    fn function_content(input: &str) -> ParseResult<FunctionDec> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, fn_name) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -382,7 +384,7 @@ impl Construct {
     ///
     /// `<typed_arg_list> := [ (<identifier> : <type>)* ]
     /// `<func> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>`
-    pub fn function_declaration(input: &str) -> IResult<&str, FunctionDec> {
+    pub(crate) fn function_declaration(input: &str) -> ParseResult<FunctionDec> {
         let (input, _) = Token::func_tok(input)?;
 
         let (input, mut function) = Construct::function_content(input)?;
@@ -404,7 +406,7 @@ impl Construct {
     /// ```
     ///
     /// `<test> <identifier> ( ) <block>
-    pub fn test_declaration(input: &str) -> IResult<&str, FunctionDec> {
+    pub(crate) fn test_declaration(input: &str) -> ParseResult<FunctionDec> {
         let (input, _) = Token::test_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, fn_name) = Token::identifier(input)?;
@@ -435,7 +437,7 @@ impl Construct {
     /// ```
     ///
     /// `<mock> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>
-    pub fn mock_declaration(input: &str) -> IResult<&str, FunctionDec> {
+    pub(crate) fn mock_declaration(input: &str) -> ParseResult<FunctionDec> {
         let (input, _) = Token::mock_tok(input)?;
 
         let (input, mut function) = Construct::function_content(input)?;
@@ -450,7 +452,7 @@ impl Construct {
     /// in a native program, for example a shared C library or a Rust crate.
     ///
     /// `<ext> <func> <identifier> ( <typed_arg_list> ) [ -> <type> ] ;`
-    pub fn ext_declaration(input: &str) -> IResult<&str, FunctionDec> {
+    pub(crate) fn ext_declaration(input: &str) -> ParseResult<FunctionDec> {
         let (input, _) = Token::ext_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::func_tok(input)?;
@@ -474,7 +476,7 @@ impl Construct {
     }
 
     /// Parse an `else` plus the associated block
-    fn else_block(input: &str) -> IResult<&str, Block> {
+    fn else_block(input: &str) -> ParseResult<Block> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::else_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -486,7 +488,7 @@ impl Construct {
     /// consuming the first `if` and the remaining optional `else`.
     ///
     /// `<if> <block> [ <else> <block> ]`
-    pub fn if_else(input: &str) -> IResult<&str, IfElse> {
+    pub(crate) fn if_else(input: &str) -> ParseResult<IfElse> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::if_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -508,7 +510,7 @@ impl Construct {
     /// example, you're allowed to ignore return values in an audit block.
     ///
     /// `<audit> <block>`
-    pub fn audit(input: &str) -> IResult<&str, Audit> {
+    pub(crate) fn audit(input: &str) -> ParseResult<Audit> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::audit_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -520,7 +522,7 @@ impl Construct {
     /// Parse a loop block, meaning the `loop` keyword and a corresponding block
     ///
     /// `<loop> <block>`
-    pub fn loop_block(input: &str) -> IResult<&str, Loop> {
+    fn loop_block(input: &str) -> ParseResult<Loop> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::loop_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -533,7 +535,7 @@ impl Construct {
     /// well as a block
     ///
     /// `<while> <expression> <block>`
-    pub fn while_block(input: &str) -> IResult<&str, Loop> {
+    fn while_block(input: &str) -> ParseResult<Loop> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::while_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -548,7 +550,7 @@ impl Construct {
     /// a block to execute
     ///
     /// `<for> <variable> <in> <expression> <block>`
-    pub fn for_block(input: &str) -> IResult<&str, Loop> {
+    fn for_block(input: &str) -> ParseResult<Loop> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::for_tok(input)?;
 
@@ -568,7 +570,7 @@ impl Construct {
     }
 
     /// Parse any loop construct: For, While or Loop
-    pub fn any_loop(input: &str) -> IResult<&str, Loop> {
+    pub(crate) fn any_loop(input: &str) -> ParseResult<Loop> {
         alt((
             Construct::loop_block,
             Construct::for_block,
@@ -580,7 +582,7 @@ impl Construct {
     /// the `JkInst` module
     ///
     /// `@<jinko_inst><args_list>`
-    pub fn jinko_inst(input: &str) -> IResult<&str, JkInst> {
+    pub(crate) fn jinko_inst(input: &str) -> ParseResult<JkInst> {
         let (input, _) = Token::at_sign(input)?;
         let (input, fc) = Construct::function_call(input)?;
 
@@ -600,7 +602,7 @@ impl Construct {
     /// a << 2; // Shift a by 2 bits
     /// a > 2; // Is a greater than 2?
     /// ```
-    pub fn binary_op(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+    pub(crate) fn binary_op(input: &str) -> ParseResult<Box<dyn Instruction>> {
         ShuntingYard::parse(input)
     }
 
@@ -608,7 +610,7 @@ impl Construct {
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
     // FIXME: Un-underscore for 0.1.1
-    pub fn _custom_type(input: &str) -> IResult<&str, &str> {
+    pub(crate) fn _custom_type(input: &str) -> ParseResult<&str> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::_type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
