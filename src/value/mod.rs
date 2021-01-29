@@ -1,7 +1,7 @@
 //! A `Value` is a number instance in jinko. It refers to arithmetic primtive types, such
 //! as Ints and Floats
 
-use crate::{instruction::Operator, ObjectInstance, Instruction, JkError};
+use crate::{instruction::Operator, Instruction, JkError, ObjectInstance};
 
 mod jk_constant;
 

@@ -3,7 +3,7 @@
 //! need to keep an option of an instance. A variable is either there, fully initialized,
 //! or it's not.
 
-use crate::{ObjectInstance, InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError};
+use crate::{InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError, ObjectInstance};
 
 #[derive(Clone)]
 pub struct Var {

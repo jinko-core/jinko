@@ -583,7 +583,10 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
 
-        Ok((input, Loop::new(LoopKind::For(variable, instruction), block)))
+        Ok((
+            input,
+            Loop::new(LoopKind::For(variable, instruction), block),
+        ))
     }
 
     /// Parse any loop construct: For, While or Loop

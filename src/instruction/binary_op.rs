@@ -6,8 +6,8 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::Operator, FromObjectInstance, ObjectInstance, InstrKind, Instruction, Interpreter, JkErrKind,
-    JkError, JkFloat, JkInt, Value,
+    instruction::Operator, FromObjectInstance, InstrKind, Instruction, Interpreter, JkErrKind,
+    JkError, JkFloat, JkInt, ObjectInstance, Value,
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic

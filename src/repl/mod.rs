@@ -8,8 +8,8 @@ use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, FromObjectInstance, ObjectInstance, InstrKind, Instruction, Interpreter, JkConstant,
-    JkError,
+    parser::Construct, FromObjectInstance, InstrKind, Instruction, Interpreter, JkConstant,
+    JkError, ObjectInstance,
 };
 
 /// Empty struct for the Repl methods
