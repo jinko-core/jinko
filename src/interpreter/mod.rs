@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::error::{ErrKind, JinkoError};
-use crate::instruction::{Block, CustomType, FunctionDec, FunctionKind, Instruction, Var};
+use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -79,7 +79,7 @@ impl Interpreter {
 
     /// Add a type to the interpreter. Returns `Ok` if the type was added, `Err`
     /// if it existed already and was not.
-    pub fn add_type(&mut self, custom_type: CustomType) -> Result<(), JinkoError> {
+    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), JinkoError> {
         self.scope_map.add_type(custom_type)
     }
 
@@ -107,7 +107,7 @@ impl Interpreter {
     }
 
     /// Get a reference on an existing type
-    pub fn get_type(&self, name: &str) -> Option<&CustomType> {
+    pub fn get_type(&self, name: &str) -> Option<&Rc<TypeDec>> {
         self.scope_map.get_type(name)
     }
 

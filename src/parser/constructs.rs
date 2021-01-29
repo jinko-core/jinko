@@ -20,8 +20,8 @@ use super::{
     shunting_yard::ShuntingYard, tokens::Token,
 };
 use crate::instruction::{
-    Audit, Block, CustomType, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Instruction,
-    Loop, LoopKind, Var, VarAssign,
+    Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Instruction, Loop,
+    LoopKind, TypeDec, TypeInstantiation, Var, VarAssign,
 };
 
 pub struct Construct;
@@ -38,6 +38,7 @@ impl Construct {
             BoxConstruct::ext_declaration,
             BoxConstruct::test_declaration,
             BoxConstruct::mock_declaration,
+            BoxConstruct::type_instantiation,
             BoxConstruct::function_call,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
@@ -138,6 +139,31 @@ impl Construct {
         arg_vec.drain(0..).for_each(|arg| fn_call.add_arg(arg));
 
         Ok((input, fn_call))
+    }
+
+    /// When a type is instantiated in the source code.
+    ///
+    /// ```
+    /// type A(n: int); // Declare type A
+    /// val = A(1); // Instantiate a new A type variable
+    /// ```
+    /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
+    /// `<identifier> ( <arg_list> )`
+    pub fn type_instantiation(input: &str) -> IResult<&str, TypeInstantiation> {
+        let (input, type_id) = Token::identifier(input)?;
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let mut type_instantiation = TypeInstantiation::new(type_id.to_owned());
+
+        let (input, mut arg_vec) = Construct::args_list(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        arg_vec
+            .drain(0..)
+            .for_each(|field| type_instantiation.add_field(field));
+
+        Ok((input, type_instantiation))
     }
 
     /// When a function is called in the source code.
@@ -611,7 +637,7 @@ impl Construct {
     /// Parse a user-defined custom type
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
-    pub fn custom_type(input: &str) -> IResult<&str, CustomType> {
+    pub fn custom_type(input: &str) -> IResult<&str, TypeDec> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::_type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -622,7 +648,7 @@ impl Construct {
 
         let (input, fields) = Construct::args_dec_non_empty(input)?;
 
-        let custom_type = CustomType::new(type_name.to_owned(), fields);
+        let custom_type = TypeDec::new(type_name.to_owned(), fields);
 
         Ok((input, custom_type))
     }
@@ -1191,38 +1217,37 @@ mod tests {
     }
 
     #[test]
-    fn t_custom_type_simple() {
-        match Construct::_custom_type("type Int(v: int);") {
+    fn tcustom_type_simple() {
+        match Construct::custom_type("type Int(v: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Just one int is valid"),
         };
-        match Construct::_custom_type("type Ints(a: int, b: int);") {
+        match Construct::custom_type("type Ints(a: int, b: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Two integers is valid"),
         };
-        match Construct::_custom_type("type Compound(i: int, s: str);") {
+        match Construct::custom_type("type Compound(i: int, s: str);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Different types are valid"),
         };
-        match Construct::_custom_type(
-            "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
-        ) {
+        match Construct::custom_type("type Custom(v: int, a: SomeType, b: Another, c: lower_case);")
+        {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Custom types in custom types are valid"),
         };
     }
 
     #[test]
-    fn t_custom_type_empty() {
-        match Construct::_custom_type("type Empty();") {
+    fn tcustom_type_empty() {
+        match Construct::custom_type("type Empty();") {
             Ok(_) => assert!(false, "Can't have empty types"),
             Err(_) => assert!(true),
         }
     }
 
     #[test]
-    fn t_custom_type_invalid() {
-        match Construct::_custom_type("type ExtraComma(a: int, b: int,);") {
+    fn tcustom_type_invalid() {
+        match Construct::custom_type("type ExtraComma(a: int, b: int,);") {
             Ok(_) => assert!(false, "Extra comma in type definition"),
             Err(_) => assert!(true),
         }

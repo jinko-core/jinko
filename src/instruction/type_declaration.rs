@@ -3,23 +3,27 @@ use super::{DecArg, InstrKind, Instruction};
 use crate::error::JinkoError;
 use crate::interpreter::Interpreter;
 
-#[derive(Clone)]
-pub struct CustomType {
+#[derive(Clone, Debug)]
+pub struct TypeDec {
     name: String,
     fields: Vec<DecArg>,
 }
 
-impl CustomType {
-    pub fn new(name: String, fields: Vec<DecArg>) -> CustomType {
-        CustomType { name, fields }
+impl TypeDec {
+    pub fn new(name: String, fields: Vec<DecArg>) -> TypeDec {
+        TypeDec { name, fields }
     }
 
     pub fn name(&self) -> &str {
         &self.name
     }
+
+    pub fn fields(&self) -> &Vec<DecArg> {
+        &self.fields
+    }
 }
 
-impl Instruction for CustomType {
+impl Instruction for TypeDec {
     fn kind(&self) -> InstrKind {
         InstrKind::Statement
     }

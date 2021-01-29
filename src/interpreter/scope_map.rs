@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use crate::{
     error::{ErrKind, JinkoError},
-    instruction::{CustomType, FunctionDec, Var},
+    instruction::{FunctionDec, TypeDec, Var},
     Instruction,
 };
 
@@ -17,7 +17,7 @@ use crate::{
 struct Scope {
     variables: HashMap<String, Var>,
     functions: HashMap<String, Rc<FunctionDec>>,
-    types: HashMap<String, CustomType>,
+    types: HashMap<String, Rc<TypeDec>>,
 }
 
 impl Scope {
@@ -41,7 +41,7 @@ impl Scope {
     }
 
     /// Get a reference on a type from the scope map if is has been inserted already
-    pub fn get_type(&self, name: &str) -> Option<&CustomType> {
+    pub fn get_type(&self, name: &str) -> Option<&Rc<TypeDec>> {
         self.types.get(name)
     }
 
@@ -91,17 +91,17 @@ impl Scope {
     }
 
     /// Add a type to the most recently created scope, if it doesn't already exist
-    pub fn add_type(&mut self, custom_type: CustomType) -> Result<(), JinkoError> {
-        match self.get_type(custom_type.name()) {
+    pub fn add_type(&mut self, type_dec: TypeDec) -> Result<(), JinkoError> {
+        match self.get_type(type_dec.name()) {
             Some(_) => Err(JinkoError::new(
                 ErrKind::Interpreter,
-                format!("type already declared: {}", custom_type.name()),
+                format!("type already declared: {}", type_dec.name()),
                 None,
-                custom_type.name().to_owned(),
+                type_dec.name().to_owned(),
             )),
             None => Ok({
                 self.types
-                    .insert(custom_type.name().to_owned(), custom_type);
+                    .insert(type_dec.name().to_owned(), Rc::new(type_dec));
             }),
         }
     }
@@ -174,7 +174,7 @@ impl ScopeMap {
     }
 
     /// Maybe get a type in any available scopes
-    pub fn get_type(&self, name: &str) -> Option<&CustomType> {
+    pub fn get_type(&self, name: &str) -> Option<&Rc<TypeDec>> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_type(name) {
@@ -226,7 +226,7 @@ impl ScopeMap {
     }
 
     /// Add a type to the current scope if it hasn't been added before
-    pub fn add_type(&mut self, custom_type: CustomType) -> Result<(), JinkoError> {
+    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), JinkoError> {
         match self.scopes.front_mut() {
             Some(head) => head.add_type(custom_type),
             None => Err(JinkoError::new(

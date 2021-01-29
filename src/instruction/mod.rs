@@ -9,24 +9,26 @@ use downcast_rs::{impl_downcast, Downcast};
 mod audit;
 mod binary_op;
 mod block;
-mod custom_type;
 mod dec_arg;
 mod function_call;
 mod function_declaration;
 mod if_else;
 mod loop_block;
+mod type_declaration;
+mod type_instantiation;
 mod var;
 mod var_assignment;
 
 pub use audit::Audit;
 pub use binary_op::{BinaryOp, Operator};
 pub use block::Block;
-pub use custom_type::CustomType;
 pub use dec_arg::DecArg;
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionKind};
 pub use if_else::IfElse;
 pub use loop_block::{Loop, LoopKind};
+pub use type_declaration::TypeDec;
+pub use type_instantiation::TypeInstantiation;
 pub use var::Var;
 pub use var_assignment::VarAssign;
 

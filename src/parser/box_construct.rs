@@ -37,6 +37,7 @@ impl BoxConstruct {
         Ok((input, Box::new(value)))
     }
 
+    box_construct! {type_instantiation}
     box_construct! {function_call}
     box_construct! {function_declaration}
     box_construct! {ext_declaration}
