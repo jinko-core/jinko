@@ -6,7 +6,7 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::Operator, FromInstance, Instance, InstrKind, Instruction, Interpreter, JkErrKind,
+    instruction::Operator, FromObjectInstance, ObjectInstance, InstrKind, Instruction, Interpreter, JkErrKind,
     JkError, JkFloat, JkInt, Value,
 };
 
@@ -56,7 +56,7 @@ impl BinaryOp {
         &self,
         node: &Box<dyn Instruction>,
         interpreter: &mut Interpreter,
-    ) -> Result<Instance, JkError> {
+    ) -> Result<ObjectInstance, JkError> {
         match node.execute(interpreter)? {
             InstrKind::Statement | InstrKind::Expression(None) => Err(JkError::new(
                 JkErrKind::Interpreter,
@@ -139,7 +139,7 @@ impl Instruction for BinaryOp {
 mod tests {
     use super::*;
     use crate::value::JkInt;
-    use crate::ToInstance;
+    use crate::ToObjectInstance;
     use crate::{InstrKind, Interpreter};
 
     fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {

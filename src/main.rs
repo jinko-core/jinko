@@ -15,7 +15,7 @@ use repl::Repl;
 use std::fs;
 
 pub use error::{JkErrKind, JkError};
-pub use instance::{FromInstance, Instance, ToInstance};
+pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};

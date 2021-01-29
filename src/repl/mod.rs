@@ -8,7 +8,7 @@ use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, FromInstance, Instance, InstrKind, Instruction, Interpreter, JkConstant,
+    parser::Construct, FromObjectInstance, ObjectInstance, InstrKind, Instruction, Interpreter, JkConstant,
     JkError,
 };
 
@@ -18,7 +18,7 @@ pub struct Repl;
 // FIXME:
 // - Is Display really how we want to go about it?
 // - Cleanup the code
-impl std::fmt::Display for Instance {
+impl std::fmt::Display for ObjectInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

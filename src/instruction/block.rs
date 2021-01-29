@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn block_execute_with_last() {
-        use crate::instance::ToInstance;
+        use crate::instance::ToObjectInstance;
 
         let mut b = Block::new();
 

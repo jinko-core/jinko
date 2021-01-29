@@ -201,7 +201,7 @@ mod tests {
     fn t_func_call_arg_return() {
         use crate::parser::Construct;
         use crate::value::JkInt;
-        use crate::ToInstance;
+        use crate::ToObjectInstance;
 
         let mut i = Interpreter::new();
         let func_dec = Construct::instruction("func second(f: int, s: int) -> int { s }")
@@ -221,7 +221,7 @@ mod tests {
     fn t_func_call_arg_return_binop() {
         use crate::parser::Construct;
         use crate::value::JkInt;
-        use crate::ToInstance;
+        use crate::ToObjectInstance;
 
         let mut i = Interpreter::new();
         let func_dec = Construct::instruction("func add(a: int, b: int) -> int { a + b }")
@@ -241,7 +241,7 @@ mod tests {
     fn t_func_call_variable_return() {
         use crate::parser::Construct;
         use crate::value::JkInt;
-        use crate::ToInstance;
+        use crate::ToObjectInstance;
 
         let mut i = Interpreter::new();
         let func_dec = Construct::instruction("func one() -> int { one = 1; one }")

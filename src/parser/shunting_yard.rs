@@ -206,7 +206,7 @@ mod tests {
     // FIXME: Add more tests with more operators
 
     fn sy_assert(input: &str, result: i64) {
-        use crate::instance::ToInstance;
+        use crate::instance::ToObjectInstance;
         use crate::{InstrKind, Interpreter};
 
         let boxed_output = ShuntingYard::parse(input).unwrap().1;

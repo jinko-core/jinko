@@ -2,7 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use crate::{Instance, Interpreter, JkErrKind, JkError};
+use crate::{ObjectInstance, Interpreter, JkErrKind, JkError};
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
@@ -38,7 +38,7 @@ pub use var_assignment::VarAssign;
 #[derive(Debug, PartialEq, Clone)]
 pub enum InstrKind {
     Statement,
-    Expression(Option<Instance>),
+    Expression(Option<ObjectInstance>),
 }
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
@@ -57,7 +57,7 @@ pub trait Instruction: InstructionClone + Downcast {
 
     /// Execute the instruction, hoping for an InstrKind::Expression(Some(...)) to be
     /// returned. If an invalid value is returned, error out.
-    fn execute_expression(&self, i: &mut Interpreter) -> Result<Instance, JkError> {
+    fn execute_expression(&self, i: &mut Interpreter) -> Result<ObjectInstance, JkError> {
         match self.execute(i)? {
             InstrKind::Expression(Some(result)) => Ok(result),
             _ => Err(JkError::new(
