@@ -1,7 +1,7 @@
 //! The Loop instruction is used for repeating instructions. They can be of three
 //! different kinds, `for`, `while` or `loop`.
 
-use crate::{error::JinkoError, interpreter::Interpreter};
+use crate::{ErrKind, Interpreter, JinkoError};
 
 use super::{Block, InstrKind, Instruction, Var};
 
@@ -58,31 +58,52 @@ impl Instruction for Loop {
             },
             LoopKind::While(cond) => {
                 interpreter.debug_step("WHILE ENTER");
-                while cond.as_bool() {
+                while cond.as_bool(interpreter)? {
                     self.block.execute(interpreter)?;
                 }
                 interpreter.debug_step("WHILE EXIT");
             }
-            LoopKind::For(var, range) => {
-                interpreter.debug_step("FOR ENTER");
-                let var_name = var.name().to_owned();
-                interpreter.scope_enter();
+            LoopKind::For(_var, _range) => {
+                // FIXME:
+                //
+                // In order to have a correct for implementation, jinko needs ranges,
+                // iterators, which implies the need for options, which implies the need
+                // for a standard library, which implies the need for code inclusion, etc
+                // etc etc... All of that is the goal of the 0.1.1 release.
+                //
+                // A possible implementation would be to execute the range, assign it
+                // to the var, and check that var is a valid iterator. For example,
+                // by calling `Iter::ok(var)` (whatever the API might be) and checking
+                // that that result, as a boolean, returns true. If it does, execute the
+                // body. If it does not, break from the for.
 
-                interpreter.add_variable(var.clone())?;
+                return Err(JinkoError::new(
+                    ErrKind::Interpreter,
+                    format!("for loops are currently unimplemented"),
+                    None,
+                    self.print(),
+                ));
 
-                loop {
-                    range.execute(interpreter)?;
+                // FIXME: Rework that code
+                // interpreter.debug_step("FOR ENTER");
+                // let var_name = var.name().to_owned();
+                // interpreter.scope_enter();
 
-                    // We can unwrap since we added the variable right before
-                    if !interpreter.get_variable(&var_name).unwrap().as_bool() {
-                        break;
-                    }
+                // interpreter.add_variable(var.clone())?;
 
-                    self.block.execute(interpreter)?;
-                }
+                // loop {
+                //     range.execute(interpreter)?;
 
-                interpreter.scope_exit();
-                interpreter.debug_step("FOR EXIT");
+                //     // We can unwrap since we added the variable right before
+                //     if !interpreter.get_variable(&var_name).unwrap().as_bool() {
+                //         break;
+                //     }
+
+                //     self.block.execute(interpreter)?;
+                // }
+
+                // interpreter.scope_exit();
+                // interpreter.debug_step("FOR EXIT");
             }
         }
 

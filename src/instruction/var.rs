@@ -3,7 +3,7 @@
 //! need to keep an option of an instance. A variable is either there, fully initialized,
 //! or it's not.
 
-use crate::{ErrKind, Instance, InstrKind, Instruction, Interpreter, JinkoError};
+use crate::{ErrKind, Instance, InstrKind, Instruction, Interpreter, JinkBool, JinkoError};
 
 #[derive(Clone)]
 pub struct Var {
@@ -60,6 +60,38 @@ impl Instruction for Var {
             self.instance.ty().unwrap_or(&"".to_owned()),
             self.instance
         )
+    }
+
+    fn as_bool(&self, i: &mut Interpreter) -> Result<bool, JinkoError> {
+        use crate::FromInstance;
+
+        // FIXME: Cleanup
+
+        match self.execute(i)? {
+            InstrKind::Expression(Some(instance)) => match instance.ty() {
+                Some(ty) => match ty.as_ref() {
+                    // FIXME:
+                    "bool" => Ok(JinkBool::from_instance(&instance).as_bool(i).unwrap()),
+                    // We can safely unwrap since we checked the type of the variable
+                    _ => Err(JinkoError::new(
+                        ErrKind::Interpreter,
+                        format!("var {} cannot be interpreted as boolean", self.name),
+                        None,
+                        self.print(),
+                    )),
+                },
+                None => todo!(
+                    "If the type of the variable hasn't been determined yet,
+                    typecheck it and call self.as_bool() again"
+                ),
+            },
+            _ => Err(JinkoError::new(
+                ErrKind::Interpreter,
+                format!("var {} cannot be interpreted as boolean", self.name),
+                None,
+                self.print(),
+            )),
+        }
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {

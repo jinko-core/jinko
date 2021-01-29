@@ -51,8 +51,8 @@ impl Instruction for JinkBool {
         self.0.to_string()
     }
 
-    fn as_bool(&self) -> bool {
-        self.0
+    fn as_bool(&self, _: &mut Interpreter) -> Result<bool, JinkoError> {
+        Ok(self.0)
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
@@ -195,16 +195,11 @@ impl ToInstance for JinkChar {
 
 impl ToInstance for JinkString {
     fn to_instance(&self) -> Instance {
-        use std::mem::{size_of, transmute};
-
-        unsafe {
-            Instance::from_bytes(
-                Some("string".to_string()), // FIXME
-                size_of::<String>(),
-                // FIXME: Avoid cloning
-                &transmute::<String, [u8; size_of::<String>()]>(self.0.clone()),
-            )
-        }
+        Instance::from_bytes(
+            Some("string".to_string()), // FIXME
+            self.0.as_bytes().len(),
+            self.0.as_bytes(),
+        )
     }
 }
 
@@ -260,13 +255,8 @@ impl FromInstance for JinkChar {
 
 impl FromInstance for JinkString {
     fn from_instance(i: &Instance) -> Self {
-        use std::mem::{size_of, transmute};
-
-        unsafe {
-            JinkString::from(transmute::<[u8; size_of::<String>()], String>(
-                TryFrom::try_from(i.data()).unwrap(),
-            ))
-        }
+        // unchecked is safe because this instance came from a utf8 string in ToInstance
+        unsafe { JinkString::from(String::from_utf8_unchecked(i.data().to_vec())) }
     }
 }
 

@@ -17,4 +17,7 @@ printf "Test files:\n$files\n\n"
 
 cargo build
 
+# Print a newline for cleaner formatting
+echo ""
+
 ft -f $files

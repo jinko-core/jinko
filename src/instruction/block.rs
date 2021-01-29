@@ -56,6 +56,11 @@ impl Block {
         self.instructions.push(instruction)
     }
 
+    /// Pop an instruction from the block, removing it from the execution pool
+    pub fn pop_instruction(&mut self) -> Option<Box<dyn Instruction>> {
+        self.instructions.pop()
+    }
+
     /// Returns a reference to the last expression of the block, if it exists
     pub fn last(&self) -> Option<&Box<dyn Instruction>> {
         self.last.as_ref()

@@ -20,8 +20,8 @@ use super::{
     shunting_yard::ShuntingYard, tokens::Token,
 };
 use crate::instruction::{
-    Audit, Block, FunctionCall, FunctionDec, DecArg, FunctionKind, IfElse, Instruction,
-    Loop, LoopKind, Var, VarAssign, CustomType,
+    Audit, Block, CustomType, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Instruction,
+    Loop, LoopKind, Var, VarAssign,
 };
 
 pub struct Construct;
@@ -54,6 +54,16 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, value))
+    }
+
+    /// Parse an expression and maybe the semicolon that follows.
+    ///
+    /// `<expression> [ ; ]`
+    pub fn expression_maybe_semicolon(input: &str) -> IResult<&str, Box<dyn Instruction>> {
+        let (input, expr) = Construct::expression(input)?;
+        let (input, _) = opt(Token::semicolon)(input)?;
+
+        Ok((input, expr))
     }
 
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
@@ -212,7 +222,7 @@ impl Construct {
     }
 
     /// Parse multiple statements and a possible return Instruction
-    pub fn stmts_and_maybe_last(
+    fn stmts_and_maybe_last(
         input: &str,
     ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
@@ -603,7 +613,7 @@ impl Construct {
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
     pub fn custom_type(input: &str) -> IResult<&str, CustomType> {
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::type_tok(input)?;
+        let (input, _) = Token::_type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, type_name) = Token::identifier(input)?;
@@ -1182,20 +1192,21 @@ mod tests {
 
     #[test]
     fn t_custom_type_simple() {
-        match Construct::custom_type("type Int(v: int);") {
+        match Construct::_custom_type("type Int(v: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Just one int is valid"),
         };
-        match Construct::custom_type("type Ints(a: int, b: int);") {
+        match Construct::_custom_type("type Ints(a: int, b: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Two integers is valid"),
         };
-        match Construct::custom_type("type Compound(i: int, s: str);") {
+        match Construct::_custom_type("type Compound(i: int, s: str);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Different types are valid"),
         };
-        match Construct::custom_type("type Custom(v: int, a: SomeType, b: Another, c: lower_case);")
-        {
+        match Construct::_custom_type(
+            "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
+        ) {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Custom types in custom types are valid"),
         };
@@ -1203,7 +1214,7 @@ mod tests {
 
     #[test]
     fn t_custom_type_empty() {
-        match Construct::custom_type("type Empty();") {
+        match Construct::_custom_type("type Empty();") {
             Ok(_) => assert!(false, "Can't have empty types"),
             Err(_) => assert!(true),
         }
@@ -1211,7 +1222,7 @@ mod tests {
 
     #[test]
     fn t_custom_type_invalid() {
-        match Construct::custom_type("type ExtraComma(a: int, b: int,);") {
+        match Construct::_custom_type("type ExtraComma(a: int, b: int,);") {
             Ok(_) => assert!(false, "Extra comma in type definition"),
             Err(_) => assert!(true),
         }
@@ -1259,5 +1270,15 @@ mod tests {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to directly return a binop as a variable"),
         }
+    }
+
+    #[test]
+    fn t_func_call_with_true_arg_is_func_call() {
+        let res = Construct::expression("h(true)").unwrap().1;
+        res.downcast_ref::<FunctionCall>().unwrap();
+
+        // There might be a bug that a function call with just a boolean argument gets
+        // parsed as a variable. This test aims at correcting that regression. If it
+        // fails, then it means the function call did not get parsed as a function call
     }
 }

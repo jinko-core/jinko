@@ -46,6 +46,7 @@ impl Token {
                     char('\n'),
                     char(' '),
                     char('{'),
+                    char(')'),
                     char(';'),
                 )))(input)?;
                 Ok((input, tag))
@@ -145,7 +146,7 @@ impl Token {
         Token::specific_token(input, "audit ")
     }
 
-    pub fn type_tok(input: &str) -> IResult<&str, &str> {
+    pub fn _type_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "type")
     }
 

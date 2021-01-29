@@ -137,7 +137,13 @@ impl Instruction for FunctionCall {
 
         interpreter.debug("CALL", self.name());
 
-        self.map_args(&function, interpreter)?;
+        match self.map_args(&function, interpreter) {
+            Ok(_) => {}
+            Err(e) => {
+                interpreter.scope_exit();
+                return Err(e);
+            }
+        };
 
         let ret_val = function.run(interpreter);
 

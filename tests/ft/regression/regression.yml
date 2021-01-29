@@ -1,0 +1,6 @@
+tests:
+  - name: "String double free"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/string_double_free.jk"
+    exit_code: 0

@@ -21,13 +21,14 @@ be expanded. If you want to contribute, this a good place to start!
 ## Behavior
 
 * [ ] A variable cannot be assigned the `void` type
+* [x] Immutable variables cannot be assigned twice
 * [ ] `-i|--interactive` option allows you to run a script and then open a REPL
 
 ## Execution
 
 * [x] Constants
-* [ ] Variables
-* [ ] Variable assignment
+* [x] Variables
+* [x] Variable assignment
 * [x] Function calls
 * [x] Code blocks
 * [x] If condition
@@ -35,8 +36,8 @@ be expanded. If you want to contribute, this a good place to start!
 * [x] For loop
 * [x] While loop
 * [x] Loop loop
-* [ ] Test functions
-* [ ] Tests for execution
+* [x] Test functions
+* [x] Tests for execution
 
 ## Typechecker
 
@@ -59,5 +60,5 @@ be expanded. If you want to contribute, this a good place to start!
 
 ## Misc
 
-* [ ] Logo and .xcf for `jinko`
+* [x] Logo and .xcf for `jinko`
 * [x] [Editor support](https://github.com/cohenarthur/jinko.vim)
