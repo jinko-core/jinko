@@ -53,8 +53,9 @@ impl Repl {
     /// Launch the REPL
     pub fn launch_repl(args: &Args) -> Result<(), JkError> {
         let line_reader = Interface::new("jinko")?;
+
         let mut interpreter = Interpreter::new();
-        interpreter.debug_mode = args.debug;
+        interpreter.set_debug(args.debug());
 
         // FIXME: Add actual prompt
         line_reader.set_prompt(&Prompt::get(&interpreter))?;
