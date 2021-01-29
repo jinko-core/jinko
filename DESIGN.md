@@ -235,7 +235,7 @@ Thus, the following syntax should be adopted at first:
 type CustomType(int_value: int, some_character: char, f: float);
 
 // Let's create one
-let value = CustomType(4, 'J', 27.07);
+value = CustomType(4, 'J', 27.07);
 ```
 
 The "default constructor" is thus all the compounded types, in order. If your types get
@@ -328,9 +328,9 @@ func push(node: LinkedList, next: LinkedList) {
     /* Some code to add next to the end of the list or whatever */
 }
 
-let last = LinkedList(3, None);
-let mid = LinkedList(2, Some(last));
-let head = LinkedList(1, Some(mid));
+last = LinkedList(3, None);
+mid = LinkedList(2, Some(last));
+head = LinkedList(1, Some(mid));
 
 head.push(LinkedList(67, None));
 
