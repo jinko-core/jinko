@@ -43,7 +43,7 @@ impl Repl {
     fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, JkError> {
         match input.is_empty() {
             true => Ok(None),
-            false => match Construct::expression(input) {
+            false => match Construct::instruction(input) {
                 Ok((_, value)) => Ok(Some(value)),
                 Err(e) => Err(JkError::from(e)),
             },

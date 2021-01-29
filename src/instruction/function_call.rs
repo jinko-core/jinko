@@ -204,10 +204,10 @@ mod tests {
         use crate::ToInstance;
 
         let mut i = Interpreter::new();
-        let func_dec = Construct::expression("func second(f: int, s: int) -> int { s }")
+        let func_dec = Construct::instruction("func second(f: int, s: int) -> int { s }")
             .unwrap()
             .1;
-        let func_call = Construct::expression("second(1, 2)").unwrap().1;
+        let func_call = Construct::instruction("second(1, 2)").unwrap().1;
 
         func_dec.execute(&mut i).unwrap();
 
@@ -224,10 +224,10 @@ mod tests {
         use crate::ToInstance;
 
         let mut i = Interpreter::new();
-        let func_dec = Construct::expression("func add(a: int, b: int) -> int { a + b }")
+        let func_dec = Construct::instruction("func add(a: int, b: int) -> int { a + b }")
             .unwrap()
             .1;
-        let func_call = Construct::expression("add(1, 2)").unwrap().1;
+        let func_call = Construct::instruction("add(1, 2)").unwrap().1;
 
         func_dec.execute(&mut i).unwrap();
 
@@ -244,10 +244,10 @@ mod tests {
         use crate::ToInstance;
 
         let mut i = Interpreter::new();
-        let func_dec = Construct::expression("func one() -> int { one = 1; one }")
+        let func_dec = Construct::instruction("func one() -> int { one = 1; one }")
             .unwrap()
             .1;
-        let func_call = Construct::expression("one()").unwrap().1;
+        let func_call = Construct::instruction("one()").unwrap().1;
 
         func_dec.execute(&mut i).unwrap();
 

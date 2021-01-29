@@ -28,7 +28,7 @@ impl Parser {
 
         let entry_block = interpreter.entry_point.block_mut().unwrap();
 
-        let (_, instructions) = many0(Construct::expression_maybe_semicolon)(input)?;
+        let (_, instructions) = many0(Construct::instruction_maybe_semicolon)(input)?;
 
         entry_block.set_instructions(instructions);
 

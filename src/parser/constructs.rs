@@ -5,7 +5,7 @@
 //! abstraction for all possible ways to parse a line in jinko.
 //!
 //! Each of the functions in that module contain the grammar they represent above their
-//! name. The syntax used for the grammar is loosely based on regular expressions and
+//! name. The syntax used for the grammar is loosely based on regular instructions and
 //! globbing. One can use * to indicate 0 or more, ? to indicate 1 or more, etc etc.
 //! Optional parameters are included between brackets. For example,
 //!
@@ -26,9 +26,9 @@ type ParseResult<'i, T> = IResult<&'i str, T>;
 pub struct Construct;
 
 impl Construct {
-    /// Parse any valid jinko expression. This can be a function call, a variable,
+    /// Parse any valid jinko instruction. This can be a function call, a variable,
     /// a block declaration...
-    pub fn expression(input: &str) -> ParseResult<Box<dyn Instruction>> {
+    pub fn instruction(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         // FIXME: If input is empty, return an error or do nothing
@@ -54,11 +54,11 @@ impl Construct {
         Ok((input, value))
     }
 
-    /// Parse an expression and maybe the semicolon that follows.
+    /// Parse an instruction and maybe the semicolon that follows.
     ///
-    /// `<expression> [ ; ]`
-    pub fn expression_maybe_semicolon(input: &str) -> ParseResult<Box<dyn Instruction>> {
-        let (input, expr) = Construct::expression(input)?;
+    /// `<instruction> [ ; ]`
+    pub fn instruction_maybe_semicolon(input: &str) -> ParseResult<Box<dyn Instruction>> {
+        let (input, expr) = Construct::instruction(input)?;
         let (input, _) = opt(Token::semicolon)(input)?;
 
         Ok((input, expr))
@@ -95,7 +95,7 @@ impl Construct {
     fn arg(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, constant) = Construct::expression(input)?;
+        let (input, constant) = Construct::instruction(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -104,7 +104,7 @@ impl Construct {
 
     /// Parse an argument and the comma that follows it
     fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
-        let (input, constant) = Construct::expression(input)?;
+        let (input, constant) = Construct::instruction(input)?;
         let (input, _) = Token::comma(input)?;
 
         Ok((input, constant))
@@ -143,11 +143,11 @@ impl Construct {
     ///
     /// ```
     /// fn(); // Function call
-    /// fn() // Call the function `fn` and use the return result as an expression
+    /// fn() // Call the function `fn` and use the return result as an instruction
     /// x = fn(); // Assign the result of the function call to the variable x
     /// ```
     ///
-    /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
+    /// `<arg_list> := [(<constant> | <variable> | <instruction>)*]`
     /// `<identifier> ( <arg_list> )`
     pub(crate) fn function_call(input: &str) -> ParseResult<FunctionCall> {
         alt((
@@ -193,7 +193,7 @@ impl Construct {
         let (input, _) = opt(Token::consume_whitespaces)(input)?;
         let (input, _) = Token::equal(input)?;
         let (input, _) = opt(Token::consume_whitespaces)(input)?;
-        let (input, value) = Construct::expression(input)?;
+        let (input, value) = Construct::instruction(input)?;
 
         match mut_opt {
             Some(_) => Ok((input, VarAssign::new(true, id.to_owned(), value))),
@@ -212,10 +212,10 @@ impl Construct {
 
     /// Parse a statement and the semicolon that follows
     ///
-    /// `<expression> ;`
+    /// `<instruction> ;`
     fn stmt_semicolon(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, expr) = Construct::expression(input)?;
+        let (input, expr) = Construct::instruction(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::semicolon(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -228,12 +228,12 @@ impl Construct {
         input: &str,
     ) -> ParseResult<(Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
-        let (input, last_expr) = opt(Construct::expression)(input)?;
+        let (input, last_expr) = opt(Construct::instruction)(input)?;
 
         Ok((input, (instructions, last_expr)))
     }
 
-    /// Parses the statements in a block as well as a possible last expression
+    /// Parses the statements in a block as well as a possible last instruction
     fn instructions(
         input: &str,
     ) -> ParseResult<(Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
@@ -270,7 +270,7 @@ impl Construct {
     /// There can only be one returning instruction, and it must be the last one
     /// in the block.
     ///
-    /// `{ [ <expression> ; ]* [ <expression> ] }`
+    /// `{ [ <instruction> ; ]* [ <instruction> ] }`
     pub(crate) fn block(input: &str) -> ParseResult<Block> {
         let (input, (instructions, last)) = Construct::instructions(input)?;
 
@@ -510,7 +510,7 @@ impl Construct {
         let (input, _) = Token::if_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, condition) = Construct::expression(input)?;
+        let (input, condition) = Construct::instruction(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, if_body) = Construct::block(input)?;
@@ -548,25 +548,25 @@ impl Construct {
         Ok((input, Loop::new(LoopKind::Loop, block)))
     }
 
-    /// Parse a while block. A while block consists of a high bound, or expression, as
+    /// Parse a while block. A while block consists of a high bound, or instruction, as
     /// well as a block
     ///
-    /// `<while> <expression> <block>`
+    /// `<while> <instruction> <block>`
     fn while_block(input: &str) -> ParseResult<Loop> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::while_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, condition) = Construct::expression(input)?;
+        let (input, condition) = Construct::instruction(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Loop::new(LoopKind::While(condition), block)))
     }
 
-    /// Construct a for block, which consists of a variable, a range expression, and
+    /// Construct a for block, which consists of a variable, a range instruction, and
     /// a block to execute
     ///
-    /// `<for> <variable> <in> <expression> <block>`
+    /// `<for> <variable> <in> <instruction> <block>`
     fn for_block(input: &str) -> ParseResult<Loop> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::for_tok(input)?;
@@ -578,12 +578,12 @@ impl Construct {
         let (input, _) = Token::in_tok(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, expression) = Construct::expression(input)?;
+        let (input, instruction) = Construct::instruction(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
 
-        Ok((input, Loop::new(LoopKind::For(variable, expression), block)))
+        Ok((input, Loop::new(LoopKind::For(variable, instruction), block)))
     }
 
     /// Parse any loop construct: For, While or Loop
@@ -609,8 +609,8 @@ impl Construct {
         Ok((input, inst))
     }
 
-    /// Parse a binary operation. A binary operation is composed of an expression, an
-    /// operator and another expression
+    /// Parse a binary operation. A binary operation is composed of an instruction, an
+    /// operator and another instruction
     ///
     /// `<expr> <op> <expr>`
     ///
@@ -850,7 +850,7 @@ mod tests {
 
         match Construct::block("{ 12a; 14a }").unwrap().1.last() {
             Some(_) => assert!(true),
-            None => assert!(false, "Last expression here is valid"),
+            None => assert!(false, "Last instruction here is valid"),
         }
     }
 
@@ -926,12 +926,12 @@ mod tests {
         }
 
         match Construct::block("{ 12a") {
-            Ok(_) => assert!(false, "Unterminated bracket but on expression"),
+            Ok(_) => assert!(false, "Unterminated bracket but on instruction"),
             Err(_) => assert!(true),
         }
 
         match Construct::block("{ 12a; 13a") {
-            Ok(_) => assert!(false, "Unterminated bracket but on second expression"),
+            Ok(_) => assert!(false, "Unterminated bracket but on second instruction"),
             Err(_) => assert!(true),
         }
 
@@ -1173,7 +1173,7 @@ mod tests {
         };
         match Construct::binary_op("some() + 12.1") {
             Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have multiple expression types"),
+            Err(_) => assert!(false, "Valid to have multiple instruction types"),
         };
     }
 
@@ -1269,7 +1269,7 @@ mod tests {
 
     #[test]
     fn t_func_call_with_true_arg_is_func_call() {
-        let res = Construct::expression("h(true)").unwrap().1;
+        let res = Construct::instruction("h(true)").unwrap().1;
         res.downcast_ref::<FunctionCall>().unwrap();
 
         // There might be a bug that a function call with just a boolean argument gets
