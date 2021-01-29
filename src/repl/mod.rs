@@ -75,7 +75,6 @@ impl Repl {
             };
 
             match inst.execute(&mut interpreter) {
-                // FIXME: Handle statements and expressions differently
                 Ok(InstrKind::Expression(None)) | Ok(InstrKind::Statement) => {}
                 Ok(InstrKind::Expression(Some(result))) => println!("{}", result),
                 Err(e) => println!("{}", e.to_string()),
