@@ -604,7 +604,9 @@ impl Construct {
         let (input, fc) = Construct::function_call(input)?;
 
         // FIXME: No unwrap(), use something else than just the name
-        let inst = JkInst::from_str(fc.name()).unwrap();
+        //        this is very awkward, we have a JkError coming up and we shouldn't be creating
+        //        new JkInst.
+        let inst = JkInst::from_function_call(fc).unwrap();
 
         Ok((input, inst))
     }
