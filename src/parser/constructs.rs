@@ -633,8 +633,9 @@ impl Construct {
 
     /// Parses a path for code inclusion
     fn path(input: &str) -> IResult<&str, PathBuf> {
-        let (input, path) = delimited(char(' '), is_not(" "), char(' '))(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
+        let (input, path) = Token::identifier(input)?;
         let path = PathBuf::from(path);
 
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -642,14 +643,14 @@ impl Construct {
         Ok((input, path))
     }
 
-    fn as_path(input: &str) -> IResult<&str, String> {
+    pub fn as_identifier(input: &str) -> IResult<&str, String> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::as_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, id) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, rename) = Token::identifier(input)?;
-
-        Ok((input, rename.to_owned()))
+        Ok((input, id.to_string()))
     }
 
     pub fn incl(input: &str) -> IResult<&str, Incl> {
@@ -658,7 +659,7 @@ impl Construct {
         let (input, _) = Token::incl_tok(input)?;
         let (input, path) = Construct::path(input)?;
 
-        let (input, rename) = opt(Construct::as_path)(input)?;
+        let (input, rename) = opt(Construct::as_identifier)(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
 
