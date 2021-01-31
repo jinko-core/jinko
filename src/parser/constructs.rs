@@ -13,7 +13,12 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, multi::many0, IResult};
+use nom::{
+    branch::alt, character::complete::char, combinator::opt, multi::many0,
+    sequence::delimited, IResult, bytes::complete::is_not
+};
+
+use std::path::PathBuf;
 
 use super::{
     box_construct::BoxConstruct, constant_construct::ConstantConstruct, jinko_insts::JinkoInst,
@@ -21,7 +26,7 @@ use super::{
 };
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Loop, LoopKind, Var, VarAssign,
+    Loop, LoopKind, Var, VarAssign, Incl,
 };
 
 pub struct Construct;
@@ -624,6 +629,42 @@ impl Construct {
 
         // FIXME: Add Type creation and return it
         Ok((input, ""))
+    }
+
+    /// Parses a path for code inclusion
+    fn path(input: &str) -> IResult<&str, PathBuf> {
+        let (input, path) = delimited(char(' '), is_not(" "), char(' '))(input)?;
+
+        let path = PathBuf::from(path);
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        Ok((input, path))
+    }
+
+    fn as_path(input: &str) -> IResult<&str, String> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::as_tok(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, rename) = Token::identifier(input)?;
+
+        Ok((input, rename.to_owned()))
+    }
+
+    pub fn incl(input: &str) -> IResult<&str, Incl> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, _) = Token::incl_tok(input)?;
+        let (input, path) = Construct::path(input)?;
+
+        let (input, rename) = opt(Construct::as_path)(input)?;
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let incl = Incl::new(path, rename);
+
+        Ok((input, incl))
     }
 }
 
@@ -1279,5 +1320,37 @@ mod tests {
         // There might be a bug that a function call with just a boolean argument gets
         // parsed as a variable. This test aims at correcting that regression. If it
         // fails, then it means the function call did not get parsed as a function call
+    }
+
+    #[test]
+    fn t_incl_valid() {
+        match Construct::incl("incl simple") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "`incl simple` is perfectly valid"),
+        }
+    }
+
+    #[test]
+    fn t_incl_valid_plus_rename() {
+        match Construct::incl("incl a as b") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "incl + renaming has to be handled"),
+        }
+    }
+
+    #[test]
+    fn t_incl_invalid() {
+        match Construct::incl("incl") {
+            Ok(_) => assert!(false, "Can't include nothing"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_incl_plus_rename_invalid() {
+        match Construct::incl("incl a as") {
+            Ok(_) => assert!(false, "Can't include a and rename as nothing"),
+            Err(_) => assert!(true),
+        }
     }
 }

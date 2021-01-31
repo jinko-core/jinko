@@ -1,6 +1,8 @@
 //! This module is used to parse external code and make it available to other source
 //! files.
 
+use std::path::PathBuf;
+
 use crate::{ErrKind, InstrKind, Instruction, Interpreter, JinkoError, Parser};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
@@ -8,27 +10,37 @@ use crate::{ErrKind, InstrKind, Instruction, Interpreter, JinkoError, Parser};
 /// Aliases are used to potentially rename exported functions.
 #[derive(Clone)]
 pub struct Incl {
-    path: String,
+    path: PathBuf,
     alias: Option<String>,
     content: Option<Interpreter>,
 }
 
 impl Incl {
+    pub fn new(path: PathBuf, alias: Option<String>) -> Incl {
+        Incl {
+            path, alias, content: None,
+        }
+    }
+
     /// Rename all contained code to the correct alias
     fn rename(&mut self) {
-        todo!()
+        todo!("Implement once namespaces are implemented")
     }
 
     /// Parse the code and load it in the Incl's interpreter
-    fn inner_load(&mut self, path: &str) -> Result<Interpreter, JinkoError> {
-        let input = std::fs::read_to_string(path)?;
+    fn inner_load(&mut self) -> Result<Interpreter, JinkoError> {
+        self.path.push(".jk");
+
+        let input = std::fs::read_to_string(&self.path)?;
+
+        eprintln!("Path: {:#?}", self.path);
 
         Parser::parse(&input)
     }
 
     /// Try to load code from the current path where the executable has been launched
     fn load_relative(&mut self) -> Result<Interpreter, JinkoError> {
-        todo!()
+        self.inner_load()
     }
 
     /// Try to load code from jinko's installation path
@@ -47,7 +59,8 @@ impl Incl {
                 Ok(i) => Ok(i),
                 Err(_) => Err(JinkoError::new(
                     ErrKind::Interpreter,
-                    format!("couldn't include the following code: {}", self.path),
+                    // FIXME: No debug formatting
+                    format!("couldn't include the following code: {:#?}", self.path),
                     None,
                     self.print(),
                 )),
@@ -70,7 +83,11 @@ impl Instruction for Incl {
     }
 
     fn print(&self) -> String {
-        let mut base = format!("incl {}", self.path);
+        use std::ffi::OsStr;
+
+        let path: &OsStr = self.path.as_ref();
+        // FIXME: No unwrap
+        let mut base = format!("incl {}", path.to_str().unwrap());
 
         base = match &self.alias {
             Some(alias) => format!("{} as {}", base, alias),

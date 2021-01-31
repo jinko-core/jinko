@@ -150,6 +150,14 @@ impl Token {
         Token::specific_token(input, "type")
     }
 
+    pub fn incl_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "incl")
+    }
+
+    pub fn as_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "as")
+    }
+
     pub fn add(input: &str) -> IResult<&str, &str> {
         Token::token(input, "+")
     }
