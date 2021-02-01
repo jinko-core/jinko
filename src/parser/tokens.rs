@@ -11,8 +11,9 @@ use nom::{
 };
 
 /// Reserved Keywords by jinko
-const RESERVED_KEYWORDS: [&str; 11] = [
-    "func", "test", "mock", "type", "ext", "for", "while", "loop", "mut", "true", "false",
+const RESERVED_KEYWORDS: [&str; 13] = [
+    "func", "test", "mock", "type", "ext", "for", "while", "loop", "mut", "true", "false", "incl",
+    "as",
 ];
 
 const OPERATORS: [&str; 6] = ["+", "-", "*", "/", "(", ")"];

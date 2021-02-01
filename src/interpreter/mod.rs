@@ -78,6 +78,18 @@ impl Interpreter {
         self.scope_map.add_variable(var)
     }
 
+    /// Get all variables globally declared in an interpreter. This is
+    /// a destructive operation and greatly mutates the interpreter
+    pub fn global_variables(&mut self) -> Vec<Var> {
+        self.scope_map.global_variables()
+    }
+
+    /// Get all functions globally declared in an interpreter. This is
+    /// a destructive operation and greatly mutates the interpreter
+    pub fn global_functions(&mut self) -> Vec<FunctionDec> {
+        self.scope_map.global_functions()
+    }
+
     /// Remove a variable from the interpreter
     pub fn remove_variable(&mut self, var: &Var) -> Result<(), JinkoError> {
         self.scope_map.remove_variable(var)

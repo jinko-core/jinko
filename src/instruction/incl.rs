@@ -10,15 +10,17 @@ use crate::{ErrKind, InstrKind, Instruction, Interpreter, JinkoError, Parser};
 /// Aliases are used to potentially rename exported functions.
 #[derive(Clone)]
 pub struct Incl {
-    path: PathBuf,
+    path: String,
     alias: Option<String>,
     content: Option<Interpreter>,
 }
 
 impl Incl {
-    pub fn new(path: PathBuf, alias: Option<String>) -> Incl {
+    pub fn new(path: String, alias: Option<String>) -> Incl {
         Incl {
-            path, alias, content: None,
+            path,
+            alias,
+            content: None,
         }
     }
 
@@ -28,23 +30,26 @@ impl Incl {
     }
 
     /// Parse the code and load it in the Incl's interpreter
-    fn inner_load(&mut self) -> Result<Interpreter, JinkoError> {
-        self.path.push(".jk");
+    fn inner_load(&self) -> Result<Interpreter, JinkoError> {
+        let mut path = self.path.clone();
+        path.push_str(".jk");
 
-        let input = std::fs::read_to_string(&self.path)?;
+        let path = PathBuf::from(path);
 
-        eprintln!("Path: {:#?}", self.path);
+        dbg!(&path);
+
+        let input = std::fs::read_to_string(path)?;
 
         Parser::parse(&input)
     }
 
     /// Try to load code from the current path where the executable has been launched
-    fn load_relative(&mut self) -> Result<Interpreter, JinkoError> {
+    fn load_relative(&self) -> Result<Interpreter, JinkoError> {
         self.inner_load()
     }
 
     /// Try to load code from jinko's installation path
-    fn load_jinko_path(&mut self) -> Result<Interpreter, JinkoError> {
+    fn load_jinko_path(&self) -> Result<Interpreter, JinkoError> {
         todo!()
     }
 
@@ -52,28 +57,24 @@ impl Incl {
     ///
     /// There are two ways to look for a source file: First in the includer's path, and
     /// if not available in jinko's installation directory.
-    fn load(&mut self) -> Result<(), JinkoError> {
-        let interpreter = match self.load_relative() {
-            Ok(i) => Ok(i),
-            Err(_) => match self.load_jinko_path() {
-                Ok(i) => Ok(i),
-                Err(_) => Err(JinkoError::new(
-                    ErrKind::Interpreter,
-                    // FIXME: No debug formatting
-                    format!("couldn't include the following code: {:#?}", self.path),
-                    None,
-                    self.print(),
-                )),
-            },
-        };
+    fn load(&self) -> Result<Interpreter, JinkoError> {
+        self.load_relative()
 
-        match interpreter {
-            Ok(i) => {
-                self.content = Some(i);
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
+        // let interpreter = match self.load_relative() {
+        //     Ok(i) => Ok(i),
+        //     Err(_) => match self.load_jinko_path() {
+        //         Ok(i) => Ok(i),
+        //         Err(_) => Err(JinkoError::new(
+        //             ErrKind::Interpreter,
+        //             // FIXME: No debug formatting
+        //             format!("couldn't include the following code: {:#?}", self.path),
+        //             None,
+        //             self.print(),
+        //         )),
+        //     },
+        // };
+
+        // interpreter
     }
 }
 
@@ -97,7 +98,29 @@ impl Instruction for Incl {
         base
     }
 
-    fn execute(&self, _interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
-        todo!()
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+        // FIXME: Store content at some point
+        let mut content = match &self.content {
+            None => self.load().unwrap(),
+            Some(content) => content.clone(),
+        };
+
+        println!("{}", content.print());
+
+        let fns = content.global_functions();
+        let vars = content.global_variables();
+
+        // FIXME: No unwrap: Do something similar to Blocks
+        fns.into_iter().for_each(|f| {
+            interpreter.add_function(f).unwrap();
+        });
+        vars.into_iter().for_each(|v| {
+            interpreter.add_variable(v).unwrap();
+        });
+
+        // Execute content globally
+        content.entry_point.execute(interpreter)?;
+
+        Ok(InstrKind::Statement)
     }
 }

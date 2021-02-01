@@ -16,8 +16,8 @@ use crate::{
 /// A scope contains a set of available variables and functions
 #[derive(Clone)]
 struct Scope {
-    variables: HashMap<String, Var>,
-    functions: HashMap<String, Rc<FunctionDec>>,
+    pub(crate) variables: HashMap<String, Var>,
+    pub(crate) functions: HashMap<String, Rc<FunctionDec>>,
 }
 
 impl Scope {
@@ -189,6 +189,32 @@ impl ScopeMap {
                 func.name().to_owned(),
             )),
         }
+    }
+
+    /// Return all the variables declared in the first scope of the scopemap
+    pub fn global_variables(&mut self) -> Vec<Var> {
+        let scope = self.scopes.front_mut().unwrap();
+
+        // FIXME: No clone
+        scope
+            .variables
+            .clone()
+            .into_iter()
+            .map(|(_k, v)| v)
+            .collect()
+    }
+
+    /// Return all the functions declared in the first scope of the scopemap
+    pub fn global_functions(&mut self) -> Vec<FunctionDec> {
+        let scope = self.scopes.front_mut().unwrap();
+
+        // FIXME: No clone
+        scope
+            .functions
+            .clone()
+            .into_iter()
+            .map(|(_k, v)| Rc::try_unwrap(v).unwrap())
+            .collect()
     }
 
     /// Display all contained information on stdout

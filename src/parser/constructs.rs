@@ -14,8 +14,8 @@
 //! is the grammar for a variable assignment.
 
 use nom::{
-    branch::alt, character::complete::char, combinator::opt, multi::many0,
-    sequence::delimited, IResult, bytes::complete::is_not
+    branch::alt, bytes::complete::is_not, character::complete::char, combinator::opt, multi::many0,
+    sequence::delimited, IResult,
 };
 
 use std::path::PathBuf;
@@ -25,8 +25,8 @@ use super::{
     shunting_yard::ShuntingYard, tokens::Token,
 };
 use crate::instruction::{
-    Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    Loop, LoopKind, Var, VarAssign, Incl,
+    Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Incl,
+    Instruction, Loop, LoopKind, Var, VarAssign,
 };
 
 pub struct Construct;
@@ -44,6 +44,7 @@ impl Construct {
             BoxConstruct::test_declaration,
             BoxConstruct::mock_declaration,
             BoxConstruct::function_call,
+            BoxConstruct::incl,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
@@ -632,15 +633,14 @@ impl Construct {
     }
 
     /// Parses a path for code inclusion
-    fn path(input: &str) -> IResult<&str, PathBuf> {
+    fn path(input: &str) -> IResult<&str, String> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, path) = Token::identifier(input)?;
-        let path = PathBuf::from(path);
 
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        Ok((input, path))
+        Ok((input, path.to_string()))
     }
 
     pub fn as_identifier(input: &str) -> IResult<&str, Option<String>> {
@@ -651,7 +651,7 @@ impl Construct {
                 let (input, id) = Token::identifier(input)?;
 
                 (input, Some(id.to_string()))
-            },
+            }
             (input, None) => (input, None),
         };
 
