@@ -8,10 +8,16 @@ use crate::{Interpreter, JkErrKind, JkError};
 
 /// The potential interpreter instructions
 #[derive(Clone, Debug, PartialEq)]
-pub enum JkInst {
+pub enum JkInstKind {
     Dump,
     Quit,
     Ir,
+}
+
+#[derive(Clone)]
+pub struct JkInst {
+    kind: JkInstKind,
+    args: Vec<Box<dyn Instruction>>,
 }
 
 impl JkInst {
@@ -19,18 +25,27 @@ impl JkInst {
     pub fn from_function_call(fc: FunctionCall) -> Result<Self, JkError> {
         let func_name = fc.name();
 
-        match func_name {
-            "dump" => Ok(JkInst::Dump),
-            "quit" => Ok(JkInst::Quit),
-            "ir" => Ok(JkInst::Ir),
+        let kind = match func_name {
+            "dump" => JkInstKind::Dump,
+            "quit" => JkInstKind::Quit,
+            "ir" => JkInstKind::Ir,
             // FIXME: Fix location
-            _ => Err(JkError::new(
+            _ => return Err(JkError::new(
                 JkErrKind::Parsing,
                 format!("unknown interpreter directive @{}", func_name),
                 None,
                 func_name.to_owned(),
             )),
-        }
+        };
+
+        Ok(Self {
+            kind,
+            args: fc.args().to_owned()
+        })
+    }
+
+    pub fn jk_inst_kind(&self) -> &JkInstKind {
+        &self.kind
     }
 }
 
@@ -40,10 +55,10 @@ impl Instruction for JkInst {
     }
 
     fn print(&self) -> String {
-        match self {
-            JkInst::Dump => "@dump",
-            JkInst::Quit => "@quit",
-            JkInst::Ir => "@ir",
+        match self.kind {
+            JkInstKind::Dump => "@dump",
+            JkInstKind::Quit => "@quit",
+            JkInstKind::Ir => "@ir",
         }
         .to_string()
     }
@@ -51,10 +66,10 @@ impl Instruction for JkInst {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("JINKO_INST", &self.print());
 
-        match self {
-            JkInst::Dump => println!("{}", interpreter.print()),
-            JkInst::Quit => std::process::exit(0),
-            JkInst::Ir => eprintln!("usage: {:?} <statement|expr>", JkInst::Ir),
+        match self.kind {
+            JkInstKind::Dump => println!("{}", interpreter.print()),
+            JkInstKind::Quit => std::process::exit(0),
+            JkInstKind::Ir => eprintln!("usage: {:?} <statement|expr>", JkInstKind::Ir),
         };
 
         // JinkInsts cannot return anything. They simply act directly from the interpreter,
@@ -87,18 +102,9 @@ mod tests {
 
     #[test]
     fn t_valid_inst_with_args() {
-        let (_, fc) = Construct::function_call("ir(func)").unwrap();
+        let (_, fc) = Construct::function_call("ir(fn)").unwrap();
         let inst = JkInst::from_function_call(fc);
 
         assert!(inst.is_ok(), "ir(func) is a valid use of the ir interpreter directive")
-    }
-
-
-    #[test]
-    fn t_invalid_inst_with_args() {
-        let (_, fc) = Construct::function_call("dump(arg)").unwrap();
-        let inst = JkInst::from_function_call(fc);
-
-        assert!(inst.is_err(), "dump does not take any parameters")
     }
 }

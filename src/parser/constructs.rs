@@ -17,7 +17,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
     Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    JkInst, Loop, LoopKind, Var, VarAssign,
+    JkInst, JkInstKind, Loop, LoopKind, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -1160,11 +1160,11 @@ mod tests {
 
     #[test]
     fn t_jinko_inst_valid() {
-        assert_eq!(Construct::jinko_inst("@dump()"), Ok(("", JkInst::Dump)));
-        assert_eq!(
-            Construct::jinko_inst("@quit(something, something_else)"),
-            Ok(("", JkInst::Quit))
-        );
+        let (_, dump_inst) = Construct::jinko_inst("@dump()").unwrap();
+        assert_eq!(dump_inst.jk_inst_kind(), &JkInstKind::Dump);
+
+        let (_, quit_inst) = Construct::jinko_inst("@quit(something, something_else)").unwrap();
+        assert_eq!(quit_inst.jk_inst_kind(), &JkInstKind::Quit);
     }
 
     #[test]
