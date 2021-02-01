@@ -132,20 +132,3 @@ impl Clone for Box<dyn Instruction> {
         self.box_clone()
     }
 }
-
-use inkwell::OptimizationLevel;
-use inkwell::builder::Builder;
-use inkwell::context::Context;
-use inkwell::execution_engine::{ExecutionEngine, JitFunction};
-use inkwell::module::Module;
-use inkwell::targets::{InitializationConfig, Target};
-
-pub struct CodeGen<'ctx> {
-    context: &'ctx Context,
-    module: Module<'ctx>,
-    builder: Builder<'ctx>,
-}
-
-pub trait Compilable {
-    fn ir(&self, ctx: &mut CodeGen, interpreter: &Interpreter) -> Result<String, JkError>;
-}
