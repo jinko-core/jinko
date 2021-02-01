@@ -234,7 +234,7 @@ impl Construct {
     }
 
     /// Parses the statements in a block as well as a possible last instruction
-    fn instructions(
+    fn block_instructions(
         input: &str,
     ) -> ParseResult<(Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, _) = Token::left_curly_bracket(input)?;
@@ -272,7 +272,7 @@ impl Construct {
     ///
     /// `{ [ <instruction> ; ]* [ <instruction> ] }`
     pub(crate) fn block(input: &str) -> ParseResult<Block> {
-        let (input, (instructions, last)) = Construct::instructions(input)?;
+        let (input, (instructions, last)) = Construct::block_instructions(input)?;
 
         let mut block = Block::new();
         block.set_instructions(instructions);
