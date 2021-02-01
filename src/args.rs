@@ -11,13 +11,13 @@ pub struct Args {
     version: bool,
 
     #[structopt(short, long)]
-    pub interactive: bool,
+    interactive: bool,
 
     #[structopt(short, long)]
-    pub debug: bool,
+    debug: bool,
 
     #[structopt(parse(from_os_str))]
-    pub input: Option<PathBuf>,
+    input: Option<PathBuf>,
 }
 
 impl Args {
@@ -37,5 +37,20 @@ impl Args {
         }
 
         args
+    }
+
+    /// Is the interpreter launched in interactive mode
+    pub fn interactive(&self) -> bool {
+        self.interactive
+    }
+
+    /// Is the interpreter launched in debug mode
+    pub fn debug(&self) -> bool {
+        self.debug
+    }
+
+    /// File input given to the interpreter
+    pub fn input(&self) -> Option<&PathBuf> {
+        self.input.as_ref()
     }
 }

@@ -1,10 +1,7 @@
 //! Audit blocks are more permissive than normal blocks. They allow ignoring a return
 //! value, for example.
 
-use crate::error::JinkoError;
-use crate::interpreter::Interpreter;
-
-use super::{Block, InstrKind, Instruction};
+use crate::{instruction::Block, InstrKind, Instruction, Interpreter, JkError};
 
 #[derive(Clone)]
 pub struct Audit {
@@ -27,7 +24,7 @@ impl Instruction for Audit {
         format!("audit {}", self.block.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.audit_enter();
         interpreter.debug_step("AUDIT ENTER");
 

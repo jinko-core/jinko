@@ -14,11 +14,11 @@ use parser::Parser;
 use repl::Repl;
 use std::fs;
 
-pub use error::{ErrKind, JinkoError};
-pub use instance::{FromInstance, Instance, ToInstance};
+pub use error::{JkErrKind, JkError};
+pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
-pub use value::{JinkBool, JinkChar, JinkFloat, JinkInt, JinkString};
+pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 fn handle_exit_code(result: InstrKind) {
     match result {
@@ -30,10 +30,10 @@ fn handle_exit_code(result: InstrKind) {
         // If it's an expression, return if you can (if it's an int)
         InstrKind::Expression(Some(i)) => match i.ty() {
             Some(ty) => match ty.as_ref() {
-                "int" => std::process::exit(JinkInt::from_instance(&i).0 as i32),
-                "float" => std::process::exit(JinkFloat::from_instance(&i).0 as i32),
+                "int" => std::process::exit(JkInt::from_instance(&i).0 as i32),
+                "float" => std::process::exit(JkFloat::from_instance(&i).0 as i32),
                 "bool" => {
-                    let b_value = JinkBool::from_instance(&i).0;
+                    let b_value = JkBool::from_instance(&i).0;
                     match b_value {
                         true => std::process::exit(0),
                         false => std::process::exit(1),
@@ -49,7 +49,7 @@ fn handle_exit_code(result: InstrKind) {
 fn main() {
     let args = Args::handle();
 
-    if args.interactive || args.input.is_none() {
+    if args.interactive() || args.input().is_none() {
         match Repl::launch_repl(&args) {
             Ok(_) => {}
             Err(e) => e.exit(),
@@ -57,12 +57,11 @@ fn main() {
     };
 
     // We can unwrap since we checked for `None` in the if
-    let input = fs::read_to_string(args.input.unwrap()).unwrap();
+    let input = fs::read_to_string(args.input().unwrap()).unwrap();
 
     // FIXME: No unwrap()
     let mut interpreter = Parser::parse(&input).unwrap();
-
-    interpreter.debug_mode = args.debug;
+    interpreter.set_debug(args.debug());
 
     // The entry point always has a block
     let ep = interpreter.entry_point.block().unwrap().clone();
