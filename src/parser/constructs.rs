@@ -13,12 +13,7 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{
-    branch::alt, bytes::complete::is_not, character::complete::char, combinator::opt, multi::many0,
-    sequence::delimited, IResult,
-};
-
-use std::path::PathBuf;
+use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use super::{
     box_construct::BoxConstruct, constant_construct::ConstantConstruct, jinko_insts::JinkoInst,
@@ -69,6 +64,11 @@ impl Construct {
         let (input, _) = opt(Token::semicolon)(input)?;
 
         Ok((input, expr))
+    }
+
+    /// Parse as many instructions as possible
+    pub fn many_instructions(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
+        many0(Construct::expression_maybe_semicolon)(input)
     }
 
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
@@ -237,7 +237,7 @@ impl Construct {
     }
 
     /// Parses the statements in a block as well as a possible last expression
-    fn instructions(
+    fn block_instructions(
         input: &str,
     ) -> IResult<&str, (Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, _) = Token::left_curly_bracket(input)?;
@@ -275,7 +275,7 @@ impl Construct {
     ///
     /// `{ [ <expression> ; ]* [ <expression> ] }`
     pub fn block(input: &str) -> IResult<&str, Block> {
-        let (input, (instructions, last)) = Construct::instructions(input)?;
+        let (input, (instructions, last)) = Construct::block_instructions(input)?;
 
         let mut block = Block::new();
         block.set_instructions(instructions);

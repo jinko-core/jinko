@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 
-use crate::{ErrKind, InstrKind, Instruction, Interpreter, JinkoError, Parser};
+use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JinkoError};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
 /// The interpreter is built from parsing the source file in the path.
@@ -12,16 +12,11 @@ use crate::{ErrKind, InstrKind, Instruction, Interpreter, JinkoError, Parser};
 pub struct Incl {
     path: String,
     alias: Option<String>,
-    content: Option<Interpreter>,
 }
 
 impl Incl {
     pub fn new(path: String, alias: Option<String>) -> Incl {
-        Incl {
-            path,
-            alias,
-            content: None,
-        }
+        Incl { path, alias }
     }
 
     /// Rename all contained code to the correct alias
@@ -30,26 +25,29 @@ impl Incl {
     }
 
     /// Parse the code and load it in the Incl's interpreter
-    fn inner_load(&self) -> Result<Interpreter, JinkoError> {
+    fn inner_load(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
         let mut path = self.path.clone();
         path.push_str(".jk");
 
         let path = PathBuf::from(path);
 
-        dbg!(&path);
-
         let input = std::fs::read_to_string(path)?;
 
-        Parser::parse(&input)
+        // We can't just parse the input, since it adds the instructions
+        // to an entry block in order to execute them. What we can do, is
+        // parse many instructions and add them to an empty interpreter
+        let (_, instructions) = Construct::many_instructions(input.as_str())?;
+
+        Ok(instructions)
     }
 
     /// Try to load code from the current path where the executable has been launched
-    fn load_relative(&self) -> Result<Interpreter, JinkoError> {
+    fn load_relative(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
         self.inner_load()
     }
 
     /// Try to load code from jinko's installation path
-    fn load_jinko_path(&self) -> Result<Interpreter, JinkoError> {
+    fn load_jinko_path(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
         todo!()
     }
 
@@ -57,7 +55,7 @@ impl Incl {
     ///
     /// There are two ways to look for a source file: First in the includer's path, and
     /// if not available in jinko's installation directory.
-    fn load(&self) -> Result<Interpreter, JinkoError> {
+    fn load(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
         self.load_relative()
 
         // let interpreter = match self.load_relative() {
@@ -65,7 +63,7 @@ impl Incl {
         //     Err(_) => match self.load_jinko_path() {
         //         Ok(i) => Ok(i),
         //         Err(_) => Err(JinkoError::new(
-        //             ErrKind::Interpreter,
+        //             ErrKind::Vec<Box<dyn Instruction>>,
         //             // FIXME: No debug formatting
         //             format!("couldn't include the following code: {:#?}", self.path),
         //             None,
@@ -99,27 +97,17 @@ impl Instruction for Incl {
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
-        // FIXME: Store content at some point
-        let mut content = match &self.content {
-            None => self.load().unwrap(),
-            Some(content) => content.clone(),
-        };
+        interpreter.debug("INCL ENTER", &format!("{}", self.print()));
 
-        println!("{}", content.print());
+        let content = self.load()?;
 
-        let fns = content.global_functions();
-        let vars = content.global_variables();
-
-        // FIXME: No unwrap: Do something similar to Blocks
-        fns.into_iter().for_each(|f| {
-            interpreter.add_function(f).unwrap();
-        });
-        vars.into_iter().for_each(|v| {
-            interpreter.add_variable(v).unwrap();
-        });
-
-        // Execute content globally
-        content.entry_point.execute(interpreter)?;
+        content
+            .into_iter()
+            .map(|instr| {
+                interpreter.debug("INCLUDING", instr.print().as_str());
+                instr.execute(interpreter)
+            })
+            .collect::<Result<Vec<InstrKind>, JinkoError>>()?;
 
         Ok(InstrKind::Statement)
     }

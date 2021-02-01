@@ -10,6 +10,7 @@ use std::rc::Rc;
 use crate::{
     error::{ErrKind, JinkoError},
     instruction::{FunctionDec, Var},
+    interpreter::ENTRY_NAME,
     Instruction,
 };
 
@@ -213,7 +214,8 @@ impl ScopeMap {
             .functions
             .clone()
             .into_iter()
-            .map(|(_k, v)| Rc::try_unwrap(v).unwrap())
+            .filter(|(_key, f)| f.name() != ENTRY_NAME)
+            .map(|(_key, f)| Rc::try_unwrap(f).unwrap())
             .collect()
     }
 
