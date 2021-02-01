@@ -643,14 +643,21 @@ impl Construct {
         Ok((input, path))
     }
 
-    pub fn as_identifier(input: &str) -> IResult<&str, String> {
+    pub fn as_identifier(input: &str) -> IResult<&str, Option<String>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::as_tok(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, id) = Token::maybe_consume_extra(input)?;
+        let (input, id) = match opt(Token::as_tok)(input)? {
+            (input, Some(_)) => {
+                let (input, _) = Token::maybe_consume_extra(input)?;
+                let (input, id) = Token::identifier(input)?;
+
+                (input, Some(id.to_string()))
+            },
+            (input, None) => (input, None),
+        };
+
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        Ok((input, id.to_string()))
+        Ok((input, id))
     }
 
     pub fn incl(input: &str) -> IResult<&str, Incl> {
@@ -659,7 +666,7 @@ impl Construct {
         let (input, _) = Token::incl_tok(input)?;
         let (input, path) = Construct::path(input)?;
 
-        let (input, rename) = opt(Construct::as_identifier)(input)?;
+        let (input, rename) = Construct::as_identifier(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
 
