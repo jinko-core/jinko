@@ -20,7 +20,7 @@ impl Incl {
     }
 
     /// Rename all contained code to the correct alias
-    fn rename(&mut self) {
+    fn _rename(&mut self) {
         todo!("Implement once namespaces are implemented")
     }
 
@@ -47,7 +47,7 @@ impl Incl {
     }
 
     /// Try to load code from jinko's installation path
-    fn load_jinko_path(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+    fn _load_jinko_path(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
         todo!()
     }
 
