@@ -1,0 +1,17 @@
+# In this directory, tests need two source files. One "includer" and one "includee".
+# Therefore, each file shall be named "incl_*.jk" and "incl_*_includer.jk" for the source
+# that includes it. The includer file shall be passed as argument to the interpreter,
+# and the includee shall simply be included by the includer.
+
+tests:
+  - name: "Include simple var"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_simple_includer.jk"
+    exit_code: 12
+
+  - name: "Include simple function"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_func_includer.jk"
+    exit_code: 1

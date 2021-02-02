@@ -57,11 +57,14 @@ fn main() {
     };
 
     // We can unwrap since we checked for `None` in the if
-    let input = fs::read_to_string(args.input.unwrap()).unwrap();
+    let path = args.input.unwrap();
+
+    let input = fs::read_to_string(&path).unwrap();
 
     // FIXME: No unwrap()
     let mut interpreter = Parser::parse(&input).unwrap();
 
+    interpreter.set_path(Some(path));
     interpreter.debug_mode = args.debug;
 
     // The entry point always has a block

@@ -4,6 +4,8 @@
 //! source file returns an "Interpreter", which is really just a complex structure
 //! aggregating the necessary information to run a jinko program.
 
+use std::path::PathBuf;
+
 use colored::Colorize;
 
 mod scope_map;
@@ -32,6 +34,10 @@ pub struct Interpreter {
     /// Entry point to the interpreter, the "main" function
     pub entry_point: FunctionDec,
 
+    /// An interpreter corresponds to a single source file (that might include other files)
+    /// We need to keep track of its path in order to load files relative to this one
+    path: Option<PathBuf>,
+
     /// Contains the scopes of the interpreter, in which are variables and functions
     scope_map: ScopeMap,
 
@@ -54,16 +60,25 @@ impl Interpreter {
         let mut i = Interpreter {
             in_audit: false,
             debug_mode: false,
-
             entry_point: Self::new_entry(),
+            path: None,
             scope_map: ScopeMap::new(),
-
             tests: HashMap::new(),
         };
 
         i.scope_enter();
 
         i
+    }
+
+    /// Get a rerference to an interpreter's source path
+    pub fn path(&self) -> Option<&PathBuf> {
+        self.path.as_ref()
+    }
+
+    /// Get a rerference to an interpreter's source path
+    pub fn set_path(&mut self, path: Option<PathBuf>) {
+        self.path = path
     }
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`

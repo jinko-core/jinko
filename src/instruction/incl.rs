@@ -1,7 +1,7 @@
 //! This module is used to parse external code and make it available to other source
 //! files.
 
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JinkoError};
 
@@ -25,13 +25,20 @@ impl Incl {
     }
 
     /// Parse the code and load it in the Incl's interpreter
-    fn inner_load(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+    fn inner_load(&self, base: &Path, i: &Interpreter) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+        let mut formatted = PathBuf::from(base);
+
+        // Add the extension
         let mut path = self.path.clone();
         path.push_str(".jk");
 
-        let path = PathBuf::from(path);
+        // Add the path of the module to load
+        formatted.push(&path);
 
-        let input = std::fs::read_to_string(path)?;
+        i.debug("FINAL PATH", &format!("{:?}", formatted));
+        i.debug("CURRENT DIR", &format!("{:?}", std::env::current_dir().unwrap()));
+
+        let input = std::fs::read_to_string(formatted)?;
 
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
@@ -42,8 +49,8 @@ impl Incl {
     }
 
     /// Try to load code from the current path where the executable has been launched
-    fn load_relative(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
-        self.inner_load()
+    fn load_relative(&self, base: &Path, i: &Interpreter) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+        self.inner_load(base, i)
     }
 
     /// Try to load code from jinko's installation path
@@ -55,8 +62,8 @@ impl Incl {
     ///
     /// There are two ways to look for a source file: First in the includer's path, and
     /// if not available in jinko's installation directory.
-    fn load(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
-        self.load_relative()
+    fn load(&self, base: &Path, i: &Interpreter) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+        self.load_relative(base, i)
 
         // let interpreter = match self.load_relative() {
         //     Ok(i) => Ok(i),
@@ -99,7 +106,20 @@ impl Instruction for Incl {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
         interpreter.debug("INCL ENTER", &format!("{}", self.print()));
 
-        let content = self.load()?;
+        let base = match interpreter.path() {
+            // Get the parent directory of the interpreter's source file. We can unwrap
+            // since there's always a base
+            Some(path) => path.parent().unwrap(),
+            // The interpreter doesn't have an associated source file. Therefore, we
+            // load from where the interpreter was started. This is the case if we're
+            // in dynamic mode for example
+            None => Path::new(""),
+        };
+
+        interpreter.debug("BASE DIR", &format!("{:#?}", base));
+
+
+        let content = self.load(base, interpreter)?;
 
         content
             .into_iter()
