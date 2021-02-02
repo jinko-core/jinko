@@ -15,3 +15,15 @@ tests:
     args:
       - "tests/ft/incl/incl_func_includer.jk"
     exit_code: 1
+
+  - name: "Include directory"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_dir_includer.jk"
+    exit_code: 15
+
+  - name: "Include directory subfile"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_dir_subfile_includer.jk"
+    exit_code: 59

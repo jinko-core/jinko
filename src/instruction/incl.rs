@@ -14,6 +14,9 @@ pub struct Incl {
     alias: Option<String>,
 }
 
+/// Default file that gets included when including a directory in jinko source code
+const DEFAULT_INCL: &str = "/lib.jk";
+
 impl Incl {
     pub fn new(path: String, alias: Option<String>) -> Incl {
         Incl { path, alias }
@@ -24,22 +27,30 @@ impl Incl {
         todo!("Implement once namespaces are implemented")
     }
 
-    fn format_path(&self, base: &Path) -> PathBuf {
+    fn format_path(&self, base: &Path) -> Result<PathBuf, JinkoError> {
         let mut formatted = PathBuf::from(base);
+        let mut formatted_check = formatted.clone();
 
-        // Add the extension
         let mut path = self.path.clone();
-        path.push_str(".jk");
+        formatted_check.push(&path);
+
+        // We now face two choices: Either the required path is a folder, and then
+        // we need to include the `lib.jk` file inside that folder. Either `<path>.jk` is
+        // a file and then we include it. If both are present, error out appropriately.
+        match formatted_check.is_dir() {
+            true => path.push_str(DEFAULT_INCL),
+            false => path.push_str(".jk"),
+        };
 
         // Add the path of the module to load
         formatted.push(&path);
 
-        formatted
+        Ok(formatted)
     }
 
     /// Parse the code and load it in the Incl's interpreter
     fn inner_load(&self, base: &Path, i: &Interpreter) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
-        let formatted = self.format_path(base);
+        let formatted = self.format_path(base)?;
 
         i.debug("FINAL PATH", &format!("{:?}", formatted));
         i.debug("CURRENT DIR", &format!("{:?}", std::env::current_dir().unwrap()));
@@ -123,7 +134,6 @@ impl Instruction for Incl {
         };
 
         interpreter.debug("BASE DIR", &format!("{:#?}", base));
-
 
         let content = self.load(base, interpreter)?;
 
