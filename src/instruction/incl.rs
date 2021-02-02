@@ -53,7 +53,7 @@ impl Incl {
         &self,
         base: &Path,
         i: &Interpreter,
-    ) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JinkoError> {
         let formatted = self.format_path(base)?;
 
         i.debug("FINAL PATH", &format!("{:?}", formatted));
@@ -62,14 +62,14 @@ impl Incl {
             &format!("{:?}", std::env::current_dir().unwrap()),
         );
 
-        let input = std::fs::read_to_string(formatted)?;
+        let input = std::fs::read_to_string(&formatted)?;
 
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty interpreter
         let (_, instructions) = Construct::many_instructions(input.as_str())?;
 
-        Ok(instructions)
+        Ok((formatted, instructions))
     }
 
     /// Try to load code from the current path where the executable has been launched
@@ -77,7 +77,7 @@ impl Incl {
         &self,
         base: &Path,
         i: &Interpreter,
-    ) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JinkoError> {
         self.inner_load(base, i)
     }
 
@@ -90,7 +90,11 @@ impl Incl {
     ///
     /// There are two ways to look for a source file: First in the includer's path, and
     /// if not available in jinko's installation directory.
-    fn load(&self, base: &Path, i: &Interpreter) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+    fn load(
+        &self,
+        base: &Path,
+        i: &Interpreter,
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JinkoError> {
         self.load_relative(base, i)
 
         // let interpreter = match self.load_relative() {
@@ -146,7 +150,12 @@ impl Instruction for Incl {
 
         interpreter.debug("BASE DIR", &format!("{:#?}", base));
 
-        let content = self.load(base, interpreter)?;
+        let old_path = interpreter.path().cloned();
+
+        let (new_path, content) = self.load(base, interpreter)?;
+
+        // Temporarily change the path of the interpreter
+        interpreter.set_path(Some(new_path));
 
         content
             .into_iter()
@@ -155,6 +164,9 @@ impl Instruction for Incl {
                 instr.execute(interpreter)
             })
             .collect::<Result<Vec<InstrKind>, JinkoError>>()?;
+
+        // Reset the old path before leaving the instruction
+        interpreter.set_path(old_path);
 
         Ok(InstrKind::Statement)
     }
