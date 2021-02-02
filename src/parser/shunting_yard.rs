@@ -2,11 +2,8 @@
 //! returning a BinaryOp in the end
 
 use crate::instruction::{BinaryOp, Instruction, Operator};
+use crate::parser::{BoxConstruct, Construct, Token};
 use crate::utils::{Queue, Stack};
-
-use super::box_construct::BoxConstruct;
-use super::constructs::Construct;
-use super::tokens::Token;
 
 use nom::{branch::alt, Err, IResult};
 
@@ -209,7 +206,7 @@ mod tests {
     // FIXME: Add more tests with more operators
 
     fn sy_assert(input: &str, result: i64) {
-        use crate::instance::ToInstance;
+        use crate::instance::ToObjectInstance;
         use crate::{InstrKind, Interpreter};
 
         let boxed_output = ShuntingYard::parse(input).unwrap().1;
@@ -219,7 +216,7 @@ mod tests {
 
         assert_eq!(
             output.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(result).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(result).to_instance()))
         );
     }
 

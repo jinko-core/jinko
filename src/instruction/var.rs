@@ -3,13 +3,13 @@
 //! need to keep an option of an instance. A variable is either there, fully initialized,
 //! or it's not.
 
-use crate::{ErrKind, Instance, InstrKind, Instruction, Interpreter, JinkBool, JinkoError};
+use crate::{InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError, ObjectInstance};
 
 #[derive(Clone)]
 pub struct Var {
     name: String,
     mutable: bool,
-    instance: Instance,
+    instance: ObjectInstance,
 }
 
 impl Var {
@@ -18,7 +18,7 @@ impl Var {
         Var {
             name,
             mutable: false,
-            instance: Instance::empty(),
+            instance: ObjectInstance::empty(),
         }
     }
 
@@ -28,7 +28,7 @@ impl Var {
     }
 
     /// Return a copy of the variable's instance
-    pub fn instance(&self) -> Instance {
+    pub fn instance(&self) -> ObjectInstance {
         self.instance.clone()
     }
 
@@ -38,7 +38,7 @@ impl Var {
     }
 
     /// Set the instance contained in a variable
-    pub fn set_instance(&mut self, instance: Instance) {
+    pub fn set_instance(&mut self, instance: ObjectInstance) {
         self.instance = instance;
     }
 
@@ -62,8 +62,8 @@ impl Instruction for Var {
         )
     }
 
-    fn as_bool(&self, i: &mut Interpreter) -> Result<bool, JinkoError> {
-        use crate::FromInstance;
+    fn as_bool(&self, i: &mut Interpreter) -> Result<bool, JkError> {
+        use crate::FromObjectInstance;
 
         // FIXME: Cleanup
 
@@ -71,10 +71,10 @@ impl Instruction for Var {
             InstrKind::Expression(Some(instance)) => match instance.ty() {
                 Some(ty) => match ty.as_ref() {
                     // FIXME:
-                    "bool" => Ok(JinkBool::from_instance(&instance).as_bool(i).unwrap()),
+                    "bool" => Ok(JkBool::from_instance(&instance).as_bool(i).unwrap()),
                     // We can safely unwrap since we checked the type of the variable
-                    _ => Err(JinkoError::new(
-                        ErrKind::Interpreter,
+                    _ => Err(JkError::new(
+                        JkErrKind::Interpreter,
                         format!("var {} cannot be interpreted as boolean", self.name),
                         None,
                         self.print(),
@@ -85,8 +85,8 @@ impl Instruction for Var {
                     typecheck it and call self.as_bool() again"
                 ),
             },
-            _ => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            _ => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!("var {} cannot be interpreted as boolean", self.name),
                 None,
                 self.print(),
@@ -94,12 +94,12 @@ impl Instruction for Var {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         let var = match interpreter.get_variable(self.name()) {
             Some(v) => v,
             None => {
-                return Err(JinkoError::new(
-                    ErrKind::Interpreter,
+                return Err(JkError::new(
+                    JkErrKind::Interpreter,
                     format!("variable has not been declared: {}", self.name),
                     None,
                     self.name().to_owned(),
@@ -122,15 +122,15 @@ impl Default for Var {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::value::JinkInt;
-    use crate::ToInstance;
+    use crate::value::JkInt;
+    use crate::ToObjectInstance;
 
     #[test]
     fn keep_instance() {
         let mut i = Interpreter::new();
         let mut v = Var::new("a".to_string());
 
-        let instance = JinkInt::from(15).to_instance();
+        let instance = JkInt::from(15).to_instance();
         v.set_instance(instance.clone());
 
         i.add_variable(v.clone()).unwrap();

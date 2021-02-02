@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JinkoError};
+use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JkError};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
 /// The interpreter is built from parsing the source file in the path.
@@ -27,7 +27,7 @@ impl Incl {
         todo!("Implement once namespaces are implemented")
     }
 
-    fn format_path(&self, base: &Path) -> Result<PathBuf, JinkoError> {
+    fn format_path(&self, base: &Path) -> Result<PathBuf, JkError> {
         let mut formatted = PathBuf::from(base);
         let mut formatted_check = formatted.clone();
 
@@ -53,7 +53,7 @@ impl Incl {
         &self,
         base: &Path,
         i: &Interpreter,
-    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JinkoError> {
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
         let formatted = self.format_path(base)?;
 
         i.debug("FINAL PATH", &format!("{:?}", formatted));
@@ -77,12 +77,12 @@ impl Incl {
         &self,
         base: &Path,
         i: &Interpreter,
-    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JinkoError> {
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
         self.inner_load(base, i)
     }
 
     /// Try to load code from jinko's installation path
-    fn _load_jinko_path(&self) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+    fn _load_jinko_path(&self) -> Result<Vec<Box<dyn Instruction>>, JkError> {
         todo!()
     }
 
@@ -94,14 +94,14 @@ impl Incl {
         &self,
         base: &Path,
         i: &Interpreter,
-    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JinkoError> {
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
         self.load_relative(base, i)
 
         // let interpreter = match self.load_relative() {
         //     Ok(i) => Ok(i),
         //     Err(_) => match self.load_jinko_path() {
         //         Ok(i) => Ok(i),
-        //         Err(_) => Err(JinkoError::new(
+        //         Err(_) => Err(JkError::new(
         //             ErrKind::Vec<Box<dyn Instruction>>,
         //             // FIXME: No debug formatting
         //             format!("couldn't include the following code: {:#?}", self.path),
@@ -135,7 +135,7 @@ impl Instruction for Incl {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("INCL ENTER", &format!("{}", self.print()));
 
         let base = match interpreter.path() {
@@ -163,7 +163,7 @@ impl Instruction for Incl {
                 interpreter.debug("INCLUDING", instr.print().as_str());
                 instr.execute(interpreter)
             })
-            .collect::<Result<Vec<InstrKind>, JinkoError>>()?;
+            .collect::<Result<Vec<InstrKind>, JkError>>()?;
 
         // Reset the old path before leaving the instruction
         interpreter.set_path(old_path);
