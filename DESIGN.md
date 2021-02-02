@@ -141,7 +141,22 @@ incl dir1::source0 as dir1_source0;
 /* Now, dir0::source0 functions are named dir0_source0::<function_name> and so on */
 ```
 
-I'm not entirely happy with this design yet. It's obviously open to discussion and changes
+For now, you can also include directories:
+
+```shell
+/*
+|_ main.jk
+|_ std/
+    |_ lib.jk       // includes option.jk, result.jk maybe, etc
+    |_ option.jk
+    |_ result.jk
+*/
+
+```rust
+incl std // Actually includes std/lib.jk
+```
+
+I'm not entirely happy with this design yet. It's obviously open to discussion and changes.
 
 ## Garbage collection
 
