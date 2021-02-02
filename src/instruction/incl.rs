@@ -1,7 +1,7 @@
 //! This module is used to parse external code and make it available to other source
 //! files.
 
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JinkoError};
 
@@ -49,11 +49,18 @@ impl Incl {
     }
 
     /// Parse the code and load it in the Incl's interpreter
-    fn inner_load(&self, base: &Path, i: &Interpreter) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+    fn inner_load(
+        &self,
+        base: &Path,
+        i: &Interpreter,
+    ) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
         let formatted = self.format_path(base)?;
 
         i.debug("FINAL PATH", &format!("{:?}", formatted));
-        i.debug("CURRENT DIR", &format!("{:?}", std::env::current_dir().unwrap()));
+        i.debug(
+            "CURRENT DIR",
+            &format!("{:?}", std::env::current_dir().unwrap()),
+        );
 
         let input = std::fs::read_to_string(formatted)?;
 
@@ -66,7 +73,11 @@ impl Incl {
     }
 
     /// Try to load code from the current path where the executable has been launched
-    fn load_relative(&self, base: &Path, i: &Interpreter) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+    fn load_relative(
+        &self,
+        base: &Path,
+        i: &Interpreter,
+    ) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
         self.inner_load(base, i)
     }
 
