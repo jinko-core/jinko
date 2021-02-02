@@ -40,7 +40,7 @@ impl JkInst {
 
         Ok(Self {
             kind,
-            args: fc.args().to_owned()
+            args: fc.args().clone()
         })
     }
 
