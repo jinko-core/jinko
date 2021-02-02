@@ -24,8 +24,7 @@ impl Incl {
         todo!("Implement once namespaces are implemented")
     }
 
-    /// Parse the code and load it in the Incl's interpreter
-    fn inner_load(&self, base: &Path, i: &Interpreter) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+    fn format_path(&self, base: &Path) -> PathBuf {
         let mut formatted = PathBuf::from(base);
 
         // Add the extension
@@ -34,6 +33,13 @@ impl Incl {
 
         // Add the path of the module to load
         formatted.push(&path);
+
+        formatted
+    }
+
+    /// Parse the code and load it in the Incl's interpreter
+    fn inner_load(&self, base: &Path, i: &Interpreter) -> Result<Vec<Box<dyn Instruction>>, JinkoError> {
+        let formatted = self.format_path(base);
 
         i.debug("FINAL PATH", &format!("{:?}", formatted));
         i.debug("CURRENT DIR", &format!("{:?}", std::env::current_dir().unwrap()));
