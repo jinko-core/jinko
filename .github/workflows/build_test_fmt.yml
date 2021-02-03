@@ -1,4 +1,4 @@
-name: jinko-test
+name: jinko-build-and-test
 
 on: pull_request
 
