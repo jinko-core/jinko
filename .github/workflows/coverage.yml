@@ -19,6 +19,7 @@ jobs:
         cmake ..
         make -j
         sudo make install
+        cd ../../
         cargo test --no-run
         for file in target/debug/deps/jinko-* ; do [ -x "${file}" ] || continue; mkdir -p "target/cov/$(basename $file)"; kcov --exclude-pattern=/.cargo,/usr/lib,/.rustup --verify "target/cov/$(basename $file)" "$file"; done
-        bash < (curl -s https://codecov.io/bash)
+        bash <(curl -s https://codecov.io/bash)
