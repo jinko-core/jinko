@@ -6,6 +6,8 @@
 unit tests, mocking and FFI.
 </div>
 
+![](https://github.com/cohenarthur/jinko/workflows/jinko-test/badge.svg)
+
 While `jinko` can't do a whole lot right now, it's growing fast! You can look
 at the roadmap in order to get an idea of what is in and what isn't.
 Most of the syntax is implemented at this point, but might not yet produce
