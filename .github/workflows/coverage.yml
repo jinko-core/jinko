@@ -1,6 +1,6 @@
 name: code-coverage
 
-on: pull-request
+on: pull_request
 
 jobs:
   coverage:
