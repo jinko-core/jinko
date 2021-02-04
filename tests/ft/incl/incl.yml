@@ -28,4 +28,10 @@ tests:
       - "tests/ft/incl/incl_dir_subfile_includer.jk"
     exit_code: 59
 
+  - name: "Cyclic inclusion"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_cyclic_includer.jk"
+    exit_code: 0
+
 # FIXME: Add tests for dynamic include once `jinko -c` (command) is implemented
