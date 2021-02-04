@@ -28,9 +28,11 @@ impl Incl {
     }
 
     fn format_candidates(&self, base: &Path) -> (PathBuf, PathBuf) {
+        let mut format = PathBuf::from(base);
+        format.push(&self.path);
+
         // FIXME: No unwrap
-        let mut format = String::from(base.to_str().unwrap());
-        format.push_str(&format!("/{}", &self.path));
+        let format = format.to_str().unwrap().to_string();
 
         let mut dir_fmt = format.clone();
         let mut file_fmt = format.clone();
