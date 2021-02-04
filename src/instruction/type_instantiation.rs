@@ -132,8 +132,103 @@ impl Instruction for TypeInstantiation {
             data,
             Some(fields),
         ))))
+    }
+}
 
-        // println!("Type found {:?}", type_dec);
-        // todo!("Execution for type_instantiation is not yet available");
+mod test {
+    use super::*;
+
+    #[test]
+    fn t_fields_number() {
+        use super::super::{DecArg, TypeDec};
+        use crate::value::JkInt;
+
+        let mut interpreter = Interpreter::new();
+
+        // Create a new type with two integers fields
+        let fields = vec![
+            DecArg::new("a".to_owned(), "int".to_owned()),
+            DecArg::new("b".to_owned(), "int".to_owned()),
+        ];
+        let t = TypeDec::new("Type_Test".to_owned(), fields);
+
+        interpreter.add_type(t).unwrap();
+
+        let mut t_inst = TypeInstantiation::new("Type_Test".to_string());
+
+        match t_inst.execute(&mut interpreter) {
+            Ok(_) => assert!(false, "Given 0 field to 2 fields type"),
+            Err(_) => assert!(true),
+        }
+
+        t_inst.add_field(Box::new(JkInt::from(12)));
+
+        match t_inst.execute(&mut interpreter) {
+            Ok(_) => assert!(false, "Given 1 field to 2 fields type"),
+            Err(_) => assert!(true),
+        }
+
+        t_inst.add_field(Box::new(JkInt::from(8)));
+
+        assert!(
+            t_inst.execute(&mut interpreter).is_ok(),
+            "Type instantiation should have a correct number of fields now"
+        );
+    }
+
+    #[test]
+    fn t_returned_instance() {
+        use super::super::{DecArg, TypeDec};
+        use crate::value::{JkInt, JkString};
+
+        const TYPE_NAME: &'static str = "Type_Name";
+
+        let mut interpreter = Interpreter::new();
+
+        // Create a new type with two integers fields
+        let fields = vec![
+            DecArg::new("a".to_owned(), "string".to_owned()),
+            DecArg::new("b".to_owned(), "int".to_owned()),
+        ];
+        let t = TypeDec::new(TYPE_NAME.to_owned(), fields);
+
+        interpreter.add_type(t).unwrap();
+
+        let mut t_inst = TypeInstantiation::new(TYPE_NAME.to_string());
+        t_inst.add_field(Box::new(JkString::from("I am a loooooooong string")));
+        t_inst.add_field(Box::new(JkInt::from(12)));
+
+        let instance = match t_inst.execute(&mut interpreter).unwrap() {
+            InstrKind::Expression(Some(instance)) => instance,
+            _ => {
+                return assert!(
+                    false,
+                    "Type instantiation should have returned an Expression"
+                )
+            }
+        };
+
+        assert!(
+            instance.ty().unwrap() == TYPE_NAME,
+            "Type name should be {}",
+            TYPE_NAME
+        );
+        assert_eq!(
+            instance.data()[..],
+            [
+                73, 32, 97, 109, 32, 97, 32, 108, 111, 111, 111, 111, 111, 111, 111, 111, 110, 103,
+                32, 115, 116, 114, 105, 110, 103, 12, 0, 0, 0, 0, 0, 0, 0
+            ]
+        );
+        assert_eq!(instance.size(), 33);
+
+        assert_eq!(
+            instance.fields().as_ref().unwrap().get("a"),
+            Some(&(0 as usize, 25 as usize))
+        );
+        assert_eq!(
+            instance.fields().as_ref().unwrap().get("b"),
+            Some(&(25 as usize, 8 as usize))
+        );
     }
 }

@@ -79,6 +79,10 @@ impl ObjectInstance {
         self.size
     }
 
+    pub fn fields(&self) -> &Option<FieldsMap> {
+        &self.fields
+    }
+
     fn fields_vec_to_hash_map(vec: Vec<(String, Size)>) -> FieldsMap {
         let mut current_offset: usize = 0;
         let mut hashmap = FieldsMap::new();

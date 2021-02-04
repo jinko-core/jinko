@@ -1218,7 +1218,7 @@ mod tests {
     }
 
     #[test]
-    fn ttype_declaration_simple() {
+    fn t_type_declaration_simple() {
         match Construct::type_declaration("type Int(v: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Just one int is valid"),
@@ -1240,7 +1240,7 @@ mod tests {
     }
 
     #[test]
-    fn ttype_declaration_empty() {
+    fn t_type_declaration_empty() {
         match Construct::type_declaration("type Empty();") {
             Ok(_) => assert!(false, "Can't have empty types"),
             Err(_) => assert!(true),
@@ -1248,10 +1248,34 @@ mod tests {
     }
 
     #[test]
-    fn ttype_declaration_invalid() {
+    fn t_type_declaration_invalid() {
         match Construct::type_declaration("type ExtraComma(a: int, b: int,);") {
             Ok(_) => assert!(false, "Extra comma in type definition"),
             Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_type_instantiation_valid() {
+        match Construct::type_instantiation("Custom { 1 }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Type instantiation with one value is valid"),
+        }
+    }
+
+    #[test]
+    fn t_type_instantiation_invalid() {
+        match Construct::type_instantiation("Custom { ") {
+            Ok(_) => assert!(false),
+            Err(_) => assert!(true, "Type instantiation need a closing brace"),
+        }
+    }
+
+    #[test]
+    fn t_type_instantiation_no_name() {
+        match Construct::type_instantiation("{ 1 }") {
+            Ok(_) => assert!(false),
+            Err(_) => assert!(true, "Type instantiation need a type name"),
         }
     }
 
