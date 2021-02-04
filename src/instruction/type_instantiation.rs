@@ -1,7 +1,10 @@
 //! TypeInstantiations are used when instantiating a type. The argument list is given to the
 //! type on execution.
 
-use super::{ErrKind, FunctionDec, InstrKind, Instruction, Interpreter, JinkoError, TypeDec, Var};
+use super::{
+    ErrKind, FunctionDec, Instance, InstrKind, Instruction, Interpreter, JinkoError, TypeDec, Var,
+};
+use crate::instance::{Name, Size};
 
 use std::rc::Rc;
 
@@ -99,15 +102,40 @@ impl Instruction for TypeInstantiation {
 
         self.check_fields_count(&type_dec)?;
 
-        println!("Type found {:?}", type_dec);
+        let mut size: usize = 0;
+        let mut data: Vec<u8> = Vec::new();
+        let mut fields: Vec<(Name, Size)> = Vec::new();
+        for (i, instr) in self.fields.iter().enumerate() {
+            let dec_name = type_dec.fields()[i].name();
+            let instance = match instr.execute(interpreter)? {
+                InstrKind::Expression(Some(instance)) => instance,
+                _ => {
+                    return Err(JinkoError::new(
+                        ErrKind::Interpreter,
+                        format!(
+                            "An Expression was excepted but found a Statement for \"{}\"",
+                            dec_name
+                        ),
+                        None,
+                        instr.print(),
+                    ))
+                }
+            };
 
+            let inst_size = instance.size();
+            size += inst_size;
+            fields.push((dec_name.to_string(), inst_size));
+            data.append(&mut instance.data().to_vec());
+        }
+
+        Ok(InstrKind::Expression(Some(Instance::new(
+            Some(self.type_name.clone()),
+            size,
+            data,
+            Some(fields),
+        ))))
+
+        // println!("Type found {:?}", type_dec);
         // todo!("Execution for type_instantiation is not yet available");
-
-        Err(JinkoError::new(
-            ErrKind::Interpreter,
-            "Execution for type_instantiation is not yet available".to_string(),
-            None,
-            "".to_string(),
-        ))
     }
 }

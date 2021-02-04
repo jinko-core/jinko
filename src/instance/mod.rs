@@ -10,8 +10,14 @@
 use super::value::JinkConstant;
 use crate::Instruction;
 
+use std::collections::HashMap;
+
 // FIXME: Use CustomType once @Skallwar's PR is merged
 type Ty = String;
+pub type Name = String;
+type Offset = usize;
+pub type Size = usize;
+type FieldsMap = HashMap<Name, (Offset, Size)>;
 
 /// The type is optional. At first, the type might not be known, and will only be
 /// revealed during the typechecking phase. `size` is the size of the instance in bytes.
@@ -19,24 +25,42 @@ type Ty = String;
 #[derive(Debug, PartialEq, Clone)]
 pub struct Instance {
     ty: Option<Ty>,
-    size: usize,
+    size: Size,
     data: Vec<u8>,
+    fields: Option<FieldsMap>,
 }
 
 impl Instance {
     /// Create a new, empty instance without a type or a size
     pub fn empty() -> Instance {
-        Instance::new(None, 0, vec![])
+        Instance::new(None, 0, vec![], None)
     }
 
     /// Create a new instance
-    pub fn new(ty: Option<Ty>, size: usize, data: Vec<u8>) -> Instance {
-        Instance { ty, size, data }
+    pub fn new(
+        ty: Option<Ty>,
+        size: usize,
+        data: Vec<u8>,
+        fields: Option<Vec<(Name, Size)>>,
+    ) -> Instance {
+        let fields = fields.map(|vec| Instance::fields_vec_to_hash_map(vec));
+
+        Instance {
+            ty,
+            size,
+            data,
+            fields,
+        }
     }
 
     /// Create a new instance from raw bytes instead of a vector
-    pub fn from_bytes(ty: Option<Ty>, size: usize, data: &[u8]) -> Instance {
-        Instance::new(ty, size, data.to_vec())
+    pub fn from_bytes(
+        ty: Option<Ty>,
+        size: usize,
+        data: &[u8],
+        fields: Option<Vec<(Name, Size)>>,
+    ) -> Instance {
+        Instance::new(ty, size, data.to_vec(), fields)
     }
 
     /// Get a reference to the type of the instance
@@ -52,6 +76,21 @@ impl Instance {
     /// Get a reference to the raw data bytes of the Instance
     pub fn data(&self) -> &[u8] {
         &self.data
+    }
+
+    pub fn size(&self) -> Size {
+        self.size
+    }
+
+    fn fields_vec_to_hash_map(vec: Vec<(String, Size)>) -> FieldsMap {
+        let mut current_offset: usize = 0;
+        let mut hashmap = FieldsMap::new();
+        for (name, size) in vec {
+            hashmap.insert(name, (current_offset, size));
+            current_offset += size;
+        }
+
+        hashmap
     }
 }
 

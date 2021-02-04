@@ -35,6 +35,7 @@ impl Construct {
         // FIXME: If input is empty, return an error or do nothing
         let (input, value) = alt((
             BoxConstruct::function_declaration,
+            BoxConstruct::custom_type,
             BoxConstruct::ext_declaration,
             BoxConstruct::test_declaration,
             BoxConstruct::mock_declaration,
@@ -49,7 +50,6 @@ impl Construct {
             Construct::binary_op,
             BoxConstruct::variable,
             Construct::constant,
-            BoxConstruct::custom_type,
         ))(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -151,13 +151,14 @@ impl Construct {
     /// `<identifier> ( <arg_list> )`
     pub fn type_instantiation(input: &str) -> IResult<&str, TypeInstantiation> {
         let (input, type_id) = Token::identifier(input)?;
-        let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::left_curly_bracket(input)?;
+        // let (input, _) = Token::maybe_consume_extra(input)?;
 
         let mut type_instantiation = TypeInstantiation::new(type_id.to_owned());
 
         let (input, mut arg_vec) = Construct::args_list(input)?;
-        let (input, _) = Token::right_parenthesis(input)?;
+        let (input, _) = Token::right_curly_bracket(input)?;
 
         arg_vec
             .drain(0..)

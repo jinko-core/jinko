@@ -146,6 +146,7 @@ impl ToInstance for JinkInt {
                 Some("int".to_string()), // FIXME
                 size_of::<i64>(),
                 &transmute::<i64, [u8; size_of::<i64>()]>(self.0),
+                None,
             )
         }
     }
@@ -160,6 +161,7 @@ impl ToInstance for JinkFloat {
                 Some("float".to_string()), // FIXME
                 size_of::<f64>(),
                 &transmute::<f64, [u8; size_of::<f64>()]>(self.0),
+                None,
             )
         }
     }
@@ -174,6 +176,7 @@ impl ToInstance for JinkBool {
                 Some("bool".to_string()), // FIXME
                 size_of::<bool>(),
                 &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
+                None,
             )
         }
     }
@@ -188,6 +191,7 @@ impl ToInstance for JinkChar {
                 Some("char".to_string()), // FIXME
                 size_of::<char>(),
                 &transmute::<char, [u8; size_of::<char>()]>(self.0),
+                None,
             )
         }
     }
@@ -199,6 +203,7 @@ impl ToInstance for JinkString {
             Some("string".to_string()), // FIXME
             self.0.as_bytes().len(),
             self.0.as_bytes(),
+            None,
         )
     }
 }
