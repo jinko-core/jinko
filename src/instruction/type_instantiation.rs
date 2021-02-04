@@ -135,6 +135,7 @@ impl Instruction for TypeInstantiation {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 
