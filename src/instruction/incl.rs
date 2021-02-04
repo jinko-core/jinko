@@ -81,6 +81,12 @@ impl Incl {
     ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
         let formatted = self.format_path(base)?;
 
+        // If a source has already been included, skip it without returning
+        // an error
+        if i.is_included(&formatted) {
+            return Ok((formatted, vec![]));
+        }
+
         i.debug("FINAL PATH", &format!("{:?}", formatted));
 
         let input = std::fs::read_to_string(&formatted)?;

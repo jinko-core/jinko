@@ -11,7 +11,7 @@ use colored::Colorize;
 mod scope_map;
 use scope_map::ScopeMap;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, Var};
@@ -45,6 +45,9 @@ pub struct Interpreter {
 
     /// Tests registered in the interpreter
     tests: HashMap<IKey, FunctionDec>,
+
+    /// Sources included by the interpreter
+    included: HashSet<PathBuf>,
 }
 
 impl Interpreter {
@@ -66,6 +69,7 @@ impl Interpreter {
             path: None,
             scope_map: ScopeMap::new(),
             tests: HashMap::new(),
+            included: HashSet::new(),
         };
 
         i.scope_enter();
@@ -80,7 +84,14 @@ impl Interpreter {
 
     /// Get a rerference to an interpreter's source path
     pub fn set_path(&mut self, path: Option<PathBuf>) {
-        self.path = path
+        self.path = path;
+
+        match &self.path {
+            Some(p) => {
+                self.included.insert(p.clone());
+            }
+            None => {}
+        };
     }
 
     /// Set the debug mode of a previously created interpreter
@@ -188,6 +199,11 @@ impl Interpreter {
                 Ok(())
             }
         }
+    }
+
+    /// Check if a source is included or not
+    pub fn is_included(&self, source: &PathBuf) -> bool {
+        self.included.contains(source)
     }
 }
 
