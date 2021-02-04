@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JkError};
+use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JkErrKind, JkError};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
 /// The interpreter is built from parsing the source file in the path.
@@ -27,25 +27,48 @@ impl Incl {
         todo!("Implement once namespaces are implemented")
     }
 
+    fn format_candidates(&self, base: &Path) -> (PathBuf, PathBuf) {
+        // FIXME: No unwrap
+        let mut format = String::from(base.to_str().unwrap());
+        format.push_str(&format!("/{}", &self.path));
+
+        let mut dir_fmt = format.clone();
+        let mut file_fmt = format.clone();
+
+        dir_fmt.push_str(&format!("{}", DEFAULT_INCL));
+        file_fmt.push_str(".jk");
+
+        (PathBuf::from(dir_fmt), PathBuf::from(file_fmt))
+    }
+
     fn format_path(&self, base: &Path) -> Result<PathBuf, JkError> {
-        let mut formatted = PathBuf::from(base);
-        let mut formatted_check = formatted.clone();
+        let (dir_candidate, file_candidate) = self.format_candidates(base);
 
-        let mut path = self.path.clone();
-        formatted_check.push(&path);
+        let (dir_valid, file_valid) = (dir_candidate.is_file(), file_candidate.is_file());
 
-        // We now face two choices: Either the required path is a folder, and then
-        // we need to include the `lib.jk` file inside that folder. Either `<path>.jk` is
-        // a file and then we include it. If both are present, error out appropriately.
-        match formatted_check.is_dir() {
-            true => path.push_str(DEFAULT_INCL),
-            false => path.push_str(".jk"),
-        };
-
-        // Add the path of the module to load
-        formatted.push(&path);
-
-        Ok(formatted)
+        match (dir_valid, file_valid) {
+            // We cannot have both <path>/lib.jk and <path>.jk be valid files
+            (true, true) => Err(JkError::new(
+                JkErrKind::Interpreter,
+                format!(
+                    "invalid include: {:?} and {:?} are both valid candidates",
+                    dir_candidate, file_candidate
+                ),
+                None,
+                self.print(),
+            )),
+            (false, false) => Err(JkError::new(
+                JkErrKind::Interpreter,
+                format!(
+                    "no candidate for include: {:?} and {:?} do not exist",
+                    dir_candidate, file_candidate
+                ),
+                None,
+                self.print(),
+            )),
+            (false, true) => Ok(file_candidate),
+            (true, false) => Ok(dir_candidate),
+        }
     }
 
     /// Parse the code and load it in the Incl's interpreter
@@ -57,10 +80,6 @@ impl Incl {
         let formatted = self.format_path(base)?;
 
         i.debug("FINAL PATH", &format!("{:?}", formatted));
-        i.debug(
-            "CURRENT DIR",
-            &format!("{:?}", std::env::current_dir().unwrap()),
-        );
 
         let input = std::fs::read_to_string(&formatted)?;
 
@@ -96,22 +115,6 @@ impl Incl {
         i: &Interpreter,
     ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
         self.load_relative(base, i)
-
-        // let interpreter = match self.load_relative() {
-        //     Ok(i) => Ok(i),
-        //     Err(_) => match self.load_jinko_path() {
-        //         Ok(i) => Ok(i),
-        //         Err(_) => Err(JkError::new(
-        //             ErrKind::Vec<Box<dyn Instruction>>,
-        //             // FIXME: No debug formatting
-        //             format!("couldn't include the following code: {:#?}", self.path),
-        //             None,
-        //             self.print(),
-        //         )),
-        //     },
-        // };
-
-        // interpreter
     }
 }
 
