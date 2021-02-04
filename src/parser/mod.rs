@@ -2,29 +2,33 @@
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
+use crate::{InstrKind, Interpreter, JkError};
+
+use nom::multi::many0;
+
 mod box_construct;
 mod constant_construct;
 mod constructs;
-mod jinko_insts;
 mod shunting_yard;
 mod tokens;
 
-use crate::{InstrKind, Interpreter, JinkoError};
-use nom::multi::many0;
-
+pub use box_construct::BoxConstruct;
+pub use constant_construct::ConstantConstruct;
 pub use constructs::Construct;
+pub use shunting_yard::ShuntingYard;
+pub use tokens::Token;
 
 pub struct Parser;
 
 impl Parser {
     /// Parses the entire user input and returns a hashmap corresponding to the user
     /// program
-    pub fn parse(input: &str) -> Result<Interpreter, JinkoError> {
+    pub fn parse(input: &str) -> Result<Interpreter, JkError> {
         let mut interpreter = Interpreter::new();
 
         let entry_block = interpreter.entry_point.block_mut().unwrap();
 
-        let (_, instructions) = many0(Construct::expression_maybe_semicolon)(input)?;
+        let (_, instructions) = many0(Construct::instruction_maybe_semicolon)(input)?;
 
         entry_block.set_instructions(instructions);
 

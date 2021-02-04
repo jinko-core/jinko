@@ -328,9 +328,9 @@ func push(node: LinkedList, next: LinkedList) {
     /* Some code to add next to the end of the list or whatever */
 }
 
-let last = LinkedList(3, None);
-let mid = LinkedList(2, Some(last));
-let head = LinkedList(1, Some(mid));
+last = LinkedList(3, None);
+mid = LinkedList(2, Some(last));
+head = LinkedList(1, Some(mid));
 
 head.push(LinkedList(67, None));
 

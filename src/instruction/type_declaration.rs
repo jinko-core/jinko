@@ -1,6 +1,6 @@
 use super::{DecArg, InstrKind, Instruction};
 
-use crate::error::JinkoError;
+use crate::error::JkError;
 use crate::interpreter::Interpreter;
 
 #[derive(Clone, Debug)]
@@ -28,7 +28,7 @@ impl Instruction for TypeDec {
         InstrKind::Statement
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug_step(&format!("CUSTOM TYPE {} ENTER", self.name));
 
         interpreter.add_type(self.clone())?;

@@ -12,8 +12,8 @@ use scope_map::ScopeMap;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::error::{ErrKind, JinkoError};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
+use crate::{JkErrKind, JkError};
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -21,6 +21,9 @@ type IKey = String;
 /// Name of the entry point in jinko
 const ENTRY_NAME: &str = "__entry";
 
+/// An interpreter represents the state of a jinko program. It contains functions,
+/// variables, tests... and can be optimized, typechecked, executed or
+/// serialized/deserialized to bytecode.
 pub struct Interpreter {
     /// Is the interpreter in an audit block or not
     pub in_audit: bool,
@@ -65,31 +68,36 @@ impl Interpreter {
         i
     }
 
+    /// Set the debug mode of a previously created interpreter
+    pub fn set_debug(&mut self, debug: bool) {
+        self.debug_mode = debug
+    }
+
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
-    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), JinkoError> {
+    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), JkError> {
         self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
-    pub fn add_variable(&mut self, var: Var) -> Result<(), JinkoError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), JkError> {
         self.scope_map.add_variable(var)
     }
 
     /// Add a type to the interpreter. Returns `Ok` if the type was added, `Err`
     /// if it existed already and was not.
-    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), JinkoError> {
+    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), JkError> {
         self.scope_map.add_type(custom_type)
     }
 
     /// Remove a variable from the interpreter
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JinkoError> {
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JkError> {
         self.scope_map.remove_variable(var)
     }
 
     /// Replace a variable or create it if it does not exist
-    pub fn replace_variable(&mut self, var: Var) -> Result<(), JinkoError> {
+    pub fn replace_variable(&mut self, var: Var) -> Result<(), JkError> {
         // Remove the variable if it exists
         let _ = self.remove_variable(&var);
 
@@ -163,10 +171,10 @@ impl Interpreter {
     }
 
     /// Register a test to be executed by the interpreter
-    pub fn add_test(&mut self, test: FunctionDec) -> Result<(), JinkoError> {
+    pub fn add_test(&mut self, test: FunctionDec) -> Result<(), JkError> {
         match self.tests.get(test.name()) {
-            Some(test) => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            Some(test) => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!("test function already declared: {}", test.name()),
                 None,
                 test.name().to_owned(),
@@ -182,7 +190,7 @@ impl Interpreter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ErrKind;
+    use crate::error::JkErrKind;
 
     #[test]
     fn t_redefinition_of_function() {
@@ -194,7 +202,7 @@ mod tests {
         assert_eq!(i.add_function(f0), Ok(()));
         assert_eq!(
             i.add_function(f0_copy).err().unwrap().kind(),
-            ErrKind::Interpreter,
+            JkErrKind::Interpreter,
         );
     }
 
@@ -208,7 +216,7 @@ mod tests {
         assert_eq!(i.add_variable(v0), Ok(()));
         assert_eq!(
             i.add_variable(v0_copy).err().unwrap().kind(),
-            ErrKind::Interpreter,
+            JkErrKind::Interpreter,
         );
     }
 }

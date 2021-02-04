@@ -12,9 +12,7 @@
 //! wrap the return value of `Construct::function_call` and `Construct::block` in a box,
 //! allowing to use them simultaneously when parsing multiple types of constructs.
 
-use crate::instruction::Instruction;
-
-use super::constructs::Construct;
+use crate::{parser::Construct, Instruction};
 
 macro_rules! box_construct {
     ($func:ident) => {
@@ -47,7 +45,7 @@ impl BoxConstruct {
     box_construct! {any_loop}
     box_construct! {var_assignment}
     box_construct! {if_else}
-    box_construct! {custom_type}
+    box_construct! {type_declaration}
     box_construct! {audit}
     box_construct! {test_declaration}
     box_construct! {mock_declaration}

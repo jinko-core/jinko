@@ -1,9 +1,7 @@
 //! The VarAssign struct is used when assigning values to variables.
 
-use crate::error::{ErrKind, JinkoError};
-use crate::interpreter::Interpreter;
-
-use super::{InstrKind, Instruction, Var};
+use crate::instruction::{InstrKind, Var};
+use crate::{Instruction, Interpreter, JkErrKind, JkError};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -50,7 +48,7 @@ impl Instruction for VarAssign {
         format!("{}{} = {}", base, self.symbol, self.value.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("ASSIGN VAR", self.symbol());
 
         // Are we creating the variable or not
@@ -62,8 +60,8 @@ impl Instruction for VarAssign {
                 // for the first time. However, we entered the match arm because the variable
                 // is already present in the interpreter. Error out appropriately.
                 if self.mutable() {
-                    return Err(JinkoError::new(
-                        ErrKind::Interpreter,
+                    return Err(JkError::new(
+                        JkErrKind::Interpreter,
                         format!("Trying to redefine already defined variable: {}", v.name()),
                         None,
                         self.print(),
@@ -91,8 +89,8 @@ impl Instruction for VarAssign {
                 false => {
                     // The variable already exists. So we need to error out if it isn't
                     // mutable
-                    return Err(JinkoError::new(
-                        ErrKind::Interpreter,
+                    return Err(JkError::new(
+                        JkErrKind::Interpreter,
                         format!(
                             "Trying to assign value to non mutable variable `{}`: `{}`",
                             var.name(),
@@ -119,12 +117,12 @@ impl Instruction for VarAssign {
 mod tests {
     use super::*;
     use crate::parser::Construct;
-    use crate::value::{JinkInt, JinkString};
-    use crate::ToInstance;
+    use crate::value::{JkInt, JkString};
+    use crate::ToObjectInstance;
 
     #[test]
     fn non_mutable() {
-        let var_assignment = VarAssign::new(false, "x".to_owned(), Box::new(JinkInt::from(12)));
+        let var_assignment = VarAssign::new(false, "x".to_owned(), Box::new(JkInt::from(12)));
 
         assert_eq!(var_assignment.print(), "x = 12");
     }
@@ -134,7 +132,7 @@ mod tests {
         let var_assignment = VarAssign::new(
             true,
             "some_id_99".to_owned(),
-            Box::new(JinkString::from("Hey there")),
+            Box::new(JkString::from("Hey there")),
         );
 
         assert_eq!(var_assignment.print(), "mut some_id_99 = \"Hey there\"");
@@ -152,7 +150,7 @@ mod tests {
         let va_get = Construct::variable("a").unwrap().1;
         assert_eq!(
             va_get.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(15).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(15).to_instance()))
         );
     }
 

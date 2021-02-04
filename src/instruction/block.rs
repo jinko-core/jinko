@@ -18,8 +18,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use super::{InstrKind, Instruction};
-use crate::{error::JinkoError, interpreter::Interpreter};
+use crate::{InstrKind, Instruction, Interpreter, JkError};
 
 #[derive(Clone)]
 pub struct Block {
@@ -101,14 +100,14 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.scope_enter();
         interpreter.debug_step("BLOCK ENTER");
 
         self.instructions()
             .iter()
             .map(|inst| inst.execute(interpreter))
-            .collect::<Result<Vec<InstrKind>, JinkoError>>()?;
+            .collect::<Result<Vec<InstrKind>, JkError>>()?;
 
         let ret_val = match &self.last {
             Some(e) => e.execute(interpreter),
@@ -126,7 +125,7 @@ impl Instruction for Block {
 mod tests {
     use super::*;
     use crate::instruction::Var;
-    use crate::value::JinkInt;
+    use crate::value::JkInt;
 
     #[test]
     fn empty() {
@@ -155,9 +154,9 @@ mod tests {
         let instrs: Vec<Box<dyn Instruction>> = vec![
             Box::new(Var::new("x".to_owned())),
             Box::new(Var::new("n".to_owned())),
-            Box::new(JinkInt::from(14)),
+            Box::new(JkInt::from(14)),
         ];
-        let last = Box::new(JinkInt::from(12));
+        let last = Box::new(JkInt::from(12));
 
         b.set_instructions(instrs);
         b.set_last(Some(last));
@@ -179,7 +178,7 @@ mod tests {
         let mut b = Block::new();
 
         let instr: Vec<Box<dyn Instruction>> =
-            vec![Box::new(JinkInt::from(12)), Box::new(JinkInt::from(15))];
+            vec![Box::new(JkInt::from(12)), Box::new(JkInt::from(15))];
         b.set_instructions(instr);
 
         let mut i = Interpreter::new();
@@ -189,22 +188,22 @@ mod tests {
 
     #[test]
     fn block_execute_with_last() {
-        use crate::instance::ToInstance;
+        use crate::instance::ToObjectInstance;
 
         let mut b = Block::new();
 
         let instr: Vec<Box<dyn Instruction>> =
-            vec![Box::new(JinkInt::from(12)), Box::new(JinkInt::from(15))];
+            vec![Box::new(JkInt::from(12)), Box::new(JkInt::from(15))];
         b.set_instructions(instr);
 
-        let last = Box::new(JinkInt::from(18));
+        let last = Box::new(JkInt::from(18));
         b.set_last(Some(last));
 
         let mut i = Interpreter::new();
 
         assert_eq!(
             b.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JinkInt::from(18).to_instance()))
+            InstrKind::Expression(Some(JkInt::from(18).to_instance()))
         );
     }
 }

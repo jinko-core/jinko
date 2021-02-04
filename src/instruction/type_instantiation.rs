@@ -1,9 +1,7 @@
 //! TypeInstantiations are used when instantiating a type. The argument list is given to the
 //! type on execution.
 
-use super::{
-    ErrKind, FunctionDec, Instance, InstrKind, Instruction, Interpreter, JinkoError, TypeDec, Var,
-};
+use super::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, TypeDec};
 use crate::instance::{Name, Size};
 
 use std::rc::Rc;
@@ -40,13 +38,13 @@ impl TypeInstantiation {
     }
 
     /// Get the corresponding type declaration from an interpreter
-    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<TypeDec>, JinkoError> {
+    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<TypeDec>, JkError> {
         match interpreter.get_type(self.name()) {
             // get_function() return a Rc, so this clones the Rc, not the FunctionDec
             Some(t) => Ok(t.clone()),
             // FIXME: Fix Location and input
-            None => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            None => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!("Cannot find type {}", self.name()),
                 None,
                 self.name().to_owned(),
@@ -55,11 +53,11 @@ impl TypeInstantiation {
     }
 
     /// Check if the fields received and the fields expected match
-    fn check_fields_count(&self, type_dec: &TypeDec) -> Result<(), JinkoError> {
+    fn check_fields_count(&self, type_dec: &TypeDec) -> Result<(), JkError> {
         match self.fields().len() == type_dec.fields().len() {
             true => Ok(()),
-            false => Err(JinkoError::new(
-                ErrKind::Interpreter,
+            false => Err(JkError::new(
+                JkErrKind::Interpreter,
                 format!(
                     "Wrong number of arguments \
                     for call to function `{}`: Expected {}, got {}",
@@ -97,7 +95,7 @@ impl Instruction for TypeInstantiation {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JinkoError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         let type_dec = self.get_declaration(interpreter)?;
 
         self.check_fields_count(&type_dec)?;
@@ -110,8 +108,8 @@ impl Instruction for TypeInstantiation {
             let instance = match instr.execute(interpreter)? {
                 InstrKind::Expression(Some(instance)) => instance,
                 _ => {
-                    return Err(JinkoError::new(
-                        ErrKind::Interpreter,
+                    return Err(JkError::new(
+                        JkErrKind::Interpreter,
                         format!(
                             "An Expression was excepted but found a Statement for \"{}\"",
                             dec_name
@@ -128,7 +126,7 @@ impl Instruction for TypeInstantiation {
             data.append(&mut instance.data().to_vec());
         }
 
-        Ok(InstrKind::Expression(Some(Instance::new(
+        Ok(InstrKind::Expression(Some(ObjectInstance::new(
             Some(self.type_name.clone()),
             size,
             data,

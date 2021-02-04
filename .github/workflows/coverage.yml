@@ -1,0 +1,28 @@
+name: code-coverage
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Compute code coverage
+      run: |
+        sudo apt-get install libelf-dev libdw-dev libcurl4-openssl-dev
+        wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz
+        tar xzf master.tar.gz
+        cd kcov-master
+        mkdir build
+        cd build
+        cmake ..
+        make -j
+        sudo make install
+        cd ../../
+        cargo test --no-run
+        for file in target/debug/deps/jinko-* ; do [ -x "${file}" ] || continue; mkdir -p "target/cov/$(basename $file)"; kcov --exclude-pattern=/.cargo,/usr/lib,/.rustup --verify "target/cov/$(basename $file)" "$file"; done
+        bash <(curl -s https://codecov.io/bash)
