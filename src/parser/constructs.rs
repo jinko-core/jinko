@@ -153,7 +153,6 @@ impl Construct {
         let (input, type_id) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_curly_bracket(input)?;
-        // let (input, _) = Token::maybe_consume_extra(input)?;
 
         let mut type_instantiation = TypeInstantiation::new(type_id.to_owned());
 

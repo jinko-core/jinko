@@ -209,9 +209,9 @@ on simple parsing and fonctionality. Let's split this section in two:
 
 In order to keep the parsing simple, as much code as possible should be reused. At this
 point, the parser is already around 1500 lines big, and that's big enough. Types
-declarations are similar to function declaration: They have a name, take arguments.
-Type instantiation however are quite different. Let's examine a C custom types and an
-instantiation of it:
+declarations are similar to function declarations: They have a name, take arguments.
+Type instantiations, however are quite different. Let's examine a custom types in C and its
+instantiation:
 
 ```c
 struct custom_type {
@@ -236,10 +236,10 @@ Thus, the following syntax should be adopted at first:
 type CustomType(int_value: int, some_character: char, f: float);
 
 // Let's create one
-let value = CustomType{ int_value = 4, some_character = 'J', f = 27.07 };
+value = CustomType{ int_value = 4, some_character = 'J', f = 27.07 };
 ```
 
-If your types get too big, then just like function defintions, multilines are supported.
+If your types get too big, then just like function definitions, multilines are supported.
 
 ```rust
 type CustomType(
@@ -249,7 +249,7 @@ type CustomType(
 );
 ```
 
-The only differences between a function definition and a type definition is the keyword:
+The only difference between a function definition and a type definition is the keyword:
 `type` or `func` and no block of code for the type instantiation.
 
 #### Methods and functions in Jinko
