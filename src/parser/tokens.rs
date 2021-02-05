@@ -206,7 +206,7 @@ impl Token {
         tag("//")(input)
     }
 
-    pub fn identifier(input: &str) -> IResult<&str, &str> {
+    pub fn inner_identifer(input: &str) -> IResult<&str, &str> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
         match RESERVED_KEYWORDS.contains(&id) {
@@ -228,6 +228,10 @@ impl Token {
         }
 
         Err(nom::Err::Error(("Invalid identifier", ErrorKind::Eof)))
+    }
+
+    pub fn identifier(input: &str) -> IResult<&str, &str> {
+        Token::inner_identifer(input)
     }
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
