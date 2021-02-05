@@ -66,7 +66,7 @@ impl Construct {
     }
 
     /// Parse as many instructions as possible
-    pub fn many_instructions(input: &str) -> IResult<&str, Vec<Box<dyn Instruction>>> {
+    pub fn many_instructions(input: &str) -> ParseResult<Vec<Box<dyn Instruction>>> {
         many0(Construct::instruction_maybe_semicolon)(input)
     }
 
@@ -652,7 +652,7 @@ impl Construct {
     }
 
     /// Parses a path for code inclusion
-    fn path(input: &str) -> IResult<&str, String> {
+    fn path(input: &str) -> ParseResult<String> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, path) = Token::identifier(input)?;
