@@ -40,7 +40,7 @@ impl TypeInstantiation {
     /// Get the corresponding type declaration from an interpreter
     fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<TypeDec>, JkError> {
         match interpreter.get_type(self.name()) {
-            // get_function() return a Rc, so this clones the Rc, not the FunctionDec
+            // get_type() return a Rc, so this clones the Rc, not the TypeDec
             Some(t) => Ok(t.clone()),
             // FIXME: Fix Location and input
             None => Err(JkError::new(
@@ -60,7 +60,7 @@ impl TypeInstantiation {
                 JkErrKind::Interpreter,
                 format!(
                     "Wrong number of arguments \
-                    for call to function `{}`: Expected {}, got {}",
+                    for type instantiation `{}`: Expected {}, got {}",
                     self.name(),
                     type_dec.fields().len(),
                     self.fields().len()
@@ -75,7 +75,6 @@ impl TypeInstantiation {
 
 impl Instruction for TypeInstantiation {
     fn kind(&self) -> InstrKind {
-        // FIXME: Add logic
         InstrKind::Expression(None)
     }
 
@@ -111,7 +110,7 @@ impl Instruction for TypeInstantiation {
                     return Err(JkError::new(
                         JkErrKind::Interpreter,
                         format!(
-                            "An Expression was excepted but found a Statement for \"{}\"",
+                            "An Expression was excepted but a Statement was found: `{}`",
                             dec_name
                         ),
                         None,

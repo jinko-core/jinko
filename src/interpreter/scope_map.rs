@@ -228,7 +228,7 @@ impl ScopeMap {
             Some(head) => head.add_type(custom_type),
             None => Err(JkError::new(
                 JkErrKind::Interpreter,
-                String::from("Adding custom_type to empty scopemap"),
+                String::from("Adding new custom type to empty scopemap"),
                 None,
                 custom_type.name().to_owned(),
             )),
