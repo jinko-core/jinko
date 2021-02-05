@@ -51,7 +51,7 @@ fn main() {
 
     if args.interactive() || args.input().is_none() {
         match Repl::launch_repl(&args) {
-            Ok(_) => {}
+            Ok(_) => return,
             Err(e) => e.exit(),
         }
     };

@@ -207,4 +207,27 @@ mod tests {
             InstrKind::Expression(Some(JkInt::from(36).to_instance()))
         );
     }
+
+    #[test]
+    fn t_binop_lhs_execute() {
+        let l_bin = BinaryOp::new(
+            Box::new(JkInt::from(12)),
+            Box::new(JkInt::from(3)),
+            Operator::new("*"),
+        );
+        let binary_op = BinaryOp::new(
+            Box::new(l_bin),
+            Box::new(JkInt::from(9)),
+            Operator::new("-"),
+        );
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(binary_op.operator(), Operator::Sub);
+
+        assert_eq!(
+            binary_op.lhs().execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JkInt::from(36).to_instance()))
+        );
+    }
 }
