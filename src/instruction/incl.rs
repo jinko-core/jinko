@@ -43,7 +43,7 @@ impl Incl {
         (PathBuf::from(dir_fmt), PathBuf::from(file_fmt))
     }
 
-    fn format_path(&self, base: &Path) -> Result<PathBuf, JkError> {
+    fn find_include_path(&self, base: &Path) -> Result<PathBuf, JkError> {
         let (dir_candidate, file_candidate) = self.format_candidates(base);
 
         let (dir_valid, file_valid) = (dir_candidate.is_file(), file_candidate.is_file());
@@ -79,7 +79,7 @@ impl Incl {
         base: &Path,
         i: &Interpreter,
     ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
-        let formatted = self.format_path(base)?;
+        let formatted = self.find_include_path(base)?;
 
         // If a source has already been included, skip it without returning
         // an error
