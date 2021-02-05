@@ -6,8 +6,8 @@ use nom::{
     branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
     bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
     character::complete::char, character::is_alphabetic, character::is_alphanumeric,
-    character::is_digit, combinator::opt, combinator::peek, error::ErrorKind, sequence::delimited,
-    IResult,
+    character::is_digit, combinator::opt, combinator::peek, error::ErrorKind, multi::many0,
+    sequence::delimited, sequence::pair, IResult,
 };
 
 /// Reserved Keywords by jinko
@@ -230,8 +230,39 @@ impl Token {
         Err(nom::Err::Error(("Invalid identifier", ErrorKind::Eof)))
     }
 
-    pub fn identifier(input: &str) -> IResult<&str, &str> {
-        Token::inner_identifer(input)
+    pub fn namespace_separator(input: &str) -> IResult<&str, &str> {
+        Token::token(input, "::")
+    }
+
+    pub fn identifier(input: &str) -> IResult<&str, String> {
+        let (input, first_id) = Token::inner_identifer(input)?;
+
+        let (input, namespaced) =
+            many0(pair(Token::namespace_separator, Token::inner_identifer))(input)?;
+
+        let mut identifier = String::from(first_id);
+        namespaced.into_iter().for_each(|(sep, nspace)| {
+            identifier.push_str(sep);
+            identifier.push_str(nspace)
+        });
+
+        // If a namespace_separator remains, then it means we're in a situation where
+        // the identifier is of the following form:
+        //
+        // `<id>::<id>::<id>...<id>::`
+        //
+        // which is not a valid identifier
+        match Token::namespace_separator(input) {
+            Ok(_) => {
+                return Err(nom::Err::Error((
+                    "Cannot finish identifier on namespace separator `::`",
+                    ErrorKind::OneOf,
+                )))
+            }
+            Err(_) => {}
+        };
+
+        Ok((input, identifier))
     }
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
@@ -447,12 +478,15 @@ mod tests {
 
     #[test]
     fn t_id() {
-        assert_eq!(Token::identifier("x"), Ok(("", "x")));
-        assert_eq!(Token::identifier("x_"), Ok(("", "x_")));
-        assert_eq!(Token::identifier("x_99"), Ok(("", "x_99")));
-        assert_eq!(Token::identifier("99x"), Ok(("", "99x")));
-        assert_eq!(Token::identifier("n99 x"), Ok((" x", "n99")));
-        assert_eq!(Token::identifier("func_ x"), Ok((" x", "func_")));
+        assert_eq!(Token::identifier("x"), Ok(("", "x".to_string())));
+        assert_eq!(Token::identifier("x_"), Ok(("", "x_".to_string())));
+        assert_eq!(Token::identifier("x_99"), Ok(("", "x_99".to_string())));
+        assert_eq!(Token::identifier("99x"), Ok(("", "99x".to_string())));
+        assert_eq!(Token::identifier("n99 x"), Ok((" x", "n99".to_string())));
+        assert_eq!(
+            Token::identifier("func_ x"),
+            Ok((" x", "func_".to_string()))
+        );
     }
 
     #[test]
@@ -553,5 +587,50 @@ mod tests {
     #[test]
     fn t_keyword_next_to_curly() {
         assert_eq!(Token::loop_tok("loop{}"), Ok(("{}", "loop")));
+    }
+
+    #[test]
+    fn t_identifier_no_namespace() {
+        assert_eq!(Token::identifier("id"), Ok(("", String::from("id"))));
+    }
+
+    #[test]
+    fn t_identifier_plus_one_namespace() {
+        assert_eq!(
+            Token::identifier("nspace::id"),
+            Ok(("", String::from("nspace::id")))
+        );
+    }
+
+    #[test]
+    fn t_identifier_plus_many_namespace() {
+        assert_eq!(
+            Token::identifier("nspace::id::sub"),
+            Ok(("", String::from("nspace::id::sub")))
+        );
+    }
+
+    #[test]
+    fn t_identifier_invalid_just_sep() {
+        match Token::identifier("::") {
+            Ok(_) => assert!(false, "Just a separator is invalid"),
+            Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_identifier_invalid_nspace_no_id() {
+        match Token::identifier("nspace::") {
+            Ok(_) => assert!(false, "Cannot have namespace without id"),
+            Err(_) => assert!(true),
+        };
+    }
+
+    #[test]
+    fn t_identifier_invalid_nspace_no_id_multi() {
+        match Token::identifier("nspace::id::sub::") {
+            Ok(_) => assert!(false, "Cannot have namespace without id (multi)"),
+            Err(_) => assert!(true),
+        };
     }
 }
