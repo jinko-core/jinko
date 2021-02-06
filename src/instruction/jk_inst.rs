@@ -3,7 +3,7 @@
 //! really an `Instruction`, and therefore their implementation lives in the parser
 //! module. They are executed at "compile" time, when running through the code first.
 
-use crate::instruction::{InstrKind, Instruction, FunctionCall};
+use crate::instruction::{FunctionCall, InstrKind, Instruction};
 use crate::{Interpreter, JkErrKind, JkError};
 
 /// The potential interpreter instructions
@@ -30,17 +30,19 @@ impl JkInst {
             "quit" => JkInstKind::Quit,
             "ir" => JkInstKind::Ir,
             // FIXME: Fix location
-            _ => return Err(JkError::new(
-                JkErrKind::Parsing,
-                format!("unknown interpreter directive @{}", func_name),
-                None,
-                func_name.to_owned(),
-            )),
+            _ => {
+                return Err(JkError::new(
+                    JkErrKind::Parsing,
+                    format!("unknown interpreter directive @{}", func_name),
+                    None,
+                    func_name.to_owned(),
+                ))
+            }
         };
 
         Ok(Self {
             kind,
-            args: fc.args().clone()
+            args: fc.args().clone(),
         })
     }
 
@@ -83,7 +85,6 @@ mod tests {
     use super::*;
     use crate::parser::Construct;
 
-
     #[test]
     fn t_invalid_jkinst() {
         let (_, fc) = Construct::function_call("tamer()").unwrap();
@@ -105,6 +106,9 @@ mod tests {
         let (_, fc) = Construct::function_call("ir(fn)").unwrap();
         let inst = JkInst::from_function_call(fc);
 
-        assert!(inst.is_ok(), "ir(func) is a valid use of the ir interpreter directive")
+        assert!(
+            inst.is_ok(),
+            "ir(func) is a valid use of the ir interpreter directive"
+        )
     }
 }
