@@ -6,7 +6,7 @@
 unit tests, mocking and FFI.
 </div>
 
-![](https://github.com/cohenarthur/jinko/workflows/jinko-build-and-test/badge.svg)
+![](https://github.com/cohenarthur/jinko/workflows/jinko-build-and-test/badge.svg?branch=master)
 [![codecov](https://codecov.io/gh/CohenArthur/jinko/branch/master/graph/badge.svg?token=37RZPKA62K)](https://codecov.io/gh/CohenArthur/jinko)
 
 While `jinko` can't do a whole lot right now, it's growing fast! You can look
