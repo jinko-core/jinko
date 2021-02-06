@@ -7,14 +7,15 @@
 use std::collections::{HashMap, LinkedList};
 use std::rc::Rc;
 
-use crate::instruction::{FunctionDec, Var};
+use crate::instruction::{FunctionDec, TypeDec, Var};
 use crate::{Instruction, JkErrKind, JkError};
 
 /// A scope contains a set of available variables and functions
 #[derive(Clone)]
 struct Scope {
-    pub(crate) variables: HashMap<String, Var>,
-    pub(crate) functions: HashMap<String, Rc<FunctionDec>>,
+    variables: HashMap<String, Var>,
+    functions: HashMap<String, Rc<FunctionDec>>,
+    types: HashMap<String, Rc<TypeDec>>,
 }
 
 impl Scope {
@@ -23,6 +24,7 @@ impl Scope {
         Scope {
             variables: HashMap::new(),
             functions: HashMap::new(),
+            types: HashMap::new(),
         }
     }
 
@@ -34,6 +36,11 @@ impl Scope {
     /// Get a reference on a function from the scope map if is has been inserted already
     pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
         self.functions.get(name)
+    }
+
+    /// Get a reference on a type from the scope map if is has been inserted already
+    pub fn get_type(&self, name: &str) -> Option<&Rc<TypeDec>> {
+        self.types.get(name)
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
@@ -77,6 +84,22 @@ impl Scope {
             )),
             None => Ok({
                 self.functions.insert(func.name().to_owned(), Rc::new(func));
+            }),
+        }
+    }
+
+    /// Add a type to the most recently created scope, if it doesn't already exist
+    pub fn add_type(&mut self, type_dec: TypeDec) -> Result<(), JkError> {
+        match self.get_type(type_dec.name()) {
+            Some(_) => Err(JkError::new(
+                JkErrKind::Interpreter,
+                format!("type already declared: {}", type_dec.name()),
+                None,
+                type_dec.name().to_owned(),
+            )),
+            None => Ok({
+                self.types
+                    .insert(type_dec.name().to_owned(), Rc::new(type_dec));
             }),
         }
     }
@@ -149,6 +172,19 @@ impl ScopeMap {
         None
     }
 
+    /// Maybe get a type in any available scopes
+    pub fn get_type(&self, name: &str) -> Option<&Rc<TypeDec>> {
+        // FIXME: Use find for code quality?
+        for scope in self.scopes.iter() {
+            match scope.get_type(name) {
+                Some(v) => return Some(v),
+                None => continue,
+            };
+        }
+
+        None
+    }
+
     /// Add a variable to the current scope if it hasn't been added before
     pub fn add_variable(&mut self, var: Var) -> Result<(), JkError> {
         match self.scopes.front_mut() {
@@ -184,6 +220,19 @@ impl ScopeMap {
                 String::from("Adding function to empty scopemap"),
                 None,
                 func.name().to_owned(),
+            )),
+        }
+    }
+
+    /// Add a type to the current scope if it hasn't been added before
+    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), JkError> {
+        match self.scopes.front_mut() {
+            Some(head) => head.add_type(custom_type),
+            None => Err(JkError::new(
+                JkErrKind::Interpreter,
+                String::from("Adding new custom type to empty scopemap"),
+                None,
+                custom_type.name().to_owned(),
             )),
         }
     }

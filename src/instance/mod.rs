@@ -7,8 +7,14 @@
 //! the instance is always there. The type of the ObjectInstance might be resolved later, after
 //! different passes of the typechecker.
 
+use std::collections::HashMap;
+
 // FIXME: Use CustomType once @Skallwar's PR is merged
-type Ty = String;
+pub type Ty = String;
+pub type Name = String;
+type Offset = usize;
+pub type Size = usize;
+type FieldsMap = HashMap<Name, (Offset, Size)>;
 
 /// The type is optional. At first, the type might not be known, and will only be
 /// revealed during the typechecking phase. `size` is the size of the instance in bytes.
@@ -16,24 +22,42 @@ type Ty = String;
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectInstance {
     ty: Option<Ty>,
-    size: usize,
+    size: Size,
     data: Vec<u8>,
+    fields: Option<FieldsMap>,
 }
 
 impl ObjectInstance {
     /// Create a new, empty instance without a type or a size
     pub fn empty() -> ObjectInstance {
-        ObjectInstance::new(None, 0, vec![])
+        ObjectInstance::new(None, 0, vec![], None)
     }
 
     /// Create a new instance
-    pub fn new(ty: Option<Ty>, size: usize, data: Vec<u8>) -> ObjectInstance {
-        ObjectInstance { ty, size, data }
+    pub fn new(
+        ty: Option<Ty>,
+        size: usize,
+        data: Vec<u8>,
+        fields: Option<Vec<(Name, Size)>>,
+    ) -> ObjectInstance {
+        let fields = fields.map(|vec| ObjectInstance::fields_vec_to_hash_map(vec));
+
+        ObjectInstance {
+            ty,
+            size,
+            data,
+            fields,
+        }
     }
 
     /// Create a new instance from raw bytes instead of a vector
-    pub fn from_bytes(ty: Option<Ty>, size: usize, data: &[u8]) -> ObjectInstance {
-        ObjectInstance::new(ty, size, data.to_vec())
+    pub fn from_bytes(
+        ty: Option<Ty>,
+        size: usize,
+        data: &[u8],
+        fields: Option<Vec<(Name, Size)>>,
+    ) -> ObjectInstance {
+        ObjectInstance::new(ty, size, data.to_vec(), fields)
     }
 
     /// Get a reference to the type of the instance
@@ -49,6 +73,25 @@ impl ObjectInstance {
     /// Get a reference to the raw data bytes of the ObjectInstance
     pub fn data(&self) -> &[u8] {
         &self.data
+    }
+
+    pub fn size(&self) -> Size {
+        self.size
+    }
+
+    pub fn fields(&self) -> &Option<FieldsMap> {
+        &self.fields
+    }
+
+    fn fields_vec_to_hash_map(vec: Vec<(String, Size)>) -> FieldsMap {
+        let mut current_offset: usize = 0;
+        let mut hashmap = FieldsMap::new();
+        for (name, size) in vec {
+            hashmap.insert(name, (current_offset, size));
+            current_offset += size;
+        }
+
+        hashmap
     }
 }
 

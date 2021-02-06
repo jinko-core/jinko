@@ -14,7 +14,7 @@ use scope_map::ScopeMap;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, Var};
+use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
 use crate::{JkErrKind, JkError};
 
 /// Type the interpreter uses for keys
@@ -111,6 +111,12 @@ impl Interpreter {
         self.scope_map.add_variable(var)
     }
 
+    /// Add a type to the interpreter. Returns `Ok` if the type was added, `Err`
+    /// if it existed already and was not.
+    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), JkError> {
+        self.scope_map.add_type(custom_type)
+    }
+
     /// Remove a variable from the interpreter
     pub fn remove_variable(&mut self, var: &Var) -> Result<(), JkError> {
         self.scope_map.remove_variable(var)
@@ -132,6 +138,11 @@ impl Interpreter {
     /// Get a reference on an existing variable
     pub fn get_variable(&self, name: &str) -> Option<&Var> {
         self.scope_map.get_variable(name)
+    }
+
+    /// Get a reference on an existing type
+    pub fn get_type(&self, name: &str) -> Option<&Rc<TypeDec>> {
+        self.scope_map.get_type(name)
     }
 
     /// Create a new empty scope

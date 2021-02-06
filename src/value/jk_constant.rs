@@ -67,6 +67,7 @@ macro_rules! jk_primitive {
                         Some("bool".to_string()), // FIXME
                         size_of::<bool>(),
                         &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
+                        None,
                     )
                 }
             }
@@ -116,6 +117,7 @@ macro_rules! jk_primitive {
                         Some($s.to_string()), // FIXME
                         size_of::<$t>(),
                         &transmute::<$t, [u8; size_of::<$t>()]>(self.0),
+                        None,
                     )
                 }
             }
@@ -188,6 +190,7 @@ impl ToObjectInstance for JkString {
             Some("string".to_string()), // FIXME
             self.0.as_bytes().len(),
             self.0.as_bytes(),
+            None,
         )
     }
 }
