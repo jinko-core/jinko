@@ -211,15 +211,15 @@ impl Construct {
     /// }
     /// ```
     ///
-    /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
+    /// `[mut] <identifier> = <instruction>`
     pub(crate) fn var_assignment(input: &str) -> ParseResult<VarAssign> {
         let (input, mut_opt) = opt(Token::mut_tok)(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, id) = Token::identifier(input)?;
-        let (input, _) = opt(Token::consume_whitespaces)(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::equal(input)?;
-        let (input, _) = opt(Token::consume_whitespaces)(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, value) = Construct::instruction(input)?;
 
         match mut_opt {
@@ -671,6 +671,21 @@ impl Construct {
         let type_declaration = TypeDec::new(type_name.to_owned(), fields);
 
         Ok((input, type_declaration))
+    }
+
+    /// Parse a named argument. The syntax is similar to variable assignments, but they
+    /// are only used during type instantiation, and maybe later during function calls.
+    ///
+    /// `<identifier> = <instruction>`
+    fn named_arg(input: &str) -> ParseResult<VarAssign> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::equal(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, value) = Construct::instruction(input)?;
+
+        Ok((input, VarAssign::new(false, id.to_owned(), value)))
     }
 }
 
@@ -1330,5 +1345,20 @@ mod tests {
         // There might be a bug that a function call with just a boolean argument gets
         // parsed as a variable. This test aims at correcting that regression. If it
         // fails, then it means the function call did not get parsed as a function call
+    }
+
+    #[test]
+    fn t_named_argument_valid() {
+        assert!(Construct::named_arg("a = b").is_ok());
+        assert!(Construct::named_arg("a = 2").is_ok());
+        assert!(Construct::named_arg("a = { 2 }").is_ok());
+        assert!(Construct::named_arg("a = call()").is_ok());
+    }
+
+    #[test]
+    fn t_named_argument_invalid() {
+        assert!(Construct::named_arg("a =").is_err(), "No second member");
+        assert!(Construct::named_arg("= 2").is_err(), "No first member");
+        assert!(Construct::named_arg("a { 2 }").is_err(), "Missing equal sign");
     }
 }
