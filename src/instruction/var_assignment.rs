@@ -1,6 +1,6 @@
 //! The VarAssign struct is used when assigning values to variables.
 
-use crate::instruction::{CodeGen, Compilable, InstrKind, Var};
+use crate::instruction::{CodeGen, InstrKind, Var};
 use crate::{Instruction, Interpreter, JkErrKind, JkError};
 
 #[derive(Clone)]
@@ -115,21 +115,6 @@ impl Instruction for VarAssign {
 
         // A variable assignment is always a statement
         Ok(InstrKind::Statement)
-    }
-}
-
-impl Compilable for VarAssign {
-    fn ir(&self, ctx: &mut CodeGen, interpreter: &Interpreter) -> Result<String, JkError> {
-        let i64_type = ctx.context.i64_type();
-
-        let var = ctx.builder.build_alloca(i64_type, self.symbol());
-        let val = i64_type.const_int(42, false); //self.value().execute_expression(&mut interpreter)?;
-
-        ctx.builder.build_store(var, val);
-
-        let mut output = String::new();
-
-        Ok(ctx.module.print_to_string().to_string())
     }
 }
 
