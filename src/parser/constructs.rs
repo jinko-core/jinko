@@ -104,18 +104,19 @@ impl Construct {
         Ok((input, constant))
     }
 
-    /// Parse an argument and the comma that follows it
-    fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
-        let (input, constant) = Construct::instruction(input)?;
-        let (input, _) = Token::comma(input)?;
-
-        Ok((input, constant))
-    }
 
     /// Parse a list of arguments separated by comma
     fn args_list(input: &str) -> ParseResult<Vec<Box<dyn Instruction>>> {
-        // Get 1 or more arguments with a comma to the function call
-        let (input, mut arg_vec) = many0(Construct::arg_and_comma)(input)?;
+        /// Parse an argument and the comma that follows it
+        fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
+            let (input, constant) = Construct::instruction(input)?;
+            let (input, _) = Token::comma(input)?;
+
+            Ok((input, constant))
+        }
+
+        // Get 0 or more arguments with a comma to the function call
+        let (input, mut arg_vec) = many0(arg_and_comma)(input)?;
 
         // Parse the last argument, which does not have a comma. There needs to be
         // at least one argument, which can be this one
@@ -141,6 +142,42 @@ impl Construct {
         Ok((input, fn_call))
     }
 
+    /// Parse a named argument. The syntax is similar to variable assignments, but they
+    /// are only used during type instantiation, and maybe later during function calls.
+    ///
+    /// `<identifier> = <instruction>`
+    fn named_arg(input: &str) -> ParseResult<VarAssign> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::equal(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, value) = Construct::instruction(input)?;
+
+        Ok((input, VarAssign::new(false, id.to_owned(), value)))
+    }
+
+    fn named_arg_list(input: &str) -> ParseResult<Vec<VarAssign>> {
+        fn named_arg_and_comma(input: &str) -> ParseResult<VarAssign> {
+            let (input, constant) = Construct::named_arg(input)?;
+            let (input, _) = Token::comma(input)?;
+
+            Ok((input, constant))
+        }
+
+        // Get 0 or more arguments with a comma to the function call
+        let (input, mut arg_vec) = many0(named_arg_and_comma)(input)?;
+
+        // Parse the last argument, which does not have a comma. There needs to be
+        // at least one argument, which can be this one
+        let (input, last_arg) = Construct::named_arg(input)?;
+
+        arg_vec.push(last_arg);
+
+        Ok((input, arg_vec))
+
+    }
+
     /// When a type is instantiated in the source code.
     ///
     /// ```
@@ -156,7 +193,7 @@ impl Construct {
 
         let mut type_instantiation = TypeInstantiation::new(type_id.to_owned());
 
-        let (input, mut arg_vec) = Construct::args_list(input)?;
+        let (input, mut arg_vec) = Construct::named_arg_list(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
 
         arg_vec
@@ -671,21 +708,6 @@ impl Construct {
         let type_declaration = TypeDec::new(type_name.to_owned(), fields);
 
         Ok((input, type_declaration))
-    }
-
-    /// Parse a named argument. The syntax is similar to variable assignments, but they
-    /// are only used during type instantiation, and maybe later during function calls.
-    ///
-    /// `<identifier> = <instruction>`
-    fn named_arg(input: &str) -> ParseResult<VarAssign> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, id) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::equal(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, value) = Construct::instruction(input)?;
-
-        Ok((input, VarAssign::new(false, id.to_owned(), value)))
     }
 }
 
@@ -1271,9 +1293,17 @@ mod tests {
 
     #[test]
     fn t_type_instantiation_valid() {
-        match Construct::type_instantiation("Custom { 1 }") {
+        match Construct::type_instantiation("Custom { a = 1 }") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Type instantiation with one value is valid"),
+        }
+    }
+
+    #[test]
+    fn t_type_instantiation_valid_multi() {
+        match Construct::type_instantiation("Custom { a = 1, b= 2, c = { 's' } }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Type instantiation with multiple values is valid"),
         }
     }
 
@@ -1290,6 +1320,14 @@ mod tests {
         match Construct::type_instantiation("{ 1 }") {
             Ok(_) => assert!(false),
             Err(_) => assert!(true, "Type instantiation need a type name"),
+        }
+    }
+
+    #[test]
+    fn t_type_instantiation_no_named_arg() {
+        match Construct::type_instantiation("CustomType { 1 }") {
+            Ok(_) => assert!(false),
+            Err(_) => assert!(true, "Type instantiation need a named arg"),
         }
     }
 

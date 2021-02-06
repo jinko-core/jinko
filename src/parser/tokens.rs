@@ -305,11 +305,6 @@ impl Token {
             .contains(&c)
     }
 
-    /// Consumes 1 or more whitespaces in an input. A whitespace is a space or a tab
-    pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
-        take_while1(|c| Token::is_whitespace(c))(input)
-    }
-
     /// Consumes 0 or more whitespaces in an input. A whitespace is a space or a tab
     fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
         take_while(|c| Token::is_whitespace(c))(input)
