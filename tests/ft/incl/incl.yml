@@ -1,0 +1,37 @@
+# In this directory, tests need two source files. One "includer" and one "includee".
+# Therefore, each file shall be named "incl_*.jk" and "incl_*_includer.jk" for the source
+# that includes it. The includer file shall be passed as argument to the interpreter,
+# and the includee shall simply be included by the includer.
+
+tests:
+  - name: "Include simple var"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_simple_includer.jk"
+    exit_code: 12
+
+  - name: "Include simple function"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_func_includer.jk"
+    exit_code: 1
+
+  - name: "Include directory"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_dir_includer.jk"
+    exit_code: 15
+
+  - name: "Include directory subfile"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_dir_subfile_includer.jk"
+    exit_code: 59
+
+  - name: "Cyclic inclusion"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/incl/incl_cyclic_includer.jk"
+    exit_code: 0
+
+# FIXME: Add tests for dynamic include once `jinko -c` (command) is implemented

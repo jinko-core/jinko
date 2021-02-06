@@ -1,0 +1,12 @@
+tests:
+  - name: "Include non-existant"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/invalid/incl/incl_nothing.jk"
+    exit_code: 2
+
+  - name: "Include two valid candidates"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/invalid/incl/incl_both_includer.jk"
+    exit_code: 2

@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn t_invalid_args_number() {
-        use super::super::{FunctionDec, FunctionDecArg};
+        use super::super::{DecArg, FunctionDec};
         use crate::instruction::FunctionKind;
         use crate::value::JkInt;
 
@@ -176,8 +176,8 @@ mod tests {
         f.set_kind(FunctionKind::Func);
 
         f.set_args(vec![
-            FunctionDecArg::new("a".to_owned(), "int".to_owned()),
-            FunctionDecArg::new("b".to_owned(), "int".to_owned()),
+            DecArg::new("a".to_owned(), "int".to_owned()),
+            DecArg::new("b".to_owned(), "int".to_owned()),
         ]);
 
         interpreter.add_function(f).unwrap();

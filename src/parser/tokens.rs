@@ -11,8 +11,9 @@ use nom::{
 };
 
 /// Reserved Keywords by jinko
-const RESERVED_KEYWORDS: [&str; 11] = [
-    "func", "test", "mock", "type", "ext", "for", "while", "loop", "mut", "true", "false",
+const RESERVED_KEYWORDS: [&str; 13] = [
+    "func", "test", "mock", "type", "ext", "for", "while", "loop", "mut", "true", "false", "incl",
+    "as",
 ];
 
 const OPERATORS: [&str; 6] = ["+", "-", "*", "/", "(", ")"];
@@ -148,6 +149,14 @@ impl Token {
 
     pub fn _type_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "type")
+    }
+
+    pub fn incl_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "incl")
+    }
+
+    pub fn as_tok(input: &str) -> IResult<&str, &str> {
+        Token::specific_token(input, "as")
     }
 
     pub fn add(input: &str) -> IResult<&str, &str> {
