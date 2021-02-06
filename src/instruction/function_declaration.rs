@@ -191,6 +191,12 @@ impl Default for FunctionDec {
     }
 }
 
+impl std::fmt::Debug for FunctionDec {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.print())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
