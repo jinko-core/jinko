@@ -104,7 +104,6 @@ impl Construct {
         Ok((input, constant))
     }
 
-
     /// Parse a list of arguments separated by comma
     fn args_list(input: &str) -> ParseResult<Vec<Box<dyn Instruction>>> {
         /// Parse an argument and the comma that follows it
@@ -175,7 +174,6 @@ impl Construct {
         arg_vec.push(last_arg);
 
         Ok((input, arg_vec))
-
     }
 
     /// When a type is instantiated in the source code.
@@ -1397,6 +1395,9 @@ mod tests {
     fn t_named_argument_invalid() {
         assert!(Construct::named_arg("a =").is_err(), "No second member");
         assert!(Construct::named_arg("= 2").is_err(), "No first member");
-        assert!(Construct::named_arg("a { 2 }").is_err(), "Missing equal sign");
+        assert!(
+            Construct::named_arg("a { 2 }").is_err(),
+            "Missing equal sign"
+        );
     }
 }
