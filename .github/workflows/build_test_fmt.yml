@@ -50,7 +50,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Run Unit Tests and Documentation examples
+    - name: Run functional tests
       run: |
           cargo install --git https://github.com/cohenarthur/ft
           tests/func_tests.sh
