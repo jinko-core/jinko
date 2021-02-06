@@ -155,7 +155,7 @@ impl Construct {
     /// ```
     /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
     /// `<identifier> ( <arg_list> )`
-    pub fn type_instantiation(input: &str) -> IResult<&str, TypeInstantiation> {
+    pub fn type_instantiation(input: &str) -> ParseResult<TypeInstantiation> {
         let (input, type_id) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_curly_bracket(input)?;
@@ -690,7 +690,7 @@ impl Construct {
         Ok((input, path.to_string()))
     }
 
-    pub fn as_identifier(input: &str) -> IResult<&str, Option<String>> {
+    pub fn as_identifier(input: &str) -> ParseResult<Option<String>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, id) = match opt(Token::as_tok)(input)? {
             (input, Some(_)) => {
@@ -707,7 +707,7 @@ impl Construct {
         Ok((input, id))
     }
 
-    pub fn incl(input: &str) -> IResult<&str, Incl> {
+    pub fn incl(input: &str) -> ParseResult<Incl> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, _) = Token::incl_tok(input)?;
