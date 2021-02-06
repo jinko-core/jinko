@@ -158,7 +158,8 @@ mod test {
         ];
         let t = TypeDec::new("Type_Test".to_owned(), fields);
 
-        interpreter.add_type(t).unwrap();
+        t.execute(&mut interpreter).unwrap();
+        // interpreter.add_type(t).unwrap();
 
         let mut t_inst = TypeInstantiation::new("Type_Test".to_string());
 
@@ -206,7 +207,8 @@ mod test {
         ];
         let t = TypeDec::new(TYPE_NAME.to_owned(), fields);
 
-        interpreter.add_type(t).unwrap();
+        t.execute(&mut interpreter).unwrap();
+        // interpreter.add_type(t).unwrap();
 
         let mut t_inst = TypeInstantiation::new(TYPE_NAME.to_string());
         t_inst.add_field(VarAssign::new(
