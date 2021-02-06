@@ -1,0 +1,15 @@
+#!some_shebang
+
+// A comment
+
+global_b = 12;
+a = 1;
+
+/* Some doc maybe */
+func one() -> int { 1 }
+
+func two() -> int { 2 }
+
+c = a + global_b;
+
+c

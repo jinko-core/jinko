@@ -2,7 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use crate::{Instance, Interpreter, JkErrKind, JkError};
+use crate::{Interpreter, JkErrKind, JkError, ObjectInstance};
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
@@ -10,24 +10,32 @@ use downcast_rs::{impl_downcast, Downcast};
 mod audit;
 mod binary_op;
 mod block;
+mod dec_arg;
 mod function_call;
 mod function_declaration;
 mod if_else;
+mod incl;
 mod jk_inst;
 mod loop_block;
 mod operator;
+mod type_declaration;
+mod type_instantiation;
 mod var;
 mod var_assignment;
 
 pub use audit::Audit;
 pub use binary_op::BinaryOp;
 pub use block::Block;
+pub use dec_arg::DecArg;
 pub use function_call::FunctionCall;
-pub use function_declaration::{FunctionDec, FunctionDecArg, FunctionKind};
+pub use function_declaration::{FunctionDec, FunctionKind};
 pub use if_else::IfElse;
+pub use incl::Incl;
 pub use jk_inst::{JkInst, JkInstKind};
 pub use loop_block::{Loop, LoopKind};
 pub use operator::Operator;
+pub use type_declaration::TypeDec;
+pub use type_instantiation::TypeInstantiation;
 pub use var::Var;
 pub use var_assignment::VarAssign;
 
@@ -38,7 +46,7 @@ pub use var_assignment::VarAssign;
 #[derive(Debug, PartialEq, Clone)]
 pub enum InstrKind {
     Statement,
-    Expression(Option<Instance>),
+    Expression(Option<ObjectInstance>),
 }
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
@@ -57,7 +65,7 @@ pub trait Instruction: InstructionClone + Downcast {
 
     /// Execute the instruction, hoping for an InstrKind::Expression(Some(...)) to be
     /// returned. If an invalid value is returned, error out.
-    fn execute_expression(&self, i: &mut Interpreter) -> Result<Instance, JkError> {
+    fn execute_expression(&self, i: &mut Interpreter) -> Result<ObjectInstance, JkError> {
         match self.execute(i)? {
             InstrKind::Expression(Some(result)) => Ok(result),
             _ => Err(JkError::new(

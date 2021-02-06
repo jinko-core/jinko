@@ -1,0 +1,3 @@
+incl incl_func
+
+one() // Return 1

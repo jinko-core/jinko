@@ -123,7 +123,7 @@ mod tests {
     use super::*;
     use crate::parser::Construct;
     use crate::value::{JkInt, JkString};
-    use crate::ToInstance;
+    use crate::ToObjectInstance;
 
     #[test]
     fn non_mutable() {

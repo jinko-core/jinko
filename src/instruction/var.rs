@@ -3,13 +3,13 @@
 //! need to keep an option of an instance. A variable is either there, fully initialized,
 //! or it's not.
 
-use crate::{Instance, InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError};
+use crate::{InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError, ObjectInstance};
 
 #[derive(Clone)]
 pub struct Var {
     name: String,
     mutable: bool,
-    instance: Instance,
+    instance: ObjectInstance,
 }
 
 impl Var {
@@ -18,7 +18,7 @@ impl Var {
         Var {
             name,
             mutable: false,
-            instance: Instance::empty(),
+            instance: ObjectInstance::empty(),
         }
     }
 
@@ -28,7 +28,7 @@ impl Var {
     }
 
     /// Return a copy of the variable's instance
-    pub fn instance(&self) -> Instance {
+    pub fn instance(&self) -> ObjectInstance {
         self.instance.clone()
     }
 
@@ -38,7 +38,7 @@ impl Var {
     }
 
     /// Set the instance contained in a variable
-    pub fn set_instance(&mut self, instance: Instance) {
+    pub fn set_instance(&mut self, instance: ObjectInstance) {
         self.instance = instance;
     }
 
@@ -63,7 +63,7 @@ impl Instruction for Var {
     }
 
     fn as_bool(&self, i: &mut Interpreter) -> Result<bool, JkError> {
-        use crate::FromInstance;
+        use crate::FromObjectInstance;
 
         // FIXME: Cleanup
 
@@ -123,7 +123,7 @@ impl Default for Var {
 mod tests {
     use super::*;
     use crate::value::JkInt;
-    use crate::ToInstance;
+    use crate::ToObjectInstance;
 
     #[test]
     fn keep_instance() {

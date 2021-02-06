@@ -5,7 +5,7 @@
 //! abstraction for all possible ways to parse a line in jinko.
 //!
 //! Each of the functions in that module contain the grammar they represent above their
-//! name. The syntax used for the grammar is loosely based on regular expressions and
+//! name. The syntax used for the grammar is loosely based on regular instructions and
 //! globbing. One can use * to indicate 0 or more, ? to indicate 1 or more, etc etc.
 //! Optional parameters are included between brackets. For example,
 //!
@@ -16,8 +16,8 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
-    Audit, Block, FunctionCall, FunctionDec, FunctionDecArg, FunctionKind, IfElse, Instruction,
-    JkInst, JkInstKind, Loop, LoopKind, Var, VarAssign,
+    Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
+    JkInst, JkInstKind, Loop, LoopKind, TypeDec, TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -26,18 +26,21 @@ type ParseResult<'i, T> = IResult<&'i str, T>;
 pub struct Construct;
 
 impl Construct {
-    /// Parse any valid jinko expression. This can be a function call, a variable,
+    /// Parse any valid jinko instruction. This can be a function call, a variable,
     /// a block declaration...
-    pub fn expression(input: &str) -> ParseResult<Box<dyn Instruction>> {
+    pub fn instruction(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         // FIXME: If input is empty, return an error or do nothing
         let (input, value) = alt((
             BoxConstruct::function_declaration,
+            BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
             BoxConstruct::test_declaration,
             BoxConstruct::mock_declaration,
+            BoxConstruct::type_instantiation,
             BoxConstruct::function_call,
+            BoxConstruct::incl,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
@@ -54,14 +57,19 @@ impl Construct {
         Ok((input, value))
     }
 
-    /// Parse an expression and maybe the semicolon that follows.
+    /// Parse an instruction and maybe the semicolon that follows.
     ///
-    /// `<expression> [ ; ]`
-    pub fn expression_maybe_semicolon(input: &str) -> ParseResult<Box<dyn Instruction>> {
-        let (input, expr) = Construct::expression(input)?;
+    /// `<instruction> [ ; ]`
+    pub fn instruction_maybe_semicolon(input: &str) -> ParseResult<Box<dyn Instruction>> {
+        let (input, expr) = Construct::instruction(input)?;
         let (input, _) = opt(Token::semicolon)(input)?;
 
         Ok((input, expr))
+    }
+
+    /// Parse as many instructions as possible
+    pub fn many_instructions(input: &str) -> ParseResult<Vec<Box<dyn Instruction>>> {
+        many0(Construct::instruction_maybe_semicolon)(input)
     }
 
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
@@ -95,7 +103,7 @@ impl Construct {
     fn arg(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, constant) = Construct::expression(input)?;
+        let (input, constant) = Construct::instruction(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -104,7 +112,7 @@ impl Construct {
 
     /// Parse an argument and the comma that follows it
     fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
-        let (input, constant) = Construct::expression(input)?;
+        let (input, constant) = Construct::instruction(input)?;
         let (input, _) = Token::comma(input)?;
 
         Ok((input, constant))
@@ -139,15 +147,40 @@ impl Construct {
         Ok((input, fn_call))
     }
 
+    /// When a type is instantiated in the source code.
+    ///
+    /// ```
+    /// type A(n: int); // Declare type A
+    /// val = A(1); // Instantiate a new A type variable
+    /// ```
+    /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
+    /// `<identifier> ( <arg_list> )`
+    pub fn type_instantiation(input: &str) -> ParseResult<TypeInstantiation> {
+        let (input, type_id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::left_curly_bracket(input)?;
+
+        let mut type_instantiation = TypeInstantiation::new(type_id.to_owned());
+
+        let (input, mut arg_vec) = Construct::args_list(input)?;
+        let (input, _) = Token::right_curly_bracket(input)?;
+
+        arg_vec
+            .drain(0..)
+            .for_each(|field| type_instantiation.add_field(field));
+
+        Ok((input, type_instantiation))
+    }
+
     /// When a function is called in the source code.
     ///
     /// ```
     /// fn(); // Function call
-    /// fn() // Call the function `fn` and use the return result as an expression
+    /// fn() // Call the function `fn` and use the return result as an instruction
     /// x = fn(); // Assign the result of the function call to the variable x
     /// ```
     ///
-    /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
+    /// `<arg_list> := [(<constant> | <variable> | <instruction>)*]`
     /// `<identifier> ( <arg_list> )`
     pub(crate) fn function_call(input: &str) -> ParseResult<FunctionCall> {
         alt((
@@ -193,7 +226,7 @@ impl Construct {
         let (input, _) = opt(Token::consume_whitespaces)(input)?;
         let (input, _) = Token::equal(input)?;
         let (input, _) = opt(Token::consume_whitespaces)(input)?;
-        let (input, value) = Construct::expression(input)?;
+        let (input, value) = Construct::instruction(input)?;
 
         match mut_opt {
             Some(_) => Ok((input, VarAssign::new(true, id.to_owned(), value))),
@@ -212,10 +245,10 @@ impl Construct {
 
     /// Parse a statement and the semicolon that follows
     ///
-    /// `<expression> ;`
+    /// `<instruction> ;`
     fn stmt_semicolon(input: &str) -> ParseResult<Box<dyn Instruction>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, expr) = Construct::expression(input)?;
+        let (input, expr) = Construct::instruction(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::semicolon(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -228,13 +261,13 @@ impl Construct {
         input: &str,
     ) -> ParseResult<(Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
-        let (input, last_expr) = opt(Construct::expression)(input)?;
+        let (input, last_expr) = opt(Construct::instruction)(input)?;
 
         Ok((input, (instructions, last_expr)))
     }
 
-    /// Parses the statements in a block as well as a possible last expression
-    fn instructions(
+    /// Parses the statements in a block as well as a possible last instruction
+    fn block_instructions(
         input: &str,
     ) -> ParseResult<(Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
         let (input, _) = Token::left_curly_bracket(input)?;
@@ -270,9 +303,9 @@ impl Construct {
     /// There can only be one returning instruction, and it must be the last one
     /// in the block.
     ///
-    /// `{ [ <expression> ; ]* [ <expression> ] }`
+    /// `{ [ <instruction> ; ]* [ <instruction> ] }`
     pub(crate) fn block(input: &str) -> ParseResult<Block> {
-        let (input, (instructions, last)) = Construct::instructions(input)?;
+        let (input, (instructions, last)) = Construct::block_instructions(input)?;
 
         let mut block = Block::new();
         block.set_instructions(instructions);
@@ -284,7 +317,7 @@ impl Construct {
     /// Parse an empty argument declaration list
     ///
     /// `( )`
-    fn args_dec_empty(input: &str) -> ParseResult<Vec<FunctionDecArg>> {
+    fn args_dec_empty(input: &str) -> ParseResult<Vec<DecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
@@ -295,20 +328,20 @@ impl Construct {
     /// Parse an identifier then its type
     ///
     /// `<identifier> : <type>`
-    fn identifier_type(input: &str) -> ParseResult<FunctionDecArg> {
+    fn identifier_type(input: &str) -> ParseResult<DecArg> {
         let (input, id) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::colon(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
 
-        Ok((input, FunctionDecArg::new(id.to_owned(), ty.to_owned())))
+        Ok((input, DecArg::new(id.to_owned(), ty.to_owned())))
     }
 
     /// Parse an identifer as well as the type and comma that follows
     ///
     /// `<identifer> : <type> ,`
-    fn identifier_type_comma(input: &str) -> ParseResult<FunctionDecArg> {
+    fn identifier_type_comma(input: &str) -> ParseResult<DecArg> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arg) = Construct::identifier_type(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -320,7 +353,7 @@ impl Construct {
     /// Parse a non empty argument declaration list
     ///
     /// `( [ <identifier> : <type> ]* )`
-    fn args_dec_non_empty(input: &str) -> ParseResult<Vec<FunctionDecArg>> {
+    fn args_dec_non_empty(input: &str) -> ParseResult<Vec<DecArg>> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -337,7 +370,7 @@ impl Construct {
     }
 
     /// Parse a list (maybe empty) of argument declarations
-    fn args_dec(input: &str) -> ParseResult<Vec<FunctionDecArg>> {
+    fn args_dec(input: &str) -> ParseResult<Vec<DecArg>> {
         alt((Construct::args_dec_empty, Construct::args_dec_non_empty))(input)
     }
 
@@ -510,7 +543,7 @@ impl Construct {
         let (input, _) = Token::if_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, condition) = Construct::expression(input)?;
+        let (input, condition) = Construct::instruction(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, if_body) = Construct::block(input)?;
@@ -548,25 +581,25 @@ impl Construct {
         Ok((input, Loop::new(LoopKind::Loop, block)))
     }
 
-    /// Parse a while block. A while block consists of a high bound, or expression, as
+    /// Parse a while block. A while block consists of a high bound, or instruction, as
     /// well as a block
     ///
-    /// `<while> <expression> <block>`
+    /// `<while> <instruction> <block>`
     fn while_block(input: &str) -> ParseResult<Loop> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::while_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, condition) = Construct::expression(input)?;
+        let (input, condition) = Construct::instruction(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
 
         Ok((input, Loop::new(LoopKind::While(condition), block)))
     }
 
-    /// Construct a for block, which consists of a variable, a range expression, and
+    /// Construct a for block, which consists of a variable, a range instruction, and
     /// a block to execute
     ///
-    /// `<for> <variable> <in> <expression> <block>`
+    /// `<for> <variable> <in> <instruction> <block>`
     fn for_block(input: &str) -> ParseResult<Loop> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::for_tok(input)?;
@@ -578,12 +611,15 @@ impl Construct {
         let (input, _) = Token::in_tok(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, expression) = Construct::expression(input)?;
+        let (input, instruction) = Construct::instruction(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
 
-        Ok((input, Loop::new(LoopKind::For(variable, expression), block)))
+        Ok((
+            input,
+            Loop::new(LoopKind::For(variable, instruction), block),
+        ))
     }
 
     /// Parse any loop construct: For, While or Loop
@@ -611,8 +647,8 @@ impl Construct {
         Ok((input, inst))
     }
 
-    /// Parse a binary operation. A binary operation is composed of an expression, an
-    /// operator and another expression
+    /// Parse a binary operation. A binary operation is composed of an instruction, an
+    /// operator and another instruction
     ///
     /// `<expr> <op> <expr>`
     ///
@@ -629,19 +665,63 @@ impl Construct {
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
     // FIXME: Un-underscore for 0.1.1
-    pub(crate) fn _custom_type(input: &str) -> ParseResult<&str> {
+    pub(crate) fn type_declaration(input: &str) -> ParseResult<TypeDec> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::_type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, _type_name) = Token::identifier(input)?;
+        let (input, type_name) = Token::identifier(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        let (input, _fields) = Construct::args_dec_non_empty(input)?;
+        let (input, fields) = Construct::args_dec_non_empty(input)?;
 
-        // FIXME: Add Type creation and return it
-        Ok((input, ""))
+        let type_declaration = TypeDec::new(type_name.to_owned(), fields);
+
+        Ok((input, type_declaration))
+    }
+
+    /// Parses a path for code inclusion
+    fn path(input: &str) -> ParseResult<String> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, path) = Token::identifier(input)?;
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        Ok((input, path.to_string()))
+    }
+
+    pub fn as_identifier(input: &str) -> ParseResult<Option<String>> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, id) = match opt(Token::as_tok)(input)? {
+            (input, Some(_)) => {
+                let (input, _) = Token::maybe_consume_extra(input)?;
+                let (input, id) = Token::identifier(input)?;
+
+                (input, Some(id.to_string()))
+            }
+            (input, None) => (input, None),
+        };
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        Ok((input, id))
+    }
+
+    pub fn incl(input: &str) -> ParseResult<Incl> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, _) = Token::incl_tok(input)?;
+        let (input, path) = Construct::path(input)?;
+
+        let (input, rename) = Construct::as_identifier(input)?;
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let incl = Incl::new(path, rename);
+
+        Ok((input, incl))
     }
 }
 
@@ -852,7 +932,7 @@ mod tests {
 
         match Construct::block("{ 12a; 14a }").unwrap().1.last() {
             Some(_) => assert!(true),
-            None => assert!(false, "Last expression here is valid"),
+            None => assert!(false, "Last instruction here is valid"),
         }
     }
 
@@ -928,12 +1008,12 @@ mod tests {
         }
 
         match Construct::block("{ 12a") {
-            Ok(_) => assert!(false, "Unterminated bracket but on expression"),
+            Ok(_) => assert!(false, "Unterminated bracket but on instruction"),
             Err(_) => assert!(true),
         }
 
         match Construct::block("{ 12a; 13a") {
-            Ok(_) => assert!(false, "Unterminated bracket but on second expression"),
+            Ok(_) => assert!(false, "Unterminated bracket but on second instruction"),
             Err(_) => assert!(true),
         }
 
@@ -1175,7 +1255,7 @@ mod tests {
         };
         match Construct::binary_op("some() + 12.1") {
             Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have multiple expression types"),
+            Err(_) => assert!(false, "Valid to have multiple instruction types"),
         };
     }
 
@@ -1188,20 +1268,20 @@ mod tests {
     }
 
     #[test]
-    fn t_custom_type_simple() {
-        match Construct::_custom_type("type Int(v: int);") {
+    fn t_type_declaration_simple() {
+        match Construct::type_declaration("type Int(v: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Just one int is valid"),
         };
-        match Construct::_custom_type("type Ints(a: int, b: int);") {
+        match Construct::type_declaration("type Ints(a: int, b: int);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Two integers is valid"),
         };
-        match Construct::_custom_type("type Compound(i: int, s: str);") {
+        match Construct::type_declaration("type Compound(i: int, s: str);") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Different types are valid"),
         };
-        match Construct::_custom_type(
+        match Construct::type_declaration(
             "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
         ) {
             Ok(_) => assert!(true),
@@ -1210,18 +1290,42 @@ mod tests {
     }
 
     #[test]
-    fn t_custom_type_empty() {
-        match Construct::_custom_type("type Empty();") {
+    fn t_type_declaration_empty() {
+        match Construct::type_declaration("type Empty();") {
             Ok(_) => assert!(false, "Can't have empty types"),
             Err(_) => assert!(true),
         }
     }
 
     #[test]
-    fn t_custom_type_invalid() {
-        match Construct::_custom_type("type ExtraComma(a: int, b: int,);") {
+    fn t_type_declaration_invalid() {
+        match Construct::type_declaration("type ExtraComma(a: int, b: int,);") {
             Ok(_) => assert!(false, "Extra comma in type definition"),
             Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_type_instantiation_valid() {
+        match Construct::type_instantiation("Custom { 1 }") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "Type instantiation with one value is valid"),
+        }
+    }
+
+    #[test]
+    fn t_type_instantiation_invalid() {
+        match Construct::type_instantiation("Custom { ") {
+            Ok(_) => assert!(false),
+            Err(_) => assert!(true, "Type instantiation need a closing brace"),
+        }
+    }
+
+    #[test]
+    fn t_type_instantiation_no_name() {
+        match Construct::type_instantiation("{ 1 }") {
+            Ok(_) => assert!(false),
+            Err(_) => assert!(true, "Type instantiation need a type name"),
         }
     }
 
@@ -1271,11 +1375,43 @@ mod tests {
 
     #[test]
     fn t_func_call_with_true_arg_is_func_call() {
-        let res = Construct::expression("h(true)").unwrap().1;
+        let res = Construct::instruction("h(true)").unwrap().1;
         res.downcast_ref::<FunctionCall>().unwrap();
 
         // There might be a bug that a function call with just a boolean argument gets
         // parsed as a variable. This test aims at correcting that regression. If it
         // fails, then it means the function call did not get parsed as a function call
+    }
+
+    #[test]
+    fn t_incl_valid() {
+        match Construct::incl("incl simple") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "`incl simple` is perfectly valid"),
+        }
+    }
+
+    #[test]
+    fn t_incl_valid_plus_rename() {
+        match Construct::incl("incl a as b") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "incl + renaming has to be handled"),
+        }
+    }
+
+    #[test]
+    fn t_incl_invalid() {
+        match Construct::incl("incl") {
+            Ok(_) => assert!(false, "Can't include nothing"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_incl_plus_rename_invalid() {
+        match Construct::incl("incl a as") {
+            Ok(_) => assert!(false, "Can't include a and rename as nothing"),
+            Err(_) => assert!(true),
+        }
     }
 }

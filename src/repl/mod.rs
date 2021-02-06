@@ -8,8 +8,8 @@ use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, FromInstance, Instance, InstrKind, Instruction, Interpreter, JkConstant,
-    JkError,
+    parser::Construct, FromObjectInstance, InstrKind, Instruction, Interpreter, JkConstant,
+    JkError, ObjectInstance,
 };
 
 /// Empty struct for the Repl methods
@@ -18,7 +18,7 @@ pub struct Repl;
 // FIXME:
 // - Is Display really how we want to go about it?
 // - Cleanup the code
-impl std::fmt::Display for Instance {
+impl std::fmt::Display for ObjectInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -43,7 +43,7 @@ impl Repl {
     fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, JkError> {
         match input.is_empty() {
             true => Ok(None),
-            false => match Construct::expression(input) {
+            false => match Construct::instruction(input) {
                 Ok((_, value)) => Ok(Some(value)),
                 Err(e) => Err(JkError::from(e)),
             },
@@ -53,8 +53,9 @@ impl Repl {
     /// Launch the REPL
     pub fn launch_repl(args: &Args) -> Result<(), JkError> {
         let line_reader = Interface::new("jinko")?;
+
         let mut interpreter = Interpreter::new();
-        interpreter.debug_mode = args.debug;
+        interpreter.set_debug(args.debug());
 
         // FIXME: Add actual prompt
         line_reader.set_prompt(&Prompt::get(&interpreter))?;
@@ -74,7 +75,6 @@ impl Repl {
             };
 
             match inst.execute(&mut interpreter) {
-                // FIXME: Handle statements and expressions differently
                 Ok(InstrKind::Expression(None)) | Ok(InstrKind::Statement) => {}
                 Ok(InstrKind::Expression(Some(result))) => println!("{}", result),
                 Err(e) => println!("{}", e.to_string()),

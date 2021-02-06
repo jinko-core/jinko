@@ -1,5 +1,7 @@
 use crate::instruction::{InstrKind, Instruction, Operator};
-use crate::{FromInstance, Instance, Interpreter, JkError, JkString, ToInstance, Value};
+use crate::{
+    FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, ToObjectInstance, Value,
+};
 
 use std::convert::TryFrom;
 
@@ -16,12 +18,12 @@ pub struct JkConstant<T>(pub(crate) T);
 // Here is the generic implementation:
 //
 // ```
-// impl<T: Sized> ToInstance for JkConstant<T> {
-//     fn to_instance(&self) -> Instance {
+// impl<T: Sized> ToObjectInstance for JkConstant<T> {
+//     fn to_instance(&self) -> ObjectInstance {
 //         use std::mem::{size_of, transmute};
 //
 //         unsafe {
-//             Instance::from_bytes(
+//             ObjectInstance::from_bytes(
 //                 None,
 //                 size_of::<T>(),
 //                 &transmute::<T, [u8; size_of::<T>()]>(self.0),
@@ -39,7 +41,7 @@ pub struct JkConstant<T>(pub(crate) T);
 // error[E0277]: the size for values of type `T` cannot be known at compilation time
 // --> src/value/jink_constant.rs:34:48
 //     |
-// 25  | impl <T: Sized> ToInstance for JkConstant<T> {
+// 25  | impl <T: Sized> ToObjectInstance for JkConstant<T> {
 //     |       - this type parameter needs to be `Sized`
 //     ...
 // 34  |         &transmute::<T, [u8; size_of::<T>()]>(self.0),
@@ -56,22 +58,23 @@ pub struct JkConstant<T>(pub(crate) T);
 macro_rules! jk_primitive {
     // Special implementation for JkBool, in order to have as_bool()
     (bool) => {
-        impl ToInstance for JkConstant<bool> {
-            fn to_instance(&self) -> Instance {
+        impl ToObjectInstance for JkConstant<bool> {
+            fn to_instance(&self) -> ObjectInstance {
                 use std::mem::{size_of, transmute};
 
                 unsafe {
-                    Instance::from_bytes(
+                    ObjectInstance::from_bytes(
                         Some("bool".to_string()), // FIXME
                         size_of::<bool>(),
                         &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
+                        None,
                     )
                 }
             }
         }
 
-        impl FromInstance for JkConstant<bool> {
-            fn from_instance(i: &Instance) -> Self {
+        impl FromObjectInstance for JkConstant<bool> {
+            fn from_instance(i: &ObjectInstance) -> Self {
                 use std::mem::{size_of, transmute};
 
                 unsafe {
@@ -98,29 +101,30 @@ macro_rules! jk_primitive {
             fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
                 interpreter.debug("CONSTANT", &self.0.to_string());
 
-                // Since we cannot use the generic ToInstance implementation, we also have to
+                // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
                 Ok(InstrKind::Expression(Some(self.to_instance())))
             }
         }
     };
     ($t:ty, $s:expr) => {
-        impl ToInstance for JkConstant<$t> {
-            fn to_instance(&self) -> Instance {
+        impl ToObjectInstance for JkConstant<$t> {
+            fn to_instance(&self) -> ObjectInstance {
                 use std::mem::{size_of, transmute};
 
                 unsafe {
-                    Instance::from_bytes(
+                    ObjectInstance::from_bytes(
                         Some($s.to_string()), // FIXME
                         size_of::<$t>(),
                         &transmute::<$t, [u8; size_of::<$t>()]>(self.0),
+                        None,
                     )
                 }
             }
         }
 
-        impl FromInstance for JkConstant<$t> {
-            fn from_instance(i: &Instance) -> Self {
+        impl FromObjectInstance for JkConstant<$t> {
+            fn from_instance(i: &ObjectInstance) -> Self {
                 use std::mem::{size_of, transmute};
 
                 unsafe {
@@ -143,7 +147,7 @@ macro_rules! jk_primitive {
             fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
                 interpreter.debug("CONSTANT", &self.0.to_string());
 
-                // Since we cannot use the generic ToInstance implementation, we also have to
+                // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
                 Ok(InstrKind::Expression(Some(self.to_instance())))
             }
@@ -157,7 +161,7 @@ jk_primitive!(char, "char");
 jk_primitive!(bool);
 
 impl Value for JkConstant<i64> {
-    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, JkError> {
         match op {
             Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
             Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
@@ -169,7 +173,7 @@ impl Value for JkConstant<i64> {
 }
 
 impl Value for JkConstant<f64> {
-    fn do_op(&self, other: &Self, op: Operator) -> Result<Instance, JkError> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, JkError> {
         match op {
             Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
             Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
@@ -180,19 +184,20 @@ impl Value for JkConstant<f64> {
     }
 }
 
-impl ToInstance for JkString {
-    fn to_instance(&self) -> Instance {
-        Instance::from_bytes(
+impl ToObjectInstance for JkString {
+    fn to_instance(&self) -> ObjectInstance {
+        ObjectInstance::from_bytes(
             Some("string".to_string()), // FIXME
             self.0.as_bytes().len(),
             self.0.as_bytes(),
+            None,
         )
     }
 }
 
-impl FromInstance for JkString {
-    fn from_instance(i: &Instance) -> Self {
-        // unchecked is safe because this instance came from a utf8 string in ToInstance
+impl FromObjectInstance for JkString {
+    fn from_instance(i: &ObjectInstance) -> Self {
+        // unchecked is safe because this instance came from a utf8 string in ToObjectInstance
         unsafe { JkString::from(String::from_utf8_unchecked(i.data().to_vec())) }
     }
 }

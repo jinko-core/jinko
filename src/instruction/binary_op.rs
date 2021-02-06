@@ -6,8 +6,8 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::Operator, FromInstance, Instance, InstrKind, Instruction, Interpreter, JkErrKind,
-    JkError, JkFloat, JkInt, Value,
+    instruction::Operator, FromObjectInstance, InstrKind, Instruction, Interpreter, JkErrKind,
+    JkError, JkFloat, JkInt, ObjectInstance, Value,
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
@@ -56,7 +56,7 @@ impl BinaryOp {
         &self,
         node: &Box<dyn Instruction>,
         interpreter: &mut Interpreter,
-    ) -> Result<Instance, JkError> {
+    ) -> Result<ObjectInstance, JkError> {
         match node.execute(interpreter)? {
             InstrKind::Statement | InstrKind::Expression(None) => Err(JkError::new(
                 JkErrKind::Interpreter,
@@ -139,7 +139,7 @@ impl Instruction for BinaryOp {
 mod tests {
     use super::*;
     use crate::value::JkInt;
-    use crate::ToInstance;
+    use crate::ToObjectInstance;
     use crate::{InstrKind, Interpreter};
 
     fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
@@ -204,6 +204,29 @@ mod tests {
 
         assert_eq!(
             binary_op.rhs().execute(&mut i).unwrap(),
+            InstrKind::Expression(Some(JkInt::from(36).to_instance()))
+        );
+    }
+
+    #[test]
+    fn t_binop_lhs_execute() {
+        let l_bin = BinaryOp::new(
+            Box::new(JkInt::from(12)),
+            Box::new(JkInt::from(3)),
+            Operator::new("*"),
+        );
+        let binary_op = BinaryOp::new(
+            Box::new(l_bin),
+            Box::new(JkInt::from(9)),
+            Operator::new("-"),
+        );
+
+        let mut i = Interpreter::new();
+
+        assert_eq!(binary_op.operator(), Operator::Sub);
+
+        assert_eq!(
+            binary_op.lhs().execute(&mut i).unwrap(),
             InstrKind::Expression(Some(JkInt::from(36).to_instance()))
         );
     }

@@ -1,6 +1,10 @@
-name: jinko-test
+name: jinko-build-and-test
 
-on: pull_request
+on:
+  pull_request:
+  push:
+    branches:
+      master
 
 jobs:
   coding-style:
@@ -50,7 +54,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Run Unit Tests and Documentation examples
+    - name: Run functional tests
       run: |
           cargo install --git https://github.com/cohenarthur/ft
           tests/func_tests.sh

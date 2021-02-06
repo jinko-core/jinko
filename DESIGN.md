@@ -141,7 +141,22 @@ incl dir1::source0 as dir1_source0;
 /* Now, dir0::source0 functions are named dir0_source0::<function_name> and so on */
 ```
 
-I'm not entirely happy with this design yet. It's obviously open to discussion and changes
+For now, you can also include directories:
+
+```shell
+/*
+|_ main.jk
+|_ std/
+    |_ lib.jk       // includes option.jk, result.jk maybe, etc
+    |_ option.jk
+    |_ result.jk
+*/
+
+```rust
+incl std // Actually includes std/lib.jk
+```
+
+I'm not entirely happy with this design yet. It's obviously open to discussion and changes.
 
 ## Garbage collection
 
@@ -208,9 +223,10 @@ on simple parsing and fonctionality. Let's split this section in two:
 ### Simple type parsing
 
 In order to keep the parsing simple, as much code as possible should be reused. At this
-point, the parser is already around 1500 lines big, and that's big enough. In a way, types
-are a sort of function: They take arguments, and create a new custom type. Let's examine
-C custom types:
+point, the parser is already around 1500 lines big, and that's big enough. Types
+declarations are similar to function declarations: They have a name, take arguments.
+Type instantiations, however are quite different. Let's examine a custom types in C and its
+instantiation:
 
 ```c
 struct custom_type {
@@ -231,15 +247,14 @@ cleaner and more readable code.
 Thus, the following syntax should be adopted at first:
 
 ```rust
-// This is similar to a function declaration, without a block
+// This is similar to a function declaration, without a block and with a ``type`` instead of ``fn``
 type CustomType(int_value: int, some_character: char, f: float);
 
 // Let's create one
-let value = CustomType(4, 'J', 27.07);
+value = CustomType{ int_value = 4, some_character = 'J', f = 27.07 };
 ```
 
-The "default constructor" is thus all the compounded types, in order. If your types get
-too big, then just like function defintions, multilines are supported.
+If your types get too big, then just like function definitions, multilines are supported.
 
 ```rust
 type CustomType(
@@ -250,7 +265,7 @@ type CustomType(
 ```
 
 The only difference between a function definition and a type definition is the keyword:
-`type` or `func`.
+`type` or `func` and no block of code for the type instantiation.
 
 #### Methods and functions in Jinko
 
@@ -328,9 +343,9 @@ func push(node: LinkedList, next: LinkedList) {
     /* Some code to add next to the end of the list or whatever */
 }
 
-let last = LinkedList(3, None);
-let mid = LinkedList(2, Some(last));
-let head = LinkedList(1, Some(mid));
+last = LinkedList(3, None);
+mid = LinkedList(2, Some(last));
+head = LinkedList(1, Some(mid));
 
 head.push(LinkedList(67, None));
 

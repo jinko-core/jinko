@@ -15,7 +15,7 @@ use repl::Repl;
 use std::fs;
 
 pub use error::{JkErrKind, JkError};
-pub use instance::{FromInstance, Instance, ToInstance};
+pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use interpreter::Interpreter;
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
@@ -49,20 +49,23 @@ fn handle_exit_code(result: InstrKind) {
 fn main() {
     let args = Args::handle();
 
-    if args.interactive || args.input.is_none() {
+    if args.interactive() || args.input().is_none() {
         match Repl::launch_repl(&args) {
-            Ok(_) => {}
+            Ok(_) => return,
             Err(e) => e.exit(),
         }
     };
 
     // We can unwrap since we checked for `None` in the if
-    let input = fs::read_to_string(args.input.unwrap()).unwrap();
+    let path = args.input().unwrap();
+
+    let input = fs::read_to_string(&path).unwrap();
 
     // FIXME: No unwrap()
     let mut interpreter = Parser::parse(&input).unwrap();
 
-    interpreter.debug_mode = args.debug;
+    interpreter.set_path(Some(path.to_owned()));
+    interpreter.set_debug(args.debug());
 
     // The entry point always has a block
     let ep = interpreter.entry_point.block().unwrap().clone();
