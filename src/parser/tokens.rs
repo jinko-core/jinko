@@ -421,7 +421,10 @@ mod tests {
 
     #[test]
     fn t_consume_whitespace() {
-        assert_eq!(Token::maybe_consume_whitespaces("   input"), Ok(("input", "   ")));
+        assert_eq!(
+            Token::maybe_consume_whitespaces("   input"),
+            Ok(("input", "   "))
+        );
         assert_eq!(
             Token::maybe_consume_whitespaces(" \t input"),
             Ok(("input", " \t "))
