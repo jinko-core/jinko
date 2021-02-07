@@ -662,7 +662,6 @@ impl Construct {
     /// Parse a user-defined custom type
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
-    // FIXME: Un-underscore for 0.1.1
     pub(crate) fn type_declaration(input: &str) -> ParseResult<TypeDec> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::_type_tok(input)?;
@@ -690,7 +689,7 @@ impl Construct {
         Ok((input, path.to_string()))
     }
 
-    pub fn as_identifier(input: &str) -> ParseResult<Option<String>> {
+    fn as_identifier(input: &str) -> ParseResult<Option<String>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, id) = match opt(Token::as_tok)(input)? {
             (input, Some(_)) => {
@@ -707,7 +706,10 @@ impl Construct {
         Ok((input, id))
     }
 
-    pub fn incl(input: &str) -> ParseResult<Incl> {
+    /// Parse an include statement and its possible aliasing
+    ///
+    /// `<incl> <path> [ <as> <alias> ]
+    pub(crate) fn incl(input: &str) -> ParseResult<Incl> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, _) = Token::incl_tok(input)?;
