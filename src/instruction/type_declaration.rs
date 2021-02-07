@@ -45,4 +45,8 @@ impl Instruction for TypeDec {
     fn print(&self) -> String {
         format!("type {} ( {:?} )", self.name, self.fields)
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.name = format!("{}{}", prefix, self.name);
+    }
 }

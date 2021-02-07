@@ -105,6 +105,8 @@ macro_rules! jk_primitive {
                 // copy paste our four basic implementations for jinko's primitive types...
                 Ok(InstrKind::Expression(Some(self.to_instance())))
             }
+
+            fn prefix(&mut self, _: &str) {}
         }
     };
     ($t:ty, $s:expr) => {
@@ -151,6 +153,8 @@ macro_rules! jk_primitive {
                 // copy paste our four basic implementations for jinko's primitive types...
                 Ok(InstrKind::Expression(Some(self.to_instance())))
             }
+
+            fn prefix(&mut self, _: &str) {}
         }
     };
 }
@@ -216,6 +220,8 @@ impl Instruction for JkString {
 
         Ok(InstrKind::Expression(Some(self.to_instance())))
     }
+
+    fn prefix(&mut self, _: &str) {}
 }
 
 impl From<&str> for JkConstant<String> {

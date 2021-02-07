@@ -119,6 +119,12 @@ impl Instruction for Block {
 
         ret_val
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.instructions
+            .iter_mut()
+            .for_each(|instr| instr.prefix(prefix))
+    }
 }
 
 #[cfg(test)]

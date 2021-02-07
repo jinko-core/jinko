@@ -111,6 +111,11 @@ impl Instruction for VarAssign {
         // A variable assignment is always a statement
         Ok(InstrKind::Statement)
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.value.prefix(prefix);
+        self.symbol = format!("{}{}", prefix, self.symbol)
+    }
 }
 
 #[cfg(test)]

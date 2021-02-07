@@ -132,6 +132,13 @@ impl Instruction for TypeInstantiation {
             Some(fields),
         ))))
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.type_name = format!("{}{}", prefix, self.type_name);
+        self.fields
+            .iter_mut()
+            .for_each(|field| field.prefix(prefix));
+    }
 }
 
 #[cfg(test)]

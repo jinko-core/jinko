@@ -35,4 +35,8 @@ impl Instruction for Audit {
 
         r
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.block.prefix(prefix)
+    }
 }

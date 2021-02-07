@@ -111,6 +111,10 @@ impl Instruction for Var {
 
         Ok(InstrKind::Expression(Some(var.instance())))
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.name = format!("{}{}", prefix, self.name)
+    }
 }
 
 impl Default for Var {

@@ -109,6 +109,19 @@ impl Instruction for Loop {
         // FIXME: Add logic. Right now they only return on error, not the actual value
         Ok(InstrKind::Statement)
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.block.prefix(prefix);
+
+        match &mut self.kind {
+            LoopKind::While(expr) => expr.prefix(prefix),
+            LoopKind::For(var, range) => {
+                var.prefix(prefix);
+                range.prefix(prefix)
+            }
+            _ => {}
+        }
+    }
 }
 
 #[cfg(test)]

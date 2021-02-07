@@ -71,6 +71,11 @@ impl FunctionDec {
         self.ty.as_ref()
     }
 
+    /// Set the type of the function
+    pub fn set_ty(&mut self, ty: Option<Ty>) {
+        self.ty = ty
+    }
+
     /// Return the kind of a function
     pub fn fn_kind(&self) -> FunctionKind {
         self.kind
@@ -149,6 +154,16 @@ impl Instruction for FunctionDec {
         interpreter.debug_step("FUNCDEC EXIT");
 
         Ok(InstrKind::Statement)
+    }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.name = format!("{}{}", prefix, self.name);
+        self.set_ty(self.ty().map_or(None, |ty| Some(format!("{}{}", prefix, ty))));
+
+        match &mut self.block {
+            Some(b) => b.prefix(prefix),
+            None => {}
+        };
     }
 
     fn print(&self) -> String {

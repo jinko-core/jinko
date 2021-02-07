@@ -133,6 +133,11 @@ impl Instruction for BinaryOp {
 
         Ok(return_value)
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.lhs.prefix(prefix);
+        self.rhs.prefix(prefix);
+    }
 }
 
 #[cfg(test)]

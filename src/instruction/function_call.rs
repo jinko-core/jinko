@@ -148,6 +148,12 @@ impl Instruction for FunctionCall {
 
         ret_val
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.fn_name = format!("{}{}", prefix, self.fn_name);
+
+        self.args.iter_mut().for_each(|arg| arg.prefix(prefix));
+    }
 }
 
 #[cfg(test)]

@@ -75,6 +75,15 @@ impl Instruction for IfElse {
             }
         }
     }
+
+    fn prefix(&mut self, prefix: &str) {
+        self.condition.prefix(prefix);
+        self.if_body.prefix(prefix);
+        match &mut self.else_body {
+            Some(eb) => eb.prefix(prefix),
+            None => {}
+        }
+    }
 }
 
 // FIXME: Add printing tests for if else

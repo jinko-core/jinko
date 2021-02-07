@@ -117,6 +117,10 @@ pub trait Instruction: InstructionClone + Downcast {
 
     /// Pretty-print the instruction to valid jinko code
     fn print(&self) -> String;
+
+    /// Prefix the instruction with a given string. This is useful when handling
+    /// namespaces for example.
+    fn prefix(&mut self, prefix: &str);
 }
 
 impl_downcast!(Instruction);

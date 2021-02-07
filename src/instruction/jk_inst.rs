@@ -55,4 +55,6 @@ impl Instruction for JkInst {
         // on the interpreter.
         Ok(InstrKind::Statement)
     }
+
+    fn prefix(&mut self, _: &str) {}
 }
