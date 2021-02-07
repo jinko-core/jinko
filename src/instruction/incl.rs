@@ -22,11 +22,6 @@ impl Incl {
         Incl { path, alias }
     }
 
-    /// Rename all contained code to the correct alias
-    fn _rename(&mut self) {
-        todo!("Implement once namespaces are implemented")
-    }
-
     fn format_candidates(&self, base: &Path) -> (PathBuf, PathBuf) {
         let mut format = PathBuf::from(base);
         format.push(&self.path);
@@ -163,15 +158,32 @@ impl Instruction for Incl {
 
         let old_path = interpreter.path().cloned();
 
-        let (new_path, content) = self.load(base, interpreter)?;
+        let (new_path, mut content) = self.load(base, interpreter)?;
 
         // Temporarily change the path of the interpreter
         interpreter.set_path(Some(new_path));
 
+        let prefix = match self.alias.as_ref() {
+            Some(alias) => match alias.as_str() {
+                "" => {
+                    return Err(JkError::new(
+                        JkErrKind::Interpreter,
+                        format!("cannot include source as ``"),
+                        None,
+                        self.print(),
+                    ));
+                }
+                _ => alias,
+            },
+            None => self.path.as_str(),
+        };
+        let prefix = &format!("{}::", prefix);
+
         content
-            .into_iter()
+            .iter_mut()
             .map(|instr| {
                 interpreter.debug("INCLUDING", instr.print().as_str());
+                instr.prefix(prefix);
                 instr.execute(interpreter)
             })
             .collect::<Result<Vec<InstrKind>, JkError>>()?;
@@ -180,5 +192,14 @@ impl Instruction for Incl {
         interpreter.set_path(old_path);
 
         Ok(InstrKind::Statement)
+    }
+
+    fn prefix(&mut self, prefix: &str) {
+        let alias = match &self.alias {
+            None => &self.path,
+            Some(alias) => alias,
+        };
+
+        self.alias = Some(format!("{}{}", prefix, alias))
     }
 }
