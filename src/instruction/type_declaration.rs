@@ -10,14 +10,17 @@ pub struct TypeDec {
 }
 
 impl TypeDec {
+    /// Create a new type
     pub fn new(name: String, fields: Vec<DecArg>) -> TypeDec {
         TypeDec { name, fields }
     }
 
+    /// Get a reference to the name of the type
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Get a reference to the type's fields
     pub fn fields(&self) -> &Vec<DecArg> {
         &self.fields
     }
