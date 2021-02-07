@@ -1,7 +1,7 @@
 //! TypeInstantiations are used when instantiating a type. The argument list is given to the
 //! type on execution.
 
-use super::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, TypeDec};
+use super::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, TypeDec, Rename};
 use crate::instance::{Name, Size};
 
 use std::rc::Rc;
@@ -132,7 +132,9 @@ impl Instruction for TypeInstantiation {
             Some(fields),
         ))))
     }
+}
 
+impl Rename for TypeInstantiation {
     fn prefix(&mut self, prefix: &str) {
         self.type_name = format!("{}{}", prefix, self.type_name);
         self.fields

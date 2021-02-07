@@ -1,3 +1,5 @@
+use crate::Rename;
+
 // FIXME: Shouldn't be a String
 pub type Ty = String;
 
@@ -21,5 +23,12 @@ impl DecArg {
     /// Return a reference to the argument's type
     pub fn ty(&self) -> &Ty {
         &self.ty
+    }
+}
+
+impl Rename for DecArg {
+    fn prefix(&mut self, prefix: &str) {
+        self.name = format!("{}{}", prefix, self.name);
+        self.ty = format!("{}{}", prefix, self.ty);
     }
 }

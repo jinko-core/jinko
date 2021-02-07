@@ -1,9 +1,8 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use super::{FunctionDec, InstrKind, Instruction, Var};
-use crate::error::{JkErrKind, JkError};
-use crate::interpreter::Interpreter;
+use crate::{InstrKind, Instruction, Rename, JkError, JkErrKind, Interpreter};
+use crate::instruction::{FunctionDec, Var};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -148,7 +147,9 @@ impl Instruction for FunctionCall {
 
         ret_val
     }
+}
 
+impl Rename for FunctionCall {
     fn prefix(&mut self, prefix: &str) {
         self.fn_name = format!("{}{}", prefix, self.fn_name);
 

@@ -1,6 +1,6 @@
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::{
-    FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, ToObjectInstance, Value,
+    FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, ToObjectInstance, Value, Rename
 };
 
 use std::convert::TryFrom;
@@ -105,8 +105,6 @@ macro_rules! jk_primitive {
                 // copy paste our four basic implementations for jinko's primitive types...
                 Ok(InstrKind::Expression(Some(self.to_instance())))
             }
-
-            fn prefix(&mut self, _: &str) {}
         }
     };
     ($t:ty, $s:expr) => {
@@ -153,10 +151,12 @@ macro_rules! jk_primitive {
                 // copy paste our four basic implementations for jinko's primitive types...
                 Ok(InstrKind::Expression(Some(self.to_instance())))
             }
-
-            fn prefix(&mut self, _: &str) {}
         }
     };
+}
+
+impl<T> Rename for JkConstant<T> {
+    fn prefix(&mut self, _: &str) {}
 }
 
 jk_primitive!(i64, "int");
@@ -220,8 +220,6 @@ impl Instruction for JkString {
 
         Ok(InstrKind::Expression(Some(self.to_instance())))
     }
-
-    fn prefix(&mut self, _: &str) {}
 }
 
 impl From<&str> for JkConstant<String> {

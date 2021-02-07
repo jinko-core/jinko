@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JkErrKind, JkError};
+use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
 /// The interpreter is built from parsing the source file in the path.
@@ -182,8 +182,10 @@ impl Instruction for Incl {
         content
             .iter_mut()
             .map(|instr| {
-                interpreter.debug("INCLUDING", instr.print().as_str());
                 instr.prefix(prefix);
+
+                interpreter.debug("INCLUDING", instr.print().as_str());
+
                 instr.execute(interpreter)
             })
             .collect::<Result<Vec<InstrKind>, JkError>>()?;
@@ -193,7 +195,9 @@ impl Instruction for Incl {
 
         Ok(InstrKind::Statement)
     }
+}
 
+impl Rename for Incl {
     fn prefix(&mut self, prefix: &str) {
         let alias = match &self.alias {
             None => &self.path,

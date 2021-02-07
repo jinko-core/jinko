@@ -18,6 +18,7 @@ mod incl;
 mod jk_inst;
 mod loop_block;
 mod operator;
+mod rename;
 mod type_declaration;
 mod type_instantiation;
 mod var;
@@ -34,6 +35,7 @@ pub use incl::Incl;
 pub use jk_inst::JkInst;
 pub use loop_block::{Loop, LoopKind};
 pub use operator::Operator;
+pub use rename::Rename;
 pub use type_declaration::TypeDec;
 pub use type_instantiation::TypeInstantiation;
 pub use var::Var;
@@ -51,7 +53,7 @@ pub enum InstrKind {
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
-pub trait Instruction: InstructionClone + Downcast {
+pub trait Instruction: InstructionClone + Downcast + Rename {
     /// Execute the instruction, altering the state of the interpreter. Executing
     /// this method returns an InstrKind, so either a statement or an expression
     /// containing a "return value".
@@ -117,10 +119,6 @@ pub trait Instruction: InstructionClone + Downcast {
 
     /// Pretty-print the instruction to valid jinko code
     fn print(&self) -> String;
-
-    /// Prefix the instruction with a given string. This is useful when handling
-    /// namespaces for example.
-    fn prefix(&mut self, prefix: &str);
 }
 
 impl_downcast!(Instruction);

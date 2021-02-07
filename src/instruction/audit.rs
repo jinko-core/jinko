@@ -1,7 +1,7 @@
 //! Audit blocks are more permissive than normal blocks. They allow ignoring a return
 //! value, for example.
 
-use crate::{instruction::Block, InstrKind, Instruction, Interpreter, JkError};
+use crate::{instruction::Block, InstrKind, Instruction, Interpreter, JkError, Rename};
 
 #[derive(Clone)]
 pub struct Audit {
@@ -35,7 +35,9 @@ impl Instruction for Audit {
 
         r
     }
+}
 
+impl Rename for Audit {
     fn prefix(&mut self, prefix: &str) {
         self.block.prefix(prefix)
     }

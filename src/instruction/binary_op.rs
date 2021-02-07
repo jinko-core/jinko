@@ -6,6 +6,7 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
+    Rename,
     instruction::Operator, FromObjectInstance, InstrKind, Instruction, Interpreter, JkErrKind,
     JkError, JkFloat, JkInt, ObjectInstance, Value,
 };
@@ -133,7 +134,9 @@ impl Instruction for BinaryOp {
 
         Ok(return_value)
     }
+}
 
+impl Rename for BinaryOp {
     fn prefix(&mut self, prefix: &str) {
         self.lhs.prefix(prefix);
         self.rhs.prefix(prefix);
