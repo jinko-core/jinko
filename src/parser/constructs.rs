@@ -17,7 +17,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
     Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
-    JkInst, Loop, LoopKind, TypeDec, TypeInstantiation, Var, VarAssign,
+    JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -33,6 +33,7 @@ impl Construct {
 
         // FIXME: If input is empty, return an error or do nothing
         let (input, value) = alt((
+            BoxConstruct::method_call,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -722,6 +723,31 @@ impl Construct {
         let incl = Incl::new(path, rename);
 
         Ok((input, incl))
+    }
+
+    /// Parse a viable caller for a method call
+    fn caller(input: &str) -> ParseResult<Box<dyn Instruction>> {
+        // FIXME: Add more valid callers. We cannot use Construct::instruction, since
+        // it creates an infinite recursion
+        alt((
+            Construct::constant,
+            BoxConstruct::if_else,
+            BoxConstruct::function_call,
+            BoxConstruct::variable,
+            BoxConstruct::block,
+        ))(input)
+    }
+
+    /// Parse a method like function call, that shall be desugared
+    /// to a simple function call later on
+    ///
+    /// `<identifier>.<identifier>()`
+    pub fn method_call(input: &str) -> ParseResult<MethodCall> {
+        let (input, caller) = Construct::caller(input)?;
+        let (input, _) = Token::dot(input)?;
+        let (input, method) = Construct::function_call(input)?;
+
+        Ok((input, MethodCall::new(caller, method)))
     }
 }
 
@@ -1413,5 +1439,41 @@ mod tests {
             Ok(_) => assert!(false, "Can't include a and rename as nothing"),
             Err(_) => assert!(true),
         }
+    }
+
+    #[test]
+    fn t_method_call_simple() {
+        assert!(
+            Construct::method_call("a.b()").is_ok(),
+            "Valid to have simple identifiers"
+        );
+        assert!(
+            Construct::method_call("135.method()").is_ok(),
+            "Valid to have constant as caller"
+        );
+        assert!(
+            Construct::method_call("{ hey }.method()").is_ok(),
+            "Valid to have block as caller"
+        );
+        assert!(
+            Construct::method_call("func_call().method()").is_ok(),
+            "Valid to have call as caller"
+        );
+    }
+
+    #[test]
+    fn t_method_call_invalid() {
+        assert!(
+            Construct::method_call("a.b").is_err(),
+            "Missing parentheses"
+        );
+        assert!(
+            Construct::method_call("a.()").is_err(),
+            "Missing method name"
+        );
+        assert!(
+            Construct::method_call(".method()").is_err(),
+            "Missing caller"
+        );
     }
 }

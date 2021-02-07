@@ -35,6 +35,8 @@ impl Instruction for MethodCall {
 
         call.add_arg_front(self.var.clone());
 
+        interpreter.debug("DESUGARING TO", &call.print());
+
         interpreter.debug("METHOD CALL EXIT", &self.print());
 
         call.execute(interpreter)
