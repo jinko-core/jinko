@@ -1,0 +1,12 @@
+tests:
+  - name: "Include without alias"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/namespaces/nspace_no_alias_includer.jk"
+    exit_code: 15
+
+  - name: "Include with alias"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/namespaces/nspace_alias_includer.jk"
+    exit_code: 16
