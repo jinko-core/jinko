@@ -4,12 +4,14 @@
 //! source file returns an "Interpreter", which is really just a complex structure
 //! aggregating the necessary information to run a jinko program.
 
+use std::path::PathBuf;
+
 use colored::Colorize;
 
 mod scope_map;
 use scope_map::ScopeMap;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
@@ -34,11 +36,18 @@ pub struct Interpreter {
     /// Entry point to the interpreter, the "main" function
     pub entry_point: FunctionDec,
 
+    /// An interpreter corresponds to a single source file (that might include other files)
+    /// We need to keep track of its path in order to load files relative to this one
+    path: Option<PathBuf>,
+
     /// Contains the scopes of the interpreter, in which are variables and functions
     scope_map: ScopeMap,
 
     /// Tests registered in the interpreter
     tests: HashMap<IKey, FunctionDec>,
+
+    /// Sources included by the interpreter
+    included: HashSet<PathBuf>,
 }
 
 impl Interpreter {
@@ -56,16 +65,33 @@ impl Interpreter {
         let mut i = Interpreter {
             in_audit: false,
             debug_mode: false,
-
             entry_point: Self::new_entry(),
+            path: None,
             scope_map: ScopeMap::new(),
-
             tests: HashMap::new(),
+            included: HashSet::new(),
         };
 
         i.scope_enter();
 
         i
+    }
+
+    /// Get a rerference to an interpreter's source path
+    pub fn path(&self) -> Option<&PathBuf> {
+        self.path.as_ref()
+    }
+
+    /// Get a rerference to an interpreter's source path
+    pub fn set_path(&mut self, path: Option<PathBuf>) {
+        self.path = path;
+
+        match &self.path {
+            Some(p) => {
+                self.included.insert(p.clone());
+            }
+            None => {}
+        };
     }
 
     /// Set the debug mode of a previously created interpreter
@@ -184,6 +210,11 @@ impl Interpreter {
                 Ok(())
             }
         }
+    }
+
+    /// Check if a source is included or not
+    pub fn is_included(&self, source: &PathBuf) -> bool {
+        self.included.contains(source)
     }
 }
 

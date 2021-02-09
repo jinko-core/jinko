@@ -49,4 +49,5 @@ impl BoxConstruct {
     box_construct! {audit}
     box_construct! {test_declaration}
     box_construct! {mock_declaration}
+    box_construct! {incl}
 }

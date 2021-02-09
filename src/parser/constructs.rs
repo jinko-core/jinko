@@ -16,8 +16,8 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
-    Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Instruction, JkInst,
-    Loop, LoopKind, TypeDec, TypeInstantiation, Var, VarAssign,
+    Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
+    JkInst, Loop, LoopKind, TypeDec, TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -40,6 +40,7 @@ impl Construct {
             BoxConstruct::mock_declaration,
             BoxConstruct::type_instantiation,
             BoxConstruct::function_call,
+            BoxConstruct::incl,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
@@ -64,6 +65,11 @@ impl Construct {
         let (input, _) = opt(Token::semicolon)(input)?;
 
         Ok((input, expr))
+    }
+
+    /// Parse as many instructions as possible
+    pub fn many_instructions(input: &str) -> ParseResult<Vec<Box<dyn Instruction>>> {
+        many0(Construct::instruction_maybe_semicolon)(input)
     }
 
     /// Constants are raw values in the source code. For example, `"string"`, `12` and
@@ -184,7 +190,7 @@ impl Construct {
     /// ```
     /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
     /// `<identifier> ( <arg_list> )`
-    pub fn type_instantiation(input: &str) -> IResult<&str, TypeInstantiation> {
+    pub fn type_instantiation(input: &str) -> ParseResult<TypeInstantiation> {
         let (input, type_id) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_curly_bracket(input)?;
@@ -706,6 +712,49 @@ impl Construct {
         let type_declaration = TypeDec::new(type_name.to_owned(), fields);
 
         Ok((input, type_declaration))
+    }
+
+    /// Parses a path for code inclusion
+    fn path(input: &str) -> ParseResult<String> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, path) = Token::identifier(input)?;
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        Ok((input, path.to_string()))
+    }
+
+    pub fn as_identifier(input: &str) -> ParseResult<Option<String>> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, id) = match opt(Token::as_tok)(input)? {
+            (input, Some(_)) => {
+                let (input, _) = Token::maybe_consume_extra(input)?;
+                let (input, id) = Token::identifier(input)?;
+
+                (input, Some(id.to_string()))
+            }
+            (input, None) => (input, None),
+        };
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        Ok((input, id))
+    }
+
+    pub fn incl(input: &str) -> ParseResult<Incl> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, _) = Token::incl_tok(input)?;
+        let (input, path) = Construct::path(input)?;
+
+        let (input, rename) = Construct::as_identifier(input)?;
+
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let incl = Incl::new(path, rename);
+
+        Ok((input, incl))
     }
 }
 
@@ -1399,5 +1448,37 @@ mod tests {
             Construct::named_arg("a { 2 }").is_err(),
             "Missing equal sign"
         );
+    }
+
+    #[test]
+    fn t_incl_valid() {
+        match Construct::incl("incl simple") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "`incl simple` is perfectly valid"),
+        }
+    }
+
+    #[test]
+    fn t_incl_valid_plus_rename() {
+        match Construct::incl("incl a as b") {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false, "incl + renaming has to be handled"),
+        }
+    }
+
+    #[test]
+    fn t_incl_invalid() {
+        match Construct::incl("incl") {
+            Ok(_) => assert!(false, "Can't include nothing"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn t_incl_plus_rename_invalid() {
+        match Construct::incl("incl a as") {
+            Ok(_) => assert!(false, "Can't include a and rename as nothing"),
+            Err(_) => assert!(true),
+        }
     }
 }
