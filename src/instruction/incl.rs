@@ -124,19 +124,7 @@ impl Incl {
     /// of an alias, and also checks for the validity of the prefix
     fn format_prefix(&self) -> Result<String, JkError> {
         let alias = match self.alias.as_ref() {
-            Some(alias) => match alias.as_str() {
-                // Cannot have empty aliasing. This is also enforced by the parser
-                "" => {
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
-                        format!("cannot include source as ``"),
-                        None,
-                        self.print(),
-                    ));
-                }
-                _ => alias,
-            },
-
+            Some(alias) => alias,
             // If no alias is given, then return the include path as alias
             None => self.path.as_str(),
         };
