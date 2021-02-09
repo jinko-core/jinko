@@ -1,8 +1,8 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use crate::{InstrKind, Instruction, Rename, JkError, JkErrKind, Interpreter};
 use crate::instruction::{FunctionDec, Var};
+use crate::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
 use std::rc::Rc;
 
 #[derive(Clone)]

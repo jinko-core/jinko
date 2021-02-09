@@ -1,6 +1,7 @@
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::{
-    FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, ToObjectInstance, Value, Rename
+    FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, Rename, ToObjectInstance,
+    Value,
 };
 
 use std::convert::TryFrom;

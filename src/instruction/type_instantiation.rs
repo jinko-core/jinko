@@ -1,7 +1,9 @@
 //! TypeInstantiations are used when instantiating a type. The argument list is given to the
 //! type on execution.
 
-use super::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, TypeDec, Rename};
+use super::{
+    InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, Rename, TypeDec,
+};
 use crate::instance::{Name, Size};
 
 use std::rc::Rc;

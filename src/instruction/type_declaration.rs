@@ -1,6 +1,6 @@
 use super::{DecArg, InstrKind, Instruction};
 
-use crate::{JkError, Interpreter, Rename};
+use crate::{Interpreter, JkError, Rename};
 
 #[derive(Clone, Debug)]
 pub struct TypeDec {
@@ -49,6 +49,8 @@ impl Instruction for TypeDec {
 impl Rename for TypeDec {
     fn prefix(&mut self, prefix: &str) {
         self.name = format!("{}{}", prefix, self.name);
-        self.fields.iter_mut().for_each(|field| field.prefix(prefix));
+        self.fields
+            .iter_mut()
+            .for_each(|field| field.prefix(prefix));
     }
 }
