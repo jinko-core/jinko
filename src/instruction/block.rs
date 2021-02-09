@@ -125,7 +125,12 @@ impl Rename for Block {
     fn prefix(&mut self, prefix: &str) {
         self.instructions
             .iter_mut()
-            .for_each(|instr| instr.prefix(prefix))
+            .for_each(|instr| instr.prefix(prefix));
+
+        match &mut self.last {
+            Some(l) => l.prefix(prefix),
+            None => {}
+        }
     }
 }
 
