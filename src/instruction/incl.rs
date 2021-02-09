@@ -119,6 +119,30 @@ impl Incl {
     ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
         self.load_relative(base, i)
     }
+
+    /// Format the correct prefix to include content as. This depends on the presence
+    /// of an alias, and also checks for the validity of the prefix
+    fn format_prefix(&self) -> Result<String, JkError> {
+        let alias = match self.alias.as_ref() {
+            Some(alias) => match alias.as_str() {
+                // Cannot have empty aliasing. This is also enforced by the parser
+                "" => {
+                    return Err(JkError::new(
+                        JkErrKind::Interpreter,
+                        format!("cannot include source as ``"),
+                        None,
+                        self.print(),
+                    ));
+                }
+                _ => alias,
+            },
+
+            // If no alias is given, then return the include path as alias
+            None => self.path.as_str(),
+        };
+
+        Ok(format!("{}::", alias))
+    }
 }
 
 impl Instruction for Incl {
@@ -154,6 +178,8 @@ impl Instruction for Incl {
             None => Path::new(""),
         };
 
+        let prefix = self.format_prefix()?;
+
         interpreter.debug("BASE DIR", &format!("{:#?}", base));
 
         let old_path = interpreter.path().cloned();
@@ -163,26 +189,10 @@ impl Instruction for Incl {
         // Temporarily change the path of the interpreter
         interpreter.set_path(Some(new_path));
 
-        let prefix = match self.alias.as_ref() {
-            Some(alias) => match alias.as_str() {
-                "" => {
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
-                        format!("cannot include source as ``"),
-                        None,
-                        self.print(),
-                    ));
-                }
-                _ => alias,
-            },
-            None => self.path.as_str(),
-        };
-        let prefix = &format!("{}::", prefix);
-
         content
             .iter_mut()
             .map(|instr| {
-                instr.prefix(prefix);
+                instr.prefix(&prefix);
 
                 interpreter.debug("INCLUDING", instr.print().as_str());
 
