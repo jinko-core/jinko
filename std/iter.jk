@@ -1,0 +1,9 @@
+type Iter(current: int, r: Range);
+
+func new(r: Range) -> Iter {
+    Iter { 0, r }
+}
+
+func next(i: Iter) -> int {
+    current + 1
+}
