@@ -33,6 +33,7 @@ impl Construct {
 
         // FIXME: If input is empty, return an error or do nothing
         let (input, value) = alt((
+            Construct::binary_op,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -47,7 +48,6 @@ impl Construct {
             BoxConstruct::audit,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
-            Construct::binary_op,
             BoxConstruct::variable,
             Construct::constant,
         ))(input)?;
