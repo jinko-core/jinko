@@ -129,7 +129,12 @@ impl Incl {
             None => self.path.as_str(),
         };
 
-        Ok(format!("{}::", alias))
+        match alias {
+            // If the alias is empty, then we're doing a special include from
+            // the interpreter itself. Don't add a leading `::`
+            "" => Ok(alias.to_string()),
+            _ => Ok(format!("{}::", alias)),
+        }
     }
 }
 

@@ -18,7 +18,7 @@ impl TypeDec {
     pub fn from(name: &str) -> TypeDec {
         TypeDec {
             name: name.to_string(),
-            fields: vec![]
+            fields: vec![],
         }
     }
 

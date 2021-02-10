@@ -1,5 +1,5 @@
-use crate::Rename;
 use crate::instruction::TypeDec;
+use crate::Rename;
 
 // FIXME: Shouldn't be a String
 pub type Ty = String;
