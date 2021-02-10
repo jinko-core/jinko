@@ -1,4 +1,5 @@
 use crate::Rename;
+use crate::instruction::TypeDec;
 
 // FIXME: Shouldn't be a String
 pub type Ty = String;
@@ -29,6 +30,10 @@ impl DecArg {
 impl Rename for DecArg {
     fn prefix(&mut self, prefix: &str) {
         self.name = format!("{}{}", prefix, self.name);
-        self.ty = format!("{}{}", prefix, self.ty);
+
+        // If the type is a primitive one, no need to rename it
+        if !TypeDec::from(self.ty()).is_primitive_type() {
+            self.ty = format!("{}{}", prefix, self.ty);
+        }
     }
 }

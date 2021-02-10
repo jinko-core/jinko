@@ -14,6 +14,14 @@ impl TypeDec {
         TypeDec { name, fields }
     }
 
+    /// Create a new type from a ype string, with an empty fields vector
+    pub fn from(name: &str) -> TypeDec {
+        TypeDec {
+            name: name.to_string(),
+            fields: vec![]
+        }
+    }
+
     /// Get a reference to the name of the type
     pub fn name(&self) -> &str {
         &self.name
@@ -22,6 +30,15 @@ impl TypeDec {
     /// Get a reference to the type's fields
     pub fn fields(&self) -> &Vec<DecArg> {
         &self.fields
+    }
+
+    /// Check if a type is a primitive jinko type or not
+    pub fn is_primitive_type(&self) -> bool {
+        self.name == "bool"
+            || self.name == "int"
+            || self.name == "float"
+            || self.name == "char"
+            || self.name == "string"
     }
 }
 
