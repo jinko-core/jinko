@@ -33,7 +33,6 @@ impl Construct {
 
         // FIXME: If input is empty, return an error or do nothing
         let (input, value) = alt((
-            BoxConstruct::method_call,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -49,6 +48,7 @@ impl Construct {
             BoxConstruct::block,
             BoxConstruct::var_assignment,
             Construct::binary_op,
+            BoxConstruct::method_call,
             BoxConstruct::variable,
             Construct::constant,
         ))(input)?;
@@ -726,15 +726,20 @@ impl Construct {
     }
 
     /// Parse a viable caller for a method call
-    fn caller(input: &str) -> ParseResult<Box<dyn Instruction>> {
-        // FIXME: Add more valid callers. We cannot use Construct::instruction, since
-        // it creates an infinite recursion
+    fn method_caller(input: &str) -> ParseResult<Box<dyn Instruction>> {
+        // FIXME: Right now, we cannot chain method calls and no error is produced:
+        // `1.double().double()` returns 2 instead of the expected 4, since
+        // only one call is resolved and the remaining input (`.double()`) is
+        // silently ignored
         alt((
+            BoxConstruct::variable,
             Construct::constant,
             BoxConstruct::if_else,
             BoxConstruct::function_call,
-            BoxConstruct::variable,
             BoxConstruct::block,
+            BoxConstruct::any_loop,
+            BoxConstruct::jinko_inst,
+            BoxConstruct::audit,
         ))(input)
     }
 
@@ -743,7 +748,7 @@ impl Construct {
     ///
     /// `<identifier>.<identifier>()`
     pub fn method_call(input: &str) -> ParseResult<MethodCall> {
-        let (input, caller) = Construct::caller(input)?;
+        let (input, caller) = Construct::method_caller(input)?;
         let (input, _) = Token::dot(input)?;
         let (input, method) = Construct::function_call(input)?;
 

@@ -76,6 +76,7 @@ impl ShuntingYard {
 
     fn operand<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
         let (input, expr) = alt((
+            BoxConstruct::method_call,
             BoxConstruct::function_call,
             Construct::constant,
             BoxConstruct::variable,
