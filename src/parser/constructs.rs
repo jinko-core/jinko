@@ -32,7 +32,10 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         // FIXME: If input is empty, return an error or do nothing
+        // FIXME: We need to parse the remaining input after a correct instruction
+        // has been parsed
         let (input, value) = alt((
+            BoxConstruct::method_call,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -48,7 +51,6 @@ impl Construct {
             BoxConstruct::block,
             BoxConstruct::var_assignment,
             Construct::binary_op,
-            BoxConstruct::method_call,
             BoxConstruct::variable,
             Construct::constant,
         ))(input)?;
