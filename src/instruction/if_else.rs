@@ -16,7 +16,7 @@
 //! ```
 
 use crate::instruction::{Block, InstrKind, Instruction};
-use crate::{Interpreter, JkError};
+use crate::{Interpreter, JkError, Rename};
 
 #[derive(Clone)]
 pub struct IfElse {
@@ -73,6 +73,17 @@ impl Instruction for IfElse {
                 // if there is no else, then error out
                 None => Ok(InstrKind::Statement),
             }
+        }
+    }
+}
+
+impl Rename for IfElse {
+    fn prefix(&mut self, prefix: &str) {
+        self.condition.prefix(prefix);
+        self.if_body.prefix(prefix);
+        match &mut self.else_body {
+            Some(eb) => eb.prefix(prefix),
+            None => {}
         }
     }
 }

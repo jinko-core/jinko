@@ -3,7 +3,9 @@
 //! need to keep an option of an instance. A variable is either there, fully initialized,
 //! or it's not.
 
-use crate::{InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError, ObjectInstance};
+use crate::{
+    InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError, ObjectInstance, Rename,
+};
 
 #[derive(Clone)]
 pub struct Var {
@@ -110,6 +112,12 @@ impl Instruction for Var {
         interpreter.debug("VAR", var.print().as_ref());
 
         Ok(InstrKind::Expression(Some(var.instance())))
+    }
+}
+
+impl Rename for Var {
+    fn prefix(&mut self, prefix: &str) {
+        self.name = format!("{}{}", prefix, self.name)
     }
 }
 

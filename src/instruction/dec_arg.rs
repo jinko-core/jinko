@@ -1,3 +1,6 @@
+use crate::instruction::TypeDec;
+use crate::Rename;
+
 // FIXME: Shouldn't be a String
 pub type Ty = String;
 
@@ -21,5 +24,16 @@ impl DecArg {
     /// Return a reference to the argument's type
     pub fn ty(&self) -> &Ty {
         &self.ty
+    }
+}
+
+impl Rename for DecArg {
+    fn prefix(&mut self, prefix: &str) {
+        self.name = format!("{}{}", prefix, self.name);
+
+        // If the type is a primitive one, no need to rename it
+        if !TypeDec::from(self.ty()).is_primitive_type() {
+            self.ty = format!("{}{}", prefix, self.ty);
+        }
     }
 }

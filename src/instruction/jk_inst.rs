@@ -4,7 +4,7 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{InstrKind, Instruction};
-use crate::{Interpreter, JkErrKind, JkError};
+use crate::{Interpreter, JkErrKind, JkError, Rename};
 
 /// The potential interpreter instructions
 #[derive(Clone, Debug, PartialEq)]
@@ -55,4 +55,8 @@ impl Instruction for JkInst {
         // on the interpreter.
         Ok(InstrKind::Statement)
     }
+}
+
+impl Rename for JkInst {
+    fn prefix(&mut self, _: &str) {}
 }

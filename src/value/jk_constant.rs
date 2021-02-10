@@ -1,6 +1,7 @@
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::{
-    FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, ToObjectInstance, Value,
+    FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, Rename, ToObjectInstance,
+    Value,
 };
 
 use std::convert::TryFrom;
@@ -153,6 +154,10 @@ macro_rules! jk_primitive {
             }
         }
     };
+}
+
+impl<T> Rename for JkConstant<T> {
+    fn prefix(&mut self, _: &str) {}
 }
 
 jk_primitive!(i64, "int");

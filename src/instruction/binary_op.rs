@@ -7,7 +7,7 @@
 
 use crate::{
     instruction::Operator, FromObjectInstance, InstrKind, Instruction, Interpreter, JkErrKind,
-    JkError, JkFloat, JkInt, ObjectInstance, Value,
+    JkError, JkFloat, JkInt, ObjectInstance, Rename, Value,
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
@@ -132,6 +132,13 @@ impl Instruction for BinaryOp {
         interpreter.debug_step("BINOP EXIT");
 
         Ok(return_value)
+    }
+}
+
+impl Rename for BinaryOp {
+    fn prefix(&mut self, prefix: &str) {
+        self.lhs.prefix(prefix);
+        self.rhs.prefix(prefix);
     }
 }
 

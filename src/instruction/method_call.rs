@@ -2,7 +2,7 @@
 //! they get desugared into a normal function call.
 
 use crate::instruction::FunctionCall;
-use crate::{InstrKind, Instruction, Interpreter, JkError};
+use crate::{InstrKind, Instruction, Interpreter, JkError, Rename};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -40,6 +40,13 @@ impl Instruction for MethodCall {
         interpreter.debug("METHOD CALL EXIT", &self.print());
 
         call.execute(interpreter)
+    }
+}
+
+impl Rename for MethodCall {
+    fn prefix(&mut self, prefix: &str) {
+        self.var.prefix(prefix);
+        self.method.prefix(prefix);
     }
 }
 
