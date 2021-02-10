@@ -1,12 +1,13 @@
 func hey() {
+    1
 }
 
 func ho() {
+    2
 }
 
 func heyho() {
-    hey();
-    ho();
+    hey() + ho()
 }
 
-heyho();
+heyho() // return 3

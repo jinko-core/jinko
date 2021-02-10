@@ -1,0 +1,11 @@
+type Option(i: int, state: bool);
+
+func some(i: int) -> Option {
+    Option { i, true }
+}
+
+func none() -> Option {
+    Option { 0, false }
+}
+
+option_included = true;
