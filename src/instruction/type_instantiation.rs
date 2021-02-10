@@ -128,7 +128,8 @@ impl Instruction for TypeInstantiation {
         }
 
         Ok(InstrKind::Expression(Some(ObjectInstance::new(
-            Some(TypeDec::from(self.type_name.as_str())),
+            // FIXME: Disgusting, maybe do not use Rc for TypeDec?
+            Some((*type_dec).clone()),
             size,
             data,
             Some(fields),
