@@ -982,7 +982,8 @@ mod tests {
             Construct::identifier_type("name: some_type")
                 .unwrap()
                 .1
-                .ty(),
+                .get_type()
+                .name(),
             "some_type"
         );
 
@@ -997,7 +998,8 @@ mod tests {
             Construct::identifier_type("name     :some_type")
                 .unwrap()
                 .1
-                .ty(),
+                .get_type()
+                .name(),
             "some_type"
         );
     }

@@ -1,13 +1,10 @@
 use crate::instruction::TypeDec;
 use crate::Rename;
 
-// FIXME: Shouldn't be a String
-pub type Ty = String;
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {
     name: String,
-    ty: Ty,
+    ty: String,
 }
 
 impl DecArg {
@@ -21,9 +18,9 @@ impl DecArg {
         &self.name
     }
 
-    /// Return a reference to the argument's type
-    pub fn ty(&self) -> &Ty {
-        &self.ty
+    /// Return a representation of the argument's type
+    pub fn get_type(&self) -> TypeDec {
+        TypeDec::from(self.ty.as_str())
     }
 }
 
@@ -32,7 +29,7 @@ impl Rename for DecArg {
         self.name = format!("{}{}", prefix, self.name);
 
         // If the type is a primitive one, no need to rename it
-        if !TypeDec::from(self.ty()).is_primitive_type() {
+        if !TypeDec::from(self.get_type()).is_primitive_type() {
             self.ty = format!("{}{}", prefix, self.ty);
         }
     }

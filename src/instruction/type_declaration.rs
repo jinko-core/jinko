@@ -2,7 +2,7 @@ use super::{DecArg, InstrKind, Instruction};
 
 use crate::{Interpreter, JkError, Rename};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
     name: String,
     fields: Vec<DecArg>,
@@ -12,14 +12,6 @@ impl TypeDec {
     /// Create a new type
     pub fn new(name: String, fields: Vec<DecArg>) -> TypeDec {
         TypeDec { name, fields }
-    }
-
-    /// Create a new type from a ype string, with an empty fields vector
-    pub fn from(name: &str) -> TypeDec {
-        TypeDec {
-            name: name.to_string(),
-            fields: vec![],
-        }
     }
 
     /// Get a reference to the name of the type
@@ -69,5 +61,26 @@ impl Rename for TypeDec {
         self.fields
             .iter_mut()
             .for_each(|field| field.prefix(prefix));
+    }
+}
+
+impl From<&str> for TypeDec {
+    fn from(type_name: &str) -> TypeDec {
+        TypeDec::from(type_name.to_string())
+    }
+}
+
+impl From<&String> for TypeDec {
+    fn from(type_name: &String) -> TypeDec {
+        TypeDec::from(type_name.clone())
+    }
+}
+
+impl From<String> for TypeDec {
+    fn from(type_name: String) -> TypeDec {
+        TypeDec {
+            name: type_name,
+            fields: vec![],
+        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::instruction::{InstrKind, Instruction, Operator};
+use crate::instruction::{InstrKind, Instruction, Operator, TypeDec};
 use crate::{
     FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, Rename, ToObjectInstance,
     Value,
@@ -65,7 +65,7 @@ macro_rules! jk_primitive {
 
                 unsafe {
                     ObjectInstance::from_bytes(
-                        Some("bool".to_string()), // FIXME
+                        Some(TypeDec::from("bool")),
                         size_of::<bool>(),
                         &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
                         None,
@@ -115,7 +115,7 @@ macro_rules! jk_primitive {
 
                 unsafe {
                     ObjectInstance::from_bytes(
-                        Some($s.to_string()), // FIXME
+                        Some(TypeDec::from($s)),
                         size_of::<$t>(),
                         &transmute::<$t, [u8; size_of::<$t>()]>(self.0),
                         None,
@@ -192,7 +192,7 @@ impl Value for JkConstant<f64> {
 impl ToObjectInstance for JkString {
     fn to_instance(&self) -> ObjectInstance {
         ObjectInstance::from_bytes(
-            Some("string".to_string()), // FIXME
+            Some(TypeDec::from("string")),
             self.0.as_bytes().len(),
             self.0.as_bytes(),
             None,

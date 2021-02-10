@@ -128,7 +128,7 @@ impl Instruction for TypeInstantiation {
         }
 
         Ok(InstrKind::Expression(Some(ObjectInstance::new(
-            Some(self.type_name.clone()),
+            Some(TypeDec::from(self.type_name.as_str())),
             size,
             data,
             Some(fields),
@@ -220,7 +220,7 @@ mod test {
         };
 
         assert!(
-            instance.ty().unwrap() == TYPE_NAME,
+            instance.ty().unwrap().name() == TYPE_NAME,
             "Type name should be {}",
             TYPE_NAME
         );

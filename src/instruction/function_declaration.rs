@@ -1,7 +1,6 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::instance::Ty;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction};
 use crate::{Interpreter, JkErrKind, JkError, Rename};
 
@@ -19,7 +18,7 @@ pub enum FunctionKind {
 #[derive(Clone)]
 pub struct FunctionDec {
     name: String,
-    ty: Option<Ty>,
+    ty: Option<String>,
     kind: FunctionKind,
     args: Vec<DecArg>,
     block: Option<Block>,
@@ -27,7 +26,7 @@ pub struct FunctionDec {
 
 impl FunctionDec {
     /// Create a new function declaration with a given name, no args and no code block
-    pub fn new(name: String, ty: Option<Ty>) -> FunctionDec {
+    pub fn new(name: String, ty: Option<String>) -> FunctionDec {
         FunctionDec {
             name,
             ty,
@@ -67,12 +66,12 @@ impl FunctionDec {
     }
 
     /// Return a reference to the function's return type
-    pub fn ty(&self) -> Option<&Ty> {
+    pub fn ty(&self) -> Option<&String> {
         self.ty.as_ref()
     }
 
     /// Set the type of the function
-    pub fn set_ty(&mut self, ty: Option<Ty>) {
+    pub fn set_ty(&mut self, ty: Option<String>) {
         self.ty = ty
     }
 
@@ -173,7 +172,7 @@ impl Instruction for FunctionDec {
                 base.push_str(", ");
             }
 
-            base.push_str(&format!("{}: {}", arg.name(), arg.ty()));
+            base.push_str(&format!("{}: {}", arg.name(), arg.get_type().name()));
 
             first_arg = false;
         }
@@ -233,7 +232,7 @@ mod tests {
 
     #[test]
     fn simple_args() {
-        let mut function = FunctionDec::new("fn".to_owned(), Some("int".to_owned()));
+        let mut function = FunctionDec::new("fn".to_owned(), Some("int".to_string()));
         function.set_kind(FunctionKind::Func);
         let args = vec![
             DecArg::new("arg0".to_owned(), "int".to_owned()),

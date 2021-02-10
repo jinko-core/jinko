@@ -6,6 +6,7 @@
 use crate::{
     InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError, ObjectInstance, Rename,
 };
+use crate::instruction::TypeDec;
 
 #[derive(Clone)]
 pub struct Var {
@@ -59,7 +60,7 @@ impl Instruction for Var {
         format!(
             "{} /* : {} = {} */",
             self.name.clone(),
-            self.instance.ty().unwrap_or(&"".to_owned()),
+            self.instance.ty().unwrap_or(&TypeDec::from("")).name(),
             self.instance
         )
     }
@@ -71,7 +72,7 @@ impl Instruction for Var {
 
         match self.execute(i)? {
             InstrKind::Expression(Some(instance)) => match instance.ty() {
-                Some(ty) => match ty.as_ref() {
+                Some(ty) => match ty.name() {
                     // FIXME:
                     "bool" => Ok(JkBool::from_instance(&instance).as_bool(i).unwrap()),
                     // We can safely unwrap since we checked the type of the variable

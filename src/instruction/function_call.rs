@@ -96,7 +96,7 @@ impl FunctionCall {
             // passed to the call
             let mut new_var = Var::new(func_arg.name().to_owned());
             let mut instance = call_arg.execute_expression(interpreter)?;
-            instance.set_ty(Some(func_arg.ty().to_owned()));
+            instance.set_ty(Some(func_arg.get_type()));
 
             new_var.set_instance(instance);
 
