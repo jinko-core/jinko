@@ -1,7 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::instruction::{Block, DecArg, InstrKind, Instruction};
+use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeDec};
 use crate::{Interpreter, JkErrKind, JkError, Rename};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
@@ -18,7 +18,7 @@ pub enum FunctionKind {
 #[derive(Clone)]
 pub struct FunctionDec {
     name: String,
-    ty: Option<String>,
+    ty: Option<TypeDec>,
     kind: FunctionKind,
     args: Vec<DecArg>,
     block: Option<Block>,
@@ -26,7 +26,7 @@ pub struct FunctionDec {
 
 impl FunctionDec {
     /// Create a new function declaration with a given name, no args and no code block
-    pub fn new(name: String, ty: Option<String>) -> FunctionDec {
+    pub fn new(name: String, ty: Option<TypeDec>) -> FunctionDec {
         FunctionDec {
             name,
             ty,
@@ -66,12 +66,12 @@ impl FunctionDec {
     }
 
     /// Return a reference to the function's return type
-    pub fn ty(&self) -> Option<&String> {
+    pub fn ty(&self) -> Option<&TypeDec> {
         self.ty.as_ref()
     }
 
     /// Set the type of the function
-    pub fn set_ty(&mut self, ty: Option<String>) {
+    pub fn set_ty(&mut self, ty: Option<TypeDec>) {
         self.ty = ty
     }
 
@@ -178,7 +178,7 @@ impl Instruction for FunctionDec {
         }
 
         base = match &self.ty {
-            Some(ty) => format!("{}) -> {}", base, ty),
+            Some(ty) => format!("{}) -> {}", base, ty.name()),
             None => format!("{})", base),
         };
 
@@ -192,10 +192,9 @@ impl Instruction for FunctionDec {
 impl Rename for FunctionDec {
     fn prefix(&mut self, prefix: &str) {
         self.name = format!("{}{}", prefix, self.name);
-        self.set_ty(
-            self.ty()
-                .map_or(None, |ty| Some(format!("{}{}", prefix, ty))),
-        );
+        self.set_ty(self.ty().map_or(None, |ty| {
+            Some(TypeDec::from(format!("{}{}", prefix, ty.name()).as_str()))
+        }));
 
         match &mut self.block {
             Some(b) => b.prefix(prefix),
@@ -233,7 +232,7 @@ mod tests {
 
     #[test]
     fn simple_args() {
-        let mut function = FunctionDec::new("fn".to_owned(), Some("int".to_string()));
+        let mut function = FunctionDec::new("fn".to_owned(), Some(TypeDec::from("int")));
         function.set_kind(FunctionKind::Func);
         let args = vec![
             DecArg::new("arg0".to_owned(), TypeDec::from("int")),
