@@ -1,0 +1,3 @@
+incl lib
+
+lib::first // return 15

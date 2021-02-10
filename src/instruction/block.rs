@@ -18,7 +18,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{InstrKind, Instruction, Interpreter, JkError};
+use crate::{InstrKind, Instruction, Interpreter, JkError, Rename};
 
 #[derive(Clone)]
 pub struct Block {
@@ -118,6 +118,19 @@ impl Instruction for Block {
         interpreter.debug_step("BLOCK EXIT");
 
         ret_val
+    }
+}
+
+impl Rename for Block {
+    fn prefix(&mut self, prefix: &str) {
+        self.instructions
+            .iter_mut()
+            .for_each(|instr| instr.prefix(prefix));
+
+        match &mut self.last {
+            Some(l) => l.prefix(prefix),
+            None => {}
+        }
     }
 }
 
