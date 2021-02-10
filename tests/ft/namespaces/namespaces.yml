@@ -10,3 +10,9 @@ tests:
     args:
       - "tests/ft/namespaces/nspace_alias_includer.jk"
     exit_code: 16
+
+  - name: "Correct method call prefixing"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/namespaces/nspace_method_call.jk"
+    exit_code: 10

@@ -50,4 +50,5 @@ impl BoxConstruct {
     box_construct! {test_declaration}
     box_construct! {mock_declaration}
     box_construct! {incl}
+    box_construct! {method_call}
 }

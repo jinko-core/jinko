@@ -28,6 +28,12 @@ impl FunctionCall {
         self.args.push(arg)
     }
 
+    /// Add an argument to the beginning of the function call's argument list. This is
+    /// only useful for method call desugaring
+    pub fn add_arg_front(&mut self, arg: Box<dyn Instruction>) {
+        self.args.insert(0, arg)
+    }
+
     /// Return a reference the called function's name
     pub fn name(&self) -> &str {
         &self.fn_name

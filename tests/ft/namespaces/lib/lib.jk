@@ -1,2 +1,6 @@
 first = 15;
 second = 16;
+
+incl sub_lib
+
+a = 12.sub_lib::sub(2)

@@ -1,0 +1,1 @@
+func sub(lhs: int, rhs: int) { lhs - rhs }

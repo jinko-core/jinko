@@ -215,6 +215,10 @@ impl Token {
         tag("//")(input)
     }
 
+    pub fn dot(input: &str) -> IResult<&str, &str> {
+        Token::token(input, ".")
+    }
+
     pub fn inner_identifer(input: &str) -> IResult<&str, &str> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
@@ -596,6 +600,11 @@ mod tests {
     #[test]
     fn t_keyword_next_to_curly() {
         assert_eq!(Token::loop_tok("loop{}"), Ok(("{}", "loop")));
+    }
+
+    #[test]
+    fn t_dot_token() {
+        assert_eq!(Token::dot("."), Ok(("", ".")));
     }
 
     #[test]
