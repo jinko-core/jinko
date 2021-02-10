@@ -734,10 +734,10 @@ impl Construct {
         // only one call is resolved and the remaining input (`.double()`) is
         // silently ignored
         alt((
+            BoxConstruct::function_call,
             BoxConstruct::variable,
             Construct::constant,
             BoxConstruct::if_else,
-            BoxConstruct::function_call,
             BoxConstruct::block,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
