@@ -4,12 +4,12 @@ use crate::Rename;
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {
     name: String,
-    ty: String,
+    ty: TypeDec,
 }
 
 impl DecArg {
     /// Create a new function declaration argument with a name and a type
-    pub fn new(name: String, ty: String) -> DecArg {
+    pub fn new(name: String, ty: TypeDec) -> DecArg {
         DecArg { name, ty }
     }
 
@@ -20,7 +20,7 @@ impl DecArg {
 
     /// Return a representation of the argument's type
     pub fn get_type(&self) -> TypeDec {
-        TypeDec::from(self.ty.as_str())
+        self.ty.clone()
     }
 }
 
@@ -29,8 +29,8 @@ impl Rename for DecArg {
         self.name = format!("{}{}", prefix, self.name);
 
         // If the type is a primitive one, no need to rename it
-        if !TypeDec::from(self.get_type()).is_primitive_type() {
-            self.ty = format!("{}{}", prefix, self.ty);
+        if !self.ty.is_primitive_type() {
+            self.ty = TypeDec::from(format!("{}{}", prefix, self.ty.name()).as_str());
         }
     }
 }

@@ -159,8 +159,8 @@ mod test {
 
         // Create a new type with two integers fields
         let fields = vec![
-            DecArg::new("a".to_owned(), "int".to_owned()),
-            DecArg::new("b".to_owned(), "int".to_owned()),
+            DecArg::new("a".to_owned(), TypeDec::from("int")),
+            DecArg::new("b".to_owned(), TypeDec::from("int")),
         ];
         let t = TypeDec::new("Type_Test".to_owned(), fields);
 
@@ -199,8 +199,8 @@ mod test {
 
         // Create a new type with two integers fields
         let fields = vec![
-            DecArg::new("a".to_owned(), "string".to_owned()),
-            DecArg::new("b".to_owned(), "int".to_owned()),
+            DecArg::new("a".to_owned(), TypeDec::from("string")),
+            DecArg::new("b".to_owned(), TypeDec::from("int")),
         ];
         let t = TypeDec::new(TYPE_NAME.to_owned(), fields);
 

@@ -338,7 +338,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
 
-        Ok((input, DecArg::new(id.to_owned(), ty.to_owned())))
+        Ok((input, DecArg::new(id.to_owned(), TypeDec::from(ty))))
     }
 
     /// Parse an identifer as well as the type and comma that follows

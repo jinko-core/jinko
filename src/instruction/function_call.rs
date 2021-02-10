@@ -166,6 +166,7 @@ impl Rename for FunctionCall {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instruction::TypeDec;
 
     #[test]
     fn t_pretty_print_empty() {
@@ -189,8 +190,8 @@ mod tests {
         f.set_kind(FunctionKind::Func);
 
         f.set_args(vec![
-            DecArg::new("a".to_owned(), "int".to_owned()),
-            DecArg::new("b".to_owned(), "int".to_owned()),
+            DecArg::new("a".to_owned(), TypeDec::from("int")),
+            DecArg::new("b".to_owned(), TypeDec::from("int")),
         ]);
 
         interpreter.add_function(f).unwrap();

@@ -221,6 +221,7 @@ impl std::fmt::Debug for FunctionDec {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instruction::TypeDec;
 
     #[test]
     fn simple_no_arg() {
@@ -235,8 +236,8 @@ mod tests {
         let mut function = FunctionDec::new("fn".to_owned(), Some("int".to_string()));
         function.set_kind(FunctionKind::Func);
         let args = vec![
-            DecArg::new("arg0".to_owned(), "int".to_owned()),
-            DecArg::new("arg1".to_owned(), "int".to_owned()),
+            DecArg::new("arg0".to_owned(), TypeDec::from("int")),
+            DecArg::new("arg1".to_owned(), TypeDec::from("int")),
         ];
 
         function.set_args(args);
