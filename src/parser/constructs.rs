@@ -35,6 +35,7 @@ impl Construct {
         // FIXME: We need to parse the remaining input after a correct instruction
         // has been parsed
         let (input, value) = alt((
+            Construct::binary_op,
             BoxConstruct::method_call,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
@@ -50,7 +51,6 @@ impl Construct {
             BoxConstruct::audit,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
-            Construct::binary_op,
             BoxConstruct::variable,
             Construct::constant,
         ))(input)?;

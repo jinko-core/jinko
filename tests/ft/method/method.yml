@@ -1,10 +1,9 @@
 tests:
-  # FIXME: Do not ignore once remaining input is parsed after a valid instruction
-  # - name: "Method call in binop"
-  #   binary: "target/debug/jinko"
-  #   args:
-  #     - "tests/ft/method/method_call_in_binop.jk"
-  #   exit_code: 4
+  - name: "Method call in binop"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/method/method_call_in_binop.jk"
+    exit_code: 4
 
   - name: "Correct argument mapping in method call"
     binary: "target/debug/jinko"
