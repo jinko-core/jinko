@@ -1,15 +1,15 @@
-use crate::instruction::TypeDec;
+use crate::instruction::TypeId;
 use crate::Rename;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {
     name: String,
-    ty: TypeDec,
+    ty: TypeId,
 }
 
 impl DecArg {
     /// Create a new function declaration argument with a name and a type
-    pub fn new(name: String, ty: TypeDec) -> DecArg {
+    pub fn new(name: String, ty: TypeId) -> DecArg {
         DecArg { name, ty }
     }
 
@@ -19,18 +19,14 @@ impl DecArg {
     }
 
     /// Return a representation of the argument's type
-    pub fn get_type(&self) -> TypeDec {
-        self.ty.clone()
+    pub fn get_type(&self) -> &TypeId {
+        &self.ty
     }
 }
 
 impl Rename for DecArg {
     fn prefix(&mut self, prefix: &str) {
         self.name = format!("{}{}", prefix, self.name);
-
-        // If the type is a primitive one, no need to rename it
-        if !self.ty.is_primitive_type() {
-            self.ty = TypeDec::from(format!("{}{}", prefix, self.ty.name()).as_str());
-        }
+        self.ty.prefix(prefix);
     }
 }

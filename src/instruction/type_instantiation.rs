@@ -2,7 +2,7 @@
 //! type on execution.
 
 use super::{
-    InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, Rename, TypeDec,
+    InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, Rename, TypeDec, TypeId,
 };
 use crate::instance::{Name, Size};
 
@@ -10,14 +10,13 @@ use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct TypeInstantiation {
-    type_name: String,
-
+    type_name: TypeId,
     fields: Vec<Box<dyn Instruction>>,
 }
 
 impl TypeInstantiation {
     /// Create a new type instantiation and return it
-    pub fn new(type_name: String) -> TypeInstantiation {
+    pub fn new(type_name: TypeId) -> TypeInstantiation {
         TypeInstantiation {
             type_name,
             fields: Vec::new(),
@@ -29,8 +28,8 @@ impl TypeInstantiation {
         self.fields.push(arg)
     }
 
-    /// Return a reference the called function's name
-    pub fn name(&self) -> &str {
+    /// Return a reference to the instantiated type's name
+    pub fn name(&self) -> &TypeId {
         &self.type_name
     }
 
@@ -47,9 +46,9 @@ impl TypeInstantiation {
             // FIXME: Fix Location and input
             None => Err(JkError::new(
                 JkErrKind::Interpreter,
-                format!("Cannot find type {}", self.name()),
+                format!("Cannot find type {}", self.name().id()),
                 None,
-                self.name().to_owned(),
+                self.print(),
             )),
         }
     }
@@ -63,7 +62,7 @@ impl TypeInstantiation {
                 format!(
                     "Wrong number of arguments \
                     for type instantiation `{}`: Expected {}, got {}",
-                    self.name(),
+                    self.name().id(),
                     type_dec.fields().len(),
                     self.fields().len()
                 ),
@@ -81,7 +80,7 @@ impl Instruction for TypeInstantiation {
     }
 
     fn print(&self) -> String {
-        let mut base = format!("{}(", self.type_name);
+        let mut base = format!("{}(", self.type_name.id());
         let mut first_arg = true;
         for arg in &self.fields {
             if !first_arg {
@@ -139,7 +138,7 @@ impl Instruction for TypeInstantiation {
 
 impl Rename for TypeInstantiation {
     fn prefix(&mut self, prefix: &str) {
-        self.type_name = format!("{}{}", prefix, self.type_name);
+        self.type_name.prefix(prefix);
         self.fields
             .iter_mut()
             .for_each(|field| field.prefix(prefix));

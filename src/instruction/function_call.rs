@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use crate::instruction::{FunctionDec, Var};
+use crate::instruction::{FunctionDec, Var, TypeDec};
 use crate::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
 use std::rc::Rc;
 
@@ -91,12 +91,26 @@ impl FunctionCall {
                 format!("Mapping `{}` to `{}`", func_arg.name(), call_arg.print()).as_ref(),
             );
 
-            // FIXME: Cleanup
             // Create a new variable, and execute the content of the function argument
             // passed to the call
             let mut new_var = Var::new(func_arg.name().to_owned());
             let mut instance = call_arg.execute_expression(interpreter)?;
-            instance.set_ty(Some(func_arg.get_type()));
+
+            let ty = match interpreter.get_type(func_arg.get_type()) {
+                // Double dereferencing: Some(t) gives us a &Rc<TypeDec>. We dereference
+                // it to access the Rc, and dereference it again to access the TypeDec.
+                Some(t) => (**t).clone(),
+                None => {
+                    return Err(JkError::new(
+                        JkErrKind::Interpreter,
+                        format!("type not found: {}", func_arg.get_type().id()),
+                        None,
+                        self.print(),
+                    ))
+                }
+            };
+
+            instance.set_ty(Some(ty));
 
             new_var.set_instance(instance);
 

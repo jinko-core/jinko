@@ -172,7 +172,7 @@ impl Instruction for FunctionDec {
                 base.push_str(", ");
             }
 
-            base.push_str(&format!("{}: {}", arg.name(), arg.get_type().name()));
+            base.push_str(&format!("{}: {}", arg.name(), arg.get_type().id()));
 
             first_arg = false;
         }
