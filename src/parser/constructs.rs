@@ -1483,4 +1483,12 @@ mod tests {
             "Missing caller"
         );
     }
+
+    #[test]
+    fn t_sy_eager_consume() {
+        // https://github.com/CohenArthur/jinko/issues/172
+
+        assert_eq!(Construct::instruction("1 2").unwrap().0, "2");
+        assert_eq!(Construct::instruction("a b").unwrap().0, "b");
+    }
 }
