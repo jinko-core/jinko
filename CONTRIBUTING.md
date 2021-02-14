@@ -33,6 +33,8 @@ Feel free to assign people as reviewers. You can also mark a PR as a `Draft`, if
 some early feedback or indications. Once your PR is out of `Draft`, it will be merged
 if approved and if the tests pass.
 
+Remember to format your code using `cargo fmt`!
+
 ## Documentation
 
 You can build jinko's documentation like so:
