@@ -74,6 +74,11 @@ impl Interpreter {
 
         i.scope_enter();
 
+        // Add all primitive types as empty types without fields
+        crate::instruction::PRIMITIVE_TYPES
+            .iter()
+            .for_each(|ty_name| i.add_type(TypeDec::from(*ty_name)).unwrap());
+
         i
     }
 
