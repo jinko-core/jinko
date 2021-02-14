@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use crate::instruction::{FunctionDec, Var, TypeDec};
+use crate::instruction::{FunctionDec, Var};
 use crate::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
 use std::rc::Rc;
 
@@ -180,7 +180,7 @@ impl Rename for FunctionCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruction::TypeDec;
+    use crate::instruction::TypeId;
 
     #[test]
     fn t_pretty_print_empty() {
@@ -204,8 +204,8 @@ mod tests {
         f.set_kind(FunctionKind::Func);
 
         f.set_args(vec![
-            DecArg::new("a".to_owned(), TypeDec::from("int")),
-            DecArg::new("b".to_owned(), TypeDec::from("int")),
+            DecArg::new("a".to_owned(), TypeId::from("int")),
+            DecArg::new("b".to_owned(), TypeId::from("int")),
         ]);
 
         interpreter.add_function(f).unwrap();

@@ -23,15 +23,6 @@ impl TypeDec {
     pub fn fields(&self) -> &Vec<DecArg> {
         &self.fields
     }
-
-    /// Check if a type is a primitive jinko type or not
-    pub fn is_primitive_type(&self) -> bool {
-        self.name == "bool"
-            || self.name == "int"
-            || self.name == "float"
-            || self.name == "char"
-            || self.name == "string"
-    }
 }
 
 impl Instruction for TypeDec {

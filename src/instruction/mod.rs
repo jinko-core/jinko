@@ -40,7 +40,7 @@ pub use method_call::MethodCall;
 pub use operator::Operator;
 pub use rename::Rename;
 pub use type_declaration::TypeDec;
-pub use type_id::TypeId;
+pub use type_id::{TypeId, PRIMITIVE_TYPES};
 pub use type_instantiation::TypeInstantiation;
 pub use var::Var;
 pub use var_assignment::VarAssign;

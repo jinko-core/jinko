@@ -79,7 +79,10 @@ impl TypeInstantiation {
         match self.type_name.is_primitive() {
             true => Err(JkError::new(
                 JkErrKind::Interpreter,
-                format!("cannot instantiate primitive type `{}`", self.type_name.id()),
+                format!(
+                    "cannot instantiate primitive type `{}`",
+                    self.type_name.id()
+                ),
                 None,
                 self.print(),
             )),
