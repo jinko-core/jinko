@@ -17,7 +17,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
     Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
-    JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeInstantiation, Var, VarAssign,
+    JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeInstantiation, Var, VarAssign, TypeId,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -160,10 +160,11 @@ impl Construct {
     /// `<identifier> ( <arg_list> )`
     pub fn type_instantiation(input: &str) -> ParseResult<TypeInstantiation> {
         let (input, type_id) = Token::identifier(input)?;
+        let type_id = TypeId::new(type_id);
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_curly_bracket(input)?;
 
-        let mut type_instantiation = TypeInstantiation::new(type_id.to_owned());
+        let mut type_instantiation = TypeInstantiation::new(type_id);
 
         let (input, mut arg_vec) = Construct::args_list(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
@@ -338,7 +339,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
 
-        Ok((input, DecArg::new(id.to_owned(), TypeDec::from(ty))))
+        Ok((input, DecArg::new(id.to_owned(), TypeId::new(ty))))
     }
 
     /// Parse an identifer as well as the type and comma that follows
