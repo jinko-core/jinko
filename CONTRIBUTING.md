@@ -55,3 +55,6 @@ are given.
 The code you produce should be documented and tested as much as possible. Considering the
 fact that `jinko` is a programming language, a lot of behaviors have to be tested
 externally.
+
+Checkout [ARCHITECTURE.md](ARCHITECTURE.md) in order to understand how the project is
+organized.
