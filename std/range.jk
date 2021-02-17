@@ -1,9 +1,0 @@
-type Range(s: int, e: int);
-
-func new(s: int, e: int) -> Range {
-    Range { s, e }
-}
-
-func next(s: int, e: int) -> int {
-    s + 1
-}
