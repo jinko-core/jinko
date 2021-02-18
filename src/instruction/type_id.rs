@@ -7,7 +7,7 @@ pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeId {
-    id: String
+    id: String,
 }
 
 impl TypeId {
