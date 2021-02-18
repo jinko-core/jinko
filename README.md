@@ -17,6 +17,10 @@ valid or convincing results.
 Feel free to open an issue in order to get more information about the language
 or its usage!
 
+## Community
+
+Feel free to come and chat about jinko on [matrix](https://matrix.to/#/+jinko:matrix.org)!
+
 ## Programming in jinko
 
 The lib standard is currently inexistant. `0.1.0` serves as a staple release, in
