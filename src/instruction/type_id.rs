@@ -6,28 +6,30 @@ use crate::Rename;
 pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"];
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TypeId(String);
+pub struct TypeId {
+    id: String
+}
 
 impl TypeId {
     pub fn new(id: String) -> TypeId {
-        TypeId { 0: id }
+        TypeId { id }
     }
 
     pub fn id(&self) -> &str {
-        &self.0
+        &self.id
     }
 
     pub fn is_primitive(&self) -> bool {
-        PRIMITIVE_TYPES.contains(&self.0.as_str())
+        PRIMITIVE_TYPES.contains(&self.id.as_str())
     }
 }
 
 impl Rename for TypeId {
     fn prefix(&mut self, prefix: &str) {
-        match PRIMITIVE_TYPES.contains(&self.0.as_str()) {
+        match PRIMITIVE_TYPES.contains(&self.id.as_str()) {
             // No need to rename primitive types
             true => {}
-            false => self.0 = format!("{}{}", prefix, self.0),
+            false => self.id = format!("{}{}", prefix, self.id),
         }
     }
 }
