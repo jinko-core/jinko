@@ -29,7 +29,7 @@ fn handle_exit_code(result: InstrKind) {
 
         // If it's an expression, return if you can (if it's an int)
         InstrKind::Expression(Some(i)) => match i.ty() {
-            Some(ty) => match ty.as_ref() {
+            Some(ty) => match ty.name() {
                 "int" => std::process::exit(JkInt::from_instance(&i).0 as i32),
                 "float" => std::process::exit(JkFloat::from_instance(&i).0 as i32),
                 "bool" => {

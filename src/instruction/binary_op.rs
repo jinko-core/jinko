@@ -111,7 +111,7 @@ impl Instruction for BinaryOp {
         let return_value;
 
         // FIXME: DISGUSTING and do not unwap
-        match l_value.ty().unwrap().as_str() {
+        match l_value.ty().unwrap().name() {
             // FIXME: Absolutely DISGUSTING
             "int" => {
                 return_value = InstrKind::Expression(Some(

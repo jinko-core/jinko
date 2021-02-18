@@ -17,7 +17,7 @@ use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
     Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
-    JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeInstantiation, Var, VarAssign,
+    JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -159,11 +159,12 @@ impl Construct {
     /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
     /// `<identifier> ( <arg_list> )`
     pub fn type_instantiation(input: &str) -> ParseResult<TypeInstantiation> {
-        let (input, type_id) = Token::identifier(input)?;
+        let (input, type_name) = Token::identifier(input)?;
+        let type_id = TypeId::new(type_name);
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_curly_bracket(input)?;
 
-        let mut type_instantiation = TypeInstantiation::new(type_id.to_owned());
+        let mut type_instantiation = TypeInstantiation::new(type_id);
 
         let (input, mut arg_vec) = Construct::args_list(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
@@ -338,7 +339,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
 
-        Ok((input, DecArg::new(id.to_owned(), ty.to_owned())))
+        Ok((input, DecArg::new(id.to_owned(), TypeId::new(ty))))
     }
 
     /// Parse an identifer as well as the type and comma that follows
@@ -378,7 +379,7 @@ impl Construct {
     }
 
     /// Parse the void return type of a function, checking that no arrow is present
-    fn return_type_void(input: &str) -> ParseResult<Option<String>> {
+    fn return_type_void(input: &str) -> ParseResult<Option<TypeId>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arrow) = opt(Token::arrow)(input)?;
 
@@ -389,18 +390,18 @@ impl Construct {
     }
 
     /// Parse a non-void return type
-    fn return_type_non_void(input: &str) -> ParseResult<Option<String>> {
+    fn return_type_non_void(input: &str) -> ParseResult<Option<TypeId>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::arrow(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        Ok((input, Some(ty.to_owned())))
+        Ok((input, Some(TypeId::from(ty.as_str()))))
     }
 
     /// Parse the return type of a function. Can be void
-    fn return_type(input: &str) -> ParseResult<Option<String>> {
+    fn return_type(input: &str) -> ParseResult<Option<TypeId>> {
         alt((Construct::return_type_non_void, Construct::return_type_void))(input)
     }
 
@@ -982,7 +983,8 @@ mod tests {
             Construct::identifier_type("name: some_type")
                 .unwrap()
                 .1
-                .ty(),
+                .get_type()
+                .id(),
             "some_type"
         );
 
@@ -997,7 +999,8 @@ mod tests {
             Construct::identifier_type("name     :some_type")
                 .unwrap()
                 .1
-                .ty(),
+                .get_type()
+                .id(),
             "some_type"
         );
     }
@@ -1087,11 +1090,11 @@ mod tests {
     fn t_return_type_non_void() {
         assert_eq!(
             Construct::return_type("-> int"),
-            Ok(("", Some("int".to_owned())))
+            Ok(("", Some(TypeId::from("int"))))
         );
         assert_eq!(
             Construct::return_type("   ->    int   {"),
-            Ok(("{", Some("int".to_owned())))
+            Ok(("{", Some(TypeId::from("int"))))
         );
     }
 
@@ -1114,7 +1117,7 @@ mod tests {
             .1;
 
         assert_eq!(func.name(), "add");
-        assert_eq!(func.ty(), Some(&"ty".to_owned()));
+        assert_eq!(func.ty(), Some(&TypeId::from("ty")));
         assert_eq!(func.args().len(), 2);
         assert_eq!(func.fn_kind(), FunctionKind::Func);
     }
@@ -1154,7 +1157,7 @@ mod tests {
             .1;
 
         assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), Some(&"ty".to_owned()));
+        assert_eq!(test.ty(), Some(&TypeId::from("ty")));
         assert_eq!(test.fn_kind(), FunctionKind::Ext);
     }
 

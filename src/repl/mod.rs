@@ -24,7 +24,7 @@ impl std::fmt::Display for ObjectInstance {
             f,
             "{}",
             match self.ty() {
-                Some(ty) => match ty.as_ref() {
+                Some(ty) => match ty.name() {
                     "int" => JkConstant::<i64>::from_instance(self).print(),
                     "float" => JkConstant::<f64>::from_instance(self).print(),
                     "char" => JkConstant::<char>::from_instance(self).print(),

@@ -91,12 +91,26 @@ impl FunctionCall {
                 format!("Mapping `{}` to `{}`", func_arg.name(), call_arg.print()).as_ref(),
             );
 
-            // FIXME: Cleanup
             // Create a new variable, and execute the content of the function argument
             // passed to the call
             let mut new_var = Var::new(func_arg.name().to_owned());
             let mut instance = call_arg.execute_expression(interpreter)?;
-            instance.set_ty(Some(func_arg.ty().to_owned()));
+
+            let ty = match interpreter.get_type(func_arg.get_type()) {
+                // Double dereferencing: Some(t) gives us a &Rc<TypeDec>. We dereference
+                // it to access the Rc, and dereference it again to access the TypeDec.
+                Some(t) => (**t).clone(),
+                None => {
+                    return Err(JkError::new(
+                        JkErrKind::Interpreter,
+                        format!("type not found: {}", func_arg.get_type().id()),
+                        None,
+                        self.print(),
+                    ))
+                }
+            };
+
+            instance.set_ty(Some(ty));
 
             new_var.set_instance(instance);
 
@@ -166,6 +180,7 @@ impl Rename for FunctionCall {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instruction::TypeId;
 
     #[test]
     fn t_pretty_print_empty() {
@@ -189,8 +204,8 @@ mod tests {
         f.set_kind(FunctionKind::Func);
 
         f.set_args(vec![
-            DecArg::new("a".to_owned(), "int".to_owned()),
-            DecArg::new("b".to_owned(), "int".to_owned()),
+            DecArg::new("a".to_owned(), TypeId::from("int")),
+            DecArg::new("b".to_owned(), TypeId::from("int")),
         ]);
 
         interpreter.add_function(f).unwrap();

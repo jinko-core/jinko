@@ -2,7 +2,7 @@ use super::{DecArg, InstrKind, Instruction};
 
 use crate::{Interpreter, JkError, Rename};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
     name: String,
     fields: Vec<DecArg>,
@@ -14,14 +14,6 @@ impl TypeDec {
         TypeDec { name, fields }
     }
 
-    /// Create a new type from a ype string, with an empty fields vector
-    pub fn from(name: &str) -> TypeDec {
-        TypeDec {
-            name: name.to_string(),
-            fields: vec![],
-        }
-    }
-
     /// Get a reference to the name of the type
     pub fn name(&self) -> &str {
         &self.name
@@ -30,15 +22,6 @@ impl TypeDec {
     /// Get a reference to the type's fields
     pub fn fields(&self) -> &Vec<DecArg> {
         &self.fields
-    }
-
-    /// Check if a type is a primitive jinko type or not
-    pub fn is_primitive_type(&self) -> bool {
-        self.name == "bool"
-            || self.name == "int"
-            || self.name == "float"
-            || self.name == "char"
-            || self.name == "string"
     }
 }
 
@@ -69,5 +52,26 @@ impl Rename for TypeDec {
         self.fields
             .iter_mut()
             .for_each(|field| field.prefix(prefix));
+    }
+}
+
+impl From<&str> for TypeDec {
+    fn from(type_name: &str) -> TypeDec {
+        TypeDec::from(type_name.to_string())
+    }
+}
+
+impl From<&String> for TypeDec {
+    fn from(type_name: &String) -> TypeDec {
+        TypeDec::from(type_name.clone())
+    }
+}
+
+impl From<String> for TypeDec {
+    fn from(type_name: String) -> TypeDec {
+        TypeDec {
+            name: type_name,
+            fields: vec![],
+        }
     }
 }
