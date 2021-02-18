@@ -159,8 +159,8 @@ impl Construct {
     /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
     /// `<identifier> ( <arg_list> )`
     pub fn type_instantiation(input: &str) -> ParseResult<TypeInstantiation> {
-        let (input, type_id) = Token::identifier(input)?;
-        let type_id = TypeId::new(type_id);
+        let (input, type_name) = Token::identifier(input)?;
+        let type_id = TypeId::new(type_name);
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_curly_bracket(input)?;
 
