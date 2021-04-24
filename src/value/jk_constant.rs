@@ -1,9 +1,9 @@
 use crate::instruction::{InstrKind, Instruction, Operator, TypeId};
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
+use super::string_interpolation::JkStringFmt;
 use crate::{
     log, Context, Error, FromObjectInstance, JkString, ObjectInstance, ToObjectInstance, Value,
 };
-use super::string_interpolation::JkStringFmt;
 
 use std::convert::TryFrom;
 
