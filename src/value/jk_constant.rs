@@ -291,7 +291,7 @@ impl Instruction for JkString {
     fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
         log!("constant: {}", &self.0.to_string());
 
-        let interpolated = JkString::from(JkStringFmt::interpolate(&self.0, ctx).unwrap());
+        let interpolated = JkString::from(JkStringFmt::interpolate(&self.0, ctx)?);
 
         Some(interpolated.to_instance())
     }
