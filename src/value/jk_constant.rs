@@ -3,6 +3,7 @@ use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 use crate::{
     log, Context, Error, FromObjectInstance, JkString, ObjectInstance, ToObjectInstance, Value,
 };
+use super::string_interpolation::JkStringFmt;
 
 use std::convert::TryFrom;
 
@@ -290,7 +291,9 @@ impl Instruction for JkString {
     fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
         log!("constant: {}", &self.0.to_string());
 
-        Some(self.to_instance())
+        let interpolated = JkString::from(JkStringFmt::interpolate(&self.0, ctx).unwrap());
+
+        Some(interpolated.to_instance())
     }
 }
 
