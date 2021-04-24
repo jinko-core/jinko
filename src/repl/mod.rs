@@ -39,7 +39,8 @@ impl std::fmt::Display for ObjectInstance {
 }
 
 impl Repl {
-    /// Parse a new input, adding it to an existing interpreter
+    /// Parse a new instruction from the user's input. This function uses the parser's
+    /// `instruction` method, and can therefore parse any valid Jinko instruction
     fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, JkError> {
         match input.is_empty() {
             true => Ok(None),
