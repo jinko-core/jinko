@@ -37,9 +37,9 @@ impl JkStringFmt {
     }
 
     fn expr(input: &str) -> IResult<&str, Option<Box<dyn Instruction>>> {
-        let (input, expr) = match delimited(char(L_DELIM), is_not("}"), char(R_DELIM))(input)? {
-            (i, "") => return Ok((i, None)), // Early return, no need to parse an empty input
-            (i, e) => (i, e),
+        let (input, expr) = match opt(delimited(char(L_DELIM), is_not("{}"), char(R_DELIM)))(input)? {
+            (i, Some("")) | (i, None) => return Ok((i, None)), // Early return, no need to parse an empty input
+            (i, Some(e)) => (i, e),
         };
 
         let (_, expr) = Construct::instruction(expr)?;
@@ -102,5 +102,68 @@ mod tests {
         let mut interpreter = Interpreter::new();
 
         assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), s);
+    }
+
+    /// Creates two variables, a and b, in an interpreter
+    fn setup(i: &mut Interpreter) {
+        let e = Construct::instruction("a = 1").unwrap().1;
+        e.execute(i).unwrap();
+
+        let e = Construct::instruction("b = 2").unwrap().1;
+        e.execute(i).unwrap();
+    }
+
+    #[test]
+    fn empty() {
+        let mut interpreter = Interpreter::new();
+        setup(&mut interpreter);
+
+        let s = "";
+        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "");
+    }
+
+    #[test]
+    fn only_expr() {
+        let mut interpreter = Interpreter::new();
+        setup(&mut interpreter);
+
+        let s = "{a}";
+        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "1");
+    }
+
+    #[test]
+    fn pre_expr_plus_expr() {
+        let mut interpreter = Interpreter::new();
+        setup(&mut interpreter);
+
+        let s = "Hey {a}";
+        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "Hey 1");
+    }
+
+    #[test]
+    fn expr_plus_pre_expr() {
+        let mut interpreter = Interpreter::new();
+        setup(&mut interpreter);
+
+        let s = "{a} Hey";
+        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "1 Hey");
+    }
+
+    #[test]
+    fn e_plus_pe_plus_e() {
+        let mut interpreter = Interpreter::new();
+        setup(&mut interpreter);
+
+        let s = "{a} Hey {b}";
+        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "1 Hey 2");
+    }
+
+    #[test]
+    fn pe_plus_e_plus_pe() {
+        let mut interpreter = Interpreter::new();
+        setup(&mut interpreter);
+
+        let s = "Hey {b} Hey";
+        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "Hey 2 Hey");
     }
 }
