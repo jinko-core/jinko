@@ -1,9 +1,9 @@
+use super::string_interpolation::JkStringFmt;
 use crate::instruction::{InstrKind, Instruction, Operator, TypeDec};
 use crate::{
     FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, Rename, ToObjectInstance,
     Value,
 };
-use super::string_interpolation::JkStringFmt;
 
 use std::convert::TryFrom;
 
