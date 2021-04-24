@@ -19,6 +19,10 @@ const R_DELIM: char = '}';
 pub struct JkStringFmt;
 
 impl JkStringFmt {
+    /// Consume input until a certain character is met. This is useful for interpolation,
+    /// as consume_until("Some non interpolated text {some_var}", '{') will return
+    /// "Some non interpolated text " and leave "{some_var}", which can easily be
+    /// separated into a parsable expression
     fn consume_until(input: &str, limit: char) -> IResult<&str, Option<&str>> {
         match opt(take_while(|c| c != limit))(input) {
             Ok((i, Some(data))) => match data.len() {
@@ -30,10 +34,26 @@ impl JkStringFmt {
         }
     }
 
+    /// Parse a "pre expression" in a string to interpolate. The pre expressions are
+    /// highlighted in the following string, spaces included
+    ///
+    /// ```
+    /// "Hey my name is {name} and I am {age} years old"
+    ///  ^^^^^^^^^^^^^^^      ^^^^^^^^^^     ^^^^^^^^^^
+    /// ```
     fn pre_expr(input: &str) -> IResult<&str, Option<&str>> {
         JkStringFmt::consume_until(input, L_DELIM)
     }
 
+    /// Parse an expression in a string to interpolate. The expressions are
+    /// highlighted in the following string, delimiters included. The expressions go
+    /// through the same parsing rules as regular jinko expressions. They must be valid
+    /// code.
+    ///
+    /// ```
+    /// "Hey my name is {name} and I am {age} years old"
+    ///                 ^^^^^^          ^^^^^
+    /// ```
     fn expr(input: &str) -> IResult<&str, Option<Box<dyn Instruction>>> {
         let (input, expr) = match opt(delimited(char(L_DELIM), is_not("{}"), char(R_DELIM)))(input)?
         {
