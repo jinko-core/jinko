@@ -4,7 +4,7 @@
 //! In order to use the '{' or '}' character themselves, use '{{' and '}}'.
 
 use crate::parser::constructs::Construct;
-use crate::{InstrKind, Instruction, Interpreter, JkError};
+use crate::{InstrKind, Instruction, Interpreter, JkErrKind, JkError};
 
 use nom::bytes::complete::{is_not, take_while};
 use nom::character::complete::char;
@@ -87,6 +87,36 @@ impl JkStringFmt {
         }
     }
 
+    /// Execute a parsed expression in the current context. This function returns the
+    /// expression's execution's result as a String
+    fn interpolate_expr(
+        expr: Box<dyn Instruction>,
+        s: &str,
+        interpreter: &mut Interpreter,
+    ) -> Result<String, JkError> {
+        // We must check if the expression is a statement or not. If it is
+        // an expression, then it is invalid in an Interpolation context
+        match expr.kind() {
+            InstrKind::Statement => Err(JkError::new(
+                JkErrKind::Interpreter,
+                format!("invalid argument to string interpolation: {}", expr.print()),
+                None,
+                String::from(s),
+            )), // FIXME: Fix loc and input
+            InstrKind::Expression(_) => {
+                match expr.execute(interpreter)? {
+                    // FIXME: Call some jinko code, in order to enable custom types,
+                    // instead of `to_string()` in Rust
+                    InstrKind::Expression(Some(res)) => Ok(res.to_string()),
+                    // We just checked that we couldn't execute
+                    // anything other than an expression. This pattern should never
+                    // be encountered
+                    _ => unreachable!(),
+                }
+            }
+        }
+    }
+
     /// Interpolates the string passed as parameter
     pub fn interpolate(s: &str, interpreter: &mut Interpreter) -> Result<String, JkError> {
         // We know the final string will be roughly the same size as `s`. We can pre-allocate
@@ -99,12 +129,7 @@ impl JkStringFmt {
             result.push_str(pre_expr.unwrap_or(""));
             match expr {
                 Some(expr) => {
-                    let res = expr.execute(interpreter)?;
-                    let expr_str = match res {
-                        InstrKind::Expression(Some(res)) => res.to_string(),
-                        InstrKind::Statement | InstrKind::Expression(None) => String::from(""), // Should never happen?
-                    };
-                    result.push_str(expr_str.as_str());
+                    result.push_str(&JkStringFmt::interpolate_expr(expr, s, interpreter)?)
                 }
                 None => {}
             }
@@ -199,5 +224,16 @@ mod tests {
             JkStringFmt::interpolate(s, &mut interpreter).unwrap(),
             "Hey 2 Hey"
         );
+    }
+
+    #[test]
+    fn stmt_as_interp() {
+        let mut interpreter = Interpreter::new();
+        setup(&mut interpreter);
+        let e = Construct::instruction("mut x = 1").unwrap().1;
+        e.execute(&mut interpreter).unwrap();
+
+        let s = "Hey {x = 12}";
+        assert!(JkStringFmt::interpolate(s, &mut interpreter).is_err());
     }
 }
