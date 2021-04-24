@@ -6,7 +6,7 @@
 use crate::parser::constructs::Construct;
 use crate::{InstrKind, Instruction, Interpreter, JkError};
 
-use nom::bytes::complete::{take_while, is_not};
+use nom::bytes::complete::{is_not, take_while};
 use nom::character::complete::char;
 use nom::combinator::opt;
 use nom::multi::many0;
@@ -21,11 +21,9 @@ pub struct JkStringFmt;
 impl JkStringFmt {
     fn consume_until(input: &str, limit: char) -> IResult<&str, Option<&str>> {
         match opt(take_while(|c| c != limit))(input) {
-            Ok((i, Some(data))) => {
-                match data.len() {
-                    0 => Ok((i, None)),
-                    _ => Ok((i, Some(data))),
-                }
+            Ok((i, Some(data))) => match data.len() {
+                0 => Ok((i, None)),
+                _ => Ok((i, Some(data))),
             },
             Ok((i, None)) => Ok((i, None)),
             Err(e) => Err(e),
@@ -37,7 +35,8 @@ impl JkStringFmt {
     }
 
     fn expr(input: &str) -> IResult<&str, Option<Box<dyn Instruction>>> {
-        let (input, expr) = match opt(delimited(char(L_DELIM), is_not("{}"), char(R_DELIM)))(input)? {
+        let (input, expr) = match opt(delimited(char(L_DELIM), is_not("{}"), char(R_DELIM)))(input)?
+        {
             (i, Some("")) | (i, None) => return Ok((i, None)), // Early return, no need to parse an empty input
             (i, Some(e)) => (i, e),
         };
@@ -52,15 +51,18 @@ impl JkStringFmt {
     /// The string "{name}, how are you?" has an empty pre_expr, an expression "name", a
     /// pre_expr ", how are you?" and an empty expr
     fn parser(input: &str) -> IResult<&str, (Option<&str>, Option<Box<dyn Instruction>>)> {
-        use nom::Err;
         use nom::error::{ErrorKind, ParseError};
+        use nom::Err;
 
         let (input, pre_expr) = JkStringFmt::pre_expr(input)?;
         let (input, expr) = JkStringFmt::expr(input)?;
 
         match (pre_expr, &expr) {
             // Stop multi-parsing when we couldn't parse anything anymore
-            (None, None) => Err(Err::Error(ParseError::from_error_kind(input, ErrorKind::OneOf))),
+            (None, None) => Err(Err::Error(ParseError::from_error_kind(
+                input,
+                ErrorKind::OneOf,
+            ))),
             _ => Ok((input, (pre_expr, expr))),
         }
     }
@@ -137,7 +139,10 @@ mod tests {
         setup(&mut interpreter);
 
         let s = "Hey {a}";
-        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "Hey 1");
+        assert_eq!(
+            JkStringFmt::interpolate(s, &mut interpreter).unwrap(),
+            "Hey 1"
+        );
     }
 
     #[test]
@@ -146,7 +151,10 @@ mod tests {
         setup(&mut interpreter);
 
         let s = "{a} Hey";
-        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "1 Hey");
+        assert_eq!(
+            JkStringFmt::interpolate(s, &mut interpreter).unwrap(),
+            "1 Hey"
+        );
     }
 
     #[test]
@@ -155,7 +163,10 @@ mod tests {
         setup(&mut interpreter);
 
         let s = "{a} Hey {b}";
-        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "1 Hey 2");
+        assert_eq!(
+            JkStringFmt::interpolate(s, &mut interpreter).unwrap(),
+            "1 Hey 2"
+        );
     }
 
     #[test]
@@ -164,6 +175,9 @@ mod tests {
         setup(&mut interpreter);
 
         let s = "Hey {b} Hey";
-        assert_eq!(JkStringFmt::interpolate(s, &mut interpreter).unwrap(), "Hey 2 Hey");
+        assert_eq!(
+            JkStringFmt::interpolate(s, &mut interpreter).unwrap(),
+            "Hey 2 Hey"
+        );
     }
 }
