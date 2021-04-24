@@ -4,6 +4,7 @@
 use crate::{instruction::Operator, Instruction, JkError, ObjectInstance};
 
 mod jk_constant;
+mod string_interpolation;
 
 pub use jk_constant::JkConstant;
 

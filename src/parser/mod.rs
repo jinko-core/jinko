@@ -8,7 +8,7 @@ use nom::multi::many0;
 
 mod box_construct;
 mod constant_construct;
-mod constructs;
+pub mod constructs;
 mod shunting_yard;
 mod tokens;
 

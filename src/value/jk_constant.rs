@@ -3,6 +3,7 @@ use crate::{
     FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, Rename, ToObjectInstance,
     Value,
 };
+use super::string_interpolation::JkStringFmt;
 
 use std::convert::TryFrom;
 
@@ -219,7 +220,9 @@ impl Instruction for JkString {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
-        Ok(InstrKind::Expression(Some(self.to_instance())))
+        let interpolated = JkString::from(JkStringFmt::interpolate(&self.0, interpreter).unwrap());
+
+        Ok(InstrKind::Expression(Some(interpolated.to_instance())))
     }
 }
 
