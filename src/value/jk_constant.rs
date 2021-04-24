@@ -220,7 +220,7 @@ impl Instruction for JkString {
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
-        let interpolated = JkString::from(JkStringFmt::interpolate(&self.0, interpreter).unwrap());
+        let interpolated = JkString::from(JkStringFmt::interpolate(&self.0, interpreter)?);
 
         Ok(InstrKind::Expression(Some(interpolated.to_instance())))
     }
