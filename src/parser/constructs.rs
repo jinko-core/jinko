@@ -16,8 +16,8 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
-    Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
-    JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign,
+    Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction, JkInst,
+    Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -48,7 +48,6 @@ impl Construct {
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
-            BoxConstruct::audit,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
             BoxConstruct::variable,
@@ -559,20 +558,6 @@ impl Construct {
         Ok((input, if_else))
     }
 
-    /// Parse an audit block. This consists in the the audit keyword and the following
-    /// block. Audit blocks are useful to relax the interpreter and develop faster. For
-    /// example, you're allowed to ignore return values in an audit block.
-    ///
-    /// `<audit> <block>`
-    pub(crate) fn audit(input: &str) -> ParseResult<Audit> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::audit_tok(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, block) = Construct::block(input)?;
-
-        Ok((input, Audit::new(block)))
-    }
-
     /// Parse a loop block, meaning the `loop` keyword and a corresponding block
     ///
     /// `<loop> <block>`
@@ -742,7 +727,6 @@ impl Construct {
             BoxConstruct::block,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
-            BoxConstruct::audit,
         ))(input)
     }
 
@@ -1196,14 +1180,6 @@ mod tests {
             Ok((input, _)) => assert_eq!(input, ""),
             Err(_) => assert!(false, "Valid to have empty blocks"),
         };
-    }
-
-    #[test]
-    fn t_audit_simple() {
-        match Construct::audit("audit {}") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid audit syntax"),
-        }
     }
 
     #[test]
