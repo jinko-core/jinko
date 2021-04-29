@@ -7,7 +7,6 @@ use crate::{Interpreter, JkErrKind, JkError, ObjectInstance};
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
 
-mod audit;
 mod binary_op;
 mod block;
 mod dec_arg;
@@ -26,7 +25,6 @@ mod type_instantiation;
 mod var;
 mod var_assignment;
 
-pub use audit::Audit;
 pub use binary_op::BinaryOp;
 pub use block::Block;
 pub use dec_arg::DecArg;
