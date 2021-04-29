@@ -29,7 +29,7 @@ impl JkStringFmt {
                 0 => Ok((i, None)),
                 _ => Ok((i, Some(data))),
             },
-            Ok((i, None)) => Ok((i, None)),
+            Ok(v) => Ok(v),
             Err(e) => Err(e),
         }
     }
