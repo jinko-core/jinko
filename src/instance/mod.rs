@@ -86,7 +86,7 @@ impl ObjectInstance {
             // FIXME: No string new as input
             None => Err(JkError::new(
                 JkErrKind::Interpreter,
-                String::from("No fields on instance"),
+                String::from("no fields on instance"),
                 None,
                 String::new(),
             )),
@@ -94,7 +94,7 @@ impl ObjectInstance {
             Some(fields) => fields.get(field_name).map_or(
                 Err(JkError::new(
                     JkErrKind::Interpreter,
-                    format!("Field `{}` does not exist on instance", field_name),
+                    format!("field `{}` does not exist on instance", field_name),
                     None,
                     String::new(),
                 )),
