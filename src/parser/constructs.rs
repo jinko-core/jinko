@@ -792,16 +792,40 @@ impl Construct {
         Ok((input, MethodCall::new(caller, method)))
     }
 
+    fn dot_field(input: &str) -> ParseResult<String> {
+        let (input, _) = Token::dot(input)?;
+
+        Token::identifier(input)
+    }
+
+    fn inner_field_access(input: &str) -> ParseResult<FieldAccess> {
+        let (input, instance) = Construct::instance(input)?;
+        let (input, field_name) = Construct::dot_field(input)?;
+
+        Ok((input, FieldAccess::new(instance, field_name)))
+    }
+
+    fn multi_field_access(input: &str) -> ParseResult<FieldAccess> {
+        let (input, first_fa) = Construct::inner_field_access(input)?;
+
+        let (input, dot_field_vec) = many0(Construct::dot_field)(input)?;
+
+        let mut current_fa = first_fa;
+
+        for field_name in dot_field_vec {
+            let fa = FieldAccess::new(Box::new(current_fa), field_name);
+            current_fa = fa;
+        }
+
+        Ok((input, current_fa))
+    }
+
     /// Parse a field access on a custom type. This is very similar to a method call: The
     /// only difference is that the method call shall have parentheses
     ///
-    /// `<identifier>.<identifier>`
+    /// `<identifier>.<identifier>[.<identifier>]*`
     pub fn field_access(input: &str) -> ParseResult<FieldAccess> {
-        let (input, instance) = Construct::instance(input)?;
-        let (input, _) = Token::dot(input)?;
-        let (input, field) = Token::identifier(input)?;
-
-        Ok((input, FieldAccess::new(instance, field)))
+        Construct::multi_field_access(input)
     }
 }
 
@@ -1590,5 +1614,31 @@ mod tests {
     fn t_field_access_with_spaces() {
         assert!(Construct::field_access("sdot. space").is_err());
         assert!(Construct::field_access("s .dotspace").is_err());
+    }
+
+    #[test]
+    fn t_multi_field_access_3() {
+        assert!(Construct::field_access("top.middle.bottom").is_ok());
+        assert_eq!(Construct::field_access("top.middle.bottom").unwrap().0, "");
+    }
+
+    #[test]
+    fn t_multi_field_access_4() {
+        assert!(Construct::field_access("top.middle.bottom.last").is_ok());
+        assert_eq!(
+            Construct::field_access("top.middle.bottom.last").unwrap().0,
+            ""
+        );
+    }
+
+    #[test]
+    fn t_multi_field_access_n() {
+        assert!(Construct::field_access("jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk").is_ok());
+        assert_eq!(
+            Construct::field_access("jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk")
+                .unwrap()
+                .0,
+            ""
+        );
     }
 }
