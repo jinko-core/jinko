@@ -792,31 +792,24 @@ impl Construct {
         Ok((input, MethodCall::new(caller, method)))
     }
 
-    fn inner_inner(input: &str, instance: Box<dyn Instruction>) -> ParseResult<FieldAccess> {
+    fn field_access_second_half(
+        input: &str,
+        instance: Box<dyn Instruction>,
+    ) -> ParseResult<FieldAccess> {
         let (input, field) = Token::identifier(input)?;
 
         Ok((input, FieldAccess::new(instance, field)))
-
-    }
-
-    fn inner_field_access_second_half(input: &str, instance: Box<dyn Instruction>) -> ParseResult<FieldAccess> {
-        let (input, _) = Token::dot(input)?;
-        let (input, f_a) = Construct::inner_inner(input, instance)?;
-
-        match Token::dot(input) {
-            Err(_) => Ok((input, f_a)),
-            Ok((input, _)) => Construct::inner_inner(input, Box::new(f_a))
-        }
-    }
-
-    fn inner_field_access(input: &str) -> ParseResult<FieldAccess> {
-        let (input, instance) = Construct::instance(input)?;
-
-        Construct::inner_field_access_second_half(input, instance)
     }
 
     fn multi_field_access(input: &str) -> ParseResult<FieldAccess> {
-        Construct::inner_field_access(input)
+        let (input, instance) = Construct::instance(input)?;
+        let (input, _) = Token::dot(input)?;
+        let (input, f_a) = Construct::field_access_second_half(input, instance)?;
+
+        match Token::dot(input) {
+            Err(_) => Ok((input, f_a)),
+            Ok((input, _)) => Construct::field_access_second_half(input, Box::new(f_a)),
+        }
     }
 
     /// Parse a field access on a custom type. This is very similar to a method call: The
@@ -1616,7 +1609,28 @@ mod tests {
     }
 
     #[test]
-    fn t_multi_field_access() {
+    fn t_multi_field_access_3() {
         assert!(Construct::field_access("top.middle.bottom").is_ok());
+        assert_eq!(Construct::field_access("top.middle.bottom").unwrap().0, "");
+    }
+
+    #[test]
+    fn t_multi_field_access_4() {
+        assert!(Construct::field_access("top.middle.bottom.last").is_ok());
+        assert_eq!(
+            Construct::field_access("top.middle.bottom.last").unwrap().0,
+            ""
+        );
+    }
+
+    #[test]
+    fn t_multi_field_access_n() {
+        assert!(Construct::field_access("jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk").is_ok());
+        assert_eq!(
+            Construct::field_access("jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk")
+                .unwrap()
+                .0,
+            ""
+        );
     }
 }
