@@ -772,6 +772,7 @@ impl Construct {
     fn instance(input: &str) -> ParseResult<Box<dyn Instruction>> {
         alt((
             BoxConstruct::function_call,
+            BoxConstruct::type_instantiation,
             BoxConstruct::variable,
             BoxConstruct::if_else,
             BoxConstruct::block,
@@ -1572,6 +1573,11 @@ mod tests {
         assert!(Construct::field_access("s.a").is_ok());
         assert!(Construct::field_access("longer_identifier.a").is_ok());
         assert!(Construct::field_access("longer_identifier.with_numbers32").is_ok());
+    }
+
+    #[test]
+    fn t_field_access_from_type_instantiation() {
+        assert!(Construct::field_access("CustomType { k = a, v = b }.c").is_ok());
     }
 
     #[test]
