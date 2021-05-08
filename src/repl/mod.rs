@@ -8,7 +8,7 @@ use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, FromObjectInstance, InstrKind, Instruction, Interpreter, JkConstant,
+    parser::{Construct, Token}, FromObjectInstance, InstrKind, Instruction, Interpreter, JkConstant,
     JkError, ObjectInstance,
 };
 
@@ -42,6 +42,11 @@ impl Repl {
     /// Parse a new instruction from the user's input. This function uses the parser's
     /// `instruction` method, and can therefore parse any valid Jinko instruction
     fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, JkError> {
+        // We need to consume the comments ourselves, in order to give correct input
+        // to Construct::instruction(). Since we are a REPL, we know that we will only
+        // feed at most one instruction at a time, and it needs to be non-empty.
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
         match input.is_empty() {
             true => Ok(None),
             false => match Construct::instruction(input) {

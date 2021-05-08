@@ -211,6 +211,10 @@ impl Token {
         tag("//")(input)
     }
 
+    pub fn comment_hash(input: &str) -> IResult<&str, &str> {
+        tag("#")(input)
+    }
+
     pub fn dot(input: &str) -> IResult<&str, &str> {
         Token::token(input, ".")
     }
@@ -361,20 +365,16 @@ impl Token {
     }
 
     fn consume_single_comment(input: &str) -> IResult<&str, &str> {
-        let (input, _) = Token::comment_single(input)?;
-        let (input, _) = take_while(|c| c != '\n' && c != '\0')(input)?;
-        match opt(char('\n'))(input) {
-            Ok((i, Some(_))) | Ok((i, None)) => Ok((i, "")),
-            Err(e) => Err(e),
-        }
+        let (input, _) = alt((Token::comment_single, Token::comment_hash))(input)?;
+        take_while(|c| c != '\n' && c != '\0')(input)
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
     fn maybe_consume_comment(input: &str) -> IResult<&str, &str> {
-        let (input, _) = alt((
-            opt(Token::consume_single_comment),
-            opt(Token::consume_multi_comment),
-        ))(input)?;
+        let (input, _) = opt(alt((
+            Token::consume_single_comment,
+            Token::consume_multi_comment,
+        )))(input)?;
 
         Ok((input, ""))
     }
@@ -549,6 +549,37 @@ mod tests {
     }
 
     #[test]
+    fn t_multi_comment_multi_line() {
+        let input = r#"
+        /**
+         * This function does nothing
+         */
+        func void() { }"#;
+
+        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_sing_comment_multi_line() {
+        let input = r#"
+        // Comment
+        func void() { }"#;
+
+        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_hashtag_comment_multi_line() {
+        let input = r##"
+        # Comment
+        func void() { }"##;
+
+        dbg!(&input);
+
+        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
     fn t_single_comment_valid() {
         match Token::maybe_consume_comment("//") {
             Ok(_) => assert!(true),
@@ -559,7 +590,7 @@ mod tests {
             Err(_) => assert!(false, "Valid to have lots of spaces"),
         };
         match Token::maybe_consume_comment("//          \nhey") {
-            Ok((left, _)) => assert_eq!(left, "hey"),
+            Ok((left, _)) => assert_eq!(left, "\nhey"),
             Err(_) => assert!(false, "Don't consume stuff after the newline"),
         };
         match Token::maybe_consume_comment("//// ") {
