@@ -749,8 +749,8 @@ impl Construct {
         Ok((input, incl))
     }
 
-    /// Parse a viable caller for a method call or instance for a field access
-    fn instance(input: &str) -> ParseResult<Box<dyn Instruction>> {
+    /// Parse a viable caller for a method call
+    fn method_caller(input: &str) -> ParseResult<Box<dyn Instruction>> {
         // FIXME: Right now, we cannot chain method calls and no error is produced:
         // `1.double().double()` returns 2 instead of the expected 4, since
         // only one call is resolved and the remaining input (`.double()`) is
@@ -766,12 +766,26 @@ impl Construct {
         ))(input)
     }
 
+    /// Parse a viable instance for a field access.
+    /// This is similar to Construct::method_caller, without allowing constants, as they
+    /// contain no fields.
+    fn instance(input: &str) -> ParseResult<Box<dyn Instruction>> {
+        alt((
+            BoxConstruct::function_call,
+            BoxConstruct::variable,
+            BoxConstruct::if_else,
+            BoxConstruct::block,
+            BoxConstruct::any_loop,
+            BoxConstruct::jinko_inst,
+        ))(input)
+    }
+
     /// Parse a method like function call, that shall be desugared
     /// to a simple function call later on
     ///
     /// `<identifier>.<identifier>()`
     pub fn method_call(input: &str) -> ParseResult<MethodCall> {
-        let (input, caller) = Construct::instance(input)?;
+        let (input, caller) = Construct::method_caller(input)?;
         let (input, _) = Token::dot(input)?;
         let (input, method) = Construct::function_call(input)?;
 
@@ -1558,14 +1572,22 @@ mod tests {
         assert!(Construct::field_access("s.a").is_ok());
         assert!(Construct::field_access("longer_identifier.a").is_ok());
         assert!(Construct::field_access("longer_identifier.with_numbers32").is_ok());
-        assert!(Construct::field_access("1.a").is_ok());
-        assert!(Construct::field_access("\"string\".a").is_ok());
     }
 
     #[test]
-    fn t_field_access_invalid() {
+    fn t_field_access_with_constant_field() {
         assert!(Construct::field_access("s.1").is_err());
         assert!(Construct::field_access("a.\"string\"").is_err());
+    }
+
+    #[test]
+    fn t_field_access_invalid_with_constant_instance() {
+        assert!(Construct::field_access("1.a").is_err());
+        assert!(Construct::field_access("\"string\".a").is_err());
+    }
+
+    #[test]
+    fn t_field_access_with_spaces() {
         assert!(Construct::field_access("sdot. space").is_err());
         assert!(Construct::field_access("s .dotspace").is_err());
     }
