@@ -60,3 +60,40 @@ impl Rename for FieldAccess {
         todo!()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::instance::ToObjectInstance;
+    use crate::JkInt;
+    use crate::parser::Construct;
+
+
+    fn setup() -> Interpreter {
+        let mut interpreter = Interpreter::new();
+
+        let inst = Construct::instruction("type Point(x: int, y: int); ").unwrap().1;
+        inst.execute(&mut interpreter).unwrap();
+
+        let inst = Construct::instruction("func basic() -> Point { Point { x = 15, y = 14 }}").unwrap().1;
+        inst.execute(&mut interpreter).unwrap();
+
+        let inst = Construct::instruction("b = basic();").unwrap().1;
+        inst.execute(&mut interpreter).unwrap();
+
+        interpreter
+    }
+
+    #[test]
+    fn t_valid_field_access() {
+        let mut interpreter = setup();
+
+        let inst = Construct::instruction("b.x").unwrap().1;
+        let res = match inst.execute(&mut interpreter).unwrap() {
+            InstrKind::Expression(Some(i)) => i,
+            _ => return assert!(false, "Error when accesing valid field"),
+        };
+
+        assert_eq!(res, JkInt::from(15).to_instance())
+    }
+}
