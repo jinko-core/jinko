@@ -2,7 +2,8 @@
 //! type on execution.
 
 use super::{
-    InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, TypeDec, VarAssign, TypeId, Rename,
+    InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, Rename, TypeDec,
+    TypeId, VarAssign,
 };
 use crate::instance::{Name, Size};
 
@@ -288,7 +289,9 @@ mod test {
 
         let mut i = Interpreter::new();
 
-        let instr = Construct::instruction("i = int { no_field = 15 }").unwrap().1;
+        let instr = Construct::instruction("i = int { no_field = 15 }")
+            .unwrap()
+            .1;
 
         assert_eq!(
             instr.execute(&mut i).unwrap_err().msg(),
