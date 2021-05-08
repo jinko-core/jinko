@@ -353,9 +353,9 @@ impl Token {
             .contains(&c)
     }
 
-    /// Consumes 0 or more whitespaces in an input. A whitespace is a space or a tab
-    fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
-        take_while(|c| Token::is_whitespace(c))(input)
+    /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
+    fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
+        take_while1(|c| Token::is_whitespace(c))(input)
     }
 
     fn consume_multi_comment(input: &str) -> IResult<&str, &str> {
@@ -370,23 +370,22 @@ impl Token {
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
-    fn maybe_consume_comment(input: &str) -> IResult<&str, &str> {
-        let (input, _) = opt(alt((
+    fn consume_comment(input: &str) -> IResult<&str, &str> {
+        let (input, _) = alt((
             Token::consume_single_comment,
             Token::consume_multi_comment,
-        )))(input)?;
+        ))(input)?;
 
         Ok((input, ""))
     }
 
     /// Consumes what is considered as "extra": Whitespaces, comments...
     pub fn maybe_consume_extra(input: &str) -> IResult<&str, &str> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::maybe_consume_comment(input)?;
+        let (input, _) = many0(Token::consume_comment)(input)?;
+        let (input, _) = many0(pair(Token::consume_whitespaces, Token::consume_comment))(input)?;
 
-        // Last thing to do after clearing the extra, to make sure the next thing
-        // we parse is actual code
-        Token::maybe_consume_whitespaces(input)
+        // We can discard the accumulated comments
+        many0(Token::consume_whitespaces)(input).map(|(input, _)| (input, ""))
     }
 }
 
@@ -466,11 +465,11 @@ mod tests {
     #[test]
     fn t_consume_whitespace() {
         assert_eq!(
-            Token::maybe_consume_whitespaces("   input"),
+            Token::consume_whitespaces("   input"),
             Ok(("input", "   "))
         );
         assert_eq!(
-            Token::maybe_consume_whitespaces(" \t input"),
+            Token::consume_whitespaces(" \t input"),
             Ok(("input", " \t "))
         );
     }
@@ -530,19 +529,19 @@ mod tests {
 
     #[test]
     fn t_multi_comment_valid() {
-        match Token::maybe_consume_comment("/* */") {
+        match Token::consume_comment("/* */") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have one space"),
         };
-        match Token::maybe_consume_comment("/**/") {
+        match Token::consume_comment("/**/") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have zero space"),
         };
-        match Token::maybe_consume_comment("/*            */") {
+        match Token::consume_comment("/*            */") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have tons of spaces"),
         };
-        match Token::maybe_consume_comment("/* a bbbb a something   */") {
+        match Token::consume_comment("/* a bbbb a something   */") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have tons of text and stuff"),
         };
@@ -580,24 +579,56 @@ mod tests {
     }
 
     #[test]
+    fn t_multiple_different_comments() {
+        let input = r##"
+        # Comment
+        # Another one
+
+        /**
+         * Some documentation
+         */
+        func void() { }"##;
+
+        dbg!(&input);
+
+        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_multiple_different_comments_close() {
+        let input = r##"
+        # Comment
+        # Another one
+
+        /**
+         * Some documentation
+         *//* Some more */
+        func void() { }"##;
+
+        dbg!(&input);
+
+        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
     fn t_single_comment_valid() {
-        match Token::maybe_consume_comment("//") {
+        match Token::consume_comment("//") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have nothing after the slashes"),
         };
-        match Token::maybe_consume_comment("//                   ") {
+        match Token::consume_comment("//                   ") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have lots of spaces"),
         };
-        match Token::maybe_consume_comment("//          \nhey") {
+        match Token::consume_comment("//          \nhey") {
             Ok((left, _)) => assert_eq!(left, "\nhey"),
             Err(_) => assert!(false, "Don't consume stuff after the newline"),
         };
-        match Token::maybe_consume_comment("//// ") {
+        match Token::consume_comment("//// ") {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have multiple slashes"),
         };
-        match Token::maybe_consume_comment("// a bbbb a something  /* hey */") {
+        match Token::consume_comment("// a bbbb a something  /* hey */") {
             Ok(_) => assert!(true),
             Err(_) => assert!(
                 false,
