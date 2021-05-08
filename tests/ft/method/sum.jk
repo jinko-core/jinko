@@ -1,0 +1,5 @@
+func op(i0: int, i1: int, i2: int) -> int {
+    i0 * i1 + i2
+}
+
+1.op(2, 5) // return 1 * 2 + 5 => 7

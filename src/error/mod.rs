@@ -68,6 +68,12 @@ impl JkError {
     pub fn kind(&self) -> JkErrKind {
         self.kind
     }
+
+    /// Message contained in the error
+    #[cfg(test)]
+    pub fn msg(&self) -> &str {
+        &self.msg
+    }
 }
 
 impl std::fmt::Display for JkError {

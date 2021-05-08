@@ -1,9 +1,8 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::instance::Ty;
-use crate::instruction::{Block, DecArg, InstrKind, Instruction};
-use crate::{Interpreter, JkErrKind, JkError};
+use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
+use crate::{Interpreter, JkErrKind, JkError, Rename};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -19,7 +18,7 @@ pub enum FunctionKind {
 #[derive(Clone)]
 pub struct FunctionDec {
     name: String,
-    ty: Option<Ty>,
+    ty: Option<TypeId>,
     kind: FunctionKind,
     args: Vec<DecArg>,
     block: Option<Block>,
@@ -27,7 +26,7 @@ pub struct FunctionDec {
 
 impl FunctionDec {
     /// Create a new function declaration with a given name, no args and no code block
-    pub fn new(name: String, ty: Option<Ty>) -> FunctionDec {
+    pub fn new(name: String, ty: Option<TypeId>) -> FunctionDec {
         FunctionDec {
             name,
             ty,
@@ -67,8 +66,13 @@ impl FunctionDec {
     }
 
     /// Return a reference to the function's return type
-    pub fn ty(&self) -> Option<&Ty> {
+    pub fn ty(&self) -> Option<&TypeId> {
         self.ty.as_ref()
+    }
+
+    /// Set the type of the function
+    pub fn set_ty(&mut self, ty: Option<TypeId>) {
+        self.ty = ty
     }
 
     /// Return the kind of a function
@@ -168,13 +172,13 @@ impl Instruction for FunctionDec {
                 base.push_str(", ");
             }
 
-            base.push_str(&format!("{}: {}", arg.name(), arg.ty()));
+            base.push_str(&format!("{}: {}", arg.name(), arg.get_type().id()));
 
             first_arg = false;
         }
 
         base = match &self.ty {
-            Some(ty) => format!("{}) -> {}", base, ty),
+            Some(ty) => format!("{}) -> {}", base, ty.id()),
             None => format!("{})", base),
         };
 
@@ -182,6 +186,22 @@ impl Instruction for FunctionDec {
             Some(block) => format!("{} {}", base, block.print()),
             None => format!("{} {{}}", base),
         }
+    }
+}
+
+impl Rename for FunctionDec {
+    fn prefix(&mut self, prefix: &str) {
+        self.name = format!("{}{}", prefix, self.name);
+        self.set_ty(self.ty().map_or(None, |ty| {
+            Some(TypeId::from(format!("{}{}", prefix, ty.id()).as_str()))
+        }));
+
+        match &mut self.block {
+            Some(b) => b.prefix(prefix),
+            None => {}
+        };
+
+        self.args.iter_mut().for_each(|arg| arg.prefix(prefix));
     }
 }
 
@@ -200,6 +220,7 @@ impl std::fmt::Debug for FunctionDec {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instruction::TypeId;
 
     #[test]
     fn simple_no_arg() {
@@ -211,11 +232,11 @@ mod tests {
 
     #[test]
     fn simple_args() {
-        let mut function = FunctionDec::new("fn".to_owned(), Some("int".to_owned()));
+        let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")));
         function.set_kind(FunctionKind::Func);
         let args = vec![
-            DecArg::new("arg0".to_owned(), "int".to_owned()),
-            DecArg::new("arg1".to_owned(), "int".to_owned()),
+            DecArg::new("arg0".to_owned(), TypeId::from("int")),
+            DecArg::new("arg1".to_owned(), TypeId::from("int")),
         ];
 
         function.set_args(args);

@@ -76,6 +76,7 @@ impl ShuntingYard {
 
     fn operand<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
         let (input, expr) = alt((
+            BoxConstruct::method_call,
             BoxConstruct::function_call,
             Construct::constant,
             BoxConstruct::variable,
@@ -145,13 +146,32 @@ impl ShuntingYard {
             }
         }
 
+        // The value to return is added to the stack, and should be present once we
+        // iterated over all the pairs. If nothing is present, then it means there
+        // was an unbalance between left and right parentheses
+        let value = match stack.pop() {
+            Some(value) => value,
+            None => {
+                return Err(nom::Err::Error((
+                    "Unclosed right parenthesis",
+                    nom::error::ErrorKind::OneOf,
+                )))
+            }
+        };
+
+        // If there is still something left after the reduction, then it means the input
+        // wasn't a valid mathematical expression
         match stack.pop() {
-            Some(value) => Ok((input, value)),
-            None => Err(nom::Err::Error((
-                "Unclosed right parenthesis",
-                nom::error::ErrorKind::OneOf,
-            ))),
+            None => {}
+            Some(_) => {
+                return Err(nom::Err::Error((
+                    "Missing operator or operand",
+                    nom::error::ErrorKind::OneOf,
+                )))
+            }
         }
+
+        Ok((input, value))
     }
 
     /// Create a BinaryOp from an input string, executing the shunting yard
@@ -281,5 +301,12 @@ mod tests {
             "1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2",
             1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2,
         );
+    }
+
+    #[test]
+    fn t_sy_eager_consume_error() {
+        // https://github.com/CohenArthur/jinko/issues/172
+
+        assert!(ShuntingYard::parse("1 2").is_err(),);
     }
 }

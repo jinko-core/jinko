@@ -16,8 +16,8 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
-    Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
-    JkInst, Loop, LoopKind, TypeDec, TypeInstantiation, Var, VarAssign,
+    Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction, JkInst,
+    Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -32,7 +32,11 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         // FIXME: If input is empty, return an error or do nothing
+        // FIXME: We need to parse the remaining input after a correct instruction
+        // has been parsed
         let (input, value) = alt((
+            Construct::binary_op,
+            BoxConstruct::method_call,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -44,10 +48,8 @@ impl Construct {
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
-            BoxConstruct::audit,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
-            Construct::binary_op,
             BoxConstruct::variable,
             Construct::constant,
         ))(input)?;
@@ -191,11 +193,12 @@ impl Construct {
     /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
     /// `<identifier> ( <arg_list> )`
     pub fn type_instantiation(input: &str) -> ParseResult<TypeInstantiation> {
-        let (input, type_id) = Token::identifier(input)?;
+        let (input, type_name) = Token::identifier(input)?;
+        let type_id = TypeId::new(type_name);
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_curly_bracket(input)?;
 
-        let mut type_instantiation = TypeInstantiation::new(type_id.to_owned());
+        let mut type_instantiation = TypeInstantiation::new(type_id);
 
         let (input, mut arg_vec) = Construct::named_arg_list(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
@@ -370,7 +373,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
 
-        Ok((input, DecArg::new(id.to_owned(), ty.to_owned())))
+        Ok((input, DecArg::new(id.to_owned(), TypeId::new(ty))))
     }
 
     /// Parse an identifer as well as the type and comma that follows
@@ -410,7 +413,7 @@ impl Construct {
     }
 
     /// Parse the void return type of a function, checking that no arrow is present
-    fn return_type_void(input: &str) -> ParseResult<Option<String>> {
+    fn return_type_void(input: &str) -> ParseResult<Option<TypeId>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arrow) = opt(Token::arrow)(input)?;
 
@@ -421,18 +424,18 @@ impl Construct {
     }
 
     /// Parse a non-void return type
-    fn return_type_non_void(input: &str) -> ParseResult<Option<String>> {
+    fn return_type_non_void(input: &str) -> ParseResult<Option<TypeId>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::arrow(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        Ok((input, Some(ty.to_owned())))
+        Ok((input, Some(TypeId::from(ty.as_str()))))
     }
 
     /// Parse the return type of a function. Can be void
-    fn return_type(input: &str) -> ParseResult<Option<String>> {
+    fn return_type(input: &str) -> ParseResult<Option<TypeId>> {
         alt((Construct::return_type_non_void, Construct::return_type_void))(input)
     }
 
@@ -590,20 +593,6 @@ impl Construct {
         Ok((input, if_else))
     }
 
-    /// Parse an audit block. This consists in the the audit keyword and the following
-    /// block. Audit blocks are useful to relax the interpreter and develop faster. For
-    /// example, you're allowed to ignore return values in an audit block.
-    ///
-    /// `<audit> <block>`
-    pub(crate) fn audit(input: &str) -> ParseResult<Audit> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::audit_tok(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, block) = Construct::block(input)?;
-
-        Ok((input, Audit::new(block)))
-    }
-
     /// Parse a loop block, meaning the `loop` keyword and a corresponding block
     ///
     /// `<loop> <block>`
@@ -697,7 +686,6 @@ impl Construct {
     /// Parse a user-defined custom type
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
-    // FIXME: Un-underscore for 0.1.1
     pub(crate) fn type_declaration(input: &str) -> ParseResult<TypeDec> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::_type_tok(input)?;
@@ -725,7 +713,7 @@ impl Construct {
         Ok((input, path.to_string()))
     }
 
-    pub fn as_identifier(input: &str) -> ParseResult<Option<String>> {
+    fn as_identifier(input: &str) -> ParseResult<Option<String>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, id) = match opt(Token::as_tok)(input)? {
             (input, Some(_)) => {
@@ -742,7 +730,10 @@ impl Construct {
         Ok((input, id))
     }
 
-    pub fn incl(input: &str) -> ParseResult<Incl> {
+    /// Parse an include statement and its possible aliasing
+    ///
+    /// `<incl> <path> [ <as> <alias> ]
+    pub(crate) fn incl(input: &str) -> ParseResult<Incl> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, _) = Token::incl_tok(input)?;
@@ -755,6 +746,35 @@ impl Construct {
         let incl = Incl::new(path, rename);
 
         Ok((input, incl))
+    }
+
+    /// Parse a viable caller for a method call
+    fn method_caller(input: &str) -> ParseResult<Box<dyn Instruction>> {
+        // FIXME: Right now, we cannot chain method calls and no error is produced:
+        // `1.double().double()` returns 2 instead of the expected 4, since
+        // only one call is resolved and the remaining input (`.double()`) is
+        // silently ignored
+        alt((
+            BoxConstruct::function_call,
+            BoxConstruct::variable,
+            Construct::constant,
+            BoxConstruct::if_else,
+            BoxConstruct::block,
+            BoxConstruct::any_loop,
+            BoxConstruct::jinko_inst,
+        ))(input)
+    }
+
+    /// Parse a method like function call, that shall be desugared
+    /// to a simple function call later on
+    ///
+    /// `<identifier>.<identifier>()`
+    pub fn method_call(input: &str) -> ParseResult<MethodCall> {
+        let (input, caller) = Construct::method_caller(input)?;
+        let (input, _) = Token::dot(input)?;
+        let (input, method) = Construct::function_call(input)?;
+
+        Ok((input, MethodCall::new(caller, method)))
     }
 }
 
@@ -982,7 +1002,8 @@ mod tests {
             Construct::identifier_type("name: some_type")
                 .unwrap()
                 .1
-                .ty(),
+                .get_type()
+                .id(),
             "some_type"
         );
 
@@ -997,7 +1018,8 @@ mod tests {
             Construct::identifier_type("name     :some_type")
                 .unwrap()
                 .1
-                .ty(),
+                .get_type()
+                .id(),
             "some_type"
         );
     }
@@ -1087,11 +1109,11 @@ mod tests {
     fn t_return_type_non_void() {
         assert_eq!(
             Construct::return_type("-> int"),
-            Ok(("", Some("int".to_owned())))
+            Ok(("", Some(TypeId::from("int"))))
         );
         assert_eq!(
             Construct::return_type("   ->    int   {"),
-            Ok(("{", Some("int".to_owned())))
+            Ok(("{", Some(TypeId::from("int"))))
         );
     }
 
@@ -1114,7 +1136,7 @@ mod tests {
             .1;
 
         assert_eq!(func.name(), "add");
-        assert_eq!(func.ty(), Some(&"ty".to_owned()));
+        assert_eq!(func.ty(), Some(&TypeId::from("ty")));
         assert_eq!(func.args().len(), 2);
         assert_eq!(func.fn_kind(), FunctionKind::Func);
     }
@@ -1154,7 +1176,7 @@ mod tests {
             .1;
 
         assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), Some(&"ty".to_owned()));
+        assert_eq!(test.ty(), Some(&TypeId::from("ty")));
         assert_eq!(test.fn_kind(), FunctionKind::Ext);
     }
 
@@ -1193,14 +1215,6 @@ mod tests {
             Ok((input, _)) => assert_eq!(input, ""),
             Err(_) => assert!(false, "Valid to have empty blocks"),
         };
-    }
-
-    #[test]
-    fn t_audit_simple() {
-        match Construct::audit("audit {}") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid audit syntax"),
-        }
     }
 
     #[test]
@@ -1480,5 +1494,49 @@ mod tests {
             Ok(_) => assert!(false, "Can't include a and rename as nothing"),
             Err(_) => assert!(true),
         }
+    }
+
+    #[test]
+    fn t_method_call_simple() {
+        assert!(
+            Construct::method_call("a.b()").is_ok(),
+            "Valid to have simple identifiers"
+        );
+        assert!(
+            Construct::method_call("135.method()").is_ok(),
+            "Valid to have constant as caller"
+        );
+        assert!(
+            Construct::method_call("{ hey }.method()").is_ok(),
+            "Valid to have block as caller"
+        );
+        assert!(
+            Construct::method_call("func_call().method()").is_ok(),
+            "Valid to have call as caller"
+        );
+    }
+
+    #[test]
+    fn t_method_call_invalid() {
+        assert!(
+            Construct::method_call("a.b").is_err(),
+            "Missing parentheses"
+        );
+        assert!(
+            Construct::method_call("a.()").is_err(),
+            "Missing method name"
+        );
+        assert!(
+            Construct::method_call(".method()").is_err(),
+            "Missing caller"
+        );
+    }
+
+    #[test]
+    fn t_sy_eager_consume() {
+        // https://github.com/CohenArthur/jinko/issues/172
+
+        assert_eq!(Construct::instruction("1 2").unwrap().0, "2");
+        assert_eq!(Construct::instruction("a b").unwrap().0, "b");
     }
 }

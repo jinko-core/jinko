@@ -17,6 +17,10 @@ valid or convincing results.
 Feel free to open an issue in order to get more information about the language
 or its usage!
 
+## Community
+
+Feel free to come and chat about jinko on [matrix](https://matrix.to/#/+jinko:matrix.org)!
+
 ## Programming in jinko
 
 The lib standard is currently inexistant. `0.1.0` serves as a staple release, in
@@ -42,18 +46,7 @@ Feel free to submit any observations, bug reports or questions as an [issue](htt
 
 ## Contributing
 
-In order to run the unit tests, run `cargo test`.
-For functional tests, make sure that [`ft`](https://github.com/cohenarthur/ft) is installed
-and run `tests/func_tests.sh` from the root of the repository
-
-Code should be formatted using `cargo fmt`
-
-Feel free to open up PRs and request a review, I'll be happy to do so!
-
-I am available for mentoring requests! If an issue interests you, feel free to comment
-on it and I'll be happy to mentor you through its resolution. Check out the
-[good first issues](https://github.com/cohenarthur/jinko/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
-for a solid list of starting points.
+Checkout [CONTRIBUTING.md](CONTRIBUTING.md)!
 
 ## Requirements
 

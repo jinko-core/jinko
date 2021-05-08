@@ -7,7 +7,6 @@ use crate::{Interpreter, JkErrKind, JkError, ObjectInstance};
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
 
-mod audit;
 mod binary_op;
 mod block;
 mod dec_arg;
@@ -17,13 +16,15 @@ mod if_else;
 mod incl;
 mod jk_inst;
 mod loop_block;
+mod method_call;
 mod operator;
+mod rename;
 mod type_declaration;
+mod type_id;
 mod type_instantiation;
 mod var;
 mod var_assignment;
 
-pub use audit::Audit;
 pub use binary_op::BinaryOp;
 pub use block::Block;
 pub use dec_arg::DecArg;
@@ -33,8 +34,11 @@ pub use if_else::IfElse;
 pub use incl::Incl;
 pub use jk_inst::JkInst;
 pub use loop_block::{Loop, LoopKind};
+pub use method_call::MethodCall;
 pub use operator::Operator;
+pub use rename::Rename;
 pub use type_declaration::TypeDec;
+pub use type_id::{TypeId, PRIMITIVE_TYPES};
 pub use type_instantiation::TypeInstantiation;
 pub use var::Var;
 pub use var_assignment::VarAssign;
@@ -51,7 +55,7 @@ pub enum InstrKind {
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
-pub trait Instruction: InstructionClone + Downcast {
+pub trait Instruction: InstructionClone + Downcast + Rename {
     /// Execute the instruction, altering the state of the interpreter. Executing
     /// this method returns an InstrKind, so either a statement or an expression
     /// containing a "return value".

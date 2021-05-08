@@ -14,7 +14,7 @@ use scope_map::ScopeMap;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
+use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
 use crate::{JkErrKind, JkError};
 
 /// Type the interpreter uses for keys
@@ -73,6 +73,11 @@ impl Interpreter {
         };
 
         i.scope_enter();
+
+        // Add all primitive types as empty types without fields
+        crate::instruction::PRIMITIVE_TYPES
+            .iter()
+            .for_each(|ty_name| i.add_type(TypeDec::from(*ty_name)).unwrap());
 
         i
     }
@@ -141,8 +146,8 @@ impl Interpreter {
     }
 
     /// Get a reference on an existing type
-    pub fn get_type(&self, name: &str) -> Option<&Rc<TypeDec>> {
-        self.scope_map.get_type(name)
+    pub fn get_type(&self, type_id: &TypeId) -> Option<&Rc<TypeDec>> {
+        self.scope_map.get_type(type_id.id())
     }
 
     /// Create a new empty scope

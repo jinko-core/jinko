@@ -9,8 +9,9 @@
 
 use std::collections::HashMap;
 
-// FIXME: Use CustomType once @Skallwar's PR is merged
-pub type Ty = String;
+use crate::instruction::TypeDec;
+
+pub type Ty = TypeDec;
 pub type Name = String;
 type Offset = usize;
 pub type Size = usize;
