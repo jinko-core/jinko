@@ -16,8 +16,8 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
-    Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction, JkInst,
-    Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign, FieldAccess,
+    Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
+    JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
