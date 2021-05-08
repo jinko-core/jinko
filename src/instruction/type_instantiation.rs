@@ -104,7 +104,7 @@ impl Instruction for TypeInstantiation {
         let mut size: usize = 0;
         let mut data: Vec<u8> = Vec::new();
         let mut fields: Vec<(Name, Size)> = Vec::new();
-        for (i, named_arg) in self.fields.iter().enumerate() {
+        for (_, named_arg) in self.fields.iter().enumerate() {
             // FIXME: Need to assign the correct field to the field that corresponds
             // in the typedec
             let field_instr = named_arg.value();
