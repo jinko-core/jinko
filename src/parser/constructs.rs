@@ -16,8 +16,8 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
-    Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction, JkInst,
-    Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign,
+    Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
+    JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -796,12 +796,12 @@ impl Construct {
     /// only difference is that the method call shall have parentheses
     ///
     /// `<identifier>.<identifier>`
-    pub fn field_access(input: &str) -> ParseResult<Var /* FIXME */> {
-        let (input, _instance) = Construct::instance(input)?;
+    pub fn field_access(input: &str) -> ParseResult<FieldAccess> {
+        let (input, instance) = Construct::instance(input)?;
         let (input, _) = Token::dot(input)?;
-        let (input, _field) = Token::identifier(input)?;
+        let (input, field) = Token::identifier(input)?;
 
-        Ok((input, Var::new(String::from(_field) /* FIXME */)))
+        Ok((input, FieldAccess::new(instance, field)))
     }
 }
 
