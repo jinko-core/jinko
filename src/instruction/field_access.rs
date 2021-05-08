@@ -38,7 +38,7 @@ impl Instruction for FieldAccess {
                 return Err(JkError::new(
                     JkErrKind::Interpreter,
                     format!(
-                        "Instance `{}` is a statement and cannot be accessed",
+                        "instance `{}` is a statement and cannot be accessed",
                         self.instance.print()
                     ),
                     None,
@@ -99,5 +99,35 @@ mod tests {
         };
 
         assert_eq!(res, JkInt::from(15).to_instance())
+    }
+
+    #[test]
+    fn t_field_access_on_void() {
+        let mut interpreter = setup();
+
+        let inst = Construct::instruction("func void() {}").unwrap().1;
+        inst.execute(&mut interpreter).unwrap();
+
+        let inst = Construct::instruction("void().field").unwrap().1;
+        assert!(inst.execute(&mut interpreter).is_err())
+    }
+
+    #[test]
+    fn t_field_access_unknown_field() {
+        let mut interpreter = setup();
+
+        let inst = Construct::instruction("b.not_a_field").unwrap().1;
+        assert!(inst.execute(&mut interpreter).is_err())
+    }
+
+    #[test]
+    fn t_field_access_field_on_primitive() {
+        let mut interpreter = setup();
+
+        let inst = Construct::instruction("i = 12").unwrap().1;
+        inst.execute(&mut interpreter).unwrap();
+
+        let inst = Construct::instruction("i.field_on_primitive").unwrap().1;
+        assert!(inst.execute(&mut interpreter).is_err())
     }
 }
