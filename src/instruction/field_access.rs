@@ -88,16 +88,52 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // FIXME: Do not ignore once TypeInstantiation creates typed fields.
     fn t_valid_field_access() {
         let mut interpreter = setup();
 
         let inst = Construct::instruction("b.x").unwrap().1;
         let res = match inst.execute(&mut interpreter).unwrap() {
             InstrKind::Expression(Some(i)) => i,
-            _ => return assert!(false, "Error when accesing valid field"),
+            _ => return assert!(false, "Error when accessing valid field"),
         };
 
-        assert_eq!(res, JkInt::from(15).to_instance())
+        let mut expected = JkInt::from(15).to_instance();
+        // FIXME: Remove once typechecking is implemented
+        expected.set_ty(None);
+
+        assert_eq!(res, expected)
+    }
+
+    #[test]
+    #[ignore] // FIXME: Do not ignore once we can type instance fields
+    fn t_valid_multi_field_access() {
+        let mut interpreter = Interpreter::new();
+
+        let inst = Construct::instruction("type Pair1(x: int, y: int)")
+            .unwrap()
+            .1;
+        inst.execute(&mut interpreter).unwrap();
+
+        let inst = Construct::instruction("type Pair2(x: Pair1, y: int)")
+            .unwrap()
+            .1;
+        inst.execute(&mut interpreter).unwrap();
+
+        let inst = Construct::instruction("p = Pair2 { x = Pair1 { x = 1, y = 2}, y = 3}")
+            .unwrap()
+            .1;
+        inst.execute(&mut interpreter).unwrap();
+
+        let inst = Construct::instruction("p.x.y").unwrap().1;
+        let res = match inst.execute(&mut interpreter).unwrap() {
+            InstrKind::Expression(Some(i)) => i,
+            _ => return assert!(false, "Error when accessing valid multi field"),
+        };
+
+        let mut expected = JkInt::from(2).to_instance();
+        // FIXME: Remove once typechecking is implemented
+        expected.set_ty(None);
+
+        assert_eq!(res, expected)
     }
 }
