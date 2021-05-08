@@ -792,16 +792,39 @@ impl Construct {
         Ok((input, MethodCall::new(caller, method)))
     }
 
-    /// Parse a field access on a custom type. This is very similar to a method call: The
-    /// only difference is that the method call shall have parentheses
-    ///
-    /// `<identifier>.<identifier>`
-    pub fn field_access(input: &str) -> ParseResult<FieldAccess> {
-        let (input, instance) = Construct::instance(input)?;
-        let (input, _) = Token::dot(input)?;
+    fn inner_inner(input: &str, instance: Box<dyn Instruction>) -> ParseResult<FieldAccess> {
         let (input, field) = Token::identifier(input)?;
 
         Ok((input, FieldAccess::new(instance, field)))
+
+    }
+
+    fn inner_field_access_second_half(input: &str, instance: Box<dyn Instruction>) -> ParseResult<FieldAccess> {
+        let (input, _) = Token::dot(input)?;
+        let (input, f_a) = Construct::inner_inner(input, instance)?;
+
+        match Token::dot(input) {
+            Err(_) => Ok((input, f_a)),
+            Ok((input, _)) => Construct::inner_inner(input, Box::new(f_a))
+        }
+    }
+
+    fn inner_field_access(input: &str) -> ParseResult<FieldAccess> {
+        let (input, instance) = Construct::instance(input)?;
+
+        Construct::inner_field_access_second_half(input, instance)
+    }
+
+    fn multi_field_access(input: &str) -> ParseResult<FieldAccess> {
+        Construct::inner_field_access(input)
+    }
+
+    /// Parse a field access on a custom type. This is very similar to a method call: The
+    /// only difference is that the method call shall have parentheses
+    ///
+    /// `<identifier>.<identifier>[.<identifier>]*`
+    pub fn field_access(input: &str) -> ParseResult<FieldAccess> {
+        Construct::multi_field_access(input)
     }
 }
 
@@ -1590,5 +1613,10 @@ mod tests {
     fn t_field_access_with_spaces() {
         assert!(Construct::field_access("sdot. space").is_err());
         assert!(Construct::field_access("s .dotspace").is_err());
+    }
+
+    #[test]
+    fn t_multi_field_access() {
+        assert!(Construct::field_access("top.middle.bottom").is_ok());
     }
 }
