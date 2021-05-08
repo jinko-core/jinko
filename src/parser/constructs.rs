@@ -792,24 +792,32 @@ impl Construct {
         Ok((input, MethodCall::new(caller, method)))
     }
 
-    fn field_access_second_half(
-        input: &str,
-        instance: Box<dyn Instruction>,
-    ) -> ParseResult<FieldAccess> {
-        let (input, field) = Token::identifier(input)?;
+    fn dot_field(input: &str) -> ParseResult<String> {
+        let (input, _) = Token::dot(input)?;
 
-        Ok((input, FieldAccess::new(instance, field)))
+        Token::identifier(input)
+    }
+
+    fn inner_field_access(input: &str) -> ParseResult<FieldAccess> {
+        let (input, instance) = Construct::instance(input)?;
+        let (input, field_name) = Construct::dot_field(input)?;
+
+        Ok((input, FieldAccess::new(instance, field_name)))
     }
 
     fn multi_field_access(input: &str) -> ParseResult<FieldAccess> {
-        let (input, instance) = Construct::instance(input)?;
-        let (input, _) = Token::dot(input)?;
-        let (input, f_a) = Construct::field_access_second_half(input, instance)?;
+        let (input, first_fa) = Construct::inner_field_access(input)?;
 
-        match Token::dot(input) {
-            Err(_) => Ok((input, f_a)),
-            Ok((input, _)) => Construct::field_access_second_half(input, Box::new(f_a)),
+        let (input, dot_field_vec) = many0(Construct::dot_field)(input)?;
+
+        let mut current_fa = first_fa;
+
+        for field_name in dot_field_vec {
+            let fa = FieldAccess::new(Box::new(current_fa), field_name);
+            current_fa = fa;
         }
+
+        Ok((input, current_fa))
     }
 
     /// Parse a field access on a custom type. This is very similar to a method call: The
