@@ -3,7 +3,7 @@
 
 use super::{
     InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, Rename, TypeDec,
-    TypeId,
+    TypeId, VarAssign,
 };
 use crate::instance::{Name, Size};
 
@@ -12,7 +12,7 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub struct TypeInstantiation {
     type_name: TypeId,
-    fields: Vec<Box<dyn Instruction>>,
+    fields: Vec<VarAssign>,
 }
 
 impl TypeInstantiation {
@@ -25,7 +25,7 @@ impl TypeInstantiation {
     }
 
     /// Add an argument to the given type instantiation
-    pub fn add_field(&mut self, arg: Box<dyn Instruction>) {
+    pub fn add_field(&mut self, arg: VarAssign) {
         self.fields.push(arg)
     }
 
@@ -35,7 +35,7 @@ impl TypeInstantiation {
     }
 
     /// Return a reference to the list of fields
-    pub fn fields(&self) -> &Vec<Box<dyn Instruction>> {
+    pub fn fields(&self) -> &Vec<VarAssign> {
         &self.fields
     }
 
@@ -75,6 +75,7 @@ impl TypeInstantiation {
     }
 
     /// Check if the type we're currently instantiating is a primitive type or not
+    // FIXME: Remove later, as it should not be needed once typechecking is implemented
     fn check_primitive(&self) -> Result<(), JkError> {
         match self.type_name.is_primitive() {
             true => Err(JkError::new(
@@ -122,26 +123,30 @@ impl Instruction for TypeInstantiation {
         let mut size: usize = 0;
         let mut data: Vec<u8> = Vec::new();
         let mut fields: Vec<(Name, Size)> = Vec::new();
-        for (i, instr) in self.fields.iter().enumerate() {
-            let dec_name = type_dec.fields()[i].name();
-            let instance = match instr.execute(interpreter)? {
+        for (_, named_arg) in self.fields.iter().enumerate() {
+            // FIXME: Need to assign the correct field to the field that corresponds
+            // in the typedec
+            let field_instr = named_arg.value();
+            let field_name = named_arg.symbol();
+
+            let instance = match field_instr.execute(interpreter)? {
                 InstrKind::Expression(Some(instance)) => instance,
                 _ => {
                     return Err(JkError::new(
                         JkErrKind::Interpreter,
                         format!(
                             "An Expression was excepted but a Statement was found: `{}`",
-                            dec_name
+                            field_name
                         ),
                         None,
-                        instr.print(),
+                        named_arg.print(),
                     ))
                 }
             };
 
             let inst_size = instance.size();
             size += inst_size;
-            fields.push((dec_name.to_string(), inst_size));
+            fields.push((field_name.to_string(), inst_size));
             data.append(&mut instance.data().to_vec());
         }
 
@@ -182,7 +187,7 @@ mod test {
         ];
         let t = TypeDec::new("Type_Test".to_owned(), fields);
 
-        interpreter.add_type(t).unwrap();
+        t.execute(&mut interpreter).unwrap();
 
         let mut t_inst = TypeInstantiation::new(TypeId::from("Type_Test"));
 
@@ -191,14 +196,22 @@ mod test {
             Err(_) => assert!(true),
         }
 
-        t_inst.add_field(Box::new(JkInt::from(12)));
+        t_inst.add_field(VarAssign::new(
+            false,
+            "a".to_string(),
+            Box::new(JkInt::from(12)),
+        ));
 
         match t_inst.execute(&mut interpreter) {
             Ok(_) => assert!(false, "Given 1 field to 2 fields type"),
             Err(_) => assert!(true),
         }
 
-        t_inst.add_field(Box::new(JkInt::from(8)));
+        t_inst.add_field(VarAssign::new(
+            false,
+            "b".to_string(),
+            Box::new(JkInt::from(8)),
+        ));
 
         assert!(
             t_inst.execute(&mut interpreter).is_ok(),
@@ -222,11 +235,19 @@ mod test {
         ];
         let t = TypeDec::new(TYPE_NAME.to_owned(), fields);
 
-        interpreter.add_type(t).unwrap();
+        t.execute(&mut interpreter).unwrap();
 
-        let mut t_inst = TypeInstantiation::new(TypeId::from(TYPE_NAME));
-        t_inst.add_field(Box::new(JkString::from("I am a loooooooong string")));
-        t_inst.add_field(Box::new(JkInt::from(12)));
+        let mut t_inst = TypeInstantiation::new(TypeId::new(TYPE_NAME.to_string()));
+        t_inst.add_field(VarAssign::new(
+            false,
+            "a".to_string(),
+            Box::new(JkString::from("I am a loooooooong string")),
+        ));
+        t_inst.add_field(VarAssign::new(
+            false,
+            "b".to_string(),
+            Box::new(JkInt::from(12)),
+        ));
 
         let instance = match t_inst.execute(&mut interpreter).unwrap() {
             InstrKind::Expression(Some(instance)) => instance,
@@ -268,7 +289,9 @@ mod test {
 
         let mut i = Interpreter::new();
 
-        let instr = Construct::instruction("i = int { 15 }").unwrap().1;
+        let instr = Construct::instruction("i = int { no_field = 15 }")
+            .unwrap()
+            .1;
 
         assert_eq!(
             instr.execute(&mut i).unwrap_err().msg(),

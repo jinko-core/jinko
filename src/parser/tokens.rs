@@ -349,11 +349,6 @@ impl Token {
             .contains(&c)
     }
 
-    /// Consumes 1 or more whitespaces in an input. A whitespace is a space or a tab
-    pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
-        take_while1(|c| Token::is_whitespace(c))(input)
-    }
-
     /// Consumes 0 or more whitespaces in an input. A whitespace is a space or a tab
     fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
         take_while(|c| Token::is_whitespace(c))(input)
@@ -470,19 +465,14 @@ mod tests {
 
     #[test]
     fn t_consume_whitespace() {
-        assert_eq!(Token::consume_whitespaces("   input"), Ok(("input", "   ")));
         assert_eq!(
-            Token::consume_whitespaces(" \t input"),
+            Token::maybe_consume_whitespaces("   input"),
+            Ok(("input", "   "))
+        );
+        assert_eq!(
+            Token::maybe_consume_whitespaces(" \t input"),
             Ok(("input", " \t "))
         );
-    }
-
-    #[test]
-    fn t_consume_whitespace_invalid() {
-        match Token::consume_whitespaces("something") {
-            Ok(_) => assert!(false, "At least one whitespace required"),
-            Err(_) => assert!(true),
-        }
     }
 
     #[test]

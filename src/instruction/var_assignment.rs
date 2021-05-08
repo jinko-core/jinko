@@ -32,6 +32,11 @@ impl VarAssign {
     pub fn mutable(&self) -> bool {
         self.mutable
     }
+
+    /// Get a reference to the value used to initialize the variable
+    pub fn value(&self) -> &Box<dyn Instruction> {
+        &self.value
+    }
 }
 
 impl Instruction for VarAssign {
