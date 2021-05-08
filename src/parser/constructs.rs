@@ -898,26 +898,14 @@ mod tests {
             true
         );
 
-        match Construct::var_assignment("mut x=12;") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Equal stuck to id is allowed"),
-        }
-        match Construct::var_assignment("mut x= 12;") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Equal stuck to id is allowed"),
-        }
-        match Construct::var_assignment("mut x =12;") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Equal stuck to value is allowed"),
-        }
+        assert!(Construct::var_assignment("mut x=12;").is_ok());
+        assert!(Construct::var_assignment("mut x= 12;").is_ok());
+        assert!(Construct::var_assignment("mut x =12;").is_ok());
     }
 
     #[test]
     fn t_var_assign_invalid() {
-        match Construct::var_assignment("mutable x = 12") {
-            Ok(_) => assert!(false, "Mutable isn't mut"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::var_assignment("mutable x = 12").is_err());
     }
 
     #[test]
@@ -973,38 +961,17 @@ mod tests {
 
     #[test]
     fn t_function_call_invalid() {
-        match Construct::function_call("fn(") {
-            Ok(_) => assert!(false, "Unterminated parenthesis"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn))") {
-            Ok(_) => assert!(false, "Wrong parenthesis"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn((") {
-            Ok(_) => assert!(false, "Wrong parenthesis again"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn((") {
-            Ok(_) => assert!(false, "Wrong parenthesis again"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn((") {
-            Ok(_) => assert!(false, "Wrong parenthesis again"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::function_call("fn(").is_err());
+        assert!(Construct::function_call("fn))").is_err());
+        assert!(Construct::function_call("fn((").is_err());
+        assert!(Construct::function_call("fn((").is_err());
+        assert!(Construct::function_call("fn((").is_err());
     }
 
     #[test]
     fn t_function_call_multiarg_invalid() {
-        match Construct::function_call("fn(1, 2, 3, 4,)") {
-            Ok(_) => assert!(false, "Unterminated arglist"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn(1, 2, 3, 4,   )") {
-            Ok(_) => assert!(false, "Unterminated arglist"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::function_call("fn(1, 2, 3, 4,)").is_err());
+        assert!(Construct::function_call("fn(1, 2, 3, 4,   )").is_err());
     }
 
     #[test]
@@ -1035,10 +1002,7 @@ mod tests {
             1
         );
 
-        match Construct::block("{ 12a; 14a }").unwrap().1.last() {
-            Some(_) => assert!(true),
-            None => assert!(false, "Last instruction here is valid"),
-        }
+        assert!(Construct::block("{ 12a; 14a }").unwrap().1.last().is_some());
     }
 
     #[test]
@@ -1109,25 +1073,10 @@ mod tests {
 
     #[test]
     fn t_block_invalid_oneline() {
-        match Construct::block("{ 12a;") {
-            Ok(_) => assert!(false, "Unterminated bracket"),
-            Err(_) => assert!(true),
-        }
-
-        match Construct::block("{ 12a") {
-            Ok(_) => assert!(false, "Unterminated bracket but on instruction"),
-            Err(_) => assert!(true),
-        }
-
-        match Construct::block("{ 12a; 13a") {
-            Ok(_) => assert!(false, "Unterminated bracket but on second instruction"),
-            Err(_) => assert!(true),
-        }
-
-        match Construct::block("12a; 13a }") {
-            Ok(_) => assert!(false, "Not starting with a bracket"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::block("{ 12a;").is_err());
+        assert!(Construct::block("{ 12a").is_err());
+        assert!(Construct::block("{ 12a; 13a").is_err());
+        assert!(Construct::block("12a; 13a }").is_err());
     }
 
     #[test]
@@ -1204,10 +1153,7 @@ mod tests {
 
     #[test]
     fn t_test_invalid() {
-        match Construct::test_declaration("test add(a: int) -> int {}") {
-            Ok(_) => assert!(false, "Can't have arguments to a test"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::test_declaration("test add(a: int) -> int {}").is_err());
     }
 
     #[test]
@@ -1245,96 +1191,57 @@ mod tests {
 
     #[test]
     fn t_ext_invalid() {
-        match Construct::ext_declaration("ext func add(a: int) -> int {}") {
-            Ok(_) => assert!(false, "Can't have a block for an ext function"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::ext_declaration("ext func add(a: int) -> int {}").is_err());
     }
 
     #[test]
     fn t_if_else_just_if() {
         let ie = Construct::if_else("if condition {}");
 
-        match &ie {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to only have if"),
-        };
+        assert!(&ie.is_ok());
     }
 
     #[test]
     fn t_if_else() {
-        match Construct::if_else("if condition {} else {}") {
-            Ok((input, _)) => assert_eq!(input, ""),
-            Err(_) => assert!(false, "Valid to have empty blocks"),
-        };
+        assert!(Construct::if_else("if condition {} else {}").is_ok());
     }
 
     #[test]
     fn t_loop_valid() {
-        match Construct::loop_block("loop {}") {
-            Ok((i, _)) => assert_eq!(i, ""),
-            Err(_) => assert!(false, "Valid empty loop"),
-        }
+        assert!(Construct::loop_block("loop {}").is_ok());
     }
 
     #[test]
     fn t_loop_invalid() {
-        match Construct::loop_block("loo {}") {
-            Ok(_) => assert!(false, "`loo` is not the keyword"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::loop_block("loo {}").is_err());
 
-        match Construct::loop_block("loop") {
-            Ok(_) => assert!(false, "A block is required"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::loop_block("loop").is_err());
     }
 
     #[test]
     fn t_while_valid() {
-        match Construct::while_block("while x_99 {}") {
-            Ok((i, _)) => assert_eq!(i, ""),
-            Err(_) => assert!(false, "Valid empty while"),
-        }
+        assert!(Construct::while_block("while x_99 {}").is_ok());
     }
 
     #[test]
     fn t_while_invalid() {
-        match Construct::while_block("while {}") {
-            Ok(_) => assert!(false, "Need a condition"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::while_block("while {}").is_err());
 
-        match Construct::while_block("while") {
-            Ok(_) => assert!(false, "A block is required"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::while_block("while").is_err());
     }
 
     #[test]
     fn t_for_valid() {
-        match Construct::for_block("for x_99 in x_99 {}") {
-            Ok((i, _)) => assert_eq!(i, ""),
-            Err(_) => assert!(false, "Valid empty for"),
-        }
+        assert!(Construct::for_block("for x_99 in x_99 {}").is_ok());
     }
 
     #[test]
     fn t_for_invalid() {
-        match Construct::for_block("for {}") {
-            Ok(_) => assert!(false, "Need a variable and range"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::for_block("for {}").is_err());
 
-        match Construct::for_block("for x99 in {}") {
-            Ok(_) => assert!(false, "A range is required"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::for_block("for x99 in {}").is_err());
 
-        match Construct::for_block("for x99 in { { { inner_block() } } }") {
-            Ok(_) => assert!(false, "A range is required"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::for_block("for x99 in { { { inner_block() } } }").is_err());
     }
 
     #[test]
@@ -1348,144 +1255,93 @@ mod tests {
 
     #[test]
     fn t_binary_op_valid() {
-        match Construct::binary_op("a *   12 ") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have multi spaces"),
-        };
-        match Construct::binary_op("some() + 12.1") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have multiple instruction types"),
-        };
+        assert!(Construct::binary_op("a *   12 ").is_ok());
+        assert!(Construct::binary_op("some() + 12.1").is_ok());
     }
 
     #[test]
     fn t_binary_op_invalid() {
-        match Construct::binary_op("a ? 12") {
-            Ok(_) => assert!(false, "? is not a binop"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::binary_op("a ? 12").is_err());
     }
 
     #[test]
     fn t_type_declaration_simple() {
-        match Construct::type_declaration("type Int(v: int);") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Just one int is valid"),
-        };
-        match Construct::type_declaration("type Ints(a: int, b: int);") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Two integers is valid"),
-        };
-        match Construct::type_declaration("type Compound(i: int, s: str);") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Different types are valid"),
-        };
-        match Construct::type_declaration(
+        assert!(Construct::type_declaration("type Int(v: int);").is_ok());
+        assert!(Construct::type_declaration("type Ints(a: int, b: int);").is_ok());
+        assert!(Construct::type_declaration("type Compound(i: int, s: str);").is_ok());
+        assert!(Construct::type_declaration(
             "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
-        ) {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Custom types in custom types are valid"),
-        };
+        )
+        .is_ok());
     }
 
     #[test]
     fn t_type_declaration_empty() {
-        match Construct::type_declaration("type Empty();") {
-            Ok(_) => assert!(false, "Can't have empty types"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::type_declaration("type Empty();").is_err());
     }
 
     #[test]
     fn t_type_declaration_invalid() {
-        match Construct::type_declaration("type ExtraComma(a: int, b: int,);") {
-            Ok(_) => assert!(false, "Extra comma in type definition"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::type_declaration("type ExtraComma(a: int, b: int,);").is_err());
     }
 
     #[test]
     fn t_type_instantiation_valid() {
-        match Construct::type_instantiation("Custom { a = 1 }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Type instantiation with one value is valid"),
-        }
+        assert!(Construct::type_instantiation("Custom { a = 1 }").is_ok());
     }
 
     #[test]
     fn t_type_instantiation_valid_multi() {
-        match Construct::type_instantiation("Custom { a = 1, b= 2, c = { 's' } }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Type instantiation with multiple values is valid"),
-        }
+        assert!(Construct::type_instantiation("Custom { a = 1, b= 2, c = { 's' } }").is_ok());
     }
 
     #[test]
     fn t_type_instantiation_invalid() {
-        match Construct::type_instantiation("Custom { ") {
-            Ok(_) => assert!(false),
-            Err(_) => assert!(true, "Type instantiation need a closing brace"),
-        }
+        assert!(Construct::type_instantiation("Custom { ").is_err());
     }
 
     #[test]
     fn t_type_instantiation_no_name() {
-        match Construct::type_instantiation("{ 1 }") {
-            Ok(_) => assert!(false),
-            Err(_) => assert!(true, "Type instantiation need a type name"),
-        }
+        assert!(Construct::type_instantiation("{ 1 }").is_err());
     }
 
     #[test]
     fn t_type_instantiation_no_named_arg() {
-        match Construct::type_instantiation("CustomType { 1 }") {
-            Ok(_) => assert!(false),
-            Err(_) => assert!(true, "Type instantiation need a named arg"),
-        }
+        assert!(Construct::type_instantiation("CustomType { 1 }").is_err());
     }
 
     #[test]
     fn t_func_dec_binop() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { a + b }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to directly return a binop"),
-        }
+        assert!(Construct::function_declaration("func a(a: int, b:int) -> int { a + b }").is_ok());
     }
 
     #[test]
     fn t_func_dec_return_arg() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { a }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to directly return an argument"),
-        }
+        assert!(Construct::function_declaration("func a(a: int, b:int) -> int { a }").is_ok());
     }
 
     #[test]
     fn t_func_dec_return_arg_plus_stmt() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { something(); a }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(
-                false,
-                "Valid to directly return an argument after a statement"
-            ),
-        }
+        assert!(
+            Construct::function_declaration("func a(a: int, b:int) -> int { something(); a }")
+                .is_ok()
+        );
     }
 
     #[test]
     fn t_func_dec_return_binop_plus_stmt() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { something(); a + b }")
-        {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to directly return a binop after a statement"),
-        }
+        assert!(Construct::function_declaration(
+            "func a(a: int, b:int) -> int { something(); a + b }"
+        )
+        .is_ok());
     }
 
     #[test]
     fn t_func_dec_return_binop_as_var() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { res = a + b; res }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to directly return a binop as a variable"),
-        }
+        assert!(Construct::function_declaration(
+            "func a(a: int, b:int) -> int { res = a + b; res }"
+        )
+        .is_ok());
     }
 
     #[test]
@@ -1518,34 +1374,22 @@ mod tests {
 
     #[test]
     fn t_incl_valid() {
-        match Construct::incl("incl simple") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "`incl simple` is perfectly valid"),
-        }
+        assert!(Construct::incl("incl simple").is_ok());
     }
 
     #[test]
     fn t_incl_valid_plus_rename() {
-        match Construct::incl("incl a as b") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "incl + renaming has to be handled"),
-        }
+        assert!(Construct::incl("incl a as b").is_ok());
     }
 
     #[test]
     fn t_incl_invalid() {
-        match Construct::incl("incl") {
-            Ok(_) => assert!(false, "Can't include nothing"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::incl("incl").is_err());
     }
 
     #[test]
     fn t_incl_plus_rename_invalid() {
-        match Construct::incl("incl a as") {
-            Ok(_) => assert!(false, "Can't include a and rename as nothing"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::incl("incl a as").is_err());
     }
 
     #[test]
