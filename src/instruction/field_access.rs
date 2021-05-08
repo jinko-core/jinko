@@ -108,7 +108,9 @@ mod tests {
     fn t_valid_field_access_from_type_instantiation() {
         let mut interpreter = setup();
 
-        let inst = Construct::instruction("Point { x = 1, y = 2 }.x").unwrap().1;
+        let inst = Construct::instruction("Point { x = 1, y = 2 }.x")
+            .unwrap()
+            .1;
         let res = match inst.execute(&mut interpreter).unwrap() {
             InstrKind::Expression(Some(i)) => i,
             _ => return assert!(false, "Error when accesing valid field"),
