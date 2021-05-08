@@ -37,6 +37,7 @@ impl Construct {
         let (input, value) = alt((
             Construct::binary_op,
             BoxConstruct::method_call,
+            BoxConstruct::field_access,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -748,8 +749,8 @@ impl Construct {
         Ok((input, incl))
     }
 
-    /// Parse a viable caller for a method call
-    fn method_caller(input: &str) -> ParseResult<Box<dyn Instruction>> {
+    /// Parse a viable caller for a method call or instance for a field access
+    fn instance(input: &str) -> ParseResult<Box<dyn Instruction>> {
         // FIXME: Right now, we cannot chain method calls and no error is produced:
         // `1.double().double()` returns 2 instead of the expected 4, since
         // only one call is resolved and the remaining input (`.double()`) is
@@ -770,11 +771,23 @@ impl Construct {
     ///
     /// `<identifier>.<identifier>()`
     pub fn method_call(input: &str) -> ParseResult<MethodCall> {
-        let (input, caller) = Construct::method_caller(input)?;
+        let (input, caller) = Construct::instance(input)?;
         let (input, _) = Token::dot(input)?;
         let (input, method) = Construct::function_call(input)?;
 
         Ok((input, MethodCall::new(caller, method)))
+    }
+
+    /// Parse a field access on a custom type. This is very similar to a method call: The
+    /// only difference is that the method call shall have parentheses
+    ///
+    /// `<identifier>.<identifier>`
+    pub fn field_access(input: &str) -> ParseResult<Var /* FIXME */> {
+        let (input, _instance) = Construct::instance(input)?;
+        let (input, _) = Token::dot(input)?;
+        let (input, _field) = Token::identifier(input)?;
+
+        Ok((input, Var::new(String::from(_field) /* FIXME */)))
     }
 }
 
@@ -1538,5 +1551,22 @@ mod tests {
 
         assert_eq!(Construct::instruction("1 2").unwrap().0, "2");
         assert_eq!(Construct::instruction("a b").unwrap().0, "b");
+    }
+
+    #[test]
+    fn t_field_access_valid() {
+        assert!(Construct::field_access("s.a").is_ok());
+        assert!(Construct::field_access("longer_identifier.a").is_ok());
+        assert!(Construct::field_access("longer_identifier.with_numbers32").is_ok());
+        assert!(Construct::field_access("1.a").is_ok());
+        assert!(Construct::field_access("\"string\".a").is_ok());
+    }
+
+    #[test]
+    fn t_field_access_invalid() {
+        assert!(Construct::field_access("s.1").is_err());
+        assert!(Construct::field_access("a.\"string\"").is_err());
+        assert!(Construct::field_access("sdot. space").is_err());
+        assert!(Construct::field_access("s .dotspace").is_err());
     }
 }
