@@ -211,6 +211,10 @@ impl Token {
         tag("//")(input)
     }
 
+    pub fn comment_shebang(input: &str) -> IResult<&str, &str> {
+        tag("#")(input)
+    }
+
     pub fn dot(input: &str) -> IResult<&str, &str> {
         Token::token(input, ".")
     }
@@ -349,31 +353,35 @@ impl Token {
             .contains(&c)
     }
 
-    /// Consumes 0 or more whitespaces in an input. A whitespace is a space or a tab
-    fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
-        take_while(|c| Token::is_whitespace(c))(input)
+    /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
+    pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
+        take_while1(|c| Token::is_whitespace(c))(input)
     }
 
-    fn consume_multi_comment(input: &str) -> IResult<&str, &str> {
+    pub fn consume_multi_comment(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::comment_multi_start(input)?;
-        let (input, _) = take_until("*/")(input)?;
-        Token::comment_multi_end(input)
+        let (input, content) = take_until("*/")(input)?;
+        let (input, _) = Token::comment_multi_end(input)?;
+
+        Ok((input, content))
     }
 
-    fn consume_single_comment(input: &str) -> IResult<&str, &str> {
+    pub fn consume_single_comment(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::comment_single(input)?;
-        let (input, _) = take_while(|c| c != '\n' && c != '\0')(input)?;
-        match opt(char('\n'))(input) {
-            Ok((i, Some(_))) | Ok((i, None)) => Ok((i, "")),
-            Err(e) => Err(e),
-        }
+        take_while(|c| c != '\n' && c != '\0')(input)
+    }
+
+    pub fn consume_shebang_comment(input: &str) -> IResult<&str, &str> {
+        let (input, _) = Token::comment_shebang(input)?;
+        take_while(|c| c != '\n' && c != '\0')(input)
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
-    fn maybe_consume_comment(input: &str) -> IResult<&str, &str> {
+    fn consume_comment(input: &str) -> IResult<&str, &str> {
         let (input, _) = alt((
-            opt(Token::consume_single_comment),
-            opt(Token::consume_multi_comment),
+            Token::consume_shebang_comment,
+            Token::consume_single_comment,
+            Token::consume_multi_comment,
         ))(input)?;
 
         Ok((input, ""))
@@ -381,12 +389,11 @@ impl Token {
 
     /// Consumes what is considered as "extra": Whitespaces, comments...
     pub fn maybe_consume_extra(input: &str) -> IResult<&str, &str> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::maybe_consume_comment(input)?;
+        let (input, _) = many0(Token::consume_comment)(input)?;
+        let (input, _) = many0(pair(Token::consume_whitespaces, Token::consume_comment))(input)?;
 
-        // Last thing to do after clearing the extra, to make sure the next thing
-        // we parse is actual code
-        Token::maybe_consume_whitespaces(input)
+        // We can discard the accumulated comments
+        many0(Token::consume_whitespaces)(input).map(|(input, _)| (input, ""))
     }
 }
 
@@ -450,12 +457,9 @@ mod tests {
 
     #[test]
     fn t_consume_whitespace() {
+        assert_eq!(Token::consume_whitespaces("   input"), Ok(("input", "   ")));
         assert_eq!(
-            Token::maybe_consume_whitespaces("   input"),
-            Ok(("input", "   "))
-        );
-        assert_eq!(
-            Token::maybe_consume_whitespaces(" \t input"),
+            Token::consume_whitespaces(" \t input"),
             Ok(("input", " \t "))
         );
     }
@@ -497,19 +501,19 @@ mod tests {
 
     #[test]
     fn t_multi_comment_valid() {
-        assert!(Token::maybe_consume_comment("/* */").is_ok());
-        assert!(Token::maybe_consume_comment("/**/").is_ok());
-        assert!(Token::maybe_consume_comment("/*            */").is_ok());
-        assert!(Token::maybe_consume_comment("/* a bbbb a something   */").is_ok());
+        assert!(Token::consume_comment("/* */").is_ok());
+        assert!(Token::consume_comment("/**/").is_ok());
+        assert!(Token::consume_comment("/*            */").is_ok());
+        assert!(Token::consume_comment("/* a bbbb a something   */").is_ok());
     }
 
     #[test]
     fn t_single_comment_valid() {
-        assert!(Token::maybe_consume_comment("//").is_ok());
-        assert!(Token::maybe_consume_comment("//                   ").is_ok());
-        assert!(Token::maybe_consume_comment("//          \nhey").is_ok());
-        assert!(Token::maybe_consume_comment("//// ").is_ok());
-        assert!(Token::maybe_consume_comment("// a bbbb a something  /* hey */").is_ok());
+        assert!(Token::consume_comment("//").is_ok());
+        assert!(Token::consume_comment("//                   ").is_ok());
+        assert!(Token::consume_comment("//          \nhey").is_ok());
+        assert!(Token::consume_comment("//// ").is_ok());
+        assert!(Token::consume_comment("// a bbbb a something  /* hey */").is_ok());
     }
 
     #[test]

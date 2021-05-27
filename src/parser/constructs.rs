@@ -16,8 +16,9 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
-    Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
-    JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign,
+    Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse,
+    Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var,
+    VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -29,8 +30,6 @@ impl Construct {
     /// Parse any valid jinko instruction. This can be a function call, a variable,
     /// a block declaration...
     pub fn instruction(input: &str) -> ParseResult<Box<dyn Instruction>> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
-
         // FIXME: If input is empty, return an error or do nothing
         // FIXME: We need to parse the remaining input after a correct instruction
         // has been parsed
@@ -53,9 +52,8 @@ impl Construct {
             BoxConstruct::var_assignment,
             BoxConstruct::variable,
             Construct::constant,
+            BoxConstruct::extra,
         ))(input)?;
-
-        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, value))
     }
@@ -89,6 +87,40 @@ impl Construct {
         ))(input)
     }
 
+    fn extra_shebang(input: &str) -> ParseResult<ExtraContent> {
+        let (input, comment) = Token::consume_shebang_comment(input)?;
+
+        Ok((input, ExtraContent::new_shebang(comment.to_owned())))
+    }
+
+    fn extra_single(input: &str) -> ParseResult<ExtraContent> {
+        let (input, comment) = Token::consume_single_comment(input)?;
+
+        Ok((input, ExtraContent::new_single_line(comment.to_owned())))
+    }
+
+    fn extra_multi(input: &str) -> ParseResult<ExtraContent> {
+        let (input, comment) = Token::consume_multi_comment(input)?;
+
+        Ok((input, ExtraContent::new_multi_line(comment.to_owned())))
+    }
+
+    fn extra_whitespaces(input: &str) -> ParseResult<ExtraContent> {
+        let (input, comment) = Token::consume_whitespaces(input)?;
+
+        Ok((input, ExtraContent::new_whitespaces(comment.to_owned())))
+    }
+
+    /// Extra content is whitespaces and comments
+    pub fn extra(input: &str) -> ParseResult<ExtraContent> {
+        alt((
+            Construct::extra_whitespaces,
+            Construct::extra_shebang,
+            Construct::extra_single,
+            Construct::extra_multi,
+        ))(input)
+    }
+
     /// Parse a function call with no arguments
     ///
     /// `<identifier> ( )`
@@ -117,7 +149,9 @@ impl Construct {
     fn args_list(input: &str) -> ParseResult<Vec<Box<dyn Instruction>>> {
         /// Parse an argument and the comma that follows it
         fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
+            let (input, _) = Token::maybe_consume_extra(input)?;
             let (input, constant) = Construct::instruction(input)?;
+            let (input, _) = Token::maybe_consume_extra(input)?;
             let (input, _) = Token::comma(input)?;
 
             Ok((input, constant))
@@ -129,6 +163,7 @@ impl Construct {
         // Parse the last argument, which does not have a comma. There needs to be
         // at least one argument, which can be this one
         let (input, last_arg) = Construct::arg(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         arg_vec.push(last_arg);
 
@@ -161,6 +196,7 @@ impl Construct {
         let (input, _) = Token::equal(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, value) = Construct::instruction(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, VarAssign::new(false, id.to_owned(), value)))
     }
@@ -1432,8 +1468,8 @@ mod tests {
     fn t_sy_eager_consume() {
         // https://github.com/CohenArthur/jinko/issues/172
 
-        assert_eq!(Construct::instruction("1 2").unwrap().0, "2");
-        assert_eq!(Construct::instruction("a b").unwrap().0, "b");
+        assert_eq!(Construct::instruction("1 2").unwrap().0, " 2");
+        assert_eq!(Construct::instruction("a b").unwrap().0, " b");
     }
 
     #[test]
@@ -1464,6 +1500,80 @@ mod tests {
     fn t_field_access_with_spaces() {
         assert!(Construct::field_access("sdot. space").is_err());
         assert!(Construct::field_access("s .dotspace").is_err());
+    }
+
+    // In the following tests about comments, we always need an extra call to `instruction`
+    // in order to get ride of the newline after the comment
+
+    #[test]
+    fn t_multi_comment_multi_line() {
+        let input = r#"/**
+* This function does nothing
+*/
+func void() { }"#;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_sing_comment_multi_line() {
+        let input = r#"// Comment
+func void() { }"#;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_hashtag_comment_multi_line() {
+        let input = r##"# Comment
+func void() { }"##;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_multiple_different_comments() {
+        let input = r##"# Comment
+# Another one
+
+/**
+ * Some documentation
+ */
+func void() { }"##;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_multiple_different_comments_close() {
+        let input = r##"# Comment
+# Another one
+
+/**
+ * Some documentation
+ *//* Some more */
+func void() { }"##;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
     }
 
     #[test]

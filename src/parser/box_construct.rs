@@ -51,4 +51,5 @@ impl BoxConstruct {
     box_construct! {incl}
     box_construct! {method_call}
     box_construct! {field_access}
+    box_construct! {extra}
 }
