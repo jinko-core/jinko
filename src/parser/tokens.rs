@@ -378,7 +378,11 @@ impl Token {
 
     /// Consumes all kinds of comments: Multi-line or single-line
     fn consume_comment(input: &str) -> IResult<&str, &str> {
-        let (input, _) = alt((Token::consume_single_comment, Token::consume_multi_comment))(input)?;
+        let (input, _) = alt((
+            Token::consume_shebang_comment,
+            Token::consume_single_comment,
+            Token::consume_multi_comment,
+        ))(input)?;
 
         Ok((input, ""))
     }
@@ -546,84 +550,6 @@ mod tests {
             Ok(_) => assert!(true),
             Err(_) => assert!(false, "Valid to have tons of text and stuff"),
         };
-    }
-
-    #[test]
-    fn t_multi_comment_multi_line() {
-        let input = r#"
-        /**
-         * This function does nothing
-         */
-        func void() { }"#;
-
-        assert_eq!(
-            Token::maybe_consume_extra(input).unwrap().0,
-            "func void() { }"
-        );
-    }
-
-    #[test]
-    fn t_sing_comment_multi_line() {
-        let input = r#"
-        // Comment
-        func void() { }"#;
-
-        assert_eq!(
-            Token::maybe_consume_extra(input).unwrap().0,
-            "func void() { }"
-        );
-    }
-
-    #[test]
-    fn t_hashtag_comment_multi_line() {
-        let input = r##"
-        # Comment
-        func void() { }"##;
-
-        dbg!(&input);
-
-        assert_eq!(
-            Token::maybe_consume_extra(input).unwrap().0,
-            "func void() { }"
-        );
-    }
-
-    #[test]
-    fn t_multiple_different_comments() {
-        let input = r##"
-        # Comment
-        # Another one
-
-        /**
-         * Some documentation
-         */
-        func void() { }"##;
-
-        dbg!(&input);
-
-        assert_eq!(
-            Token::maybe_consume_extra(input).unwrap().0,
-            "func void() { }"
-        );
-    }
-
-    #[test]
-    fn t_multiple_different_comments_close() {
-        let input = r##"
-        # Comment
-        # Another one
-
-        /**
-         * Some documentation
-         *//* Some more */
-        func void() { }"##;
-
-        dbg!(&input);
-
-        assert_eq!(
-            Token::maybe_consume_extra(input).unwrap().0,
-            "func void() { }"
-        );
     }
 
     #[test]

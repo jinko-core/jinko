@@ -35,7 +35,6 @@ impl Construct {
         // has been parsed
         let (input, value) = alt((
             Construct::binary_op,
-            BoxConstruct::extra,
             BoxConstruct::method_call,
             BoxConstruct::field_access,
             BoxConstruct::function_declaration,
@@ -53,6 +52,7 @@ impl Construct {
             BoxConstruct::var_assignment,
             BoxConstruct::variable,
             Construct::constant,
+            BoxConstruct::extra,
         ))(input)?;
 
         Ok((input, value))
@@ -1595,8 +1595,8 @@ mod tests {
     fn t_sy_eager_consume() {
         // https://github.com/CohenArthur/jinko/issues/172
 
-        assert_eq!(Construct::instruction("1 2").unwrap().0, "2");
-        assert_eq!(Construct::instruction("a b").unwrap().0, "b");
+        assert_eq!(Construct::instruction("1 2").unwrap().0, " 2");
+        assert_eq!(Construct::instruction("a b").unwrap().0, " b");
     }
 
     #[test]
@@ -1622,5 +1622,95 @@ mod tests {
     fn t_field_access_with_spaces() {
         assert!(Construct::field_access("sdot. space").is_err());
         assert!(Construct::field_access("s .dotspace").is_err());
+    }
+
+    // In the following tests about comments, we always need an extra call to `instruction`
+    // in order to get ride of the newline after the comment
+
+    #[test]
+    fn t_multi_comment_multi_line() {
+        let input = r#"/**
+* This function does nothing
+*/
+func void() { }"#;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(
+            Construct::instruction(input).unwrap().0,
+            "func void() { }"
+        );
+    }
+
+    #[test]
+    fn t_sing_comment_multi_line() {
+        let input = r#"// Comment
+func void() { }"#;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(
+            Construct::instruction(input).unwrap().0,
+            "func void() { }"
+        );
+    }
+
+    #[test]
+    fn t_hashtag_comment_multi_line() {
+        let input = 
+        r##"# Comment
+func void() { }"##;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(
+            Construct::instruction(input).unwrap().0,
+            "func void() { }"
+        );
+    }
+
+    #[test]
+    fn t_multiple_different_comments() {
+        let input = r##"# Comment
+# Another one
+
+/**
+ * Some documentation
+ */
+func void() { }"##;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(
+            Construct::instruction(input).unwrap().0,
+            "func void() { }"
+        );
+    }
+
+    #[test]
+    fn t_multiple_different_comments_close() {
+        let input = r##"# Comment
+# Another one
+
+/**
+ * Some documentation
+ *//* Some more */
+func void() { }"##;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(
+            Construct::instruction(input).unwrap().0,
+            "func void() { }"
+        );
     }
 }

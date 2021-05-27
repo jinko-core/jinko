@@ -3,7 +3,7 @@
 //! of such an instruction produces no results. But they are useful when it comes to
 //! pretty printing and code formatting.
 
-use crate::{Instruction, InstrKind, JkError, Interpreter, Rename};
+use crate::{InstrKind, Instruction, Interpreter, JkError, Rename};
 
 #[derive(Clone)]
 pub enum CommentKind {
@@ -75,6 +75,5 @@ impl Instruction for ExtraContent {
 }
 
 impl Rename for ExtraContent {
-    fn prefix(&mut self, _prefix: &str) {
-    }
+    fn prefix(&mut self, _prefix: &str) {}
 }
