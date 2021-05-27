@@ -412,10 +412,7 @@ mod tests {
     #[test]
     fn t_char_constant_invalid() {
         // Multiple characters
-        match Token::char_constant("'abc'") {
-            Ok(_) => assert!(false, "Too many characters in constant"),
-            Err(_) => assert!(true),
-        };
+        assert!(Token::char_constant("'abc'").is_err());
     }
 
     #[test]
@@ -431,10 +428,7 @@ mod tests {
     #[test]
     fn t_string_constant_unclosed_quote() {
         // Simple string
-        match Token::string_constant("\"a str") {
-            Ok(_) => assert!(false, "Unclosed quote delimiter"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::string_constant("\"a str").is_err());
     }
 
     #[test]
@@ -445,10 +439,7 @@ mod tests {
 
     #[test]
     fn t_int_constant_invalid() {
-        match Token::int_constant("ff2") {
-            Ok(_) => assert!(false, "Characters in integer"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::int_constant("ff2").is_err());
     }
 
     #[test]
@@ -459,15 +450,9 @@ mod tests {
 
     #[test]
     fn t_float_constant_invalid() {
-        match Token::float_constant("ff2") {
-            Ok(_) => assert!(false, "Characters in float"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::float_constant("ff2").is_err());
 
-        match Token::float_constant("12") {
-            Ok(_) => assert!(false, "It's an integer"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::float_constant("12").is_err());
     }
 
     #[test]
@@ -494,18 +479,9 @@ mod tests {
 
     #[test]
     fn t_id_invalid() {
-        match Token::identifier("99") {
-            Ok(_) => assert!(false, "At least one alphabetical required"),
-            Err(_) => assert!(true),
-        }
-        match Token::identifier("__99_") {
-            Ok(_) => assert!(false, "At least one alphabetical required"),
-            Err(_) => assert!(true),
-        }
-        match Token::identifier("func") {
-            Ok(_) => assert!(false, "ID can't be a reserved keyword"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::identifier("99").is_err());
+        assert!(Token::identifier("__99_").is_err());
+        assert!(Token::identifier("func").is_err());
     }
 
     #[test]
@@ -518,73 +494,32 @@ mod tests {
 
     #[test]
     fn t_bool_invalid() {
-        match Token::bool_constant("tru") {
-            Ok(_) => assert!(false, "Not a valid boolean, too short"),
-            Err(_) => assert!(true),
-        }
-        match Token::bool_constant("tru a") {
-            Ok(_) => assert!(false, "Not a valid boolean, too short + character"),
-            Err(_) => assert!(true),
-        }
-        match Token::bool_constant("trueast") {
-            Ok(_) => assert!(false, "Not a valid boolean, too long"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::bool_constant("tru").is_err());
+        assert!(Token::bool_constant("tru a").is_err());
+        assert!(Token::bool_constant("trueast").is_err());
     }
 
     #[test]
     fn t_multi_comment_valid() {
-        match Token::consume_comment("/* */") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have one space"),
-        };
-        match Token::consume_comment("/**/") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have zero space"),
-        };
-        match Token::consume_comment("/*            */") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have tons of spaces"),
-        };
-        match Token::consume_comment("/* a bbbb a something   */") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have tons of text and stuff"),
-        };
+        assert!(Token::maybe_consume_comment("/* */").is_ok());
+        assert!(Token::maybe_consume_comment("/**/").is_ok());
+        assert!(Token::maybe_consume_comment("/*            */").is_ok());
+        assert!(Token::maybe_consume_comment("/* a bbbb a something   */").is_ok());
+
     }
 
     #[test]
     fn t_single_comment_valid() {
-        match Token::consume_comment("//") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have nothing after the slashes"),
-        };
-        match Token::consume_comment("//                   ") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have lots of spaces"),
-        };
-        match Token::consume_comment("//          \nhey") {
-            Ok((left, _)) => assert_eq!(left, "\nhey"),
-            Err(_) => assert!(false, "Don't consume stuff after the newline"),
-        };
-        match Token::consume_comment("//// ") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have multiple slashes"),
-        };
-        match Token::consume_comment("// a bbbb a something  /* hey */") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(
-                false,
-                "Valid to have tons of text and stuff, even other comment"
-            ),
-        };
+        assert!(Token::maybe_consume_comment("//").is_ok());
+        assert!(Token::maybe_consume_comment("//                   ").is_ok());
+        assert!(Token::maybe_consume_comment("//          \nhey").is_ok());
+        assert!(Token::maybe_consume_comment("//// ").is_ok());
+        assert!(Token::maybe_consume_comment("// a bbbb a something  /* hey */").is_ok());
     }
 
     #[test]
     fn t_multi_comment_invalid() {
-        match Token::consume_multi_comment("/*") {
-            Ok(_) => assert!(false, "Unclosed start delimiter"),
-            Err(_) => assert!(true),
-        };
+        assert!(Token::consume_multi_comment("/*").is_err());
     }
 
     #[test]
@@ -620,25 +555,16 @@ mod tests {
 
     #[test]
     fn t_identifier_invalid_just_sep() {
-        match Token::identifier("::") {
-            Ok(_) => assert!(false, "Just a separator is invalid"),
-            Err(_) => assert!(true),
-        };
+        assert!(Token::identifier("::").is_err());
     }
 
     #[test]
     fn t_identifier_invalid_nspace_no_id() {
-        match Token::identifier("nspace::") {
-            Ok(_) => assert!(false, "Cannot have namespace without id"),
-            Err(_) => assert!(true),
-        };
+        assert!(Token::identifier("nspace::").is_err());
     }
 
     #[test]
     fn t_identifier_invalid_nspace_no_id_multi() {
-        match Token::identifier("nspace::id::sub::") {
-            Ok(_) => assert!(false, "Cannot have namespace without id (multi)"),
-            Err(_) => assert!(true),
-        };
+        assert!(Token::identifier("nspace::id::sub::").is_err());
     }
 }
