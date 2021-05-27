@@ -149,7 +149,9 @@ impl Construct {
     fn args_list(input: &str) -> ParseResult<Vec<Box<dyn Instruction>>> {
         /// Parse an argument and the comma that follows it
         fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
+            let (input, _) = Token::maybe_consume_extra(input)?;
             let (input, constant) = Construct::instruction(input)?;
+            let (input, _) = Token::maybe_consume_extra(input)?;
             let (input, _) = Token::comma(input)?;
 
             Ok((input, constant))
@@ -161,6 +163,7 @@ impl Construct {
         // Parse the last argument, which does not have a comma. There needs to be
         // at least one argument, which can be this one
         let (input, last_arg) = Construct::arg(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         arg_vec.push(last_arg);
 
@@ -193,6 +196,7 @@ impl Construct {
         let (input, _) = Token::equal(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, value) = Construct::instruction(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, VarAssign::new(false, id.to_owned(), value)))
     }
@@ -1636,10 +1640,7 @@ func void() { }"#;
 
         let (input, _) = Construct::instruction(input).unwrap();
 
-        assert_eq!(
-            Construct::instruction(input).unwrap().0,
-            "func void() { }"
-        );
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
     }
 
     #[test]
@@ -1649,24 +1650,17 @@ func void() { }"#;
 
         let (input, _) = Construct::instruction(input).unwrap();
 
-        assert_eq!(
-            Construct::instruction(input).unwrap().0,
-            "func void() { }"
-        );
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
     }
 
     #[test]
     fn t_hashtag_comment_multi_line() {
-        let input = 
-        r##"# Comment
+        let input = r##"# Comment
 func void() { }"##;
 
         let (input, _) = Construct::instruction(input).unwrap();
 
-        assert_eq!(
-            Construct::instruction(input).unwrap().0,
-            "func void() { }"
-        );
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
     }
 
     #[test]
@@ -1685,10 +1679,7 @@ func void() { }"##;
         let (input, _) = Construct::instruction(input).unwrap();
         let (input, _) = Construct::instruction(input).unwrap();
 
-        assert_eq!(
-            Construct::instruction(input).unwrap().0,
-            "func void() { }"
-        );
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
     }
 
     #[test]
@@ -1708,9 +1699,6 @@ func void() { }"##;
         let (input, _) = Construct::instruction(input).unwrap();
         let (input, _) = Construct::instruction(input).unwrap();
 
-        assert_eq!(
-            Construct::instruction(input).unwrap().0,
-            "func void() { }"
-        );
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
     }
 }
