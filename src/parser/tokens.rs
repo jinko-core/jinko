@@ -501,19 +501,19 @@ mod tests {
 
     #[test]
     fn t_multi_comment_valid() {
-        assert!(Token::maybe_consume_comment("/* */").is_ok());
-        assert!(Token::maybe_consume_comment("/**/").is_ok());
-        assert!(Token::maybe_consume_comment("/*            */").is_ok());
-        assert!(Token::maybe_consume_comment("/* a bbbb a something   */").is_ok());
+        assert!(Token::consume_comment("/* */").is_ok());
+        assert!(Token::consume_comment("/**/").is_ok());
+        assert!(Token::consume_comment("/*            */").is_ok());
+        assert!(Token::consume_comment("/* a bbbb a something   */").is_ok());
     }
 
     #[test]
     fn t_single_comment_valid() {
-        assert!(Token::maybe_consume_comment("//").is_ok());
-        assert!(Token::maybe_consume_comment("//                   ").is_ok());
-        assert!(Token::maybe_consume_comment("//          \nhey").is_ok());
-        assert!(Token::maybe_consume_comment("//// ").is_ok());
-        assert!(Token::maybe_consume_comment("// a bbbb a something  /* hey */").is_ok());
+        assert!(Token::consume_comment("//").is_ok());
+        assert!(Token::consume_comment("//                   ").is_ok());
+        assert!(Token::consume_comment("//          \nhey").is_ok());
+        assert!(Token::consume_comment("//// ").is_ok());
+        assert!(Token::consume_comment("// a bbbb a something  /* hey */").is_ok());
     }
 
     #[test]
