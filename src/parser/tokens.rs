@@ -211,7 +211,7 @@ impl Token {
         tag("//")(input)
     }
 
-    pub fn comment_hash(input: &str) -> IResult<&str, &str> {
+    pub fn comment_shebang(input: &str) -> IResult<&str, &str> {
         tag("#")(input)
     }
 
@@ -354,27 +354,31 @@ impl Token {
     }
 
     /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
-    fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
+    pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
         take_while1(|c| Token::is_whitespace(c))(input)
     }
 
-    fn consume_multi_comment(input: &str) -> IResult<&str, &str> {
+    pub fn consume_multi_comment(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::comment_multi_start(input)?;
-        let (input, _) = take_until("*/")(input)?;
-        Token::comment_multi_end(input)
+        let (input, content) = take_until("*/")(input)?;
+        let (input, _) = Token::comment_multi_end(input)?;
+
+        Ok((input, content))
     }
 
-    fn consume_single_comment(input: &str) -> IResult<&str, &str> {
-        let (input, _) = alt((Token::comment_single, Token::comment_hash))(input)?;
+    pub fn consume_single_comment(input: &str) -> IResult<&str, &str> {
+        let (input, _) = Token::comment_single(input)?;
+        take_while(|c| c != '\n' && c != '\0')(input)
+    }
+
+    pub fn consume_shebang_comment(input: &str) -> IResult<&str, &str> {
+        let (input, _) = Token::comment_shebang(input)?;
         take_while(|c| c != '\n' && c != '\0')(input)
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
     fn consume_comment(input: &str) -> IResult<&str, &str> {
-        let (input, _) = alt((
-            Token::consume_single_comment,
-            Token::consume_multi_comment,
-        ))(input)?;
+        let (input, _) = alt((Token::consume_single_comment, Token::consume_multi_comment))(input)?;
 
         Ok((input, ""))
     }
@@ -464,10 +468,7 @@ mod tests {
 
     #[test]
     fn t_consume_whitespace() {
-        assert_eq!(
-            Token::consume_whitespaces("   input"),
-            Ok(("input", "   "))
-        );
+        assert_eq!(Token::consume_whitespaces("   input"), Ok(("input", "   ")));
         assert_eq!(
             Token::consume_whitespaces(" \t input"),
             Ok(("input", " \t "))
@@ -555,7 +556,10 @@ mod tests {
          */
         func void() { }"#;
 
-        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+        assert_eq!(
+            Token::maybe_consume_extra(input).unwrap().0,
+            "func void() { }"
+        );
     }
 
     #[test]
@@ -564,7 +568,10 @@ mod tests {
         // Comment
         func void() { }"#;
 
-        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+        assert_eq!(
+            Token::maybe_consume_extra(input).unwrap().0,
+            "func void() { }"
+        );
     }
 
     #[test]
@@ -575,7 +582,10 @@ mod tests {
 
         dbg!(&input);
 
-        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+        assert_eq!(
+            Token::maybe_consume_extra(input).unwrap().0,
+            "func void() { }"
+        );
     }
 
     #[test]
@@ -591,7 +601,10 @@ mod tests {
 
         dbg!(&input);
 
-        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+        assert_eq!(
+            Token::maybe_consume_extra(input).unwrap().0,
+            "func void() { }"
+        );
     }
 
     #[test]
@@ -607,7 +620,10 @@ mod tests {
 
         dbg!(&input);
 
-        assert_eq!(Token::maybe_consume_extra(input).unwrap().0, "func void() { }");
+        assert_eq!(
+            Token::maybe_consume_extra(input).unwrap().0,
+            "func void() { }"
+        );
     }
 
     #[test]
