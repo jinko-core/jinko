@@ -505,7 +505,6 @@ mod tests {
         assert!(Token::maybe_consume_comment("/**/").is_ok());
         assert!(Token::maybe_consume_comment("/*            */").is_ok());
         assert!(Token::maybe_consume_comment("/* a bbbb a something   */").is_ok());
-
     }
 
     #[test]

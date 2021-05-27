@@ -1574,7 +1574,7 @@ func void() { }"##;
         let (input, _) = Construct::instruction(input).unwrap();
 
         assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
-  }
+    }
 
     #[test]
     fn t_multi_field_access_3() {
