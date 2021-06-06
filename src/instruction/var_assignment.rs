@@ -23,7 +23,7 @@ impl VarAssign {
         }
     }
 
-    /// Get a reference to the symbol of the variable declaration
+    /// Get a reference to the symbol of the variable assignment
     pub fn symbol(&self) -> &str {
         &self.symbol
     }

@@ -701,7 +701,9 @@ impl Construct {
         let (input, fc) = Construct::function_call(input)?;
 
         // FIXME: No unwrap(), use something else than just the name
-        let inst = JkInst::from_str(fc.name()).unwrap();
+        //        this is very awkward, we have a JkError coming up and we shouldn't be creating
+        //        new JkInst.
+        let inst = JkInst::from_function_call(fc).unwrap();
 
         Ok((input, inst))
     }
@@ -869,6 +871,7 @@ impl Construct {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instruction::JkInstKind;
 
     #[test]
     fn t_var_assign_valid() {
@@ -1282,11 +1285,11 @@ mod tests {
 
     #[test]
     fn t_jinko_inst_valid() {
-        assert_eq!(Construct::jinko_inst("@dump()"), Ok(("", JkInst::Dump)));
-        assert_eq!(
-            Construct::jinko_inst("@quit(something, something_else)"),
-            Ok(("", JkInst::Quit))
-        );
+        let (_, dump_inst) = Construct::jinko_inst("@dump()").unwrap();
+        assert_eq!(dump_inst.jk_inst_kind(), &JkInstKind::Dump);
+
+        let (_, quit_inst) = Construct::jinko_inst("@quit(something, something_else)").unwrap();
+        assert_eq!(quit_inst.jk_inst_kind(), &JkInstKind::Quit);
     }
 
     #[test]

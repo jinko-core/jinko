@@ -36,7 +36,7 @@ pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionKind};
 pub use if_else::IfElse;
 pub use incl::Incl;
-pub use jk_inst::JkInst;
+pub use jk_inst::{JkInst, JkInstKind};
 pub use loop_block::{Loop, LoopKind};
 pub use method_call::MethodCall;
 pub use operator::Operator;
