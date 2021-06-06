@@ -1,0 +1,39 @@
+// FIXME: Once generics are implemented, implement the following type
+// Pair<T, U = T>(f: T, s: U)
+
+/**
+ * The Pair type holds two instances of two types, which may or may not be different.
+ */
+type Pair_int(f: int, s: int)
+
+/**
+ * Create a new pair from two instances of types T and U
+ */
+func pair_int(first: int, second: int) -> Pair_int {
+    Pair_int {
+        f = first,
+        s = second
+    }
+}
+
+/**
+ * Return the first instance contained in the pair
+ *
+ * @param pair Pair to get the first instance from
+ *
+ * @return The first member of the given pair
+ */
+func first(p: Pair_int) -> int {
+    p.f
+}
+
+/**
+ * Return the second instance contained in the pair
+ *
+ * @param pair Pair to get the second instance from
+ *
+ * @return The second member of the given pair
+ */
+func second(p: Pair_int) -> int {
+    p.s
+}
