@@ -45,7 +45,12 @@ impl Instruction for TypeDec {
     fn print(&self) -> String {
         let mut base = format!("type {} (", self.name);
 
-        base.push_str(self.fields.get(0).map_or(String::new(), |f| format!("{}", f)).as_str());
+        base.push_str(
+            self.fields
+                .get(0)
+                .map_or(String::new(), |f| format!("{}", f))
+                .as_str(),
+        );
 
         self.fields()
             .iter()
