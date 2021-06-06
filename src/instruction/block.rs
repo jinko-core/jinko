@@ -1,7 +1,6 @@
 //! Blocks are simply a vector of instructions. They execute instructions sequentially,
 //! in the order that they were parsed. You can only add instructions and run through
-//! the block. They contain a return value, that you can access once the block is done
-//! running.
+//! the block.
 //! Blocks are used to represent scope blocks
 //!
 //! `{ something(); something_else(); }`
@@ -18,7 +17,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{InstrKind, Instruction, Interpreter, JkError};
+use crate::{InstrKind, Instruction, Interpreter, JkError, Rename};
 
 #[derive(Clone)]
 pub struct Block {
@@ -27,17 +26,12 @@ pub struct Block {
 }
 
 impl Block {
-    /// Create a new function
+    /// Create a new block
     pub fn new() -> Block {
         Block {
             instructions: Vec::new(),
             last: None,
         }
-    }
-
-    /// "Call" the function and run its code
-    pub fn call(&self) {
-        todo!();
     }
 
     /// Returns a reference to the instructions contained in the block
@@ -118,6 +112,19 @@ impl Instruction for Block {
         interpreter.debug_step("BLOCK EXIT");
 
         ret_val
+    }
+}
+
+impl Rename for Block {
+    fn prefix(&mut self, prefix: &str) {
+        self.instructions
+            .iter_mut()
+            .for_each(|instr| instr.prefix(prefix));
+
+        match &mut self.last {
+            Some(l) => l.prefix(prefix),
+            None => {}
+        }
     }
 }
 

@@ -24,7 +24,7 @@ impl std::fmt::Display for ObjectInstance {
             f,
             "{}",
             match self.ty() {
-                Some(ty) => match ty.as_ref() {
+                Some(ty) => match ty.name() {
                     "int" => JkConstant::<i64>::from_instance(self).print(),
                     "float" => JkConstant::<f64>::from_instance(self).print(),
                     "char" => JkConstant::<char>::from_instance(self).print(),
@@ -39,7 +39,8 @@ impl std::fmt::Display for ObjectInstance {
 }
 
 impl Repl {
-    /// Parse a new input, adding it to an existing interpreter
+    /// Parse a new instruction from the user's input. This function uses the parser's
+    /// `instruction` method, and can therefore parse any valid Jinko instruction
     fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, JkError> {
         match input.is_empty() {
             true => Ok(None),

@@ -1,7 +1,7 @@
 //! The VarAssign struct is used when assigning values to variables.
 
 use crate::instruction::{InstrKind, Var};
-use crate::{Instruction, Interpreter, JkErrKind, JkError};
+use crate::{Instruction, Interpreter, JkErrKind, JkError, Rename};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -27,15 +27,15 @@ impl VarAssign {
     pub fn symbol(&self) -> &str {
         &self.symbol
     }
-    ///
-    /// Get a reference to the value of the variable assignment
-    pub fn value(&self) -> &Box<dyn Instruction> {
-        &self.value
-    }
 
     /// Is a variable is declared as mutable or not
     pub fn mutable(&self) -> bool {
         self.mutable
+    }
+
+    /// Get a reference to the value used to initialize the variable
+    pub fn value(&self) -> &Box<dyn Instruction> {
+        &self.value
     }
 }
 
@@ -115,6 +115,13 @@ impl Instruction for VarAssign {
 
         // A variable assignment is always a statement
         Ok(InstrKind::Statement)
+    }
+}
+
+impl Rename for VarAssign {
+    fn prefix(&mut self, prefix: &str) {
+        self.value.prefix(prefix);
+        self.symbol = format!("{}{}", prefix, self.symbol)
     }
 }
 

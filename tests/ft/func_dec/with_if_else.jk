@@ -1,5 +1,5 @@
-func t() {}
-func f() {}
+func t() { 1 }
+func f() { 2 }
 
 func something() {
     if true {
@@ -9,4 +9,4 @@ func something() {
     }
 }
 
-something()
+something() // return  1

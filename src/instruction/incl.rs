@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JkErrKind, JkError};
+use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
 /// The interpreter is built from parsing the source file in the path.
@@ -20,11 +20,6 @@ const DEFAULT_INCL: &str = "/lib.jk";
 impl Incl {
     pub fn new(path: String, alias: Option<String>) -> Incl {
         Incl { path, alias }
-    }
-
-    /// Rename all contained code to the correct alias
-    fn _rename(&mut self) {
-        todo!("Implement once namespaces are implemented")
     }
 
     fn format_candidates(&self, base: &Path) -> (PathBuf, PathBuf) {
@@ -124,6 +119,23 @@ impl Incl {
     ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
         self.load_relative(base, i)
     }
+
+    /// Format the correct prefix to include content as. This depends on the presence
+    /// of an alias, and also checks for the validity of the prefix
+    fn format_prefix(&self) -> Result<String, JkError> {
+        let alias = match self.alias.as_ref() {
+            Some(alias) => alias,
+            // If no alias is given, then return the include path as alias
+            None => self.path.as_str(),
+        };
+
+        match alias {
+            // If the alias is empty, then we're doing a special include from
+            // the interpreter itself. Don't add a leading `::`
+            "" => Ok(alias.to_string()),
+            _ => Ok(format!("{}::", alias)),
+        }
+    }
 }
 
 impl Instruction for Incl {
@@ -159,19 +171,24 @@ impl Instruction for Incl {
             None => Path::new(""),
         };
 
+        let prefix = self.format_prefix()?;
+
         interpreter.debug("BASE DIR", &format!("{:#?}", base));
 
         let old_path = interpreter.path().cloned();
 
-        let (new_path, content) = self.load(base, interpreter)?;
+        let (new_path, mut content) = self.load(base, interpreter)?;
 
         // Temporarily change the path of the interpreter
         interpreter.set_path(Some(new_path));
 
         content
-            .into_iter()
+            .iter_mut()
             .map(|instr| {
+                instr.prefix(&prefix);
+
                 interpreter.debug("INCLUDING", instr.print().as_str());
+
                 instr.execute(interpreter)
             })
             .collect::<Result<Vec<InstrKind>, JkError>>()?;
@@ -180,5 +197,16 @@ impl Instruction for Incl {
         interpreter.set_path(old_path);
 
         Ok(InstrKind::Statement)
+    }
+}
+
+impl Rename for Incl {
+    fn prefix(&mut self, prefix: &str) {
+        let alias = match &self.alias {
+            None => &self.path,
+            Some(alias) => alias,
+        };
+
+        self.alias = Some(format!("{}{}", prefix, alias))
     }
 }

@@ -1,15 +1,15 @@
-// FIXME: Shouldn't be a String
-pub type Ty = String;
+use crate::instruction::TypeId;
+use crate::Rename;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {
     name: String,
-    ty: Ty,
+    ty: TypeId,
 }
 
 impl DecArg {
     /// Create a new function declaration argument with a name and a type
-    pub fn new(name: String, ty: String) -> DecArg {
+    pub fn new(name: String, ty: TypeId) -> DecArg {
         DecArg { name, ty }
     }
 
@@ -18,8 +18,15 @@ impl DecArg {
         &self.name
     }
 
-    /// Return a reference to the argument's type
-    pub fn ty(&self) -> &Ty {
+    /// Return a representation of the argument's type
+    pub fn get_type(&self) -> &TypeId {
         &self.ty
+    }
+}
+
+impl Rename for DecArg {
+    fn prefix(&mut self, prefix: &str) {
+        self.name = format!("{}{}", prefix, self.name);
+        self.ty.prefix(prefix);
     }
 }

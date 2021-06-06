@@ -6,8 +6,8 @@ use nom::{
     branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
     bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
     character::complete::char, character::is_alphabetic, character::is_alphanumeric,
-    character::is_digit, combinator::opt, combinator::peek, error::ErrorKind, sequence::delimited,
-    IResult,
+    character::is_digit, combinator::opt, combinator::peek, error::ErrorKind, multi::many0,
+    sequence::delimited, sequence::pair, IResult,
 };
 
 /// Reserved Keywords by jinko
@@ -143,10 +143,6 @@ impl Token {
         Token::specific_token(input, "else")
     }
 
-    pub fn audit_tok(input: &str) -> IResult<&str, &str> {
-        Token::specific_token(input, "audit ")
-    }
-
     pub fn _type_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "type")
     }
@@ -215,7 +211,15 @@ impl Token {
         tag("//")(input)
     }
 
-    pub fn identifier(input: &str) -> IResult<&str, &str> {
+    pub fn comment_shebang(input: &str) -> IResult<&str, &str> {
+        tag("#")(input)
+    }
+
+    pub fn dot(input: &str) -> IResult<&str, &str> {
+        Token::token(input, ".")
+    }
+
+    pub fn inner_identifer(input: &str) -> IResult<&str, &str> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
         match RESERVED_KEYWORDS.contains(&id) {
@@ -237,6 +241,41 @@ impl Token {
         }
 
         Err(nom::Err::Error(("Invalid identifier", ErrorKind::Eof)))
+    }
+
+    pub fn namespace_separator(input: &str) -> IResult<&str, &str> {
+        Token::token(input, "::")
+    }
+
+    pub fn identifier(input: &str) -> IResult<&str, String> {
+        let (input, first_id) = Token::inner_identifer(input)?;
+
+        let (input, namespaced) =
+            many0(pair(Token::namespace_separator, Token::inner_identifer))(input)?;
+
+        let mut identifier = String::from(first_id);
+        namespaced.into_iter().for_each(|(sep, nspace)| {
+            identifier.push_str(sep);
+            identifier.push_str(nspace)
+        });
+
+        // If a namespace_separator remains, then it means we're in a situation where
+        // the identifier is of the following form:
+        //
+        // `<id>::<id>::<id>...<id>::`
+        //
+        // which is not a valid identifier
+        match Token::namespace_separator(input) {
+            Ok(_) => {
+                return Err(nom::Err::Error((
+                    "Cannot finish identifier on namespace separator `::`",
+                    ErrorKind::OneOf,
+                )))
+            }
+            Err(_) => {}
+        };
+
+        Ok((input, identifier))
     }
 
     fn non_neg_num(input: &str) -> IResult<&str, &str> {
@@ -314,36 +353,35 @@ impl Token {
             .contains(&c)
     }
 
-    /// Consumes 1 or more whitespaces in an input. A whitespace is a space or a tab
+    /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
     pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
         take_while1(|c| Token::is_whitespace(c))(input)
     }
 
-    /// Consumes 0 or more whitespaces in an input. A whitespace is a space or a tab
-    fn maybe_consume_whitespaces(input: &str) -> IResult<&str, &str> {
-        take_while(|c| Token::is_whitespace(c))(input)
-    }
-
-    fn consume_multi_comment(input: &str) -> IResult<&str, &str> {
+    pub fn consume_multi_comment(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::comment_multi_start(input)?;
-        let (input, _) = take_until("*/")(input)?;
-        Token::comment_multi_end(input)
+        let (input, content) = take_until("*/")(input)?;
+        let (input, _) = Token::comment_multi_end(input)?;
+
+        Ok((input, content))
     }
 
-    fn consume_single_comment(input: &str) -> IResult<&str, &str> {
+    pub fn consume_single_comment(input: &str) -> IResult<&str, &str> {
         let (input, _) = Token::comment_single(input)?;
-        let (input, _) = take_while(|c| c != '\n' && c != '\0')(input)?;
-        match opt(char('\n'))(input) {
-            Ok((i, Some(_))) | Ok((i, None)) => Ok((i, "")),
-            Err(e) => Err(e),
-        }
+        take_while(|c| c != '\n' && c != '\0')(input)
+    }
+
+    pub fn consume_shebang_comment(input: &str) -> IResult<&str, &str> {
+        let (input, _) = Token::comment_shebang(input)?;
+        take_while(|c| c != '\n' && c != '\0')(input)
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
-    fn maybe_consume_comment(input: &str) -> IResult<&str, &str> {
+    fn consume_comment(input: &str) -> IResult<&str, &str> {
         let (input, _) = alt((
-            opt(Token::consume_single_comment),
-            opt(Token::consume_multi_comment),
+            Token::consume_shebang_comment,
+            Token::consume_single_comment,
+            Token::consume_multi_comment,
         ))(input)?;
 
         Ok((input, ""))
@@ -351,12 +389,11 @@ impl Token {
 
     /// Consumes what is considered as "extra": Whitespaces, comments...
     pub fn maybe_consume_extra(input: &str) -> IResult<&str, &str> {
-        let (input, _) = Token::maybe_consume_whitespaces(input)?;
-        let (input, _) = Token::maybe_consume_comment(input)?;
+        let (input, _) = many0(Token::consume_comment)(input)?;
+        let (input, _) = many0(pair(Token::consume_whitespaces, Token::consume_comment))(input)?;
 
-        // Last thing to do after clearing the extra, to make sure the next thing
-        // we parse is actual code
-        Token::maybe_consume_whitespaces(input)
+        // We can discard the accumulated comments
+        many0(Token::consume_whitespaces)(input).map(|(input, _)| (input, ""))
     }
 }
 
@@ -375,10 +412,7 @@ mod tests {
     #[test]
     fn t_char_constant_invalid() {
         // Multiple characters
-        match Token::char_constant("'abc'") {
-            Ok(_) => assert!(false, "Too many characters in constant"),
-            Err(_) => assert!(true),
-        };
+        assert!(Token::char_constant("'abc'").is_err());
     }
 
     #[test]
@@ -394,10 +428,7 @@ mod tests {
     #[test]
     fn t_string_constant_unclosed_quote() {
         // Simple string
-        match Token::string_constant("\"a str") {
-            Ok(_) => assert!(false, "Unclosed quote delimiter"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::string_constant("\"a str").is_err());
     }
 
     #[test]
@@ -408,10 +439,7 @@ mod tests {
 
     #[test]
     fn t_int_constant_invalid() {
-        match Token::int_constant("ff2") {
-            Ok(_) => assert!(false, "Characters in integer"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::int_constant("ff2").is_err());
     }
 
     #[test]
@@ -422,15 +450,9 @@ mod tests {
 
     #[test]
     fn t_float_constant_invalid() {
-        match Token::float_constant("ff2") {
-            Ok(_) => assert!(false, "Characters in float"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::float_constant("ff2").is_err());
 
-        match Token::float_constant("12") {
-            Ok(_) => assert!(false, "It's an integer"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::float_constant("12").is_err());
     }
 
     #[test]
@@ -443,37 +465,23 @@ mod tests {
     }
 
     #[test]
-    fn t_consume_whitespace_invalid() {
-        match Token::consume_whitespaces("something") {
-            Ok(_) => assert!(false, "At least one whitespace required"),
-            Err(_) => assert!(true),
-        }
-    }
-
-    #[test]
     fn t_id() {
-        assert_eq!(Token::identifier("x"), Ok(("", "x")));
-        assert_eq!(Token::identifier("x_"), Ok(("", "x_")));
-        assert_eq!(Token::identifier("x_99"), Ok(("", "x_99")));
-        assert_eq!(Token::identifier("99x"), Ok(("", "99x")));
-        assert_eq!(Token::identifier("n99 x"), Ok((" x", "n99")));
-        assert_eq!(Token::identifier("func_ x"), Ok((" x", "func_")));
+        assert_eq!(Token::identifier("x"), Ok(("", "x".to_string())));
+        assert_eq!(Token::identifier("x_"), Ok(("", "x_".to_string())));
+        assert_eq!(Token::identifier("x_99"), Ok(("", "x_99".to_string())));
+        assert_eq!(Token::identifier("99x"), Ok(("", "99x".to_string())));
+        assert_eq!(Token::identifier("n99 x"), Ok((" x", "n99".to_string())));
+        assert_eq!(
+            Token::identifier("func_ x"),
+            Ok((" x", "func_".to_string()))
+        );
     }
 
     #[test]
     fn t_id_invalid() {
-        match Token::identifier("99") {
-            Ok(_) => assert!(false, "At least one alphabetical required"),
-            Err(_) => assert!(true),
-        }
-        match Token::identifier("__99_") {
-            Ok(_) => assert!(false, "At least one alphabetical required"),
-            Err(_) => assert!(true),
-        }
-        match Token::identifier("func") {
-            Ok(_) => assert!(false, "ID can't be a reserved keyword"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::identifier("99").is_err());
+        assert!(Token::identifier("__99_").is_err());
+        assert!(Token::identifier("func").is_err());
     }
 
     #[test]
@@ -486,77 +494,76 @@ mod tests {
 
     #[test]
     fn t_bool_invalid() {
-        match Token::bool_constant("tru") {
-            Ok(_) => assert!(false, "Not a valid boolean, too short"),
-            Err(_) => assert!(true),
-        }
-        match Token::bool_constant("tru a") {
-            Ok(_) => assert!(false, "Not a valid boolean, too short + character"),
-            Err(_) => assert!(true),
-        }
-        match Token::bool_constant("trueast") {
-            Ok(_) => assert!(false, "Not a valid boolean, too long"),
-            Err(_) => assert!(true),
-        }
+        assert!(Token::bool_constant("tru").is_err());
+        assert!(Token::bool_constant("tru a").is_err());
+        assert!(Token::bool_constant("trueast").is_err());
     }
 
     #[test]
     fn t_multi_comment_valid() {
-        match Token::maybe_consume_comment("/* */") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have one space"),
-        };
-        match Token::maybe_consume_comment("/**/") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have zero space"),
-        };
-        match Token::maybe_consume_comment("/*            */") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have tons of spaces"),
-        };
-        match Token::maybe_consume_comment("/* a bbbb a something   */") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have tons of text and stuff"),
-        };
+        assert!(Token::consume_comment("/* */").is_ok());
+        assert!(Token::consume_comment("/**/").is_ok());
+        assert!(Token::consume_comment("/*            */").is_ok());
+        assert!(Token::consume_comment("/* a bbbb a something   */").is_ok());
     }
 
     #[test]
     fn t_single_comment_valid() {
-        match Token::maybe_consume_comment("//") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have nothing after the slashes"),
-        };
-        match Token::maybe_consume_comment("//                   ") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have lots of spaces"),
-        };
-        match Token::maybe_consume_comment("//          \nhey") {
-            Ok((left, _)) => assert_eq!(left, "hey"),
-            Err(_) => assert!(false, "Don't consume stuff after the newline"),
-        };
-        match Token::maybe_consume_comment("//// ") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have multiple slashes"),
-        };
-        match Token::maybe_consume_comment("// a bbbb a something  /* hey */") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(
-                false,
-                "Valid to have tons of text and stuff, even other comment"
-            ),
-        };
+        assert!(Token::consume_comment("//").is_ok());
+        assert!(Token::consume_comment("//                   ").is_ok());
+        assert!(Token::consume_comment("//          \nhey").is_ok());
+        assert!(Token::consume_comment("//// ").is_ok());
+        assert!(Token::consume_comment("// a bbbb a something  /* hey */").is_ok());
     }
 
     #[test]
     fn t_multi_comment_invalid() {
-        match Token::consume_multi_comment("/*") {
-            Ok(_) => assert!(false, "Unclosed start delimiter"),
-            Err(_) => assert!(true),
-        };
+        assert!(Token::consume_multi_comment("/*").is_err());
     }
 
     #[test]
     fn t_keyword_next_to_curly() {
         assert_eq!(Token::loop_tok("loop{}"), Ok(("{}", "loop")));
+    }
+
+    #[test]
+    fn t_dot_token() {
+        assert_eq!(Token::dot("."), Ok(("", ".")));
+    }
+
+    #[test]
+    fn t_identifier_no_namespace() {
+        assert_eq!(Token::identifier("id"), Ok(("", String::from("id"))));
+    }
+
+    #[test]
+    fn t_identifier_plus_one_namespace() {
+        assert_eq!(
+            Token::identifier("nspace::id"),
+            Ok(("", String::from("nspace::id")))
+        );
+    }
+
+    #[test]
+    fn t_identifier_plus_many_namespace() {
+        assert_eq!(
+            Token::identifier("nspace::id::sub"),
+            Ok(("", String::from("nspace::id::sub")))
+        );
+    }
+
+    #[test]
+    fn t_identifier_invalid_just_sep() {
+        assert!(Token::identifier("::").is_err());
+    }
+
+    #[test]
+    fn t_identifier_invalid_nspace_no_id() {
+        assert!(Token::identifier("nspace::").is_err());
+    }
+
+    #[test]
+    fn t_identifier_invalid_nspace_no_id_multi() {
+        assert!(Token::identifier("nspace::id::sub::").is_err());
     }
 }

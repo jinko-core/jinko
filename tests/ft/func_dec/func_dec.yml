@@ -1,0 +1,12 @@
+tests:
+  - name: "Func dec with if/else"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/func_dec/with_if_else.jk"
+    exit_code: 1
+
+  - name: "Func dec with two func decs"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/func_dec/with_two_func_calls.jk"
+    exit_code: 3

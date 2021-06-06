@@ -16,8 +16,9 @@
 use nom::{branch::alt, combinator::opt, multi::many0, IResult};
 
 use crate::instruction::{
-    Audit, Block, DecArg, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction,
-    JkInst, Loop, LoopKind, TypeDec, TypeInstantiation, Var, VarAssign,
+    Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse,
+    Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var,
+    VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
@@ -29,10 +30,13 @@ impl Construct {
     /// Parse any valid jinko instruction. This can be a function call, a variable,
     /// a block declaration...
     pub fn instruction(input: &str) -> ParseResult<Box<dyn Instruction>> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
-
         // FIXME: If input is empty, return an error or do nothing
+        // FIXME: We need to parse the remaining input after a correct instruction
+        // has been parsed
         let (input, value) = alt((
+            Construct::binary_op,
+            BoxConstruct::method_call,
+            BoxConstruct::field_access,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -44,15 +48,12 @@ impl Construct {
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
-            BoxConstruct::audit,
             BoxConstruct::block,
             BoxConstruct::var_assignment,
-            Construct::binary_op,
             BoxConstruct::variable,
             Construct::constant,
+            BoxConstruct::extra,
         ))(input)?;
-
-        let (input, _) = Token::maybe_consume_extra(input)?;
 
         Ok((input, value))
     }
@@ -86,6 +87,40 @@ impl Construct {
         ))(input)
     }
 
+    fn extra_shebang(input: &str) -> ParseResult<ExtraContent> {
+        let (input, comment) = Token::consume_shebang_comment(input)?;
+
+        Ok((input, ExtraContent::new_shebang(comment.to_owned())))
+    }
+
+    fn extra_single(input: &str) -> ParseResult<ExtraContent> {
+        let (input, comment) = Token::consume_single_comment(input)?;
+
+        Ok((input, ExtraContent::new_single_line(comment.to_owned())))
+    }
+
+    fn extra_multi(input: &str) -> ParseResult<ExtraContent> {
+        let (input, comment) = Token::consume_multi_comment(input)?;
+
+        Ok((input, ExtraContent::new_multi_line(comment.to_owned())))
+    }
+
+    fn extra_whitespaces(input: &str) -> ParseResult<ExtraContent> {
+        let (input, comment) = Token::consume_whitespaces(input)?;
+
+        Ok((input, ExtraContent::new_whitespaces(comment.to_owned())))
+    }
+
+    /// Extra content is whitespaces and comments
+    pub fn extra(input: &str) -> ParseResult<ExtraContent> {
+        alt((
+            Construct::extra_whitespaces,
+            Construct::extra_shebang,
+            Construct::extra_single,
+            Construct::extra_multi,
+        ))(input)
+    }
+
     /// Parse a function call with no arguments
     ///
     /// `<identifier> ( )`
@@ -110,22 +145,25 @@ impl Construct {
         Ok((input, constant))
     }
 
-    /// Parse an argument and the comma that follows it
-    fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
-        let (input, constant) = Construct::instruction(input)?;
-        let (input, _) = Token::comma(input)?;
-
-        Ok((input, constant))
-    }
-
     /// Parse a list of arguments separated by comma
     fn args_list(input: &str) -> ParseResult<Vec<Box<dyn Instruction>>> {
-        // Get 1 or more arguments with a comma to the function call
-        let (input, mut arg_vec) = many0(Construct::arg_and_comma)(input)?;
+        /// Parse an argument and the comma that follows it
+        fn arg_and_comma(input: &str) -> ParseResult<Box<dyn Instruction>> {
+            let (input, _) = Token::maybe_consume_extra(input)?;
+            let (input, constant) = Construct::instruction(input)?;
+            let (input, _) = Token::maybe_consume_extra(input)?;
+            let (input, _) = Token::comma(input)?;
+
+            Ok((input, constant))
+        }
+
+        // Get 0 or more arguments with a comma to the function call
+        let (input, mut arg_vec) = many0(arg_and_comma)(input)?;
 
         // Parse the last argument, which does not have a comma. There needs to be
         // at least one argument, which can be this one
         let (input, last_arg) = Construct::arg(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
 
         arg_vec.push(last_arg);
 
@@ -147,6 +185,42 @@ impl Construct {
         Ok((input, fn_call))
     }
 
+    /// Parse a named argument. The syntax is similar to variable assignments, but they
+    /// are only used during type instantiation, and maybe later during function calls.
+    ///
+    /// `<identifier> = <instruction>`
+    fn named_arg(input: &str) -> ParseResult<VarAssign> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::equal(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, value) = Construct::instruction(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        Ok((input, VarAssign::new(false, id.to_owned(), value)))
+    }
+
+    fn named_arg_list(input: &str) -> ParseResult<Vec<VarAssign>> {
+        fn named_arg_and_comma(input: &str) -> ParseResult<VarAssign> {
+            let (input, constant) = Construct::named_arg(input)?;
+            let (input, _) = Token::comma(input)?;
+
+            Ok((input, constant))
+        }
+
+        // Get 0 or more arguments with a comma to the function call
+        let (input, mut arg_vec) = many0(named_arg_and_comma)(input)?;
+
+        // Parse the last argument, which does not have a comma. There needs to be
+        // at least one argument, which can be this one
+        let (input, last_arg) = Construct::named_arg(input)?;
+
+        arg_vec.push(last_arg);
+
+        Ok((input, arg_vec))
+    }
+
     /// When a type is instantiated in the source code.
     ///
     /// ```
@@ -156,13 +230,14 @@ impl Construct {
     /// `<arg_list> := [(<constant> | <variable> | <expression>)*]`
     /// `<identifier> ( <arg_list> )`
     pub fn type_instantiation(input: &str) -> ParseResult<TypeInstantiation> {
-        let (input, type_id) = Token::identifier(input)?;
+        let (input, type_name) = Token::identifier(input)?;
+        let type_id = TypeId::new(type_name);
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_curly_bracket(input)?;
 
-        let mut type_instantiation = TypeInstantiation::new(type_id.to_owned());
+        let mut type_instantiation = TypeInstantiation::new(type_id);
 
-        let (input, mut arg_vec) = Construct::args_list(input)?;
+        let (input, mut arg_vec) = Construct::named_arg_list(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
 
         arg_vec
@@ -217,15 +292,15 @@ impl Construct {
     /// }
     /// ```
     ///
-    /// `[mut] <identifier> = ( <constant> | <function_call> ) ;`
+    /// `[mut] <identifier> = <instruction>`
     pub(crate) fn var_assignment(input: &str) -> ParseResult<VarAssign> {
         let (input, mut_opt) = opt(Token::mut_tok)(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, id) = Token::identifier(input)?;
-        let (input, _) = opt(Token::consume_whitespaces)(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::equal(input)?;
-        let (input, _) = opt(Token::consume_whitespaces)(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, value) = Construct::instruction(input)?;
 
         match mut_opt {
@@ -335,7 +410,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
 
-        Ok((input, DecArg::new(id.to_owned(), ty.to_owned())))
+        Ok((input, DecArg::new(id.to_owned(), TypeId::new(ty))))
     }
 
     /// Parse an identifer as well as the type and comma that follows
@@ -375,7 +450,7 @@ impl Construct {
     }
 
     /// Parse the void return type of a function, checking that no arrow is present
-    fn return_type_void(input: &str) -> ParseResult<Option<String>> {
+    fn return_type_void(input: &str) -> ParseResult<Option<TypeId>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arrow) = opt(Token::arrow)(input)?;
 
@@ -386,18 +461,18 @@ impl Construct {
     }
 
     /// Parse a non-void return type
-    fn return_type_non_void(input: &str) -> ParseResult<Option<String>> {
+    fn return_type_non_void(input: &str) -> ParseResult<Option<TypeId>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::arrow(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        Ok((input, Some(ty.to_owned())))
+        Ok((input, Some(TypeId::from(ty.as_str()))))
     }
 
     /// Parse the return type of a function. Can be void
-    fn return_type(input: &str) -> ParseResult<Option<String>> {
+    fn return_type(input: &str) -> ParseResult<Option<TypeId>> {
         alt((Construct::return_type_non_void, Construct::return_type_void))(input)
     }
 
@@ -555,20 +630,6 @@ impl Construct {
         Ok((input, if_else))
     }
 
-    /// Parse an audit block. This consists in the the audit keyword and the following
-    /// block. Audit blocks are useful to relax the interpreter and develop faster. For
-    /// example, you're allowed to ignore return values in an audit block.
-    ///
-    /// `<audit> <block>`
-    pub(crate) fn audit(input: &str) -> ParseResult<Audit> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::audit_tok(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, block) = Construct::block(input)?;
-
-        Ok((input, Audit::new(block)))
-    }
-
     /// Parse a loop block, meaning the `loop` keyword and a corresponding block
     ///
     /// `<loop> <block>`
@@ -664,7 +725,6 @@ impl Construct {
     /// Parse a user-defined custom type
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
-    // FIXME: Un-underscore for 0.1.1
     pub(crate) fn type_declaration(input: &str) -> ParseResult<TypeDec> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::_type_tok(input)?;
@@ -692,7 +752,7 @@ impl Construct {
         Ok((input, path.to_string()))
     }
 
-    pub fn as_identifier(input: &str) -> ParseResult<Option<String>> {
+    fn as_identifier(input: &str) -> ParseResult<Option<String>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, id) = match opt(Token::as_tok)(input)? {
             (input, Some(_)) => {
@@ -709,7 +769,10 @@ impl Construct {
         Ok((input, id))
     }
 
-    pub fn incl(input: &str) -> ParseResult<Incl> {
+    /// Parse an include statement and its possible aliasing
+    ///
+    /// `<incl> <path> [ <as> <alias> ]
+    pub(crate) fn incl(input: &str) -> ParseResult<Incl> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, _) = Token::incl_tok(input)?;
@@ -723,11 +786,92 @@ impl Construct {
 
         Ok((input, incl))
     }
+
+    /// Parse a viable caller for a method call
+    fn method_caller(input: &str) -> ParseResult<Box<dyn Instruction>> {
+        // FIXME: Right now, we cannot chain method calls and no error is produced:
+        // `1.double().double()` returns 2 instead of the expected 4, since
+        // only one call is resolved and the remaining input (`.double()`) is
+        // silently ignored
+        alt((
+            BoxConstruct::function_call,
+            BoxConstruct::variable,
+            Construct::constant,
+            BoxConstruct::if_else,
+            BoxConstruct::block,
+            BoxConstruct::any_loop,
+            BoxConstruct::jinko_inst,
+        ))(input)
+    }
+
+    /// Parse a viable instance for a field access.
+    /// This is similar to Construct::method_caller, without allowing constants, as they
+    /// contain no fields.
+    fn instance(input: &str) -> ParseResult<Box<dyn Instruction>> {
+        alt((
+            BoxConstruct::function_call,
+            BoxConstruct::type_instantiation,
+            BoxConstruct::variable,
+            BoxConstruct::if_else,
+            BoxConstruct::block,
+            BoxConstruct::any_loop,
+            BoxConstruct::jinko_inst,
+        ))(input)
+    }
+
+    /// Parse a method like function call, that shall be desugared
+    /// to a simple function call later on
+    ///
+    /// `<identifier>.<identifier>()`
+    pub fn method_call(input: &str) -> ParseResult<MethodCall> {
+        let (input, caller) = Construct::method_caller(input)?;
+        let (input, _) = Token::dot(input)?;
+        let (input, method) = Construct::function_call(input)?;
+
+        Ok((input, MethodCall::new(caller, method)))
+    }
+
+    fn dot_field(input: &str) -> ParseResult<String> {
+        let (input, _) = Token::dot(input)?;
+
+        Token::identifier(input)
+    }
+
+    fn inner_field_access(input: &str) -> ParseResult<FieldAccess> {
+        let (input, instance) = Construct::instance(input)?;
+        let (input, field_name) = Construct::dot_field(input)?;
+
+        Ok((input, FieldAccess::new(instance, field_name)))
+    }
+
+    fn multi_field_access(input: &str) -> ParseResult<FieldAccess> {
+        let (input, first_fa) = Construct::inner_field_access(input)?;
+
+        let (input, dot_field_vec) = many0(Construct::dot_field)(input)?;
+
+        let mut current_fa = first_fa;
+
+        for field_name in dot_field_vec {
+            let fa = FieldAccess::new(Box::new(current_fa), field_name);
+            current_fa = fa;
+        }
+
+        Ok((input, current_fa))
+    }
+
+    /// Parse a field access on a custom type. This is very similar to a method call: The
+    /// only difference is that the method call shall have parentheses
+    ///
+    /// `<identifier>.<identifier>[.<identifier>]*`
+    pub fn field_access(input: &str) -> ParseResult<FieldAccess> {
+        Construct::multi_field_access(input)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instruction::JkInstKind;
 
     #[test]
     fn t_var_assign_valid() {
@@ -793,26 +937,14 @@ mod tests {
             true
         );
 
-        match Construct::var_assignment("mut x=12;") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Equal stuck to id is allowed"),
-        }
-        match Construct::var_assignment("mut x= 12;") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Equal stuck to id is allowed"),
-        }
-        match Construct::var_assignment("mut x =12;") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Equal stuck to value is allowed"),
-        }
+        assert!(Construct::var_assignment("mut x=12;").is_ok());
+        assert!(Construct::var_assignment("mut x= 12;").is_ok());
+        assert!(Construct::var_assignment("mut x =12;").is_ok());
     }
 
     #[test]
     fn t_var_assign_invalid() {
-        match Construct::var_assignment("mutable x = 12") {
-            Ok(_) => assert!(false, "Mutable isn't mut"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::var_assignment("mutable x = 12").is_err());
     }
 
     #[test]
@@ -868,38 +1000,17 @@ mod tests {
 
     #[test]
     fn t_function_call_invalid() {
-        match Construct::function_call("fn(") {
-            Ok(_) => assert!(false, "Unterminated parenthesis"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn))") {
-            Ok(_) => assert!(false, "Wrong parenthesis"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn((") {
-            Ok(_) => assert!(false, "Wrong parenthesis again"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn((") {
-            Ok(_) => assert!(false, "Wrong parenthesis again"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn((") {
-            Ok(_) => assert!(false, "Wrong parenthesis again"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::function_call("fn(").is_err());
+        assert!(Construct::function_call("fn))").is_err());
+        assert!(Construct::function_call("fn((").is_err());
+        assert!(Construct::function_call("fn((").is_err());
+        assert!(Construct::function_call("fn((").is_err());
     }
 
     #[test]
     fn t_function_call_multiarg_invalid() {
-        match Construct::function_call("fn(1, 2, 3, 4,)") {
-            Ok(_) => assert!(false, "Unterminated arglist"),
-            Err(_) => assert!(true),
-        }
-        match Construct::function_call("fn(1, 2, 3, 4,   )") {
-            Ok(_) => assert!(false, "Unterminated arglist"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::function_call("fn(1, 2, 3, 4,)").is_err());
+        assert!(Construct::function_call("fn(1, 2, 3, 4,   )").is_err());
     }
 
     #[test]
@@ -930,10 +1041,7 @@ mod tests {
             1
         );
 
-        match Construct::block("{ 12a; 14a }").unwrap().1.last() {
-            Some(_) => assert!(true),
-            None => assert!(false, "Last instruction here is valid"),
-        }
+        assert!(Construct::block("{ 12a; 14a }").unwrap().1.last().is_some());
     }
 
     #[test]
@@ -949,7 +1057,8 @@ mod tests {
             Construct::identifier_type("name: some_type")
                 .unwrap()
                 .1
-                .ty(),
+                .get_type()
+                .id(),
             "some_type"
         );
 
@@ -964,7 +1073,8 @@ mod tests {
             Construct::identifier_type("name     :some_type")
                 .unwrap()
                 .1
-                .ty(),
+                .get_type()
+                .id(),
             "some_type"
         );
     }
@@ -1002,25 +1112,10 @@ mod tests {
 
     #[test]
     fn t_block_invalid_oneline() {
-        match Construct::block("{ 12a;") {
-            Ok(_) => assert!(false, "Unterminated bracket"),
-            Err(_) => assert!(true),
-        }
-
-        match Construct::block("{ 12a") {
-            Ok(_) => assert!(false, "Unterminated bracket but on instruction"),
-            Err(_) => assert!(true),
-        }
-
-        match Construct::block("{ 12a; 13a") {
-            Ok(_) => assert!(false, "Unterminated bracket but on second instruction"),
-            Err(_) => assert!(true),
-        }
-
-        match Construct::block("12a; 13a }") {
-            Ok(_) => assert!(false, "Not starting with a bracket"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::block("{ 12a;").is_err());
+        assert!(Construct::block("{ 12a").is_err());
+        assert!(Construct::block("{ 12a; 13a").is_err());
+        assert!(Construct::block("12a; 13a }").is_err());
     }
 
     #[test]
@@ -1054,11 +1149,11 @@ mod tests {
     fn t_return_type_non_void() {
         assert_eq!(
             Construct::return_type("-> int"),
-            Ok(("", Some("int".to_owned())))
+            Ok(("", Some(TypeId::from("int"))))
         );
         assert_eq!(
             Construct::return_type("   ->    int   {"),
-            Ok(("{", Some("int".to_owned())))
+            Ok(("{", Some(TypeId::from("int"))))
         );
     }
 
@@ -1081,7 +1176,7 @@ mod tests {
             .1;
 
         assert_eq!(func.name(), "add");
-        assert_eq!(func.ty(), Some(&"ty".to_owned()));
+        assert_eq!(func.ty(), Some(&TypeId::from("ty")));
         assert_eq!(func.args().len(), 2);
         assert_eq!(func.fn_kind(), FunctionKind::Func);
     }
@@ -1097,10 +1192,7 @@ mod tests {
 
     #[test]
     fn t_test_invalid() {
-        match Construct::test_declaration("test add(a: int) -> int {}") {
-            Ok(_) => assert!(false, "Can't have arguments to a test"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::test_declaration("test add(a: int) -> int {}").is_err());
     }
 
     #[test]
@@ -1121,7 +1213,7 @@ mod tests {
             .1;
 
         assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), Some(&"ty".to_owned()));
+        assert_eq!(test.ty(), Some(&TypeId::from("ty")));
         assert_eq!(test.fn_kind(), FunctionKind::Ext);
     }
 
@@ -1138,104 +1230,57 @@ mod tests {
 
     #[test]
     fn t_ext_invalid() {
-        match Construct::ext_declaration("ext func add(a: int) -> int {}") {
-            Ok(_) => assert!(false, "Can't have a block for an ext function"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::ext_declaration("ext func add(a: int) -> int {}").is_err());
     }
 
     #[test]
     fn t_if_else_just_if() {
         let ie = Construct::if_else("if condition {}");
 
-        match &ie {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to only have if"),
-        };
+        assert!(&ie.is_ok());
     }
 
     #[test]
     fn t_if_else() {
-        match Construct::if_else("if condition {} else {}") {
-            Ok((input, _)) => assert_eq!(input, ""),
-            Err(_) => assert!(false, "Valid to have empty blocks"),
-        };
-    }
-
-    #[test]
-    fn t_audit_simple() {
-        match Construct::audit("audit {}") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid audit syntax"),
-        }
+        assert!(Construct::if_else("if condition {} else {}").is_ok());
     }
 
     #[test]
     fn t_loop_valid() {
-        match Construct::loop_block("loop {}") {
-            Ok((i, _)) => assert_eq!(i, ""),
-            Err(_) => assert!(false, "Valid empty loop"),
-        }
+        assert!(Construct::loop_block("loop {}").is_ok());
     }
 
     #[test]
     fn t_loop_invalid() {
-        match Construct::loop_block("loo {}") {
-            Ok(_) => assert!(false, "`loo` is not the keyword"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::loop_block("loo {}").is_err());
 
-        match Construct::loop_block("loop") {
-            Ok(_) => assert!(false, "A block is required"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::loop_block("loop").is_err());
     }
 
     #[test]
     fn t_while_valid() {
-        match Construct::while_block("while x_99 {}") {
-            Ok((i, _)) => assert_eq!(i, ""),
-            Err(_) => assert!(false, "Valid empty while"),
-        }
+        assert!(Construct::while_block("while x_99 {}").is_ok());
     }
 
     #[test]
     fn t_while_invalid() {
-        match Construct::while_block("while {}") {
-            Ok(_) => assert!(false, "Need a condition"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::while_block("while {}").is_err());
 
-        match Construct::while_block("while") {
-            Ok(_) => assert!(false, "A block is required"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::while_block("while").is_err());
     }
 
     #[test]
     fn t_for_valid() {
-        match Construct::for_block("for x_99 in x_99 {}") {
-            Ok((i, _)) => assert_eq!(i, ""),
-            Err(_) => assert!(false, "Valid empty for"),
-        }
+        assert!(Construct::for_block("for x_99 in x_99 {}").is_ok());
     }
 
     #[test]
     fn t_for_invalid() {
-        match Construct::for_block("for {}") {
-            Ok(_) => assert!(false, "Need a variable and range"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::for_block("for {}").is_err());
 
-        match Construct::for_block("for x99 in {}") {
-            Ok(_) => assert!(false, "A range is required"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::for_block("for x99 in {}").is_err());
 
-        match Construct::for_block("for x99 in { { { inner_block() } } }") {
-            Ok(_) => assert!(false, "A range is required"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::for_block("for x99 in { { { inner_block() } } }").is_err());
     }
 
     #[test]
@@ -1249,128 +1294,93 @@ mod tests {
 
     #[test]
     fn t_binary_op_valid() {
-        match Construct::binary_op("a *   12 ") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have multi spaces"),
-        };
-        match Construct::binary_op("some() + 12.1") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to have multiple instruction types"),
-        };
+        assert!(Construct::binary_op("a *   12 ").is_ok());
+        assert!(Construct::binary_op("some() + 12.1").is_ok());
     }
 
     #[test]
     fn t_binary_op_invalid() {
-        match Construct::binary_op("a ? 12") {
-            Ok(_) => assert!(false, "? is not a binop"),
-            Err(_) => assert!(true),
-        };
+        assert!(Construct::binary_op("a ? 12").is_err());
     }
 
     #[test]
     fn t_type_declaration_simple() {
-        match Construct::type_declaration("type Int(v: int);") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Just one int is valid"),
-        };
-        match Construct::type_declaration("type Ints(a: int, b: int);") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Two integers is valid"),
-        };
-        match Construct::type_declaration("type Compound(i: int, s: str);") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Different types are valid"),
-        };
-        match Construct::type_declaration(
+        assert!(Construct::type_declaration("type Int(v: int);").is_ok());
+        assert!(Construct::type_declaration("type Ints(a: int, b: int);").is_ok());
+        assert!(Construct::type_declaration("type Compound(i: int, s: str);").is_ok());
+        assert!(Construct::type_declaration(
             "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
-        ) {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Custom types in custom types are valid"),
-        };
+        )
+        .is_ok());
     }
 
     #[test]
     fn t_type_declaration_empty() {
-        match Construct::type_declaration("type Empty();") {
-            Ok(_) => assert!(false, "Can't have empty types"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::type_declaration("type Empty();").is_err());
     }
 
     #[test]
     fn t_type_declaration_invalid() {
-        match Construct::type_declaration("type ExtraComma(a: int, b: int,);") {
-            Ok(_) => assert!(false, "Extra comma in type definition"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::type_declaration("type ExtraComma(a: int, b: int,);").is_err());
     }
 
     #[test]
     fn t_type_instantiation_valid() {
-        match Construct::type_instantiation("Custom { 1 }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Type instantiation with one value is valid"),
-        }
+        assert!(Construct::type_instantiation("Custom { a = 1 }").is_ok());
+    }
+
+    #[test]
+    fn t_type_instantiation_valid_multi() {
+        assert!(Construct::type_instantiation("Custom { a = 1, b= 2, c = { 's' } }").is_ok());
     }
 
     #[test]
     fn t_type_instantiation_invalid() {
-        match Construct::type_instantiation("Custom { ") {
-            Ok(_) => assert!(false),
-            Err(_) => assert!(true, "Type instantiation need a closing brace"),
-        }
+        assert!(Construct::type_instantiation("Custom { ").is_err());
     }
 
     #[test]
     fn t_type_instantiation_no_name() {
-        match Construct::type_instantiation("{ 1 }") {
-            Ok(_) => assert!(false),
-            Err(_) => assert!(true, "Type instantiation need a type name"),
-        }
+        assert!(Construct::type_instantiation("{ 1 }").is_err());
+    }
+
+    #[test]
+    fn t_type_instantiation_no_named_arg() {
+        assert!(Construct::type_instantiation("CustomType { 1 }").is_err());
     }
 
     #[test]
     fn t_func_dec_binop() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { a + b }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to directly return a binop"),
-        }
+        assert!(Construct::function_declaration("func a(a: int, b:int) -> int { a + b }").is_ok());
     }
 
     #[test]
     fn t_func_dec_return_arg() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { a }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to directly return an argument"),
-        }
+        assert!(Construct::function_declaration("func a(a: int, b:int) -> int { a }").is_ok());
     }
 
     #[test]
     fn t_func_dec_return_arg_plus_stmt() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { something(); a }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(
-                false,
-                "Valid to directly return an argument after a statement"
-            ),
-        }
+        assert!(
+            Construct::function_declaration("func a(a: int, b:int) -> int { something(); a }")
+                .is_ok()
+        );
     }
 
     #[test]
     fn t_func_dec_return_binop_plus_stmt() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { something(); a + b }")
-        {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to directly return a binop after a statement"),
-        }
+        assert!(Construct::function_declaration(
+            "func a(a: int, b:int) -> int { something(); a + b }"
+        )
+        .is_ok());
     }
 
     #[test]
     fn t_func_dec_return_binop_as_var() {
-        match Construct::function_declaration("func a(a: int, b:int) -> int { res = a + b; res }") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "Valid to directly return a binop as a variable"),
-        }
+        assert!(Construct::function_declaration(
+            "func a(a: int, b:int) -> int { res = a + b; res }"
+        )
+        .is_ok());
     }
 
     #[test]
@@ -1384,34 +1394,214 @@ mod tests {
     }
 
     #[test]
+    fn t_named_argument_valid() {
+        assert!(Construct::named_arg("a = b").is_ok());
+        assert!(Construct::named_arg("a = 2").is_ok());
+        assert!(Construct::named_arg("a = { 2 }").is_ok());
+        assert!(Construct::named_arg("a = call()").is_ok());
+    }
+
+    #[test]
+    fn t_named_argument_invalid() {
+        assert!(Construct::named_arg("a =").is_err(), "No second member");
+        assert!(Construct::named_arg("= 2").is_err(), "No first member");
+        assert!(
+            Construct::named_arg("a { 2 }").is_err(),
+            "Missing equal sign"
+        );
+    }
+
+    #[test]
     fn t_incl_valid() {
-        match Construct::incl("incl simple") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "`incl simple` is perfectly valid"),
-        }
+        assert!(Construct::incl("incl simple").is_ok());
     }
 
     #[test]
     fn t_incl_valid_plus_rename() {
-        match Construct::incl("incl a as b") {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false, "incl + renaming has to be handled"),
-        }
+        assert!(Construct::incl("incl a as b").is_ok());
     }
 
     #[test]
     fn t_incl_invalid() {
-        match Construct::incl("incl") {
-            Ok(_) => assert!(false, "Can't include nothing"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::incl("incl").is_err());
     }
 
     #[test]
     fn t_incl_plus_rename_invalid() {
-        match Construct::incl("incl a as") {
-            Ok(_) => assert!(false, "Can't include a and rename as nothing"),
-            Err(_) => assert!(true),
-        }
+        assert!(Construct::incl("incl a as").is_err());
+    }
+
+    #[test]
+    fn t_method_call_simple() {
+        assert!(
+            Construct::method_call("a.b()").is_ok(),
+            "Valid to have simple identifiers"
+        );
+        assert!(
+            Construct::method_call("135.method()").is_ok(),
+            "Valid to have constant as caller"
+        );
+        assert!(
+            Construct::method_call("{ hey }.method()").is_ok(),
+            "Valid to have block as caller"
+        );
+        assert!(
+            Construct::method_call("func_call().method()").is_ok(),
+            "Valid to have call as caller"
+        );
+    }
+
+    #[test]
+    fn t_method_call_invalid() {
+        assert!(
+            Construct::method_call("a.b").is_err(),
+            "Missing parentheses"
+        );
+        assert!(
+            Construct::method_call("a.()").is_err(),
+            "Missing method name"
+        );
+        assert!(
+            Construct::method_call(".method()").is_err(),
+            "Missing caller"
+        );
+    }
+
+    #[test]
+    fn t_sy_eager_consume() {
+        // https://github.com/CohenArthur/jinko/issues/172
+
+        assert_eq!(Construct::instruction("1 2").unwrap().0, " 2");
+        assert_eq!(Construct::instruction("a b").unwrap().0, " b");
+    }
+
+    #[test]
+    fn t_field_access_valid() {
+        assert!(Construct::field_access("s.a").is_ok());
+        assert!(Construct::field_access("longer_identifier.a").is_ok());
+        assert!(Construct::field_access("longer_identifier.with_numbers32").is_ok());
+    }
+
+    #[test]
+    fn t_field_access_from_type_instantiation() {
+        assert!(Construct::field_access("CustomType { k = a, v = b }.c").is_ok());
+    }
+
+    #[test]
+    fn t_field_access_with_constant_field() {
+        assert!(Construct::field_access("s.1").is_err());
+        assert!(Construct::field_access("a.\"string\"").is_err());
+    }
+
+    #[test]
+    fn t_field_access_invalid_with_constant_instance() {
+        assert!(Construct::field_access("1.a").is_err());
+        assert!(Construct::field_access("\"string\".a").is_err());
+    }
+
+    #[test]
+    fn t_field_access_with_spaces() {
+        assert!(Construct::field_access("sdot. space").is_err());
+        assert!(Construct::field_access("s .dotspace").is_err());
+    }
+
+    // In the following tests about comments, we always need an extra call to `instruction`
+    // in order to get ride of the newline after the comment
+
+    #[test]
+    fn t_multi_comment_multi_line() {
+        let input = r#"/**
+* This function does nothing
+*/
+func void() { }"#;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_sing_comment_multi_line() {
+        let input = r#"// Comment
+func void() { }"#;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_hashtag_comment_multi_line() {
+        let input = r##"# Comment
+func void() { }"##;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_multiple_different_comments() {
+        let input = r##"# Comment
+# Another one
+
+/**
+ * Some documentation
+ */
+func void() { }"##;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_multiple_different_comments_close() {
+        let input = r##"# Comment
+# Another one
+
+/**
+ * Some documentation
+ *//* Some more */
+func void() { }"##;
+
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+        let (input, _) = Construct::instruction(input).unwrap();
+
+        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
+    }
+
+    #[test]
+    fn t_multi_field_access_3() {
+        assert!(Construct::field_access("top.middle.bottom").is_ok());
+        assert_eq!(Construct::field_access("top.middle.bottom").unwrap().0, "");
+    }
+
+    #[test]
+    fn t_multi_field_access_4() {
+        assert!(Construct::field_access("top.middle.bottom.last").is_ok());
+        assert_eq!(
+            Construct::field_access("top.middle.bottom.last").unwrap().0,
+            ""
+        );
+    }
+
+    #[test]
+    fn t_multi_field_access_n() {
+        assert!(Construct::field_access("jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk").is_ok());
+        assert_eq!(
+            Construct::field_access("jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk")
+                .unwrap()
+                .0,
+            ""
+        );
     }
 }

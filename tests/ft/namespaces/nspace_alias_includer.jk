@@ -1,0 +1,3 @@
+incl lib as loob
+
+loob::second // return 16
