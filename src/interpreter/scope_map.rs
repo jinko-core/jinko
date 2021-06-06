@@ -106,6 +106,10 @@ impl Scope {
 
     /// Display all contained information on stdout
     pub fn print(&self) {
+        for (_, ty) in &self.types {
+            println!("{}", ty.print());
+        }
+
         for (_, var) in &self.variables {
             println!("{}", var.print());
         }
