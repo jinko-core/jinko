@@ -163,9 +163,10 @@ impl Instruction for TypeInstantiation {
 impl Rename for TypeInstantiation {
     fn prefix(&mut self, prefix: &str) {
         self.type_name.prefix(prefix);
-        self.fields
-            .iter_mut()
-            .for_each(|field| field.prefix(prefix));
+        // FIXME
+        // self.fields
+        //     .iter_mut()
+        //     .for_each(|field| field.prefix(prefix));
     }
 }
 

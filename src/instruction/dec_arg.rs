@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result};
+
 use crate::instruction::TypeId;
 use crate::Rename;
 
@@ -26,7 +28,14 @@ impl DecArg {
 
 impl Rename for DecArg {
     fn prefix(&mut self, prefix: &str) {
-        self.name = format!("{}{}", prefix, self.name);
+        // FIXME: We shouldn't prefix function arguments, right?
+        // self.name = format!("{}{}", prefix, self.name);
         self.ty.prefix(prefix);
+    }
+}
+
+impl Display for DecArg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "{}: {}", self.name, self.ty.id())
     }
 }
