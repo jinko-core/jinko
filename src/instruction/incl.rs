@@ -89,9 +89,20 @@ impl Incl {
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty interpreter
-        let (_, instructions) = Construct::many_instructions(input.as_str())?;
-
-        Ok((formatted, instructions))
+        let (remaining_input, instructions) = Construct::many_instructions(input.as_str())?;
+        match remaining_input.len() {
+            // The remaining input is empty: We parsed the whole file properly
+            0 => Ok((formatted, instructions)),
+            _ => Err(JkError::new(
+                JkErrKind::Parsing,
+                format!(
+                    "error when parsing included file: {:?},\non the following input:\n{}",
+                    formatted, remaining_input
+                ),
+                None,
+                self.print(),
+            )),
+        }
     }
 
     /// Try to load code from the current path where the executable has been launched
