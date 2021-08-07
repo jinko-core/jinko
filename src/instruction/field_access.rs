@@ -57,7 +57,8 @@ impl Instruction for FieldAccess {
 
 impl Rename for FieldAccess {
     fn prefix(&mut self, _: &str) {
-        todo!()
+        // FIXME: Do we want to do something?
+        // todo!()
     }
 }
 

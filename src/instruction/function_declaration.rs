@@ -196,10 +196,11 @@ impl Rename for FunctionDec {
             Some(TypeId::from(format!("{}{}", prefix, ty.id()).as_str()))
         }));
 
-        match &mut self.block {
-            Some(b) => b.prefix(prefix),
-            None => {}
-        };
+        // FIXME: No need to prefix the scope inside a function, right?
+        // match &mut self.block {
+        //     Some(b) => b.prefix(prefix),
+        //     None => {}
+        // };
 
         self.args.iter_mut().for_each(|arg| arg.prefix(prefix));
     }

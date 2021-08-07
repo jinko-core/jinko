@@ -41,17 +41,32 @@ impl Instruction for TypeDec {
         Ok(InstrKind::Statement)
     }
 
+    // FIXME: Really unefficient
     fn print(&self) -> String {
-        format!("type {} ( {:?} )", self.name, self.fields)
+        let mut base = format!("type {} (", self.name);
+
+        base.push_str(
+            self.fields
+                .get(0)
+                .map_or(String::new(), |f| format!("{}", f))
+                .as_str(),
+        );
+
+        self.fields()
+            .iter()
+            .skip(1)
+            .for_each(|field| base.push_str(format!(", {}", field).as_str()));
+        format!("{});", base)
     }
 }
 
 impl Rename for TypeDec {
     fn prefix(&mut self, prefix: &str) {
         self.name = format!("{}{}", prefix, self.name);
-        self.fields
-            .iter_mut()
-            .for_each(|field| field.prefix(prefix));
+        // FIXME: Do we want to prefix field names?
+        // self.fields
+        //     .iter_mut()
+        //     .for_each(|field| field.prefix(prefix));
     }
 }
 

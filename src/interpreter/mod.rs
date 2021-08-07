@@ -79,6 +79,13 @@ impl Interpreter {
             .iter()
             .for_each(|ty_name| i.add_type(TypeDec::from(*ty_name)).unwrap());
 
+        // Include the standard library
+        let stdlib_incl =
+            crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
+        stdlib_incl
+            .execute(&mut i)
+            .expect("cannot include jinko's standard library - aborting");
+
         i
     }
 
