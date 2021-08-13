@@ -42,7 +42,7 @@ impl ObjectInstance {
         data: Vec<u8>,
         fields: Option<Vec<(Name, Size)>>,
     ) -> ObjectInstance {
-        let fields = fields.map(|vec| ObjectInstance::fields_vec_to_hash_map(vec));
+        let fields = fields.map(ObjectInstance::fields_vec_to_hash_map);
 
         ObjectInstance {
             ty,
@@ -81,7 +81,7 @@ impl ObjectInstance {
         self.size
     }
 
-    pub fn get_field(&self, field_name: &Name) -> Result<ObjectInstance, JkError> {
+    pub fn get_field(&self, field_name: &str) -> Result<ObjectInstance, JkError> {
         match self.fields.as_ref() {
             // FIXME: No string new as input
             None => Err(JkError::new(

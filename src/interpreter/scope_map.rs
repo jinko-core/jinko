@@ -52,18 +52,20 @@ impl Scope {
                 None,
                 var.name().to_owned(),
             )),
-            None => Ok({
+            None => {
                 self.variables.insert(var.name().to_owned(), var);
-            }),
+                Ok(())
+            }
         }
     }
 
     /// Remove a variable from the most recently created scope, if it exists
     pub fn remove_variable(&mut self, var: &Var) -> Result<(), JkError> {
         match self.get_variable(var.name()) {
-            Some(_) => Ok({
+            Some(_) => {
                 self.variables.remove(var.name()).unwrap();
-            }),
+                Ok(())
+            }
             None => Err(JkError::new(
                 JkErrKind::Interpreter,
                 format!("variable does not exist: {}", var.name()),
@@ -82,9 +84,10 @@ impl Scope {
                 None,
                 func.name().to_owned(),
             )),
-            None => Ok({
+            None => {
                 self.functions.insert(func.name().to_owned(), Rc::new(func));
-            }),
+                Ok(())
+            }
         }
     }
 
@@ -97,24 +100,25 @@ impl Scope {
                 None,
                 type_dec.name().to_owned(),
             )),
-            None => Ok({
+            None => {
                 self.types
                     .insert(type_dec.name().to_owned(), Rc::new(type_dec));
-            }),
+                Ok(())
+            }
         }
     }
 
     /// Display all contained information on stdout
     pub fn print(&self) {
-        for (_, ty) in &self.types {
+        for ty in self.types.values() {
             println!("{}", ty.print());
         }
 
-        for (_, var) in &self.variables {
+        for var in self.variables.values() {
             println!("{}", var.print());
         }
 
-        for (_, f) in &self.functions {
+        for f in self.functions.values() {
             println!("{}", f.print());
         }
     }

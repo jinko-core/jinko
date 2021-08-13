@@ -54,7 +54,7 @@ impl BinaryOp {
     /// Execute a node of the binary operation
     fn execute_node(
         &self,
-        node: &Box<dyn Instruction>,
+        node: &dyn Instruction,
         interpreter: &mut Interpreter,
     ) -> Result<ObjectInstance, JkError> {
         match node.execute(interpreter)? {
@@ -91,8 +91,8 @@ impl Instruction for BinaryOp {
 
         interpreter.debug("OP", self.op.to_str());
 
-        let l_value = self.execute_node(&self.lhs, interpreter)?;
-        let r_value = self.execute_node(&self.rhs, interpreter)?;
+        let l_value = self.execute_node(&*self.lhs, interpreter)?;
+        let r_value = self.execute_node(&*self.rhs, interpreter)?;
 
         if l_value.ty() != r_value.ty() {
             return Err(JkError::new(

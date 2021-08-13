@@ -47,7 +47,10 @@ impl FunctionDec {
     /// directly gives a block to the function
     pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) -> Result<(), JkError> {
         match &mut self.block {
-            Some(b) => Ok(b.add_instruction(instruction)),
+            Some(b) => {
+                b.add_instruction(instruction);
+                Ok(())
+            }
             None => Err(JkError::new(
                 JkErrKind::Interpreter,
                 format!(
@@ -192,9 +195,10 @@ impl Instruction for FunctionDec {
 impl Rename for FunctionDec {
     fn prefix(&mut self, prefix: &str) {
         self.name = format!("{}{}", prefix, self.name);
-        self.set_ty(self.ty().map_or(None, |ty| {
-            Some(TypeId::from(format!("{}{}", prefix, ty.id()).as_str()))
-        }));
+        self.set_ty(
+            self.ty()
+                .map(|ty| TypeId::from(format!("{}{}", prefix, ty.id()).as_str())),
+        );
 
         // FIXME: No need to prefix the scope inside a function, right?
         // match &mut self.block {

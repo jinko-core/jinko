@@ -25,6 +25,12 @@ pub struct Block {
     last: Option<Box<dyn Instruction>>,
 }
 
+impl Default for Block {
+    fn default() -> Block {
+        Block::new()
+    }
+}
+
 impl Block {
     /// Create a new block
     pub fn new() -> Block {
@@ -55,8 +61,8 @@ impl Block {
     }
 
     /// Returns a reference to the last expression of the block, if it exists
-    pub fn last(&self) -> Option<&Box<dyn Instruction>> {
-        self.last.as_ref()
+    pub fn last(&self) -> Option<&dyn Instruction> {
+        self.last.as_deref()
     }
 
     /// Gives a last expression to the block
@@ -68,7 +74,7 @@ impl Block {
 impl Instruction for Block {
     fn kind(&self) -> InstrKind {
         match self.last() {
-            Some(last) => last.as_ref().kind(),
+            Some(last) => last.kind(),
             None => InstrKind::Statement,
         }
     }
@@ -85,12 +91,11 @@ impl Instruction for Block {
             base.push_str(";\n");
         }
 
-        match self.last() {
-            Some(l) => base = format!("{}    {}\n", base, l.print()),
-            None => {}
+        if let Some(l) = self.last() {
+            base = format!("{}    {}\n", base, l.print());
         }
 
-        base.push_str("}");
+        base.push('}');
         base
     }
 

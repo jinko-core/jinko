@@ -34,8 +34,8 @@ impl VarAssign {
     }
 
     /// Get a reference to the value used to initialize the variable
-    pub fn value(&self) -> &Box<dyn Instruction> {
-        &self.value
+    pub fn value(&self) -> &dyn Instruction {
+        &*self.value
     }
 }
 

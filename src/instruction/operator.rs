@@ -56,8 +56,10 @@ impl Operator {
     pub fn is_left_associative(&self) -> bool {
         // FIXME: Not entirely true
         // - Changes once we add more operators such as the Power one
-        match self {
-            _ => true,
-        }
+        // match self {
+        //     _ => true,
+        // }
+
+        true
     }
 }
