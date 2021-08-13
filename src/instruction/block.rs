@@ -25,6 +25,12 @@ pub struct Block {
     last: Option<Box<dyn Instruction>>,
 }
 
+impl Default for Block {
+    fn default() -> Block {
+        Block::new()
+    }
+}
+
 impl Block {
     /// Create a new block
     pub fn new() -> Block {

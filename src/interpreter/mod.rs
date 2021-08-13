@@ -50,6 +50,12 @@ pub struct Interpreter {
     included: HashSet<PathBuf>,
 }
 
+impl Default for Interpreter {
+    fn default() -> Interpreter {
+        Interpreter::new()
+    }
+}
+
 impl Interpreter {
     fn new_entry() -> FunctionDec {
         let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None);
