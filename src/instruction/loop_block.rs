@@ -78,7 +78,7 @@ impl Instruction for Loop {
 
                 return Err(JkError::new(
                     JkErrKind::Interpreter,
-                    format!("for loops are currently unimplemented"),
+                    "for loops are currently unimplemented".to_string(),
                     None,
                     self.print(),
                 ));

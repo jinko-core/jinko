@@ -30,9 +30,9 @@ impl Incl {
         let format = format.to_str().unwrap().to_string();
 
         let mut dir_fmt = format.clone();
-        let mut file_fmt = format.clone();
+        let mut file_fmt = format;
 
-        dir_fmt.push_str(&format!("{}", DEFAULT_INCL));
+        dir_fmt.push_str(DEFAULT_INCL.to_string().as_str());
         file_fmt.push_str(".jk");
 
         (PathBuf::from(dir_fmt), PathBuf::from(file_fmt))
@@ -170,7 +170,7 @@ impl Instruction for Incl {
     }
 
     fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
-        interpreter.debug("INCL ENTER", &format!("{}", self.print()));
+        interpreter.debug("INCL ENTER", self.print().as_str());
 
         let base = match interpreter.path() {
             // Get the parent directory of the interpreter's source file. We can unwrap

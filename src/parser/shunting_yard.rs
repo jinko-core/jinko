@@ -127,7 +127,7 @@ impl ShuntingYard {
     }
 
     /// Reduce the RPN produced by the ShuntingYard to an Expression
-    fn reduce<'i>(input: &'i str, rpn: Queue<SyPair>) -> IResult<&'i str, Box<dyn Instruction>> {
+    fn reduce(input: &str, rpn: Queue<SyPair>) -> IResult<&str, Box<dyn Instruction>> {
         let mut stack = Stack::new();
 
         for sy_pair in rpn.into_iter() {
@@ -179,7 +179,7 @@ impl ShuntingYard {
     pub fn parse(i: &str) -> IResult<&str, Box<dyn Instruction>> {
         let mut sy = ShuntingYard::new();
 
-        let mut input = i.clone();
+        let mut input = i;
 
         match sy.handle_token(input) {
             Err(nom::Err::Error(_)) => {

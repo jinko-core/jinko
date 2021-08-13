@@ -151,7 +151,8 @@ impl Token {
         Token::specific_token(input, "incl")
     }
 
-    pub fn as_tok(input: &str) -> IResult<&str, &str> {
+    // Parse the `as` token. Rename it so clippy does not complain
+    pub fn az_tok(input: &str) -> IResult<&str, &str> {
         Token::specific_token(input, "as")
     }
 
@@ -222,14 +223,11 @@ impl Token {
     pub fn inner_identifer(input: &str) -> IResult<&str, &str> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
-        match RESERVED_KEYWORDS.contains(&id) {
-            true => {
-                return Err(nom::Err::Error((
-                    "Identifer cannot be keyword",
-                    ErrorKind::OneOf,
-                )));
-            }
-            _ => {}
+        if RESERVED_KEYWORDS.contains(&id) {
+            return Err(nom::Err::Error((
+                "Identifer cannot be keyword",
+                ErrorKind::OneOf,
+            )));
         }
 
         // FIXME: Ugly
@@ -265,15 +263,12 @@ impl Token {
         // `<id>::<id>::<id>...<id>::`
         //
         // which is not a valid identifier
-        match Token::namespace_separator(input) {
-            Ok(_) => {
-                return Err(nom::Err::Error((
-                    "Cannot finish identifier on namespace separator `::`",
-                    ErrorKind::OneOf,
-                )))
-            }
-            Err(_) => {}
-        };
+        if Token::namespace_separator(input).is_ok() {
+            return Err(nom::Err::Error((
+                "Cannot finish identifier on namespace separator `::`",
+                ErrorKind::OneOf,
+            )));
+        }
 
         Ok((input, identifier))
     }
@@ -349,13 +344,12 @@ impl Token {
         OPERATORS
             .iter()
             .map(|op| op.chars().next().unwrap())
-            .collect::<Vec<char>>()
-            .contains(&c)
+            .any(|x| x == c)
     }
 
     /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
     pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
-        take_while1(|c| Token::is_whitespace(c))(input)
+        take_while1(Token::is_whitespace)(input)
     }
 
     pub fn consume_multi_comment(input: &str) -> IResult<&str, &str> {

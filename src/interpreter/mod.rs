@@ -4,7 +4,7 @@
 //! source file returns an "Interpreter", which is really just a complex structure
 //! aggregating the necessary information to run a jinko program.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use colored::Colorize;
 
@@ -225,7 +225,7 @@ impl Interpreter {
     }
 
     /// Check if a source is included or not
-    pub fn is_included(&self, source: &PathBuf) -> bool {
+    pub fn is_included(&self, source: &Path) -> bool {
         self.included.contains(source)
     }
 }

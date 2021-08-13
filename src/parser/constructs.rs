@@ -24,6 +24,9 @@ use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token};
 
 type ParseResult<'i, T> = IResult<&'i str, T>;
 
+type Instructions = Vec<Box<dyn Instruction>>;
+type MaybeInstruction = Option<Box<dyn Instruction>>;
+
 pub struct Construct;
 
 impl Construct {
@@ -130,7 +133,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
 
-        Ok((input, FunctionCall::new(fn_id.to_owned())))
+        Ok((input, FunctionCall::new(fn_id)))
     }
 
     /// Parse an argument given to a function. Consumes the whitespaces before and after
@@ -175,7 +178,7 @@ impl Construct {
         let (input, fn_id) = Token::identifier(input)?;
         let (input, _) = Token::left_parenthesis(input)?;
 
-        let mut fn_call = FunctionCall::new(fn_id.to_owned());
+        let mut fn_call = FunctionCall::new(fn_id);
 
         let (input, mut arg_vec) = Construct::args_list(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
@@ -198,7 +201,7 @@ impl Construct {
         let (input, value) = Construct::instruction(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        Ok((input, VarAssign::new(false, id.to_owned(), value)))
+        Ok((input, VarAssign::new(false, id, value)))
     }
 
     fn named_arg_list(input: &str) -> ParseResult<Vec<VarAssign>> {
@@ -304,8 +307,8 @@ impl Construct {
         let (input, value) = Construct::instruction(input)?;
 
         match mut_opt {
-            Some(_) => Ok((input, VarAssign::new(true, id.to_owned(), value))),
-            None => Ok((input, VarAssign::new(false, id.to_owned(), value))),
+            Some(_) => Ok((input, VarAssign::new(true, id, value))),
+            None => Ok((input, VarAssign::new(false, id, value))),
         }
     }
 
@@ -315,7 +318,7 @@ impl Construct {
     pub(crate) fn variable(input: &str) -> ParseResult<Var> {
         let (input, name) = Token::identifier(input)?;
 
-        Ok((input, Var::new(name.to_owned())))
+        Ok((input, Var::new(name)))
     }
 
     /// Parse a statement and the semicolon that follows
@@ -332,9 +335,7 @@ impl Construct {
     }
 
     /// Parse multiple statements and a possible return Instruction
-    fn stmts_and_maybe_last(
-        input: &str,
-    ) -> ParseResult<(Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
+    fn stmts_and_maybe_last(input: &str) -> ParseResult<(Instructions, MaybeInstruction)> {
         let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
         let (input, last_expr) = opt(Construct::instruction)(input)?;
 
@@ -342,9 +343,7 @@ impl Construct {
     }
 
     /// Parses the statements in a block as well as a possible last instruction
-    fn block_instructions(
-        input: &str,
-    ) -> ParseResult<(Vec<Box<dyn Instruction>>, Option<Box<dyn Instruction>>)> {
+    fn block_instructions(input: &str) -> ParseResult<(Instructions, MaybeInstruction)> {
         let (input, _) = Token::left_curly_bracket(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -410,7 +409,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, ty) = Token::identifier(input)?;
 
-        Ok((input, DecArg::new(id.to_owned(), TypeId::new(ty))))
+        Ok((input, DecArg::new(id, TypeId::new(ty))))
     }
 
     /// Parse an identifer as well as the type and comma that follows
@@ -488,7 +487,7 @@ impl Construct {
         let (input, ty) = Construct::return_type(input)?;
         let (input, block) = Construct::block(input)?;
 
-        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+        let mut function = FunctionDec::new(fn_name, ty);
 
         function.set_args(args);
         function.set_block(block);
@@ -541,7 +540,7 @@ impl Construct {
         let (input, ty) = Construct::return_type_void(input)?;
         let (input, block) = Construct::block(input)?;
 
-        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+        let mut function = FunctionDec::new(fn_name, ty);
 
         function.set_args(args);
         function.set_block(block);
@@ -591,7 +590,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::semicolon(input)?;
 
-        let mut function = FunctionDec::new(fn_name.to_owned(), ty);
+        let mut function = FunctionDec::new(fn_name, ty);
 
         function.set_args(args);
 
@@ -736,7 +735,7 @@ impl Construct {
 
         let (input, fields) = Construct::args_dec_non_empty(input)?;
 
-        let type_declaration = TypeDec::new(type_name.to_owned(), fields);
+        let type_declaration = TypeDec::new(type_name, fields);
 
         Ok((input, type_declaration))
     }
@@ -749,17 +748,18 @@ impl Construct {
 
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        Ok((input, path.to_string()))
+        Ok((input, path))
     }
 
-    fn as_identifier(input: &str) -> ParseResult<Option<String>> {
+    // Parse the `as` keyword and the following identifier if present
+    fn az_identifier(input: &str) -> ParseResult<Option<String>> {
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, id) = match opt(Token::as_tok)(input)? {
+        let (input, id) = match opt(Token::az_tok)(input)? {
             (input, Some(_)) => {
                 let (input, _) = Token::maybe_consume_extra(input)?;
                 let (input, id) = Token::identifier(input)?;
 
-                (input, Some(id.to_string()))
+                (input, Some(id))
             }
             (input, None) => (input, None),
         };
@@ -778,7 +778,7 @@ impl Construct {
         let (input, _) = Token::incl_tok(input)?;
         let (input, path) = Construct::path(input)?;
 
-        let (input, rename) = Construct::as_identifier(input)?;
+        let (input, rename) = Construct::az_identifier(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
 

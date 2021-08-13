@@ -35,12 +35,11 @@ impl Parser {
         // We must create the block "manually", by checking if the last parsed operation
         // is an expression or not. If it is an expression, then use it as the return
         // value. If not, simply execute it.
-        match entry_block.pop_instruction() {
-            Some(last) => match last.kind() {
+        if let Some(last) = entry_block.pop_instruction() {
+            match last.kind() {
                 InstrKind::Expression(_) => entry_block.set_last(Some(last)),
                 InstrKind::Statement => entry_block.add_instruction(last),
-            },
-            None => {}
+            }
         }
 
         Ok(interpreter)
