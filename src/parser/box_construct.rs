@@ -17,7 +17,7 @@ use crate::{parser::Construct, Instruction};
 macro_rules! box_construct {
     ($func:ident) => {
         pub fn $func(input: &str) -> nom::IResult<&str, Box<dyn Instruction>> {
-            BoxConstruct::new(input, Box::new(Construct::$func))
+            BoxConstruct::wrap(input, Box::new(Construct::$func))
         }
     };
 }
@@ -26,7 +26,7 @@ pub struct BoxConstruct;
 
 impl BoxConstruct {
     /// Call a `Construct` and box the return value
-    fn new<T: 'static + Instruction>(
+    fn wrap<T: 'static + Instruction>(
         input: &str,
         construct: Box<dyn FnOnce(&str) -> nom::IResult<&str, T>>,
     ) -> nom::IResult<&str, Box<dyn Instruction>> {
