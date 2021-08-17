@@ -1,97 +1,171 @@
 //! The Error module contains helpful wrapper around possible errors in jinko. They
 //! are used by the interpreter as well as the parser.
 
+// FIXME: Add an error handler to the interpreter to pass around to functions and to use
+// to generate errors and maybe exit with a specific error code. The error handler can
+// also accumulate errors instead of always emitting them
+
 use colored::Colorize;
 
-/// What kind of error we are dealing with: Either a parsing error, or a behavioural one.
+// FIXME: Location should not be in the error part only
+/// Contains indications vis-a-vis the error's location in the source file
+#[derive(Debug, PartialEq)]
+pub struct ErrSpaceLocation {
+    pub line: usize,
+    pub offset: usize,
+    pub input: &'static str,
+}
+
+// FIXME: Add better API?
+impl ErrSpaceLocation {
+    pub fn new(line: usize, offset: usize, input: &'static str) -> ErrSpaceLocation {
+        ErrSpaceLocation {
+            line,
+            offset,
+            input,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-pub enum JkErrKind {
+pub enum ErrKind {
     Parsing,
     Interpreter,
     IO,
 }
 
-/// Contains indications vis-a-vis the error's location in the source file
-#[derive(Debug, PartialEq)]
-pub struct JkErrSpaceLocation(pub usize, pub usize);
-
-impl JkErrSpaceLocation {
-    /// Line of the error
-    pub fn line(&self) -> usize {
-        self.0
-    }
-
-    /// Offset of the error on the contained line
-    pub fn offset(&self) -> usize {
-        self.1
-    }
+#[derive(Debug)]
+pub struct Error {
+    kind: ErrKind,
+    msg: Option<String>,
+    loc: Option<ErrSpaceLocation>,
 }
 
-/// The actual error type
-// FIXME: Remove `Option` once input tracking is implemented
-#[derive(Debug, PartialEq)]
-pub struct JkError {
-    kind: JkErrKind,
-    msg: String,
+impl Error {
+    pub fn emit(&self) {
+        let kind_str = match self.kind {
+            ErrKind::Parsing => "parsing",
+            ErrKind::Interpreter => "interpreter",
+            ErrKind::IO => "i/o",
+        };
 
-    loc: Option<JkErrSpaceLocation>,
-    input: String,
-}
+        eprintln!("error type: {}", kind_str.red());
+        eprintln!("{}", self.msg.as_deref().unwrap_or(""));
 
-impl JkError {
-    /// Create a new error and return it
-    pub fn new(
-        kind: JkErrKind,
-        msg: String,
-        loc: Option<JkErrSpaceLocation>,
-        input: String,
-    ) -> JkError {
-        JkError {
+        // FIXME: Use somehow, somewhere
+        // The exit code depends on the kind of error
+        // std::process::exit(self.kind as i32 + 1);
+    }
+
+    pub fn new(kind: ErrKind) -> Error {
+        Error {
             kind,
-            msg,
-            loc,
-            input,
+            msg: None,
+            loc: None,
         }
     }
 
-    /// Display the error on stderr before exiting the program
-    pub fn exit(&self) {
-        eprintln!("{}", self.to_string());
+    // FIXME: Work out something better...
+    pub fn with_msg<T: std::fmt::Display>(self, msg: T) -> Error {
+        Error {
+            msg: Some(format!("{}", msg)),
+            ..self
+        }
+    }
 
+    pub fn with_loc(self, loc: ErrSpaceLocation) -> Error {
+        Error {
+            loc: Some(loc),
+            ..self
+        }
+    }
+
+    pub fn exit(&self) {
         // The exit code depends on the kind of error
         std::process::exit(self.kind as i32 + 1);
     }
-
-    /// What kind of error the error is
-    #[cfg(test)]
-    pub fn kind(&self) -> JkErrKind {
-        self.kind
-    }
-
-    /// Message contained in the error
-    #[cfg(test)]
-    pub fn msg(&self) -> &str {
-        &self.msg
-    }
 }
 
-impl std::fmt::Display for JkError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // FIXME: Add better formatting
-        write!(f, "ErrorKind: {:?}\nInfo: {}", self.kind, self.msg.red())
-    }
-}
+impl std::convert::From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Error {
+        let err = Error::new(ErrKind::IO).with_msg(e.to_string());
 
-impl std::convert::From<std::io::Error> for JkError {
-    fn from(e: std::io::Error) -> Self {
-        JkError::new(JkErrKind::IO, e.to_string(), None, "".to_owned())
+        err.emit();
+        err
     }
 }
 
 // FIXME: Improve formatting, current output is barren
-impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for JkError {
-    fn from(e: nom::Err<(&str, nom::error::ErrorKind)>) -> Self {
-        JkError::new(JkErrKind::Parsing, e.to_string(), None, "".to_owned())
+impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
+    fn from(e: nom::Err<(&str, nom::error::ErrorKind)>) -> Error {
+        let err = Error::new(ErrKind::Parsing).with_msg(e.to_string());
+
+        err.emit();
+        err
     }
 }
+
+// /// What kind of error we are dealing with: Either a parsing error, or a behavioural one.
+// #[derive(Copy, Clone, Debug, PartialEq)]
+// #[repr(u8)]
+// pub enum ErrErrKind {
+//     Parsing,
+//     Interpreter,
+//     IO,
+// }
+// 
+// /// The actual error type
+// // FIXME: Remove `Option` once input tracking is implemented
+// #[derive(Debug, PartialEq)]
+// pub struct Error {
+//     kind: ErrErrKind,
+//     msg: String,
+//
+//     loc: Option<ErrSpaceLocation>,
+//     input: String,
+// }
+//
+// impl Error {
+//     /// Create a new error and return it
+//     pub fn new(
+//         kind: ErrErrKind,
+//         msg: String,
+//         loc: Option<ErrSpaceLocation>,
+//         input: String,
+//     ) -> Error {
+//         Error {
+//             kind,
+//             msg,
+//             loc,
+//             input,
+//         }
+//     }
+//
+//     /// Display the error on stderr before exiting the program
+//     pub fn exit(&self) {
+//         eprintln!("{}", self.to_string());
+//
+//         // The exit code depends on the kind of error
+//         std::process::exit(self.kind as i32 + 1);
+//     }
+//
+//     /// What kind of error the error is
+//     #[cfg(test)]
+//     pub fn kind(&self) -> ErrErrKind {
+//         self.kind
+//     }
+//
+//     /// Message contained in the error
+//     #[cfg(test)]
+//     pub fn msg(&self) -> &str {
+//         &self.msg
+//     }
+// }
+//
+// impl std::fmt::Display for Error {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         // FIXME: Add better formatting
+//         write!(f, "ErrorErrKind: {:?}\nInfo: {}", self.kind, self.msg.red())
+//     }
+// }
