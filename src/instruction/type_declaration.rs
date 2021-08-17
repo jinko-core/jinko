@@ -1,6 +1,6 @@
 use super::{DecArg, InstrKind, Instruction};
 
-use crate::{Interpreter, JkError, Rename};
+use crate::{Error, Interpreter, Rename};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
@@ -30,7 +30,7 @@ impl Instruction for TypeDec {
         InstrKind::Statement
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         interpreter.debug_step(&format!("CUSTOM TYPE {} ENTER", self.name));
 
         interpreter.add_type(self.clone())?;

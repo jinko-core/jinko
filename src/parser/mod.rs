@@ -2,7 +2,7 @@
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
-use crate::{InstrKind, Interpreter, JkError};
+use crate::{Error, InstrKind, Interpreter};
 
 use nom::multi::many0;
 
@@ -23,7 +23,7 @@ pub struct Parser;
 impl Parser {
     /// Parses the entire user input and returns a hashmap corresponding to the user
     /// program
-    pub fn parse(input: &str) -> Result<Interpreter, JkError> {
+    pub fn parse(input: &str) -> Result<Interpreter, Error> {
         let mut interpreter = Interpreter::new();
 
         let entry_block = interpreter.entry_point.block_mut().unwrap();

@@ -1,7 +1,7 @@
 //! The VarAssign struct is used when assigning values to variables.
 
 use crate::instruction::{InstrKind, Var};
-use crate::{Instruction, Interpreter, JkErrKind, JkError, Rename};
+use crate::{ErrKind, Error, Instruction, Interpreter, Rename};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -53,7 +53,7 @@ impl Instruction for VarAssign {
         format!("{}{} = {}", base, self.symbol, self.value.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         interpreter.debug("ASSIGN VAR", self.symbol());
 
         // Are we creating the variable or not
@@ -65,11 +65,9 @@ impl Instruction for VarAssign {
                 // for the first time. However, we entered the match arm because the variable
                 // is already present in the interpreter. Error out appropriately.
                 if self.mutable() {
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
+                    return Err(Error::new(
+                        ErrKind::Interpreter).with_msg(
                         format!("Trying to redefine already defined variable: {}", v.name()),
-                        None,
-                        self.print(),
                     ));
                 }
 
@@ -94,15 +92,13 @@ impl Instruction for VarAssign {
                 false => {
                     // The variable already exists. So we need to error out if it isn't
                     // mutable
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
+                    return Err(Error::new(
+                        ErrKind::Interpreter).with_msg(
                         format!(
                             "Trying to assign value to non mutable variable `{}`: `{}`",
                             var.name(),
                             self.value.print()
                         ),
-                        None,
-                        self.print(),
                     ));
                 }
                 true => var.set_instance(self.value.execute_expression(interpreter)?),

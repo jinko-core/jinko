@@ -17,7 +17,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{InstrKind, Instruction, Interpreter, JkError, Rename};
+use crate::{Error, InstrKind, Instruction, Interpreter, Rename};
 
 #[derive(Clone)]
 pub struct Block {
@@ -99,14 +99,14 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         interpreter.scope_enter();
         interpreter.debug_step("BLOCK ENTER");
 
         self.instructions()
             .iter()
             .map(|inst| inst.execute(interpreter))
-            .collect::<Result<Vec<InstrKind>, JkError>>()?;
+            .collect::<Result<Vec<InstrKind>, Error>>()?;
 
         let ret_val = match &self.last {
             Some(e) => e.execute(interpreter),

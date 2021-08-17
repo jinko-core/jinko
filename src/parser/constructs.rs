@@ -700,7 +700,7 @@ impl Construct {
         let (input, fc) = Construct::function_call(input)?;
 
         // FIXME: No unwrap(), use something else than just the name
-        //        this is very awkward, we have a JkError coming up and we shouldn't be creating
+        //        this is very awkward, we have a Error coming up and we shouldn't be creating
         //        new JkInst.
         let inst = JkInst::from_function_call(fc).unwrap();
 

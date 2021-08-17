@@ -4,9 +4,7 @@
 //! or it's not.
 
 use crate::instruction::TypeDec;
-use crate::{
-    InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError, ObjectInstance, Rename,
-};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, JkBool, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct Var {
@@ -65,7 +63,7 @@ impl Instruction for Var {
         )
     }
 
-    fn as_bool(&self, i: &mut Interpreter) -> Result<bool, JkError> {
+    fn as_bool(&self, i: &mut Interpreter) -> Result<bool, Error> {
         use crate::FromObjectInstance;
 
         // FIXME: Cleanup
@@ -76,11 +74,9 @@ impl Instruction for Var {
                     // FIXME:
                     "bool" => Ok(JkBool::from_instance(&instance).as_bool(i).unwrap()),
                     // We can safely unwrap since we checked the type of the variable
-                    _ => Err(JkError::new(
-                        JkErrKind::Interpreter,
+                    _ => Err(Error::new(
+                        ErrKind::Interpreter).with_msg(
                         format!("var {} cannot be interpreted as boolean", self.name),
-                        None,
-                        self.print(),
                     )),
                 },
                 None => todo!(
@@ -88,24 +84,20 @@ impl Instruction for Var {
                     typecheck it and call self.as_bool() again"
                 ),
             },
-            _ => Err(JkError::new(
-                JkErrKind::Interpreter,
+            _ => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
                 format!("var {} cannot be interpreted as boolean", self.name),
-                None,
-                self.print(),
             )),
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         let var = match interpreter.get_variable(self.name()) {
             Some(v) => v,
             None => {
-                return Err(JkError::new(
-                    JkErrKind::Interpreter,
+                return Err(Error::new(
+                    ErrKind::Interpreter).with_msg(
                     format!("variable has not been declared: {}", self.name),
-                    None,
-                    self.name().to_owned(),
                 ))
             }
         };

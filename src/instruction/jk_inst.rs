@@ -4,7 +4,7 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::{Interpreter, JkErrKind, JkError, Rename};
+use crate::{ErrKind, Error, Interpreter, Rename};
 
 /// The potential interpreter instructions
 #[derive(Clone, Debug, PartialEq)]
@@ -22,7 +22,7 @@ pub struct JkInst {
 
 impl JkInst {
     /// Construct a `JkInst` from a `FunctionCall`
-    pub fn from_function_call(fc: FunctionCall) -> Result<Self, JkError> {
+    pub fn from_function_call(fc: FunctionCall) -> Result<Self, Error> {
         let func_name = fc.name();
 
         let kind = match func_name {
@@ -31,11 +31,9 @@ impl JkInst {
             "ir" => JkInstKind::Ir,
             // FIXME: Fix location
             _ => {
-                return Err(JkError::new(
-                    JkErrKind::Parsing,
+                return Err(Error::new(
+                    ErrKind::Parsing).with_msg(
                     format!("unknown interpreter directive @{}", func_name),
-                    None,
-                    func_name.to_owned(),
                 ))
             }
         };
@@ -66,7 +64,7 @@ impl Instruction for JkInst {
         .to_string()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         interpreter.debug("JINKO_INST", &self.print());
 
         match self.kind {

@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 
 use crate::instruction::TypeDec;
-use crate::{JkErrKind, JkError};
+use crate::{ErrKind, Error};
 
 pub type Ty = TypeDec;
 pub type Name = String;
@@ -81,23 +81,14 @@ impl ObjectInstance {
         self.size
     }
 
-    pub fn get_field(&self, field_name: &str) -> Result<ObjectInstance, JkError> {
+    pub fn get_field(&self, field_name: &str) -> Result<ObjectInstance, Error> {
         match self.fields.as_ref() {
             // FIXME: No string new as input
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
-                String::from("no fields on instance"),
-                None,
-                String::new(),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter).with_msg("no fields on instance")),
             // FIXME: No string new as input
             Some(fields) => fields.get(field_name).map_or(
-                Err(JkError::new(
-                    JkErrKind::Interpreter,
-                    format!("field `{}` does not exist on instance", field_name),
-                    None,
-                    String::new(),
-                )),
+                Err(Error::new(ErrKind::Interpreter)
+                    .with_msg(format!("field `{}` does not exist on instance", field_name))),
                 |(off, size)| {
                     Ok(ObjectInstance::from_bytes(
                         None,

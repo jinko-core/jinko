@@ -2,7 +2,7 @@
 //! function on execution.
 
 use crate::instruction::{FunctionDec, Var};
-use crate::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, Rename};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -45,46 +45,37 @@ impl FunctionCall {
     }
 
     /// Get the corresponding declaration from an interpreter
-    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<FunctionDec>, JkError> {
+    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<FunctionDec>, Error> {
         match interpreter.get_function(self.name()) {
             // get_function() return a Rc, so this clones the Rc, not the FunctionDec
             Some(f) => Ok(f.clone()),
             // FIXME: Fix Location and input
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!("cannot find function {}", self.name()),
-                None,
-                self.name().to_owned(),
-            )),
+            None => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
+                format!("cannot find function {}", self.name())),
+            ),
         }
     }
 
     /// Check if the arguments received and the arguments expected match
-    fn check_args_count(&self, function: &FunctionDec) -> Result<(), JkError> {
+    fn check_args_count(&self, function: &FunctionDec) -> Result<(), Error> {
         match self.args().len() == function.args().len() {
             true => Ok(()),
-            false => Err(JkError::new(
-                JkErrKind::Interpreter,
+            false => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
                 format!(
                     "wrong number of arguments \
                     for call to function `{}`: expected {}, got {}",
                     self.name(),
                     function.args().len(),
                     self.args().len()
-                ),
-                None,
-                "".to_owned(),
-                // FIXME: Add input and location
-            )),
+                )),
+            ),
         }
     }
 
     /// Map each argument to its corresponding instruction
-    fn map_args(
-        &self,
-        function: &FunctionDec,
-        interpreter: &mut Interpreter,
-    ) -> Result<(), JkError> {
+    fn map_args(&self, function: &FunctionDec, interpreter: &mut Interpreter) -> Result<(), Error> {
         for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
             interpreter.debug(
                 "VAR MAP",
@@ -101,11 +92,9 @@ impl FunctionCall {
                 // it to access the Rc, and dereference it again to access the TypeDec.
                 Some(t) => (**t).clone(),
                 None => {
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
+                    return Err(Error::new(
+                        ErrKind::Interpreter).with_msg(
                         format!("type not found: {}", func_arg.get_type().id()),
-                        None,
-                        self.print(),
                     ))
                 }
             };
@@ -144,7 +133,7 @@ impl Instruction for FunctionCall {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         let function = self.get_declaration(interpreter)?;
 
         self.check_args_count(&function)?;

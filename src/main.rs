@@ -14,7 +14,7 @@ use parser::Parser;
 use repl::Repl;
 use std::fs;
 
-pub use error::{JkErrKind, JkError};
+pub use error::{ErrKind, Error};
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction, Rename};
 pub use interpreter::Interpreter;

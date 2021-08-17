@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{parser::Construct, InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
+use crate::{parser::Construct, ErrKind, Error, InstrKind, Instruction, Interpreter, Rename};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
 /// The interpreter is built from parsing the source file in the path.
@@ -38,30 +38,26 @@ impl Incl {
         (PathBuf::from(dir_fmt), PathBuf::from(file_fmt))
     }
 
-    fn find_include_path(&self, base: &Path) -> Result<PathBuf, JkError> {
+    fn find_include_path(&self, base: &Path) -> Result<PathBuf, Error> {
         let (dir_candidate, file_candidate) = self.format_candidates(base);
 
         let (dir_valid, file_valid) = (dir_candidate.is_file(), file_candidate.is_file());
 
         match (dir_valid, file_valid) {
             // We cannot have both <path>/lib.jk and <path>.jk be valid files
-            (true, true) => Err(JkError::new(
-                JkErrKind::Interpreter,
+            (true, true) => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
                 format!(
                     "invalid include: {:?} and {:?} are both valid candidates",
                     dir_candidate, file_candidate
                 ),
-                None,
-                self.print(),
             )),
-            (false, false) => Err(JkError::new(
-                JkErrKind::Interpreter,
+            (false, false) => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
                 format!(
                     "no candidate for include: {:?} and {:?} do not exist",
                     dir_candidate, file_candidate
                 ),
-                None,
-                self.print(),
             )),
             (false, true) => Ok(file_candidate),
             (true, false) => Ok(dir_candidate),
@@ -73,7 +69,7 @@ impl Incl {
         &self,
         base: &Path,
         i: &Interpreter,
-    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), Error> {
         let formatted = self.find_include_path(base)?;
 
         // If a source has already been included, skip it without returning
@@ -93,14 +89,12 @@ impl Incl {
         match remaining_input.len() {
             // The remaining input is empty: We parsed the whole file properly
             0 => Ok((formatted, instructions)),
-            _ => Err(JkError::new(
-                JkErrKind::Parsing,
+            _ => Err(Error::new(
+                ErrKind::Parsing).with_msg(
                 format!(
                     "error when parsing included file: {:?},\non the following input:\n{}",
                     formatted, remaining_input
                 ),
-                None,
-                self.print(),
             )),
         }
     }
@@ -110,12 +104,12 @@ impl Incl {
         &self,
         base: &Path,
         i: &Interpreter,
-    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), Error> {
         self.inner_load(base, i)
     }
 
     /// Try to load code from jinko's installation path
-    fn _load_jinko_path(&self) -> Result<Vec<Box<dyn Instruction>>, JkError> {
+    fn _load_jinko_path(&self) -> Result<Vec<Box<dyn Instruction>>, Error> {
         todo!()
     }
 
@@ -127,13 +121,13 @@ impl Incl {
         &self,
         base: &Path,
         i: &Interpreter,
-    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), JkError> {
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), Error> {
         self.load_relative(base, i)
     }
 
     /// Format the correct prefix to include content as. This depends on the presence
     /// of an alias, and also checks for the validity of the prefix
-    fn format_prefix(&self) -> Result<String, JkError> {
+    fn format_prefix(&self) -> Result<String, Error> {
         let alias = match self.alias.as_ref() {
             Some(alias) => alias,
             // If no alias is given, then return the include path as alias
@@ -169,7 +163,7 @@ impl Instruction for Incl {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         interpreter.debug("INCL ENTER", self.print().as_str());
 
         let base = match interpreter.path() {
@@ -202,7 +196,7 @@ impl Instruction for Incl {
 
                 instr.execute(interpreter)
             })
-            .collect::<Result<Vec<InstrKind>, JkError>>()?;
+            .collect::<Result<Vec<InstrKind>, Error>>()?;
 
         // Reset the old path before leaving the instruction
         interpreter.set_path(old_path);

@@ -16,7 +16,7 @@
 //! ```
 
 use crate::instruction::{Block, InstrKind, Instruction};
-use crate::{Interpreter, JkError, Rename};
+use crate::{Error, Interpreter, Rename};
 
 #[derive(Clone)]
 pub struct IfElse {
@@ -56,7 +56,7 @@ impl Instruction for IfElse {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         interpreter.debug_step("IF_ELSE ENTER");
 
         let cond = self.condition.as_bool(interpreter)?;

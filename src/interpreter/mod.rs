@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
-use crate::{JkErrKind, JkError};
+use crate::{ErrKind, Error};
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -119,29 +119,29 @@ impl Interpreter {
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
-    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), JkError> {
+    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), Error> {
         self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
-    pub fn add_variable(&mut self, var: Var) -> Result<(), JkError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         self.scope_map.add_variable(var)
     }
 
     /// Add a type to the interpreter. Returns `Ok` if the type was added, `Err`
     /// if it existed already and was not.
-    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), JkError> {
+    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
         self.scope_map.add_type(custom_type)
     }
 
     /// Remove a variable from the interpreter
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JkError> {
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
         self.scope_map.remove_variable(var)
     }
 
     /// Replace a variable or create it if it does not exist
-    pub fn replace_variable(&mut self, var: Var) -> Result<(), JkError> {
+    pub fn replace_variable(&mut self, var: Var) -> Result<(), Error> {
         // Remove the variable if it exists
         let _ = self.remove_variable(&var);
 
@@ -215,13 +215,11 @@ impl Interpreter {
     }
 
     /// Register a test to be executed by the interpreter
-    pub fn add_test(&mut self, test: FunctionDec) -> Result<(), JkError> {
+    pub fn add_test(&mut self, test: FunctionDec) -> Result<(), Error> {
         match self.tests.get(test.name()) {
-            Some(test) => Err(JkError::new(
-                JkErrKind::Interpreter,
+            Some(test) => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
                 format!("test function already declared: {}", test.name()),
-                None,
-                test.name().to_owned(),
             )),
             None => {
                 self.tests.insert(test.name().to_owned(), test);
@@ -239,7 +237,7 @@ impl Interpreter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::JkErrKind;
+    use crate::error::ErrKind;
 
     #[test]
     fn t_redefinition_of_function() {
@@ -251,7 +249,7 @@ mod tests {
         assert_eq!(i.add_function(f0), Ok(()));
         assert_eq!(
             i.add_function(f0_copy).err().unwrap().kind(),
-            JkErrKind::Interpreter,
+            ErrKind::Interpreter).with_msg(
         );
     }
 
@@ -265,7 +263,7 @@ mod tests {
         assert_eq!(i.add_variable(v0), Ok(()));
         assert_eq!(
             i.add_variable(v0_copy).err().unwrap().kind(),
-            JkErrKind::Interpreter,
+            ErrKind::Interpreter).with_msg(
         );
     }
 }

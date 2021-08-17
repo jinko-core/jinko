@@ -1,6 +1,6 @@
 use crate::instruction::{InstrKind, Instruction, Operator, TypeDec};
 use crate::{
-    FromObjectInstance, Interpreter, JkError, JkString, ObjectInstance, Rename, ToObjectInstance,
+    Error, FromObjectInstance, Interpreter, JkString, ObjectInstance, Rename, ToObjectInstance,
     Value,
 };
 
@@ -95,11 +95,11 @@ macro_rules! jk_primitive {
                 self.0.to_string()
             }
 
-            fn as_bool(&self, _interpreter: &mut Interpreter) -> Result<bool, JkError> {
+            fn as_bool(&self, _interpreter: &mut Interpreter) -> Result<bool, Error> {
                 Ok(self.0)
             }
 
-            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
                 interpreter.debug("CONSTANT", &self.0.to_string());
 
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
@@ -145,7 +145,7 @@ macro_rules! jk_primitive {
                 self.0.to_string()
             }
 
-            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
                 interpreter.debug("CONSTANT", &self.0.to_string());
 
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
@@ -166,7 +166,7 @@ jk_primitive!(char, "char");
 jk_primitive!(bool);
 
 impl Value for JkConstant<i64> {
-    fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, JkError> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, Error> {
         match op {
             Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
             Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
@@ -178,7 +178,7 @@ impl Value for JkConstant<i64> {
 }
 
 impl Value for JkConstant<f64> {
-    fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, JkError> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, Error> {
         match op {
             Operator::Add => Ok(JkConstant::from(self.0 + other.0).to_instance()),
             Operator::Sub => Ok(JkConstant::from(self.0 - other.0).to_instance()),
@@ -216,7 +216,7 @@ impl Instruction for JkString {
         format!("\"{}\"", self.0.clone())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
         Ok(InstrKind::Expression(Some(self.to_instance())))

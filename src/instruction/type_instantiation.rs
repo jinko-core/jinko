@@ -2,8 +2,8 @@
 //! type on execution.
 
 use super::{
-    InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, Rename, TypeDec,
-    TypeId, VarAssign,
+    ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename, TypeDec, TypeId,
+    VarAssign,
 };
 use crate::instance::{Name, Size};
 
@@ -40,26 +40,24 @@ impl TypeInstantiation {
     }
 
     /// Get the corresponding type declaration from an interpreter
-    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<TypeDec>, JkError> {
+    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<TypeDec>, Error> {
         match interpreter.get_type(self.name()) {
             // get_type() return a Rc, so this clones the Rc, not the TypeId
             Some(t) => Ok(t.clone()),
             // FIXME: Fix Location and input
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
+            None => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
                 format!("Cannot find type {}", self.name().id()),
-                None,
-                self.print(),
             )),
         }
     }
 
     /// Check if the fields received and the fields expected match
-    fn check_fields_count(&self, type_dec: &TypeDec) -> Result<(), JkError> {
+    fn check_fields_count(&self, type_dec: &TypeDec) -> Result<(), Error> {
         match self.fields().len() == type_dec.fields().len() {
             true => Ok(()),
-            false => Err(JkError::new(
-                JkErrKind::Interpreter,
+            false => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
                 format!(
                     "Wrong number of arguments \
                     for type instantiation `{}`: Expected {}, got {}",
@@ -67,25 +65,20 @@ impl TypeInstantiation {
                     type_dec.fields().len(),
                     self.fields().len()
                 ),
-                None,
-                "".to_owned(),
-                // FIXME: Add input and location
             )),
         }
     }
 
     /// Check if the type we're currently instantiating is a primitive type or not
     // FIXME: Remove later, as it should not be needed once typechecking is implemented
-    fn check_primitive(&self) -> Result<(), JkError> {
+    fn check_primitive(&self) -> Result<(), Error> {
         match self.type_name.is_primitive() {
-            true => Err(JkError::new(
-                JkErrKind::Interpreter,
+            true => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
                 format!(
                     "cannot instantiate primitive type `{}`",
                     self.type_name.id()
                 ),
-                None,
-                self.print(),
             )),
             false => Ok(()),
         }
@@ -113,7 +106,7 @@ impl Instruction for TypeInstantiation {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         self.check_primitive()?;
 
         let type_dec = self.get_declaration(interpreter)?;
@@ -132,14 +125,12 @@ impl Instruction for TypeInstantiation {
             let instance = match field_instr.execute(interpreter)? {
                 InstrKind::Expression(Some(instance)) => instance,
                 _ => {
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
+                    return Err(Error::new(
+                        ErrKind::Interpreter).with_msg(
                         format!(
                             "An Expression was excepted but a Statement was found: `{}`",
                             field_name
                         ),
-                        None,
-                        named_arg.print(),
                     ))
                 }
             };

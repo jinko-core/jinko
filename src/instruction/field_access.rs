@@ -1,7 +1,7 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, Rename};
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -30,19 +30,17 @@ impl Instruction for FieldAccess {
         format!("{}.{}", self.instance.print(), self.field_name)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         interpreter.debug("FIELD ACCESS ENTER", &self.print());
 
         let calling_instance = match self.instance.execute(interpreter)? {
             InstrKind::Statement | InstrKind::Expression(None) => {
-                return Err(JkError::new(
-                    JkErrKind::Interpreter,
+                return Err(Error::new(
+                    ErrKind::Interpreter).with_msg(
                     format!(
                         "instance `{}` is a statement and cannot be accessed",
                         self.instance.print()
                     ),
-                    None,
-                    self.print(),
                 ))
             }
             InstrKind::Expression(Some(i)) => i,

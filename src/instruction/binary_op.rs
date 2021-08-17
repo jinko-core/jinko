@@ -6,8 +6,8 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::Operator, FromObjectInstance, InstrKind, Instruction, Interpreter, JkErrKind,
-    JkError, JkFloat, JkInt, ObjectInstance, Rename, Value,
+    instruction::Operator, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, Interpreter,
+    JkFloat, JkInt, ObjectInstance, Rename, Value,
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
@@ -56,16 +56,14 @@ impl BinaryOp {
         &self,
         node: &dyn Instruction,
         interpreter: &mut Interpreter,
-    ) -> Result<ObjectInstance, JkError> {
+    ) -> Result<ObjectInstance, Error> {
         match node.execute(interpreter)? {
-            InstrKind::Statement | InstrKind::Expression(None) => Err(JkError::new(
-                JkErrKind::Interpreter,
+            InstrKind::Statement | InstrKind::Expression(None) => Err(Error::new(
+                ErrKind::Interpreter).with_msg(
                 format!(
                     "Invalid use of statement in binary operation: {}",
                     self.lhs.print()
                 ),
-                None,
-                self.print(),
             )),
             InstrKind::Expression(Some(v)) => Ok(v),
         }
@@ -86,7 +84,7 @@ impl Instruction for BinaryOp {
         )
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
         interpreter.debug_step("BINOP ENTER");
 
         interpreter.debug("OP", self.op.to_str());
@@ -95,17 +93,15 @@ impl Instruction for BinaryOp {
         let r_value = self.execute_node(&*self.rhs, interpreter)?;
 
         if l_value.ty() != r_value.ty() {
-            return Err(JkError::new(
-                JkErrKind::Interpreter, // FIXME: Should be a type error
+            return Err(Error::new(
+                ErrKind::Interpreter).with_msg( // FIXME: Should be a type error
                 format!(
                     "Trying to do binary operation on invalid types: {:#?} {} {:#?}",
                     l_value.ty(),
                     self.op.to_str(),
                     r_value.ty() // FIXME: Display correctly
                 ),
-                None, // FIXME: Fix Location
-                self.print(),
-            ));
+                ));
         }
 
         let return_value;
