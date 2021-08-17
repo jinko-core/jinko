@@ -99,10 +99,8 @@ pub trait Instruction: InstructionClone + Downcast + Rename {
     /// only possible to execute as_bool on boolean variables, boolean constants. blocks
     /// returning a boolean and functions returning a boolean.
     fn as_bool(&self, _interpreter: &mut Interpreter) -> Result<bool, Error> {
-        Err(Error::new(
-            ErrKind::Interpreter).with_msg(
-            format!("cannot be used as a boolean: {}", self.print()),
-            ))
+        Err(Error::new(ErrKind::Interpreter)
+            .with_msg(format!("cannot be used as a boolean: {}", self.print())))
     }
 
     /// What is the type of the instruction: a Statement or an Expression.

@@ -217,10 +217,8 @@ impl Interpreter {
     /// Register a test to be executed by the interpreter
     pub fn add_test(&mut self, test: FunctionDec) -> Result<(), Error> {
         match self.tests.get(test.name()) {
-            Some(test) => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!("test function already declared: {}", test.name()),
-            )),
+            Some(test) => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("test function already declared: {}", test.name()))),
             None => {
                 self.tests.insert(test.name().to_owned(), test);
                 Ok(())
@@ -237,7 +235,6 @@ impl Interpreter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ErrKind;
 
     #[test]
     fn t_redefinition_of_function() {
@@ -247,10 +244,7 @@ mod tests {
         let mut i = Interpreter::new();
 
         assert_eq!(i.add_function(f0), Ok(()));
-        assert_eq!(
-            i.add_function(f0_copy).err().unwrap().kind(),
-            ErrKind::Interpreter).with_msg(
-        );
+        assert!(i.add_function(f0_copy).is_err());
     }
 
     #[test]
@@ -261,9 +255,6 @@ mod tests {
         let mut i = Interpreter::new();
 
         assert_eq!(i.add_variable(v0), Ok(()));
-        assert_eq!(
-            i.add_variable(v0_copy).err().unwrap().kind(),
-            ErrKind::Interpreter).with_msg(
-        );
+        assert!(i.add_variable(v0_copy).is_err());
     }
 }

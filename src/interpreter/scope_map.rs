@@ -46,10 +46,8 @@ impl Scope {
     /// Add a variable to the most recently created scope, if it doesn't already exist
     pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         match self.get_variable(var.name()) {
-            Some(_) => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!("variable already declared: {}", var.name()),
-            )),
+            Some(_) => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("variable already declared: {}", var.name()))),
             None => {
                 self.variables.insert(var.name().to_owned(), var);
                 Ok(())
@@ -64,20 +62,16 @@ impl Scope {
                 self.variables.remove(var.name()).unwrap();
                 Ok(())
             }
-            None => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!("variable does not exist: {}", var.name()),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("variable does not exist: {}", var.name()))),
         }
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
         match self.get_function(func.name()) {
-            Some(_) => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!("function already declared: {}", func.name()),
-            )),
+            Some(_) => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("function already declared: {}", func.name()))),
             None => {
                 self.functions.insert(func.name().to_owned(), Rc::new(func));
                 Ok(())
@@ -88,10 +82,8 @@ impl Scope {
     /// Add a type to the most recently created scope, if it doesn't already exist
     pub fn add_type(&mut self, type_dec: TypeDec) -> Result<(), Error> {
         match self.get_type(type_dec.name()) {
-            Some(_) => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!("type already declared: {}", type_dec.name()),
-            )),
+            Some(_) => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("type already declared: {}", type_dec.name()))),
             None => {
                 self.types
                     .insert(type_dec.name().to_owned(), Rc::new(type_dec));
@@ -189,10 +181,8 @@ impl ScopeMap {
     pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(var),
-            None => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                String::from("Adding variable to empty scopemap"),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(String::from("Adding variable to empty scopemap"))),
         }
     }
 
@@ -200,10 +190,8 @@ impl ScopeMap {
     pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.remove_variable(var),
-            None => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                String::from("Removing variable from empty scopemap"),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(String::from("Removing variable from empty scopemap"))),
         }
     }
 
@@ -211,10 +199,8 @@ impl ScopeMap {
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(func),
-            None => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                String::from("Adding function to empty scopemap"),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(String::from("Adding function to empty scopemap"))),
         }
     }
 
@@ -222,10 +208,8 @@ impl ScopeMap {
     pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_type(custom_type),
-            None => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                String::from("Adding new custom type to empty scopemap"),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(String::from("Adding new custom type to empty scopemap"))),
         }
     }
 

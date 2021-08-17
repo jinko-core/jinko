@@ -45,20 +45,14 @@ impl Incl {
 
         match (dir_valid, file_valid) {
             // We cannot have both <path>/lib.jk and <path>.jk be valid files
-            (true, true) => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!(
-                    "invalid include: {:?} and {:?} are both valid candidates",
-                    dir_candidate, file_candidate
-                ),
-            )),
-            (false, false) => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!(
-                    "no candidate for include: {:?} and {:?} do not exist",
-                    dir_candidate, file_candidate
-                ),
-            )),
+            (true, true) => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                "invalid include: {:?} and {:?} are both valid candidates",
+                dir_candidate, file_candidate
+            ))),
+            (false, false) => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                "no candidate for include: {:?} and {:?} do not exist",
+                dir_candidate, file_candidate
+            ))),
             (false, true) => Ok(file_candidate),
             (true, false) => Ok(dir_candidate),
         }
@@ -89,13 +83,10 @@ impl Incl {
         match remaining_input.len() {
             // The remaining input is empty: We parsed the whole file properly
             0 => Ok((formatted, instructions)),
-            _ => Err(Error::new(
-                ErrKind::Parsing).with_msg(
-                format!(
-                    "error when parsing included file: {:?},\non the following input:\n{}",
-                    formatted, remaining_input
-                ),
-            )),
+            _ => Err(Error::new(ErrKind::Parsing).with_msg(format!(
+                "error when parsing included file: {:?},\non the following input:\n{}",
+                formatted, remaining_input
+            ))),
         }
     }
 

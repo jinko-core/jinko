@@ -31,10 +31,8 @@ impl JkInst {
             "ir" => JkInstKind::Ir,
             // FIXME: Fix location
             _ => {
-                return Err(Error::new(
-                    ErrKind::Parsing).with_msg(
-                    format!("unknown interpreter directive @{}", func_name),
-                ))
+                return Err(Error::new(ErrKind::Parsing)
+                    .with_msg(format!("unknown interpreter directive @{}", func_name)))
             }
         };
 

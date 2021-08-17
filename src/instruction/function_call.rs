@@ -50,10 +50,8 @@ impl FunctionCall {
             // get_function() return a Rc, so this clones the Rc, not the FunctionDec
             Some(f) => Ok(f.clone()),
             // FIXME: Fix Location and input
-            None => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!("cannot find function {}", self.name())),
-            ),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("cannot find function {}", self.name()))),
         }
     }
 
@@ -61,16 +59,13 @@ impl FunctionCall {
     fn check_args_count(&self, function: &FunctionDec) -> Result<(), Error> {
         match self.args().len() == function.args().len() {
             true => Ok(()),
-            false => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!(
-                    "wrong number of arguments \
+            false => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                "wrong number of arguments \
                     for call to function `{}`: expected {}, got {}",
-                    self.name(),
-                    function.args().len(),
-                    self.args().len()
-                )),
-            ),
+                self.name(),
+                function.args().len(),
+                self.args().len()
+            ))),
         }
     }
 
@@ -92,10 +87,8 @@ impl FunctionCall {
                 // it to access the Rc, and dereference it again to access the TypeDec.
                 Some(t) => (**t).clone(),
                 None => {
-                    return Err(Error::new(
-                        ErrKind::Interpreter).with_msg(
-                        format!("type not found: {}", func_arg.get_type().id()),
-                    ))
+                    return Err(Error::new(ErrKind::Interpreter)
+                        .with_msg(format!("type not found: {}", func_arg.get_type().id())))
                 }
             };
 

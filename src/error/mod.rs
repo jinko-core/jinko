@@ -35,7 +35,7 @@ pub enum ErrKind {
     IO,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Error {
     kind: ErrKind,
     msg: Option<String>,
@@ -114,7 +114,7 @@ impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
 //     Interpreter,
 //     IO,
 // }
-// 
+//
 // /// The actual error type
 // // FIXME: Remove `Option` once input tracking is implemented
 // #[derive(Debug, PartialEq)]

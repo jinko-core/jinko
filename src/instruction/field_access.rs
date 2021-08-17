@@ -35,13 +35,10 @@ impl Instruction for FieldAccess {
 
         let calling_instance = match self.instance.execute(interpreter)? {
             InstrKind::Statement | InstrKind::Expression(None) => {
-                return Err(Error::new(
-                    ErrKind::Interpreter).with_msg(
-                    format!(
-                        "instance `{}` is a statement and cannot be accessed",
-                        self.instance.print()
-                    ),
-                ))
+                return Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                    "instance `{}` is a statement and cannot be accessed",
+                    self.instance.print()
+                )))
             }
             InstrKind::Expression(Some(i)) => i,
         };

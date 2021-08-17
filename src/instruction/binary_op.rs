@@ -58,13 +58,12 @@ impl BinaryOp {
         interpreter: &mut Interpreter,
     ) -> Result<ObjectInstance, Error> {
         match node.execute(interpreter)? {
-            InstrKind::Statement | InstrKind::Expression(None) => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!(
+            InstrKind::Statement | InstrKind::Expression(None) => {
+                Err(Error::new(ErrKind::Interpreter).with_msg(format!(
                     "Invalid use of statement in binary operation: {}",
                     self.lhs.print()
-                ),
-            )),
+                )))
+            }
             InstrKind::Expression(Some(v)) => Ok(v),
         }
     }
@@ -93,15 +92,15 @@ impl Instruction for BinaryOp {
         let r_value = self.execute_node(&*self.rhs, interpreter)?;
 
         if l_value.ty() != r_value.ty() {
-            return Err(Error::new(
-                ErrKind::Interpreter).with_msg( // FIXME: Should be a type error
+            return Err(Error::new(ErrKind::Interpreter).with_msg(
+                // FIXME: Should be a type error
                 format!(
                     "Trying to do binary operation on invalid types: {:#?} {} {:#?}",
                     l_value.ty(),
                     self.op.to_str(),
                     r_value.ty() // FIXME: Display correctly
                 ),
-                ));
+            ));
         }
 
         let return_value;

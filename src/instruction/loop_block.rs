@@ -76,10 +76,8 @@ impl Instruction for Loop {
                 // that that result, as a boolean, returns true. If it does, execute the
                 // body. If it does not, break from the for.
 
-                return Err(Error::new(
-                    ErrKind::Interpreter).with_msg(
-                    "for loops are currently unimplemented".to_string(),
-                ));
+                return Err(Error::new(ErrKind::Interpreter)
+                    .with_msg("for loops are currently unimplemented".to_string()));
 
                 // FIXME: Rework that code
                 // interpreter.debug_step("FOR ENTER");

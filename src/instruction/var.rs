@@ -74,20 +74,20 @@ impl Instruction for Var {
                     // FIXME:
                     "bool" => Ok(JkBool::from_instance(&instance).as_bool(i).unwrap()),
                     // We can safely unwrap since we checked the type of the variable
-                    _ => Err(Error::new(
-                        ErrKind::Interpreter).with_msg(
-                        format!("var {} cannot be interpreted as boolean", self.name),
-                    )),
+                    _ => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                        "var {} cannot be interpreted as boolean",
+                        self.name
+                    ))),
                 },
                 None => todo!(
                     "If the type of the variable hasn't been determined yet,
                     typecheck it and call self.as_bool() again"
                 ),
             },
-            _ => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!("var {} cannot be interpreted as boolean", self.name),
-            )),
+            _ => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                "var {} cannot be interpreted as boolean",
+                self.name
+            ))),
         }
     }
 
@@ -95,10 +95,8 @@ impl Instruction for Var {
         let var = match interpreter.get_variable(self.name()) {
             Some(v) => v,
             None => {
-                return Err(Error::new(
-                    ErrKind::Interpreter).with_msg(
-                    format!("variable has not been declared: {}", self.name),
-                ))
+                return Err(Error::new(ErrKind::Interpreter)
+                    .with_msg(format!("variable has not been declared: {}", self.name)))
             }
         };
 

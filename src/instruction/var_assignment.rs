@@ -65,10 +65,10 @@ impl Instruction for VarAssign {
                 // for the first time. However, we entered the match arm because the variable
                 // is already present in the interpreter. Error out appropriately.
                 if self.mutable() {
-                    return Err(Error::new(
-                        ErrKind::Interpreter).with_msg(
-                        format!("Trying to redefine already defined variable: {}", v.name()),
-                    ));
+                    return Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                        "Trying to redefine already defined variable: {}",
+                        v.name()
+                    )));
                 }
 
                 v.clone()
@@ -92,14 +92,11 @@ impl Instruction for VarAssign {
                 false => {
                     // The variable already exists. So we need to error out if it isn't
                     // mutable
-                    return Err(Error::new(
-                        ErrKind::Interpreter).with_msg(
-                        format!(
-                            "Trying to assign value to non mutable variable `{}`: `{}`",
-                            var.name(),
-                            self.value.print()
-                        ),
-                    ));
+                    return Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                        "Trying to assign value to non mutable variable `{}`: `{}`",
+                        var.name(),
+                        self.value.print()
+                    )));
                 }
                 true => var.set_instance(self.value.execute_expression(interpreter)?),
             },

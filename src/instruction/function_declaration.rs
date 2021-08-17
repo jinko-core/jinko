@@ -51,13 +51,10 @@ impl FunctionDec {
                 b.add_instruction(instruction);
                 Ok(())
             }
-            None => Err(Error::new(
-                ErrKind::Interpreter).with_msg(
-                format!(
-                    "function {} has no instruction block. It might be an extern function or an error",
-                    self.name
-                ),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                "function {} has no instruction block. It might be an extern function or an error",
+                self.name
+            ))),
         }
     }
 
@@ -114,13 +111,10 @@ impl FunctionDec {
             Some(b) => b,
             // FIXME: Fix Location and input
             None => {
-                return Err(Error::new(
-                    ErrKind::Interpreter).with_msg(
-                    format!(
-                        "cannot execute function {} as it is marked `ext`",
-                        self.name()
-                    ),
-                ))
+                return Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                    "cannot execute function {} as it is marked `ext`",
+                    self.name()
+                )))
             }
         };
 
@@ -140,10 +134,8 @@ impl Instruction for FunctionDec {
             FunctionKind::Func | FunctionKind::Ext => interpreter.add_function(self.clone())?,
             FunctionKind::Test => interpreter.add_test(self.clone())?,
             FunctionKind::Mock | FunctionKind::Unknown => {
-                return Err(Error::new(
-                    ErrKind::Interpreter).with_msg(
-                    format!("unknown type for function {}", self.name()),
-                ))
+                return Err(Error::new(ErrKind::Interpreter)
+                    .with_msg(format!("unknown type for function {}", self.name())))
             }
         }
 
