@@ -7,8 +7,23 @@
 
 use colored::Colorize;
 
+#[derive(Default)]
 pub struct ErrorHandler {
     errors: Vec<Error>,
+}
+
+impl ErrorHandler {
+    pub fn emit(&self) {
+        self.errors.iter().for_each(|e| e.emit());
+    }
+
+    pub fn add(&mut self, err: Error) {
+        self.errors.push(err)
+    }
+
+    pub fn clear(&mut self) {
+        self.errors.clear()
+    }
 }
 
 // FIXME: Location should not be in the error part only
@@ -93,101 +108,37 @@ impl Error {
 
 impl std::convert::From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Error {
-        let err = Error::new(ErrKind::IO).with_msg(e.to_string());
-
-        // FIXME: Do not emit here
-        err.emit();
-        err
+        Error::new(ErrKind::IO).with_msg(e.to_string())
     }
 }
 
-// FIXME: Improve formatting, current output is barren
-impl<T> std::convert::From<nom::Err<T>> for Error {
-    fn from(e: nom::Err<T>) -> Error {
-        let err = Error::new(ErrKind::Parsing); // .with_msg(e.to_string()); // FIXME: Use the message in the error
-
-        // FIXME: Do not emit here
-        err.emit();
-        err
+impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
+    fn from(e: nom::Err<(&str, nom::error::ErrorKind)>) -> Error {
+        Error::new(ErrKind::Parsing).with_msg(e.to_string())
     }
 }
 
-// FIXME: Restrict T to &str
-impl<T> nom::error::ParseError<T> for Error {
-    fn from_error_kind(input: T, _: nom::error::ErrorKind) -> Error {
-        Error::new(ErrKind::Parsing) // .with_msg(String::from(input))
-    }
-
-    fn append(input: T, _: nom::error::ErrorKind, other: Error) -> Error {
-        let other_msg = match other.msg {
-            Some(msg) => format!("{}\n", msg),
-            None => String::new(),
-        };
-
-        Error::new(ErrKind::Parsing) // .with_msg(format!("{}{}", other_msg, input))
+impl std::convert::From<nom::Err<Error>> for Error {
+    fn from(e: nom::Err<Error>) -> Error {
+        match e {
+            nom::Err::Incomplete(_) => Error::new(ErrKind::Parsing),
+            nom::Err::Error(inner) | nom::Err::Failure(inner) => inner,
+        }
     }
 }
 
-// /// What kind of error we are dealing with: Either a parsing error, or a behavioural one.
-// #[derive(Copy, Clone, Debug, PartialEq)]
-// #[repr(u8)]
-// pub enum ErrErrKind {
-//     Parsing,
-//     Interpreter,
-//     IO,
-// }
-//
-// /// The actual error type
-// // FIXME: Remove `Option` once input tracking is implemented
-// #[derive(Debug, PartialEq)]
-// pub struct Error {
-//     kind: ErrErrKind,
-//     msg: String,
-//
-//     loc: Option<ErrSpaceLocation>,
-//     input: String,
-// }
-//
-// impl Error {
-//     /// Create a new error and return it
-//     pub fn new(
-//         kind: ErrErrKind,
-//         msg: String,
-//         loc: Option<ErrSpaceLocation>,
-//         input: String,
-//     ) -> Error {
-//         Error {
-//             kind,
-//             msg,
-//             loc,
-//             input,
-//         }
-//     }
-//
-//     /// Display the error on stderr before exiting the program
-//     pub fn exit(&self) {
-//         eprintln!("{}", self.to_string());
-//
-//         // The exit code depends on the kind of error
-//         std::process::exit(self.kind as i32 + 1);
-//     }
-//
-//     /// What kind of error the error is
-//     #[cfg(test)]
-//     pub fn kind(&self) -> ErrErrKind {
-//         self.kind
-//     }
-//
-//     /// Message contained in the error
-//     #[cfg(test)]
-//     pub fn msg(&self) -> &str {
-//         &self.msg
-//     }
-// }
-//
-// impl std::fmt::Display for Error {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         // FIXME: Add better formatting
-//         write!(f, "ErrorErrKind: {:?}\nInfo: {}", self.kind, self.msg.red())
-//     }
-// }
+impl nom::error::ParseError<&str> for Error {
+    fn from_error_kind(input: &str, _: nom::error::ErrorKind) -> Error {
+        Error::new(ErrKind::Parsing).with_msg(String::from(input))
+    }
+
+    fn append(input: &str, _: nom::error::ErrorKind, _other: Error) -> Error {
+        // FIXME: Should we accumulate errors this way?
+        // let other_msg = match other.msg {
+        //     Some(msg) => format!("{}\n", msg),
+        //     None => String::new(),
+        // };
+
+        Error::new(ErrKind::Parsing).with_msg(String::from(input)) // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
+    }
+}

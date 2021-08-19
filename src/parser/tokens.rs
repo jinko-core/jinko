@@ -12,7 +12,6 @@ use nom::{
 
 use crate::{parser::ParseResult, ErrKind, Error};
 use nom::Err::Error as NomError;
-use nom::Err::Failure as NomFailure;
 
 /// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: [&str; 13] = [

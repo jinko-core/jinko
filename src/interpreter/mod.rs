@@ -14,8 +14,8 @@ use scope_map::ScopeMap;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
-use crate::{ErrKind, Error};
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -48,6 +48,9 @@ pub struct Interpreter {
 
     /// Sources included by the interpreter
     included: HashSet<PathBuf>,
+
+    /// Errors being kept by the interpreter
+    error_handler: ErrorHandler,
 }
 
 impl Default for Interpreter {
@@ -76,6 +79,7 @@ impl Interpreter {
             scope_map: ScopeMap::new(),
             tests: HashMap::new(),
             included: HashSet::new(),
+            error_handler: ErrorHandler::default(),
         };
 
         i.scope_enter();
@@ -110,6 +114,17 @@ impl Interpreter {
             }
             None => {}
         };
+    }
+
+    /// Add an error to the interpreter
+    pub fn error(&mut self, err: Error) {
+        self.error_handler.add(err)
+    }
+
+    /// Emit all the errors currently kept in the interpreter and remove them
+    pub fn emit_errors(&mut self) {
+        self.error_handler.emit();
+        self.error_handler.clear();
     }
 
     /// Set the debug mode of a previously created interpreter
