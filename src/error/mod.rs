@@ -41,7 +41,7 @@ pub enum ErrKind {
 
 #[derive(Debug, PartialEq)]
 pub struct Error {
-    kind: ErrKind,
+    pub(crate) kind: ErrKind,
     msg: Option<String>,
     loc: Option<ErrSpaceLocation>,
 }
@@ -115,7 +115,7 @@ impl<T> std::convert::From<nom::Err<T>> for Error {
 // FIXME: Restrict T to &str
 impl<T> nom::error::ParseError<T> for Error {
     fn from_error_kind(input: T, _: nom::error::ErrorKind) -> Error {
-        Error::new(ErrKind::Parsing)// .with_msg(String::from(input))
+        Error::new(ErrKind::Parsing) // .with_msg(String::from(input))
     }
 
     fn append(input: T, _: nom::error::ErrorKind, other: Error) -> Error {
@@ -124,7 +124,7 @@ impl<T> nom::error::ParseError<T> for Error {
             None => String::new(),
         };
 
-        Error::new(ErrKind::Parsing)// .with_msg(format!("{}{}", other_msg, input))
+        Error::new(ErrKind::Parsing) // .with_msg(format!("{}{}", other_msg, input))
     }
 }
 

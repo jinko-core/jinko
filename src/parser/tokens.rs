@@ -6,12 +6,13 @@ use nom::{
     branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
     bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
     character::complete::char, character::is_alphabetic, character::is_alphanumeric,
-    character::is_digit, combinator::opt, combinator::peek, multi::many0,
-    sequence::delimited, sequence::pair,
+    character::is_digit, combinator::opt, combinator::peek, multi::many0, sequence::delimited,
+    sequence::pair,
 };
 
-use crate::{ErrKind, Error, parser::ParseResult};
+use crate::{parser::ParseResult, ErrKind, Error};
 use nom::Err::Error as NomError;
+use nom::Err::Failure as NomFailure;
 
 /// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: [&str; 13] = [
@@ -245,9 +246,9 @@ impl Token {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
         if RESERVED_KEYWORDS.contains(&id) {
-            return Err(
-                NomError(Error::new(ErrKind::Parsing).with_msg(String::from("identifier cannot be keyword")))
-            );
+            return Err(NomError(
+                Error::new(ErrKind::Parsing).with_msg(String::from("identifier cannot be keyword")),
+            ));
         }
 
         // FIXME: Ugly
@@ -258,7 +259,9 @@ impl Token {
             }
         }
 
-        Err(NomError(Error::new(ErrKind::Parsing).with_msg(String::from("invalid identifier"))))
+        Err(NomError(
+            Error::new(ErrKind::Parsing).with_msg(String::from("invalid identifier")),
+        ))
     }
 
     pub fn namespace_separator(input: &str) -> ParseResult<&str, &str> {
@@ -284,9 +287,9 @@ impl Token {
         //
         // which is not a valid identifier
         if Token::namespace_separator(input).is_ok() {
-            return Err(NomError(Error::new(ErrKind::Parsing).with_msg(String::from(
-                "cannot finish identifier on namespace separator `::`",
-            ))));
+            return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
+                String::from("cannot finish identifier on namespace separator `::`"),
+            )));
         }
 
         Ok((input, identifier))
@@ -316,8 +319,10 @@ impl Token {
                 Some(_) => Ok((input, -value)),
                 None => Ok((input, value)),
             },
-            Err(_) => Err(NomError(Error::new(ErrKind::Parsing)
-                .with_msg(format!("invalid floating point number: {}.{}", whole, decimal)))),
+            Err(_) => Err(NomError(Error::new(ErrKind::Parsing).with_msg(format!(
+                "invalid floating point number: {}.{}",
+                whole, decimal
+            )))),
         }
     }
 
@@ -330,9 +335,9 @@ impl Token {
                 Some(_) => Ok((input, -value)),
                 None => Ok((input, value)),
             },
-            Err(_) => {
-                Err(NomError(Error::new(ErrKind::Parsing).with_msg(format!("invalid integer: {}", num))))
-            }
+            Err(_) => Err(NomError(
+                Error::new(ErrKind::Parsing).with_msg(format!("invalid integer: {}", num)),
+            )),
         }
     }
 

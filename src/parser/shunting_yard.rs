@@ -1,13 +1,14 @@
 //! ShuntingYard parses operators and operands according to operator precedence,
 //! returning a BinaryOp in the end
 
-use crate::error::{Error, ErrKind};
+use crate::error::{ErrKind, Error};
 use crate::instruction::{BinaryOp, Instruction, Operator};
-use crate::parser::{BoxConstruct, Construct, Token, ParseResult};
+use crate::parser::{BoxConstruct, Construct, ParseResult, Token};
 use crate::utils::{Queue, Stack};
 
-use nom::{branch::alt};
+use nom::branch::alt;
 use nom::Err::Error as NomError;
+use nom::Err::Failure as NomFailure;
 
 /// SyPairs are contained in the ShuntingYard's output queue. When building the parser,
 /// this queue is created in an "infix" way, but using SyPair instead of traditional
@@ -58,8 +59,10 @@ impl ShuntingYard {
             while self.operators.peek() != Some(&Operator::LeftParenthesis) {
                 match self.operators.pop() {
                     None => {
-                        return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
-                            String::from("unclosed right parenthesis"))));
+                        return Err(NomError(
+                            Error::new(ErrKind::Parsing)
+                                .with_msg(String::from("unclosed right parenthesis")),
+                        ));
                     }
 
                     Some(op) => self.output.push(SyPair::Op(op)),
@@ -92,14 +95,18 @@ impl ShuntingYard {
 
         let (input, _) = match input.chars().next() {
             None => {
-                return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
-                    String::from("not a valid binary expression"))));
+                return Err(NomFailure(
+                    Error::new(ErrKind::Parsing)
+                        .with_msg(String::from("not a valid binary expression")),
+                ));
             }
             Some(c) => {
                 // Return early if a finishing character is found
                 if c == '}' || c == ';' {
-                    return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
-                        String::from("finished binary expression"))));
+                    return Err(NomFailure(
+                        Error::new(ErrKind::Parsing)
+                            .with_msg(String::from("finished binary expression")),
+                    ));
                 }
 
                 match Token::is_operator(c) {
@@ -148,8 +155,10 @@ impl ShuntingYard {
         let value = match stack.pop() {
             Some(value) => value,
             None => {
-                return Err(NomError(Error::new(ErrKind::Parsing).with_msg(String::from(
-                    "unclosed right parenthesis"))));
+                return Err(NomFailure(
+                    Error::new(ErrKind::Parsing)
+                        .with_msg(String::from("unclosed right parenthesis")),
+                ));
             }
         };
 
@@ -158,8 +167,10 @@ impl ShuntingYard {
         match stack.pop() {
             None => {}
             Some(_) => {
-                return Err(NomError(Error::new(ErrKind::Parsing).with_msg(String::from(
-                    "missing operator or operand"))));
+                return Err(NomError(
+                    Error::new(ErrKind::Parsing)
+                        .with_msg(String::from("missing operator or operand")),
+                ));
             }
         }
 
@@ -174,23 +185,20 @@ impl ShuntingYard {
         let mut input = i;
 
         match sy.handle_token(input) {
-            // FIXME: Here, we should take care of handling the actual Parsing error to
-            // return properly
-            // Err(Error::new(ErrKind::Parsing).with_msg(String::from((_)) => {
-            //     return Err(Err::Error((
-            //         "Not a valid binary expression",
-            //         nom::error::ErrorKind::Many1,
-            //     )))
-            // }
+            // FIXME: Accumulate errors here
+            Err(NomFailure(_)) => {
+                return Err(NomError(
+                    Error::new(ErrKind::Parsing)
+                        .with_msg(String::from("not a valid binary expression")),
+                ))
+            }
             Err(e) => return Err(e),
             Ok((new_i, _)) => {
                 input = new_i;
 
                 loop {
                     match sy.handle_token(input) {
-                        // FIXME: Same as above
-                        // FIXME: Maybe don't use OneOf as error type?
-                        // Err(Error::new(ErrKind::Parsing).with_msg(String::from(((_, nom::error::ErrorKind::OneOf))) => break,
+                        Err(NomFailure(_)) => break,
                         Err(e) => return Err(e),
                         Ok((new_i, _)) => {
                             if new_i == input {

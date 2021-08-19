@@ -5,7 +5,7 @@
 //! that sense.
 
 use crate::instruction::Instruction;
-use crate::parser::{Token, ParseResult};
+use crate::parser::{ParseResult, Token};
 use crate::{JkBool, JkChar, JkFloat, JkInt, JkString};
 
 pub struct ConstantConstruct;

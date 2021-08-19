@@ -13,16 +13,16 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::{branch::alt, combinator::opt, multi::many0};
 use nom::Err::Error as NomError;
+use nom::{branch::alt, combinator::opt, multi::many0};
 
+use crate::error::{ErrKind, Error};
 use crate::instruction::{
     Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse,
     Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var,
     VarAssign,
 };
-use crate::parser::{BoxConstruct, ConstantConstruct, ShuntingYard, Token, ParseResult};
-use crate::error::{Error, ErrKind};
+use crate::parser::{BoxConstruct, ConstantConstruct, ParseResult, ShuntingYard, Token};
 
 type Instructions = Vec<Box<dyn Instruction>>;
 type MaybeInstruction = Option<Box<dyn Instruction>>;
@@ -464,7 +464,9 @@ impl Construct {
         let (input, arrow) = opt(Token::arrow)(input)?;
 
         match arrow {
-            Some(_) => Err(NomError(Error::new(ErrKind::Parsing).with_msg(String::from(input)))),
+            Some(_) => Err(NomError(
+                Error::new(ErrKind::Parsing).with_msg(String::from(input)),
+            )),
             None => Ok((input, None)),
         }
     }
