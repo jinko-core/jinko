@@ -64,6 +64,7 @@ fn main() {
     // FIXME: No unwrap()
     let mut interpreter = Parser::parse(&input).unwrap();
     interpreter.emit_errors();
+    interpreter.clear_errors();
 
     interpreter.set_path(Some(path.to_owned()));
     interpreter.set_debug(args.debug());

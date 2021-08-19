@@ -126,6 +126,10 @@ impl Interpreter {
     /// Emit all the errors currently kept in the interpreter and remove them
     pub fn emit_errors(&mut self) {
         self.error_handler.emit();
+    }
+
+    /// Clear all the errors currently kept in the interpreter and remove them
+    pub fn clear_errors(&mut self) {
         self.error_handler.clear();
     }
 
