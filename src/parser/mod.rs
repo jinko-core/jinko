@@ -4,8 +4,6 @@
 
 use crate::{Error, InstrKind, Interpreter};
 
-use nom::multi::many0;
-
 mod box_construct;
 mod constant_construct;
 mod constructs;
@@ -30,7 +28,7 @@ impl Parser {
 
         let entry_block = interpreter.entry_point.block_mut().unwrap();
 
-        let (_, instructions) = many0(Construct::instruction_maybe_semicolon)(input)?;
+        let (_, instructions) = Construct::many_instructions(input)?;
 
         entry_block.set_instructions(instructions);
 

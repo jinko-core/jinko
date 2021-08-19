@@ -5,16 +5,20 @@
 // to generate errors and maybe exit with a specific error code. The error handler can
 // also accumulate errors instead of always emitting them
 
+use std::path::{Path, PathBuf};
+
 use colored::Colorize;
 
 #[derive(Default)]
 pub struct ErrorHandler {
     errors: Vec<Error>,
+    file: PathBuf,
 }
 
+// FIXME: Add documentation
 impl ErrorHandler {
     pub fn emit(&self) {
-        self.errors.iter().for_each(|e| e.emit());
+        self.errors.iter().for_each(|e| e.emit(&self.file));
     }
 
     pub fn add(&mut self, err: Error) {
@@ -24,11 +28,19 @@ impl ErrorHandler {
     pub fn clear(&mut self) {
         self.errors.clear()
     }
+
+    pub fn set_path(&mut self, file: PathBuf) {
+        self.file = file;
+    }
+
+    pub fn has_errors(&self) -> bool {
+        self.errors.len() > 0
+    }
 }
 
 // FIXME: Location should not be in the error part only
 /// Contains indications vis-a-vis the error's location in the source file
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ErrSpaceLocation {
     pub line: usize,
     pub offset: usize,
@@ -54,7 +66,7 @@ pub enum ErrKind {
     IO,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Error {
     pub(crate) kind: ErrKind,
     msg: Option<String>,
@@ -62,15 +74,21 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn emit(&self) {
+    pub fn emit(&self, file: &Path) {
         let kind_str = match self.kind {
-            ErrKind::Parsing => "parsing",
-            ErrKind::Interpreter => "interpreter",
-            ErrKind::IO => "i/o",
+            ErrKind::Parsing => "Parsing",
+            ErrKind::Interpreter => "Interpreter",
+            ErrKind::IO => "I/O",
         };
 
-        eprintln!("error type: {}", kind_str.red());
-        eprintln!("{}", self.msg.as_deref().unwrap_or(""));
+        eprintln!("Error type: {}", kind_str.red());
+        eprintln!(" ===> {}", file.to_string_lossy().green());
+
+        eprintln!("    |");
+        for line in self.msg.as_deref().unwrap_or("").lines() {
+            eprintln!("    | {}", line);
+        }
+        eprintln!("    |");
 
         // FIXME: Use somehow, somewhere
         // The exit code depends on the kind of error

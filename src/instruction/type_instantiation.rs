@@ -40,13 +40,15 @@ impl TypeInstantiation {
     }
 
     /// Get the corresponding type declaration from an interpreter
-    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<TypeDec>, Error> {
+    fn get_declaration(&self, interpreter: &mut Interpreter) -> Option<Rc<TypeDec>> {
         match interpreter.get_type(self.name()) {
             // get_type() return a Rc, so this clones the Rc, not the TypeId
-            Some(t) => Ok(t.clone()),
+            Some(t) => Some(t.clone()),
             // FIXME: Fix Location and input
-            None => Err(Error::new(ErrKind::Interpreter)
-                .with_msg(format!("Cannot find type {}", self.name().id()))),
+            None => { interpreter.error(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("Cannot find type {}", self.name().id())));
+                None
+            }
         }
     }
 
@@ -98,12 +100,18 @@ impl Instruction for TypeInstantiation {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
-        self.check_primitive()?;
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
+        if let Err(e) = self.check_primitive() {
+            interpreter.error(e);
+            return None;
+        }
 
         let type_dec = self.get_declaration(interpreter)?;
 
-        self.check_fields_count(&type_dec)?;
+        if let Err(e) = self.check_fields_count(&type_dec) {
+            interpreter.error(e);
+            return None;
+        }
 
         let mut size: usize = 0;
         let mut data: Vec<u8> = Vec::new();
@@ -114,13 +122,15 @@ impl Instruction for TypeInstantiation {
             let field_instr = named_arg.value();
             let field_name = named_arg.symbol();
 
-            let instance = match field_instr.execute(interpreter)? {
-                InstrKind::Expression(Some(instance)) => instance,
+            // FIXME: Use execute_expression() here?
+            let instance = match field_instr.execute(interpreter) {
+                Some(instance) => instance,
                 _ => {
-                    return Err(Error::new(ErrKind::Interpreter).with_msg(format!(
-                        "An Expression was excepted but a Statement was found: `{}`",
+                    interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                        "an expression was excepted but a statement was found: `{}`",
                         field_name
-                    )))
+                    )));
+                    return None;
                 }
             };
 
@@ -130,13 +140,13 @@ impl Instruction for TypeInstantiation {
             data.append(&mut instance.data().to_vec());
         }
 
-        Ok(InstrKind::Expression(Some(ObjectInstance::new(
+        Some(ObjectInstance::new(
             // FIXME: Disgusting, maybe do not use Rc for TypeId?
             Some((*type_dec).clone()),
             size,
             data,
             Some(fields),
-        ))))
+        ))
     }
 }
 

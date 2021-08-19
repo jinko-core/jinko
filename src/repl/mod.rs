@@ -3,12 +3,13 @@
 
 mod prompt;
 use prompt::Prompt;
+use std::path::PathBuf;
 
 use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, Error, FromObjectInstance, InstrKind, Instruction, Interpreter, JkConstant,
+    parser::Construct, Error, FromObjectInstance, Instruction, Interpreter, JkConstant,
     ObjectInstance,
 };
 
@@ -57,6 +58,7 @@ impl Repl {
 
         let mut interpreter = Interpreter::new();
         interpreter.set_debug(args.debug());
+        interpreter.set_path(Some(PathBuf::from("repl")));
 
         // FIXME: Add actual prompt
         line_reader.set_prompt(&Prompt::get(&interpreter))?;
@@ -65,7 +67,7 @@ impl Repl {
             let inst = match Repl::parse_instruction(&input) {
                 Ok(i) => i,
                 Err(e) => {
-                    e.emit();
+                    e.emit(PathBuf::from("repl").as_path());
                     continue;
                 }
             };
@@ -75,11 +77,11 @@ impl Repl {
                 None => continue,
             };
 
-            match inst.execute(&mut interpreter) {
-                Ok(InstrKind::Expression(None)) | Ok(InstrKind::Statement) => {}
-                Ok(InstrKind::Expression(Some(result))) => println!("{}", result),
-                Err(e) => e.emit(),
+            if let Some(result) = inst.execute(&mut interpreter) {
+                println!("{}", result);
             };
+
+            interpreter.emit_errors();
 
             line_reader.set_prompt(&Prompt::get(&interpreter))?;
         }

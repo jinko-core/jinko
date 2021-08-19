@@ -3,7 +3,7 @@
 //! of such an instruction produces no results. But they are useful when it comes to
 //! pretty printing and code formatting.
 
-use crate::{Error, InstrKind, Instruction, Interpreter, Rename};
+use crate::{InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
 
 #[derive(Clone)]
 pub enum CommentKind {
@@ -52,10 +52,10 @@ impl ExtraContent {
 }
 
 impl Instruction for ExtraContent {
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug("COMMENT", self.print().as_str());
 
-        Ok(InstrKind::Statement)
+        None
     }
 
     fn kind(&self) -> InstrKind {

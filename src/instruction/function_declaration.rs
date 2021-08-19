@@ -2,7 +2,7 @@
 //! a name, a list of required arguments as well as an associated code block
 
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
-use crate::{ErrKind, Error, Interpreter, Rename};
+use crate::{ErrKind, Error, Interpreter, Rename, ObjectInstance};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -106,15 +106,16 @@ impl FunctionDec {
 
     /// Run through the function as if it was called. This is useful for setting
     /// an entry point into the interpreter and executing it
-    pub fn run(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    pub fn run(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         let block = match self.block() {
             Some(b) => b,
             // FIXME: Fix Location and input
             None => {
-                return Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
                     "cannot execute function {} as it is marked `ext`",
                     self.name()
-                )))
+                )));
+                return None;
             }
         };
 
@@ -127,21 +128,25 @@ impl Instruction for FunctionDec {
         InstrKind::Statement
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug_step("FUNCDEC ENTER");
 
         match self.fn_kind() {
-            FunctionKind::Func | FunctionKind::Ext => interpreter.add_function(self.clone())?,
-            FunctionKind::Test => interpreter.add_test(self.clone())?,
+            FunctionKind::Func | FunctionKind::Ext => if let Err(e) = interpreter.add_function(self.clone()) {
+                interpreter.error(e);
+            }
+            FunctionKind::Test => if let Err(e) = interpreter.add_test(self.clone()) {
+                interpreter.error(e);
+            }
             FunctionKind::Mock | FunctionKind::Unknown => {
-                return Err(Error::new(ErrKind::Interpreter)
+                interpreter.error(Error::new(ErrKind::Interpreter)
                     .with_msg(format!("unknown type for function {}", self.name())))
             }
         }
 
         interpreter.debug_step("FUNCDEC EXIT");
 
-        Ok(InstrKind::Statement)
+        None
     }
 
     fn print(&self) -> String {

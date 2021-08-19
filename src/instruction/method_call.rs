@@ -2,7 +2,7 @@
 //! they get desugared into a normal function call.
 
 use crate::instruction::FunctionCall;
-use crate::{Error, InstrKind, Instruction, Interpreter, Rename};
+use crate::{InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -27,7 +27,7 @@ impl Instruction for MethodCall {
         format!("{}.{}", self.var.print(), self.method.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug("METHOD CALL ENTER", &self.print());
 
         // FIXME: No clone here

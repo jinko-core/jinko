@@ -1,6 +1,6 @@
 use super::{DecArg, InstrKind, Instruction};
 
-use crate::{Error, Interpreter, Rename};
+use crate::{Interpreter, Rename, ObjectInstance};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
@@ -30,15 +30,18 @@ impl Instruction for TypeDec {
         InstrKind::Statement
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug_step(&format!("CUSTOM TYPE {} ENTER", self.name));
 
-        interpreter.add_type(self.clone())?;
+        if let Err(e) = interpreter.add_type(self.clone()) {
+            interpreter.error(e);
+            return None;
+        }
 
         interpreter.debug_step(&format!("CUSTOM TYPE {} EXIT", self.name));
 
         // Declaring a type is always a statement (for now)
-        Ok(InstrKind::Statement)
+        None
     }
 
     // FIXME: Really unefficient

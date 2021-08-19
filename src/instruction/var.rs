@@ -63,46 +63,48 @@ impl Instruction for Var {
         )
     }
 
-    fn as_bool(&self, i: &mut Interpreter) -> Result<bool, Error> {
+    fn as_bool(&self, interpreter: &mut Interpreter) -> Option<bool> {
         use crate::FromObjectInstance;
 
         // FIXME: Cleanup
 
-        match self.execute(i)? {
-            InstrKind::Expression(Some(instance)) => match instance.ty() {
+        match self.execute(interpreter) {
+            Some(instance) => match instance.ty() {
                 Some(ty) => match ty.name() {
                     // FIXME:
-                    "bool" => Ok(JkBool::from_instance(&instance).as_bool(i).unwrap()),
+                    "bool" => Some(JkBool::from_instance(&instance).as_bool(interpreter).unwrap()),
                     // We can safely unwrap since we checked the type of the variable
-                    _ => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
-                        "var {} cannot be interpreted as boolean",
-                        self.name
-                    ))),
+                    _ => { interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                                "var {} cannot be interpreted as boolean",
+                                self.name
+                    ))); None },
                 },
                 None => todo!(
                     "If the type of the variable hasn't been determined yet,
                     typecheck it and call self.as_bool() again"
                 ),
             },
-            _ => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
-                "var {} cannot be interpreted as boolean",
-                self.name
-            ))),
+            _ => { interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                        "var {} cannot be interpreted as boolean",
+                        self.name
+            ))); None },
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         let var = match interpreter.get_variable(self.name()) {
             Some(v) => v,
             None => {
-                return Err(Error::new(ErrKind::Interpreter)
-                    .with_msg(format!("variable has not been declared: {}", self.name)))
+                interpreter.error(Error::new(ErrKind::Interpreter)
+                    .with_msg(format!("variable has not been declared: {}", self.name)));
+
+                return None;
             }
         };
 
         interpreter.debug("VAR", var.print().as_ref());
 
-        Ok(InstrKind::Expression(Some(var.instance())))
+        Some(var.instance())
     }
 }
 

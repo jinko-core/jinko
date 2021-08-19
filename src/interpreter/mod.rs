@@ -15,7 +15,10 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
-use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
+use crate::instruction::{
+    Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var
+};
+use crate::ObjectInstance;
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -93,8 +96,7 @@ impl Interpreter {
         let stdlib_incl =
             crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
         stdlib_incl
-            .execute(&mut i)
-            .expect("cannot include jinko's standard library - aborting");
+            .execute(&mut i);
 
         i
     }
@@ -107,6 +109,9 @@ impl Interpreter {
     /// Get a rerference to an interpreter's source path
     pub fn set_path(&mut self, path: Option<PathBuf>) {
         self.path = path;
+        // FIXME: Is that correct? Remove that clone()...
+        self.error_handler
+            .set_path(self.path.clone().unwrap_or(PathBuf::new()));
 
         match &self.path {
             Some(p) => {
@@ -244,6 +249,20 @@ impl Interpreter {
     /// Check if a source is included or not
     pub fn is_included(&self, source: &Path) -> bool {
         self.included.contains(source)
+    }
+
+    pub fn execute(&mut self) -> Result<Option<ObjectInstance>, Error> {
+        // The entry point always has a block
+        let ep = self.entry_point.block().unwrap().clone();
+
+        let res = ep.execute(self);
+
+        self.emit_errors();
+
+        match self.error_handler.has_errors() {
+            true => Err(Error::new(ErrKind::Interpreter)),
+            false => Ok(res)
+        }
     }
 }
 

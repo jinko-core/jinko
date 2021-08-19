@@ -2,7 +2,7 @@
 //! function on execution.
 
 use crate::instruction::{FunctionDec, Var};
-use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, Rename};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -70,7 +70,7 @@ impl FunctionCall {
     }
 
     /// Map each argument to its corresponding instruction
-    fn map_args(&self, function: &FunctionDec, interpreter: &mut Interpreter) -> Result<(), Error> {
+    fn map_args(&self, function: &FunctionDec, interpreter: &mut Interpreter) {
         for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
             interpreter.debug(
                 "VAR MAP",
@@ -80,15 +80,19 @@ impl FunctionCall {
             // Create a new variable, and execute the content of the function argument
             // passed to the call
             let mut new_var = Var::new(func_arg.name().to_owned());
-            let mut instance = call_arg.execute_expression(interpreter)?;
+            let mut instance = match call_arg.execute_expression(interpreter) {
+                Some(i) => i,
+                None => return,
+            };
 
             let ty = match interpreter.get_type(func_arg.get_type()) {
                 // Double dereferencing: Some(t) gives us a &Rc<TypeDec>. We dereference
                 // it to access the Rc, and dereference it again to access the TypeDec.
                 Some(t) => (**t).clone(),
                 None => {
-                    return Err(Error::new(ErrKind::Interpreter)
-                        .with_msg(format!("type not found: {}", func_arg.get_type().id())))
+                    interpreter.error(Error::new(ErrKind::Interpreter)
+                        .with_msg(format!("type not found: {}", func_arg.get_type().id())));
+                        return
                 }
             };
 
@@ -96,10 +100,10 @@ impl FunctionCall {
 
             new_var.set_instance(instance);
 
-            interpreter.add_variable(new_var)?;
+            if let Err(e) = interpreter.add_variable(new_var) {
+                interpreter.error(e);
+            }
         }
-
-        Ok(())
     }
 }
 
@@ -126,22 +130,21 @@ impl Instruction for FunctionCall {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
-        let function = self.get_declaration(interpreter)?;
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
+        let function = match self.get_declaration(interpreter) {
+            Ok(f) => f,
+            Err(e) => { interpreter.error(e); return None; }
+        };
 
-        self.check_args_count(&function)?;
+        if let Err(e) = self.check_args_count(&function) {
+            interpreter.error(e); return None;
+        }
 
         interpreter.scope_enter();
 
         interpreter.debug("CALL", self.name());
 
-        match self.map_args(&function, interpreter) {
-            Ok(_) => {}
-            Err(e) => {
-                interpreter.scope_exit();
-                return Err(e);
-            }
-        };
+        self.map_args(&function, interpreter);
 
         let ret_val = function.run(interpreter);
 

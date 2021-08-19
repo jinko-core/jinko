@@ -95,16 +95,16 @@ macro_rules! jk_primitive {
                 self.0.to_string()
             }
 
-            fn as_bool(&self, _interpreter: &mut Interpreter) -> Result<bool, Error> {
-                Ok(self.0)
+            fn as_bool(&self, _interpreter: &mut Interpreter) -> Option<bool> {
+                Some(self.0)
             }
 
-            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+            fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
                 interpreter.debug("CONSTANT", &self.0.to_string());
 
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
-                Ok(InstrKind::Expression(Some(self.to_instance())))
+                Some(self.to_instance())
             }
         }
     };
@@ -145,12 +145,12 @@ macro_rules! jk_primitive {
                 self.0.to_string()
             }
 
-            fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+            fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
                 interpreter.debug("CONSTANT", &self.0.to_string());
 
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
-                Ok(InstrKind::Expression(Some(self.to_instance())))
+                Some(self.to_instance())
             }
         }
     };
@@ -216,10 +216,10 @@ impl Instruction for JkString {
         format!("\"{}\"", self.0.clone())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug("CONSTANT", &self.0.to_string());
 
-        Ok(InstrKind::Expression(Some(self.to_instance())))
+        Some(self.to_instance())
     }
 }
 

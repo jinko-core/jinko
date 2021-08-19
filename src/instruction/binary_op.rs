@@ -56,15 +56,16 @@ impl BinaryOp {
         &self,
         node: &dyn Instruction,
         interpreter: &mut Interpreter,
-    ) -> Result<ObjectInstance, Error> {
-        match node.execute(interpreter)? {
-            InstrKind::Statement | InstrKind::Expression(None) => {
-                Err(Error::new(ErrKind::Interpreter).with_msg(format!(
-                    "Invalid use of statement in binary operation: {}",
-                    self.lhs.print()
-                )))
+    ) -> Option<ObjectInstance> {
+        match node.execute(interpreter) {
+            None => {
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                    "invalid use of statement in binary operation: {}",
+                    node.print()
+                )));
+                None
             }
-            InstrKind::Expression(Some(v)) => Ok(v),
+            Some(v) => Some(v),
         }
     }
 }
@@ -83,7 +84,7 @@ impl Instruction for BinaryOp {
         )
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug_step("BINOP ENTER");
 
         interpreter.debug("OP", self.op.to_str());
@@ -92,7 +93,7 @@ impl Instruction for BinaryOp {
         let r_value = self.execute_node(&*self.rhs, interpreter)?;
 
         if l_value.ty() != r_value.ty() {
-            return Err(Error::new(ErrKind::Interpreter).with_msg(
+            interpreter.error(Error::new(ErrKind::Interpreter).with_msg(
                 // FIXME: Should be a type error
                 format!(
                     "Trying to do binary operation on invalid types: {:#?} {} {:#?}",
@@ -101,6 +102,7 @@ impl Instruction for BinaryOp {
                     r_value.ty() // FIXME: Display correctly
                 ),
             ));
+            return None;
         }
 
         let return_value;
@@ -109,24 +111,34 @@ impl Instruction for BinaryOp {
         match l_value.ty().unwrap().name() {
             // FIXME: Absolutely DISGUSTING
             "int" => {
-                return_value = InstrKind::Expression(Some(
-                    JkInt::from_instance(&l_value)
-                        .do_op(&JkInt::from_instance(&r_value), self.op)?,
-                ));
+                let res =
+                    JkInt::from_instance(&l_value).do_op(&JkInt::from_instance(&r_value), self.op);
+                return_value = match res {
+                    Ok(r) => r,
+                    Err(e) => {
+                        interpreter.error(e);
+                        return None;
+                    }
+                };
             }
 
             "float" => {
-                return_value = InstrKind::Expression(Some(
-                    JkFloat::from_instance(&l_value)
-                        .do_op(&JkFloat::from_instance(&r_value), self.op)?,
-                ));
+                let res = JkFloat::from_instance(&l_value)
+                    .do_op(&JkFloat::from_instance(&r_value), self.op);
+                return_value = match res {
+                    Ok(r) => r,
+                    Err(e) => {
+                        interpreter.error(e);
+                        return None;
+                    }
+                }
             }
             _ => todo!("Implement empty types?"),
         }
 
         interpreter.debug_step("BINOP EXIT");
 
-        Ok(return_value)
+        Some(return_value)
     }
 }
 

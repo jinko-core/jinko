@@ -4,7 +4,7 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::{ErrKind, Error, Interpreter, Rename};
+use crate::{ErrKind, Error, Interpreter, Rename, ObjectInstance};
 
 /// The potential interpreter instructions
 #[derive(Clone, Debug, PartialEq)]
@@ -62,7 +62,7 @@ impl Instruction for JkInst {
         .to_string()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug("JINKO_INST", &self.print());
 
         match self.kind {
@@ -71,9 +71,10 @@ impl Instruction for JkInst {
             JkInstKind::Ir => eprintln!("usage: {:?} <statement|expr>", JkInstKind::Ir),
         };
 
+        // FIXME: Is that true?
         // JinkInsts cannot return anything. They simply act directly from the interpreter,
         // on the interpreter.
-        Ok(InstrKind::Statement)
+        None
     }
 }
 

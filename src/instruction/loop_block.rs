@@ -2,7 +2,7 @@
 //! different kinds, `for`, `while` or `loop`.
 
 use crate::instruction::{Block, InstrKind, Instruction, Var};
-use crate::{ErrKind, Error, Interpreter, Rename};
+use crate::{ErrKind, Error, Interpreter, Rename, ObjectInstance};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
@@ -48,7 +48,7 @@ impl Instruction for Loop {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         match &self.kind {
             LoopKind::Loop => loop {
                 interpreter.debug_step("LOOP ENTER");
@@ -57,6 +57,7 @@ impl Instruction for Loop {
             },
             LoopKind::While(cond) => {
                 interpreter.debug_step("WHILE ENTER");
+                // FIXME: Add errors here too
                 while cond.as_bool(interpreter)? {
                     self.block.execute(interpreter)?;
                 }
@@ -76,8 +77,10 @@ impl Instruction for Loop {
                 // that that result, as a boolean, returns true. If it does, execute the
                 // body. If it does not, break from the for.
 
-                return Err(Error::new(ErrKind::Interpreter)
+                // FIXME: Add error here too
+                interpreter.error(Error::new(ErrKind::Interpreter)
                     .with_msg("for loops are currently unimplemented".to_string()));
+                return None;
 
                 // FIXME: Rework that code
                 // interpreter.debug_step("FOR ENTER");
@@ -103,7 +106,7 @@ impl Instruction for Loop {
         }
 
         // FIXME: Add logic. Right now they only return on error, not the actual value
-        Ok(InstrKind::Statement)
+        None
     }
 }
 

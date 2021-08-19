@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{parser::Construct, ErrKind, Error, InstrKind, Instruction, Interpreter, Rename};
+use crate::{parser::Construct, ErrKind, Error, InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
 /// The interpreter is built from parsing the source file in the path.
@@ -62,31 +62,44 @@ impl Incl {
     fn inner_load(
         &self,
         base: &Path,
-        i: &Interpreter,
-    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), Error> {
-        let formatted = self.find_include_path(base)?;
+        interpreter: &mut Interpreter,
+    ) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
+        let formatted = match self.find_include_path(base) {
+            Ok(f) => f,
+            Err(e) => {
+                interpreter.error(e);
+                return None;
+            }
+        };
 
         // If a source has already been included, skip it without returning
         // an error
-        if i.is_included(&formatted) {
-            return Ok((formatted, vec![]));
+        if interpreter.is_included(&formatted) {
+            return Some((formatted, vec![]));
         }
 
-        i.debug("FINAL PATH", &format!("{:?}", formatted));
+        interpreter.debug("FINAL PATH", &format!("{:?}", formatted));
 
-        let input = std::fs::read_to_string(&formatted)?;
+        let input = match std::fs::read_to_string(&formatted) {
+            Ok(i) => i,
+            Err(e) => { interpreter.error(Error::from(e)); return None; }
+        };
 
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty interpreter
-        let (remaining_input, instructions) = Construct::many_instructions(input.as_str())?;
+        let (remaining_input, instructions) = match Construct::many_instructions(input.as_str()) {
+            Ok(tuple) => tuple,
+            Err(e) => { interpreter.error(Error::from(e)); return None }
+        };
+
         match remaining_input.len() {
             // The remaining input is empty: We parsed the whole file properly
-            0 => Ok((formatted, instructions)),
-            _ => Err(Error::new(ErrKind::Parsing).with_msg(format!(
+            0 => Some((formatted, instructions)),
+            _ => { interpreter.error(Error::new(ErrKind::Parsing).with_msg(format!(
                 "error when parsing included file: {:?},\non the following input:\n{}",
                 formatted, remaining_input
-            ))),
+            ))); None },
         }
     }
 
@@ -94,13 +107,13 @@ impl Incl {
     fn load_relative(
         &self,
         base: &Path,
-        i: &Interpreter,
-    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), Error> {
+        i: &mut Interpreter,
+    ) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
         self.inner_load(base, i)
     }
 
     /// Try to load code from jinko's installation path
-    fn _load_jinko_path(&self) -> Result<Vec<Box<dyn Instruction>>, Error> {
+    fn _load_jinko_path(&self) -> Option<Vec<Box<dyn Instruction>>> {
         todo!()
     }
 
@@ -111,14 +124,14 @@ impl Incl {
     fn load(
         &self,
         base: &Path,
-        i: &Interpreter,
-    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), Error> {
+        i: &mut Interpreter,
+    ) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
         self.load_relative(base, i)
     }
 
     /// Format the correct prefix to include content as. This depends on the presence
     /// of an alias, and also checks for the validity of the prefix
-    fn format_prefix(&self) -> Result<String, Error> {
+    fn format_prefix(&self) -> Option<String> {
         let alias = match self.alias.as_ref() {
             Some(alias) => alias,
             // If no alias is given, then return the include path as alias
@@ -128,8 +141,20 @@ impl Incl {
         match alias {
             // If the alias is empty, then we're doing a special include from
             // the interpreter itself. Don't add a leading `::`
-            "" => Ok(alias.to_string()),
-            _ => Ok(format!("{}::", alias)),
+            "" => Some(alias.to_string()),
+            _ => Some(format!("{}::", alias)),
+        }
+    }
+
+    fn get_base(&self, interpreter: &mut Interpreter) -> PathBuf {
+        match interpreter.path() {
+            // Get the parent directory of the interpreter's source file. We can unwrap
+            // since there's always a base
+            Some(path) => path.parent().unwrap().to_owned(),
+            // The interpreter doesn't have an associated source file. Therefore, we
+            // load from where the interpreter was started. This is the case if we're
+            // in dynamic mode for example
+            None => PathBuf::new(),
         }
     }
 }
@@ -154,26 +179,17 @@ impl Instruction for Incl {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug("INCL ENTER", self.print().as_str());
 
-        let base = match interpreter.path() {
-            // Get the parent directory of the interpreter's source file. We can unwrap
-            // since there's always a base
-            Some(path) => path.parent().unwrap(),
-            // The interpreter doesn't have an associated source file. Therefore, we
-            // load from where the interpreter was started. This is the case if we're
-            // in dynamic mode for example
-            None => Path::new(""),
-        };
-
+        let base = self.get_base(interpreter);
         let prefix = self.format_prefix()?;
 
         interpreter.debug("BASE DIR", &format!("{:#?}", base));
 
         let old_path = interpreter.path().cloned();
 
-        let (new_path, mut content) = self.load(base, interpreter)?;
+        let (new_path, mut content) = self.load(&base, interpreter)?;
 
         // Temporarily change the path of the interpreter
         interpreter.set_path(Some(new_path));
@@ -187,12 +203,12 @@ impl Instruction for Incl {
 
                 instr.execute(interpreter)
             })
-            .collect::<Result<Vec<InstrKind>, Error>>()?;
+            .collect::<Option<Vec<ObjectInstance>>>()?;
 
         // Reset the old path before leaving the instruction
         interpreter.set_path(old_path);
 
-        Ok(InstrKind::Statement)
+        None
     }
 }
 

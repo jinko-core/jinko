@@ -1,7 +1,7 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, Rename};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -30,23 +30,27 @@ impl Instruction for FieldAccess {
         format!("{}.{}", self.instance.print(), self.field_name)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, Error> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug("FIELD ACCESS ENTER", &self.print());
 
-        let calling_instance = match self.instance.execute(interpreter)? {
-            InstrKind::Statement | InstrKind::Expression(None) => {
-                return Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+        let calling_instance = match self.instance.execute(interpreter) {
+            None => {
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
                     "instance `{}` is a statement and cannot be accessed",
                     self.instance.print()
-                )))
+                )));
+                return None;
             }
-            InstrKind::Expression(Some(i)) => i,
+            Some(i) => i,
         };
-        let field_instance = calling_instance.get_field(&self.field_name)?;
+        let field_instance = match calling_instance.get_field(&self.field_name) {
+            Ok(field) => field,
+            Err(e) => { interpreter.error(e); return None }
+        };
 
         interpreter.debug("FIELD ACCESS EXIT", &self.print());
 
-        Ok(InstrKind::Expression(Some(field_instance)))
+        Some(field_instance)
     }
 }
 
