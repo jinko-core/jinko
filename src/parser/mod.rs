@@ -18,6 +18,8 @@ pub use constructs::Construct;
 pub use shunting_yard::ShuntingYard;
 pub use tokens::Token;
 
+pub type ParseResult<T, I> = nom::IResult<T, I, Error>;
+
 pub struct Parser;
 
 impl Parser {

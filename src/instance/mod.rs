@@ -83,9 +83,10 @@ impl ObjectInstance {
 
     pub fn get_field(&self, field_name: &str) -> Result<ObjectInstance, Error> {
         match self.fields.as_ref() {
-            // FIXME: No string new as input
-            None => Err(Error::new(ErrKind::Interpreter).with_msg("no fields on instance")),
-            // FIXME: No string new as input
+            None => {
+                Err(Error::new(ErrKind::Interpreter)
+                    .with_msg(String::from("no fields on instance")))
+            }
             Some(fields) => fields.get(field_name).map_or(
                 Err(Error::new(ErrKind::Interpreter)
                     .with_msg(format!("field `{}` does not exist on instance", field_name))),

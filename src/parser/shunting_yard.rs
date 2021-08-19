@@ -1,11 +1,13 @@
 //! ShuntingYard parses operators and operands according to operator precedence,
 //! returning a BinaryOp in the end
 
+use crate::error::{Error, ErrKind};
 use crate::instruction::{BinaryOp, Instruction, Operator};
-use crate::parser::{BoxConstruct, Construct, Token};
+use crate::parser::{BoxConstruct, Construct, Token, ParseResult};
 use crate::utils::{Queue, Stack};
 
-use nom::{branch::alt, Err, IResult};
+use nom::{branch::alt};
+use nom::Err::Error as NomError;
 
 /// SyPairs are contained in the ShuntingYard's output queue. When building the parser,
 /// this queue is created in an "infix" way, but using SyPair instead of traditional
@@ -21,7 +23,7 @@ pub struct ShuntingYard {
 }
 
 impl ShuntingYard {
-    fn operator<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
+    fn operator<'i>(&mut self, input: &'i str) -> ParseResult<&'i str, ()> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, op) = alt((
@@ -56,10 +58,8 @@ impl ShuntingYard {
             while self.operators.peek() != Some(&Operator::LeftParenthesis) {
                 match self.operators.pop() {
                     None => {
-                        return Err(nom::Err::Error((
-                            "Unclosed right parenthesis",
-                            nom::error::ErrorKind::OneOf,
-                        )))
+                        return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
+                            String::from("unclosed right parenthesis"))));
                     }
 
                     Some(op) => self.output.push(SyPair::Op(op)),
@@ -74,7 +74,7 @@ impl ShuntingYard {
         Ok((input, ()))
     }
 
-    fn operand<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
+    fn operand<'i>(&mut self, input: &'i str) -> ParseResult<&'i str, ()> {
         let (input, expr) = alt((
             BoxConstruct::method_call,
             BoxConstruct::function_call,
@@ -87,23 +87,19 @@ impl ShuntingYard {
         Ok((input, ()))
     }
 
-    fn handle_token<'i>(&mut self, input: &'i str) -> IResult<&'i str, ()> {
+    fn handle_token<'i>(&mut self, input: &'i str) -> ParseResult<&'i str, ()> {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, _) = match input.chars().next() {
             None => {
-                return Err(Err::Error((
-                    "Not a valid binary expression",
-                    nom::error::ErrorKind::OneOf,
-                )))
+                return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
+                    String::from("not a valid binary expression"))));
             }
             Some(c) => {
                 // Return early if a finishing character is found
                 if c == '}' || c == ';' {
-                    return Err(nom::Err::Error((
-                        "Finished binary expression",
-                        nom::error::ErrorKind::OneOf,
-                    )));
+                    return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
+                        String::from("finished binary expression"))));
                 }
 
                 match Token::is_operator(c) {
@@ -127,7 +123,7 @@ impl ShuntingYard {
     }
 
     /// Reduce the RPN produced by the ShuntingYard to an Expression
-    fn reduce(input: &str, rpn: Queue<SyPair>) -> IResult<&str, Box<dyn Instruction>> {
+    fn reduce(input: &str, rpn: Queue<SyPair>) -> ParseResult<&str, Box<dyn Instruction>> {
         let mut stack = Stack::new();
 
         for sy_pair in rpn.into_iter() {
@@ -152,10 +148,8 @@ impl ShuntingYard {
         let value = match stack.pop() {
             Some(value) => value,
             None => {
-                return Err(nom::Err::Error((
-                    "Unclosed right parenthesis",
-                    nom::error::ErrorKind::OneOf,
-                )))
+                return Err(NomError(Error::new(ErrKind::Parsing).with_msg(String::from(
+                    "unclosed right parenthesis"))));
             }
         };
 
@@ -164,10 +158,8 @@ impl ShuntingYard {
         match stack.pop() {
             None => {}
             Some(_) => {
-                return Err(nom::Err::Error((
-                    "Missing operator or operand",
-                    nom::error::ErrorKind::OneOf,
-                )))
+                return Err(NomError(Error::new(ErrKind::Parsing).with_msg(String::from(
+                    "missing operator or operand"))));
             }
         }
 
@@ -176,26 +168,29 @@ impl ShuntingYard {
 
     /// Create a BinaryOp from an input string, executing the shunting yard
     /// algorithm
-    pub fn parse(i: &str) -> IResult<&str, Box<dyn Instruction>> {
+    pub fn parse(i: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         let mut sy = ShuntingYard::new();
 
         let mut input = i;
 
         match sy.handle_token(input) {
-            Err(nom::Err::Error(_)) => {
-                return Err(Err::Error((
-                    "Not a valid binary expression",
-                    nom::error::ErrorKind::Many1,
-                )))
-            }
+            // FIXME: Here, we should take care of handling the actual Parsing error to
+            // return properly
+            // Err(Error::new(ErrKind::Parsing).with_msg(String::from((_)) => {
+            //     return Err(Err::Error((
+            //         "Not a valid binary expression",
+            //         nom::error::ErrorKind::Many1,
+            //     )))
+            // }
             Err(e) => return Err(e),
             Ok((new_i, _)) => {
                 input = new_i;
 
                 loop {
                     match sy.handle_token(input) {
+                        // FIXME: Same as above
                         // FIXME: Maybe don't use OneOf as error type?
-                        Err(nom::Err::Error((_, nom::error::ErrorKind::OneOf))) => break,
+                        // Err(Error::new(ErrKind::Parsing).with_msg(String::from(((_, nom::error::ErrorKind::OneOf))) => break,
                         Err(e) => return Err(e),
                         Ok((new_i, _)) => {
                             if new_i == input {

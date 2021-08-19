@@ -7,6 +7,10 @@
 
 use colored::Colorize;
 
+pub struct ErrorHandler {
+    errors: Vec<Error>,
+}
+
 // FIXME: Location should not be in the error part only
 /// Contains indications vis-a-vis the error's location in the source file
 #[derive(Debug, PartialEq)]
@@ -67,9 +71,9 @@ impl Error {
     }
 
     // FIXME: Work out something better...
-    pub fn with_msg<T: std::fmt::Display>(self, msg: T) -> Error {
+    pub fn with_msg(self, msg: String) -> Error {
         Error {
-            msg: Some(format!("{}", msg)),
+            msg: Some(msg),
             ..self
         }
     }
@@ -91,18 +95,36 @@ impl std::convert::From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Error {
         let err = Error::new(ErrKind::IO).with_msg(e.to_string());
 
+        // FIXME: Do not emit here
         err.emit();
         err
     }
 }
 
 // FIXME: Improve formatting, current output is barren
-impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
-    fn from(e: nom::Err<(&str, nom::error::ErrorKind)>) -> Error {
-        let err = Error::new(ErrKind::Parsing).with_msg(e.to_string());
+impl<T> std::convert::From<nom::Err<T>> for Error {
+    fn from(e: nom::Err<T>) -> Error {
+        let err = Error::new(ErrKind::Parsing); // .with_msg(e.to_string()); // FIXME: Use the message in the error
 
+        // FIXME: Do not emit here
         err.emit();
         err
+    }
+}
+
+// FIXME: Restrict T to &str
+impl<T> nom::error::ParseError<T> for Error {
+    fn from_error_kind(input: T, _: nom::error::ErrorKind) -> Error {
+        Error::new(ErrKind::Parsing)// .with_msg(String::from(input))
+    }
+
+    fn append(input: T, _: nom::error::ErrorKind, other: Error) -> Error {
+        let other_msg = match other.msg {
+            Some(msg) => format!("{}\n", msg),
+            None => String::new(),
+        };
+
+        Error::new(ErrKind::Parsing)// .with_msg(format!("{}{}", other_msg, input))
     }
 }
 

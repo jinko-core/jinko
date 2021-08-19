@@ -6,9 +6,12 @@ use nom::{
     branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
     bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
     character::complete::char, character::is_alphabetic, character::is_alphanumeric,
-    character::is_digit, combinator::opt, combinator::peek, error::ErrorKind, multi::many0,
-    sequence::delimited, sequence::pair, IResult,
+    character::is_digit, combinator::opt, combinator::peek, multi::many0,
+    sequence::delimited, sequence::pair,
 };
+
+use crate::{ErrKind, Error, parser::ParseResult};
+use nom::Err::Error as NomError;
 
 /// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: [&str; 13] = [
@@ -23,21 +26,31 @@ pub struct Token;
 impl Token {
     /// Function used to recognize a specific character such as '[' or '>'. A function
     /// calling this is specifically trying to recognize the given character
-    fn specific_char(input: &str, character: char) -> IResult<&str, char> {
-        char(character)(input)
+    fn specific_char(input: &str, character: char) -> ParseResult<&str, char> {
+        let c = char::<&str, Error>(character)(input)?;
+
+        Ok(c)
     }
 
     /// Match a simple token. No rules apply to the characters following it, unlike
     /// specific_token
-    fn token<'tok>(input: &'tok str, token: &'tok str) -> IResult<&'tok str, &'tok str> {
-        tag(token)(input)
+    fn token<'input>(
+        input: &'input str,
+        token: &'input str,
+    ) -> ParseResult<&'input str, &'input str> {
+        let tok = tag::<&str, &str, Error>(token)(input)?;
+
+        Ok(tok)
     }
 
     /// Function used to recognize a specific string token such as "func" or "ext"
     /// When a function calls specific_token(_, "token"), that means it's trying to
     /// recognize specifically the word "token".
-    fn specific_token<'tok>(input: &'tok str, token: &'tok str) -> IResult<&'tok str, &'tok str> {
-        let (input, tag) = tag(token)(input)?;
+    fn specific_token<'tok>(
+        input: &'tok str,
+        token: &'tok str,
+    ) -> ParseResult<&'tok str, &'tok str> {
+        let (input, tag) = tag::<&str, &str, Error>(token)(input)?;
         match input.len() {
             0 => Ok((input, tag)),
             _ => {
@@ -55,179 +68,186 @@ impl Token {
         }
     }
 
-    pub fn single_quote(input: &str) -> IResult<&str, char> {
-        char('\'')(input)
+    pub fn single_quote(input: &str) -> ParseResult<&str, char> {
+        Token::specific_char(input, '\'')
     }
 
-    pub fn double_quote(input: &str) -> IResult<&str, char> {
-        char('"')(input)
+    pub fn double_quote(input: &str) -> ParseResult<&str, char> {
+        Token::specific_char(input, '"')
     }
 
-    pub fn equal(input: &str) -> IResult<&str, char> {
+    pub fn equal(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, '=')
     }
 
-    pub fn comma(input: &str) -> IResult<&str, char> {
+    pub fn comma(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, ',')
     }
 
-    pub fn left_curly_bracket(input: &str) -> IResult<&str, char> {
+    pub fn left_curly_bracket(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, '{')
     }
 
-    pub fn right_curly_bracket(input: &str) -> IResult<&str, char> {
+    pub fn right_curly_bracket(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, '}')
     }
 
-    pub fn _left_bracket(input: &str) -> IResult<&str, char> {
+    pub fn _left_bracket(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, '[')
     }
 
-    pub fn _right_bracket(input: &str) -> IResult<&str, char> {
+    pub fn _right_bracket(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, ']')
     }
 
-    pub fn colon(input: &str) -> IResult<&str, char> {
+    pub fn colon(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, ':')
     }
 
-    pub fn semicolon(input: &str) -> IResult<&str, char> {
+    pub fn semicolon(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, ';')
     }
 
-    pub fn at_sign(input: &str) -> IResult<&str, char> {
+    pub fn at_sign(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, '@')
     }
 
-    pub fn func_tok(input: &str) -> IResult<&str, &str> {
+    pub fn func_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "func")
     }
 
-    pub fn ext_tok(input: &str) -> IResult<&str, &str> {
+    pub fn ext_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "ext")
     }
 
-    pub fn test_tok(input: &str) -> IResult<&str, &str> {
+    pub fn test_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "test")
     }
 
-    pub fn mock_tok(input: &str) -> IResult<&str, &str> {
+    pub fn mock_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "mock")
     }
 
-    pub fn loop_tok(input: &str) -> IResult<&str, &str> {
+    pub fn loop_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "loop")
     }
 
-    pub fn while_tok(input: &str) -> IResult<&str, &str> {
+    pub fn while_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "while")
     }
 
-    pub fn for_tok(input: &str) -> IResult<&str, &str> {
+    pub fn for_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "for")
     }
 
-    pub fn in_tok(input: &str) -> IResult<&str, &str> {
+    pub fn in_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "in")
     }
 
-    pub fn mut_tok(input: &str) -> IResult<&str, &str> {
+    pub fn mut_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "mut")
     }
 
-    pub fn if_tok(input: &str) -> IResult<&str, &str> {
+    pub fn if_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "if")
     }
 
-    pub fn else_tok(input: &str) -> IResult<&str, &str> {
+    pub fn else_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "else")
     }
 
-    pub fn _type_tok(input: &str) -> IResult<&str, &str> {
+    pub fn _type_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "type")
     }
 
-    pub fn incl_tok(input: &str) -> IResult<&str, &str> {
+    pub fn incl_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "incl")
     }
 
     // Parse the `as` token. Rename it so clippy does not complain
-    pub fn az_tok(input: &str) -> IResult<&str, &str> {
+    pub fn az_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "as")
     }
 
-    pub fn add(input: &str) -> IResult<&str, &str> {
+    pub fn add(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, "+")
     }
 
-    pub fn sub(input: &str) -> IResult<&str, &str> {
+    pub fn sub(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, "-")
     }
 
-    pub fn mul(input: &str) -> IResult<&str, &str> {
+    pub fn mul(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, "*")
     }
 
-    pub fn div(input: &str) -> IResult<&str, &str> {
+    pub fn div(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, "/")
     }
 
-    pub fn left_parenthesis(input: &str) -> IResult<&str, &str> {
+    pub fn left_parenthesis(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, "(")
     }
 
-    pub fn right_parenthesis(input: &str) -> IResult<&str, &str> {
+    pub fn right_parenthesis(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, ")")
     }
 
-    pub fn _left_shift(input: &str) -> IResult<&str, &str> {
+    pub fn _left_shift(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, "<<")
     }
 
-    pub fn true_tok(input: &str) -> IResult<&str, &str> {
+    pub fn true_tok(input: &str) -> ParseResult<&str, &str> {
         let (input, t) = Token::specific_token(input, "true")?;
 
         Ok((input, t))
     }
 
-    pub fn false_tok(input: &str) -> IResult<&str, &str> {
+    pub fn false_tok(input: &str) -> ParseResult<&str, &str> {
         let (input, f) = Token::specific_token(input, "false")?;
 
         Ok((input, f))
     }
 
-    pub fn arrow(input: &str) -> IResult<&str, &str> {
+    pub fn arrow(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "->")
     }
 
-    pub fn comment_multi_start(input: &str) -> IResult<&str, &str> {
-        tag("/*")(input)
+    pub fn comment_multi_start(input: &str) -> ParseResult<&str, &str> {
+        let comment = tag("/*")(input)?;
+
+        Ok(comment)
     }
 
-    pub fn comment_multi_end(input: &str) -> IResult<&str, &str> {
-        tag("*/")(input)
+    pub fn comment_multi_end(input: &str) -> ParseResult<&str, &str> {
+        let comment_end = tag("*/")(input)?;
+
+        Ok(comment_end)
     }
 
-    pub fn comment_single(input: &str) -> IResult<&str, &str> {
-        tag("//")(input)
+    pub fn comment_single(input: &str) -> ParseResult<&str, &str> {
+        let comment = tag("//")(input)?;
+
+        Ok(comment)
     }
 
-    pub fn comment_shebang(input: &str) -> IResult<&str, &str> {
-        tag("#")(input)
+    pub fn comment_shebang(input: &str) -> ParseResult<&str, &str> {
+        let comment = tag("#")(input)?;
+
+        Ok(comment)
     }
 
-    pub fn dot(input: &str) -> IResult<&str, &str> {
+    pub fn dot(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, ".")
     }
 
-    pub fn inner_identifer(input: &str) -> IResult<&str, &str> {
+    pub fn inner_identifer(input: &str) -> ParseResult<&str, &str> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
         if RESERVED_KEYWORDS.contains(&id) {
-            return Err(nom::Err::Error((
-                "Identifer cannot be keyword",
-                ErrorKind::OneOf,
-            )));
+            return Err(
+                NomError(Error::new(ErrKind::Parsing).with_msg(String::from("identifier cannot be keyword")))
+            );
         }
 
         // FIXME: Ugly
@@ -238,14 +258,14 @@ impl Token {
             }
         }
 
-        Err(nom::Err::Error(("Invalid identifier", ErrorKind::Eof)))
+        Err(NomError(Error::new(ErrKind::Parsing).with_msg(String::from("invalid identifier"))))
     }
 
-    pub fn namespace_separator(input: &str) -> IResult<&str, &str> {
+    pub fn namespace_separator(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, "::")
     }
 
-    pub fn identifier(input: &str) -> IResult<&str, String> {
+    pub fn identifier(input: &str) -> ParseResult<&str, String> {
         let (input, first_id) = Token::inner_identifer(input)?;
 
         let (input, namespaced) =
@@ -264,27 +284,28 @@ impl Token {
         //
         // which is not a valid identifier
         if Token::namespace_separator(input).is_ok() {
-            return Err(nom::Err::Error((
-                "Cannot finish identifier on namespace separator `::`",
-                ErrorKind::OneOf,
-            )));
+            return Err(NomError(Error::new(ErrKind::Parsing).with_msg(String::from(
+                "cannot finish identifier on namespace separator `::`",
+            ))));
         }
 
         Ok((input, identifier))
     }
 
-    fn non_neg_num(input: &str) -> IResult<&str, &str> {
-        take_while1(|c| is_digit(c as u8))(input)
+    fn non_neg_num(input: &str) -> ParseResult<&str, &str> {
+        let num = take_while1(|c| is_digit(c as u8))(input)?;
+
+        Ok(num)
     }
 
-    pub fn bool_constant(input: &str) -> IResult<&str, bool> {
+    pub fn bool_constant(input: &str) -> ParseResult<&str, bool> {
         let (input, b) = alt((Token::true_tok, Token::false_tok))(input)?;
 
         // We can unwrap since we recognized valid tokens already
         Ok((input, b.parse::<bool>().unwrap()))
     }
 
-    pub fn float_constant(input: &str) -> IResult<&str, f64> {
+    pub fn float_constant(input: &str) -> ParseResult<&str, f64> {
         let (input, negative_sign) = opt(char('-'))(input)?;
         let (input, whole) = Token::int_constant(input)?;
         let (input, _) = char('.')(input)?;
@@ -295,15 +316,12 @@ impl Token {
                 Some(_) => Ok((input, -value)),
                 None => Ok((input, value)),
             },
-            // FIXME: Return better error with err message
-            Err(_) => Err(nom::Err::Error((
-                "Invalid floating point number",
-                ErrorKind::OneOf,
-            ))),
+            Err(_) => Err(NomError(Error::new(ErrKind::Parsing)
+                .with_msg(format!("invalid floating point number: {}.{}", whole, decimal)))),
         }
     }
 
-    pub fn int_constant(input: &str) -> IResult<&str, i64> {
+    pub fn int_constant(input: &str) -> ParseResult<&str, i64> {
         let (input, negative_sign) = opt(char('-'))(input)?;
         let (input, num) = Token::non_neg_num(input)?;
 
@@ -312,13 +330,14 @@ impl Token {
                 Some(_) => Ok((input, -value)),
                 None => Ok((input, value)),
             },
-            // FIXME: Return better error with err message
-            Err(_) => Err(nom::Err::Error(("Invalid integer", ErrorKind::OneOf))),
+            Err(_) => {
+                Err(NomError(Error::new(ErrKind::Parsing).with_msg(format!("invalid integer: {}", num))))
+            }
         }
     }
 
     /// Parse a single character constant and return the character inside the quotes
-    pub fn char_constant(input: &str) -> IResult<&str, char> {
+    pub fn char_constant(input: &str) -> ParseResult<&str, char> {
         let (input, _) = Token::single_quote(input)?;
         let (input, character) = anychar(input)?;
         let (input, _) = Token::single_quote(input)?;
@@ -329,9 +348,11 @@ impl Token {
     }
 
     /// Parse a string constant and return the characters between the double quotes
-    pub fn string_constant(input: &str) -> IResult<&str, &str> {
+    pub fn string_constant(input: &str) -> ParseResult<&str, &str> {
         // FIXME: This does not allow for string escaping yet
-        delimited(Token::double_quote, is_not("\""), Token::double_quote)(input)
+        let string = delimited(Token::double_quote, is_not("\""), Token::double_quote)(input)?;
+
+        Ok(string)
     }
 
     fn is_whitespace(c: char) -> bool {
@@ -348,11 +369,13 @@ impl Token {
     }
 
     /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
-    pub fn consume_whitespaces(input: &str) -> IResult<&str, &str> {
-        take_while1(Token::is_whitespace)(input)
+    pub fn consume_whitespaces(input: &str) -> ParseResult<&str, &str> {
+        let ws = take_while1(Token::is_whitespace)(input)?;
+
+        Ok(ws)
     }
 
-    pub fn consume_multi_comment(input: &str) -> IResult<&str, &str> {
+    pub fn consume_multi_comment(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = Token::comment_multi_start(input)?;
         let (input, content) = take_until("*/")(input)?;
         let (input, _) = Token::comment_multi_end(input)?;
@@ -360,18 +383,22 @@ impl Token {
         Ok((input, content))
     }
 
-    pub fn consume_single_comment(input: &str) -> IResult<&str, &str> {
+    pub fn consume_single_comment(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = Token::comment_single(input)?;
-        take_while(|c| c != '\n' && c != '\0')(input)
+        let comment = take_while(|c| c != '\n' && c != '\0')(input)?;
+
+        Ok(comment)
     }
 
-    pub fn consume_shebang_comment(input: &str) -> IResult<&str, &str> {
+    pub fn consume_shebang_comment(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = Token::comment_shebang(input)?;
-        take_while(|c| c != '\n' && c != '\0')(input)
+        let comment = take_while(|c| c != '\n' && c != '\0')(input)?;
+
+        Ok(comment)
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
-    fn consume_comment(input: &str) -> IResult<&str, &str> {
+    fn consume_comment(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = alt((
             Token::consume_shebang_comment,
             Token::consume_single_comment,
@@ -382,12 +409,14 @@ impl Token {
     }
 
     /// Consumes what is considered as "extra": Whitespaces, comments...
-    pub fn maybe_consume_extra(input: &str) -> IResult<&str, &str> {
+    pub fn maybe_consume_extra(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = many0(Token::consume_comment)(input)?;
         let (input, _) = many0(pair(Token::consume_whitespaces, Token::consume_comment))(input)?;
 
         // We can discard the accumulated comments
-        many0(Token::consume_whitespaces)(input).map(|(input, _)| (input, ""))
+        let comments = many0(Token::consume_whitespaces)(input).map(|(input, _)| (input, ""))?;
+
+        Ok(comments)
     }
 }
 
