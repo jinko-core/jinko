@@ -113,8 +113,10 @@ pub trait Instruction: InstructionClone + Downcast + Rename {
     /// only possible to execute as_bool on boolean variables, boolean constants. blocks
     /// returning a boolean and functions returning a boolean.
     fn as_bool(&self, interpreter: &mut Interpreter) -> Option<bool> {
-        interpreter.error(Error::new(ErrKind::Interpreter)
-            .with_msg(format!("cannot be used as a boolean: {}", self.print())));
+        interpreter.error(
+            Error::new(ErrKind::Interpreter)
+                .with_msg(format!("cannot be used as a boolean: {}", self.print())),
+        );
 
         None
     }

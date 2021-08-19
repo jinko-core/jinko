@@ -3,7 +3,7 @@
 //! of such an instruction produces no results. But they are useful when it comes to
 //! pretty printing and code formatting.
 
-use crate::{InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
+use crate::{InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub enum CommentKind {

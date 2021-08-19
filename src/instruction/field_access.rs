@@ -1,7 +1,7 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -45,7 +45,10 @@ impl Instruction for FieldAccess {
         };
         let field_instance = match calling_instance.get_field(&self.field_name) {
             Ok(field) => field,
-            Err(e) => { interpreter.error(e); return None }
+            Err(e) => {
+                interpreter.error(e);
+                return None;
+            }
         };
 
         interpreter.debug("FIELD ACCESS EXIT", &self.print());

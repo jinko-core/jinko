@@ -72,22 +72,32 @@ impl Instruction for Var {
             Some(instance) => match instance.ty() {
                 Some(ty) => match ty.name() {
                     // FIXME:
-                    "bool" => Some(JkBool::from_instance(&instance).as_bool(interpreter).unwrap()),
+                    "bool" => Some(
+                        JkBool::from_instance(&instance)
+                            .as_bool(interpreter)
+                            .unwrap(),
+                    ),
                     // We can safely unwrap since we checked the type of the variable
-                    _ => { interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
-                                "var {} cannot be interpreted as boolean",
-                                self.name
-                    ))); None },
+                    _ => {
+                        interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                            "var {} cannot be interpreted as boolean",
+                            self.name
+                        )));
+                        None
+                    }
                 },
                 None => todo!(
                     "If the type of the variable hasn't been determined yet,
                     typecheck it and call self.as_bool() again"
                 ),
             },
-            _ => { interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
-                        "var {} cannot be interpreted as boolean",
-                        self.name
-            ))); None },
+            _ => {
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                    "var {} cannot be interpreted as boolean",
+                    self.name
+                )));
+                None
+            }
         }
     }
 
@@ -95,8 +105,10 @@ impl Instruction for Var {
         let var = match interpreter.get_variable(self.name()) {
             Some(v) => v,
             None => {
-                interpreter.error(Error::new(ErrKind::Interpreter)
-                    .with_msg(format!("variable has not been declared: {}", self.name)));
+                interpreter.error(
+                    Error::new(ErrKind::Interpreter)
+                        .with_msg(format!("variable has not been declared: {}", self.name)),
+                );
 
                 return None;
             }

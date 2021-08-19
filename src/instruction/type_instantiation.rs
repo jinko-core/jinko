@@ -45,8 +45,11 @@ impl TypeInstantiation {
             // get_type() return a Rc, so this clones the Rc, not the TypeId
             Some(t) => Some(t.clone()),
             // FIXME: Fix Location and input
-            None => { interpreter.error(Error::new(ErrKind::Interpreter)
-                .with_msg(format!("Cannot find type {}", self.name().id())));
+            None => {
+                interpreter.error(
+                    Error::new(ErrKind::Interpreter)
+                        .with_msg(format!("Cannot find type {}", self.name().id())),
+                );
                 None
             }
         }

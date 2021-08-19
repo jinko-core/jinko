@@ -1,7 +1,7 @@
 //! The VarAssign struct is used when assigning values to variables.
 
 use crate::instruction::{InstrKind, Var};
-use crate::{ErrKind, Error, Instruction, Interpreter, Rename, ObjectInstance};
+use crate::{ErrKind, Error, Instruction, Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct VarAssign {

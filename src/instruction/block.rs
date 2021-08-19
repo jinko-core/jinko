@@ -17,7 +17,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
+use crate::{InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct Block {
@@ -105,8 +105,10 @@ impl Instruction for Block {
 
         self.instructions()
             .iter()
-            .map(|inst| inst.execute(interpreter))
-            .collect::<Option<Vec<ObjectInstance>>>()?;
+            // FIXME: Is this the correct behavior??
+            .for_each(|inst| {
+                inst.execute(interpreter);
+            });
 
         let ret_val = match &self.last {
             Some(e) => e.execute(interpreter),

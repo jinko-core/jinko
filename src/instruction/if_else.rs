@@ -16,7 +16,7 @@
 //! ```
 
 use crate::instruction::{Block, InstrKind, Instruction};
-use crate::{Interpreter, Rename, ObjectInstance};
+use crate::{Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct IfElse {

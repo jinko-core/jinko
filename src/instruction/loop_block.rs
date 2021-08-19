@@ -2,7 +2,7 @@
 //! different kinds, `for`, `while` or `loop`.
 
 use crate::instruction::{Block, InstrKind, Instruction, Var};
-use crate::{ErrKind, Error, Interpreter, Rename, ObjectInstance};
+use crate::{ErrKind, Error, Interpreter, ObjectInstance, Rename};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
@@ -78,8 +78,10 @@ impl Instruction for Loop {
                 // body. If it does not, break from the for.
 
                 // FIXME: Add error here too
-                interpreter.error(Error::new(ErrKind::Interpreter)
-                    .with_msg("for loops are currently unimplemented".to_string()));
+                interpreter.error(
+                    Error::new(ErrKind::Interpreter)
+                        .with_msg("for loops are currently unimplemented".to_string()),
+                );
                 return None;
 
                 // FIXME: Rework that code

@@ -2,7 +2,7 @@
 //! they get desugared into a normal function call.
 
 use crate::instruction::FunctionCall;
-use crate::{InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
+use crate::{InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct MethodCall {

@@ -2,7 +2,7 @@
 //! a name, a list of required arguments as well as an associated code block
 
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
-use crate::{ErrKind, Error, Interpreter, Rename, ObjectInstance};
+use crate::{ErrKind, Error, Interpreter, ObjectInstance, Rename};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -132,16 +132,20 @@ impl Instruction for FunctionDec {
         interpreter.debug_step("FUNCDEC ENTER");
 
         match self.fn_kind() {
-            FunctionKind::Func | FunctionKind::Ext => if let Err(e) = interpreter.add_function(self.clone()) {
-                interpreter.error(e);
+            FunctionKind::Func | FunctionKind::Ext => {
+                if let Err(e) = interpreter.add_function(self.clone()) {
+                    interpreter.error(e);
+                }
             }
-            FunctionKind::Test => if let Err(e) = interpreter.add_test(self.clone()) {
-                interpreter.error(e);
+            FunctionKind::Test => {
+                if let Err(e) = interpreter.add_test(self.clone()) {
+                    interpreter.error(e);
+                }
             }
-            FunctionKind::Mock | FunctionKind::Unknown => {
-                interpreter.error(Error::new(ErrKind::Interpreter)
-                    .with_msg(format!("unknown type for function {}", self.name())))
-            }
+            FunctionKind::Mock | FunctionKind::Unknown => interpreter.error(
+                Error::new(ErrKind::Interpreter)
+                    .with_msg(format!("unknown type for function {}", self.name())),
+            ),
         }
 
         interpreter.debug_step("FUNCDEC EXIT");

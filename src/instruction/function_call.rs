@@ -2,7 +2,7 @@
 //! function on execution.
 
 use crate::instruction::{FunctionDec, Var};
-use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -90,9 +90,11 @@ impl FunctionCall {
                 // it to access the Rc, and dereference it again to access the TypeDec.
                 Some(t) => (**t).clone(),
                 None => {
-                    interpreter.error(Error::new(ErrKind::Interpreter)
-                        .with_msg(format!("type not found: {}", func_arg.get_type().id())));
-                        return
+                    interpreter.error(
+                        Error::new(ErrKind::Interpreter)
+                            .with_msg(format!("type not found: {}", func_arg.get_type().id())),
+                    );
+                    return;
                 }
             };
 
@@ -133,11 +135,15 @@ impl Instruction for FunctionCall {
     fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         let function = match self.get_declaration(interpreter) {
             Ok(f) => f,
-            Err(e) => { interpreter.error(e); return None; }
+            Err(e) => {
+                interpreter.error(e);
+                return None;
+            }
         };
 
         if let Err(e) = self.check_args_count(&function) {
-            interpreter.error(e); return None;
+            interpreter.error(e);
+            return None;
         }
 
         interpreter.scope_enter();

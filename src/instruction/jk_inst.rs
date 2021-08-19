@@ -4,7 +4,7 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::{ErrKind, Error, Interpreter, Rename, ObjectInstance};
+use crate::{ErrKind, Error, Interpreter, ObjectInstance, Rename};
 
 /// The potential interpreter instructions
 #[derive(Clone, Debug, PartialEq)]

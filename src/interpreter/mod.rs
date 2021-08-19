@@ -15,9 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
-use crate::instruction::{
-    Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var
-};
+use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
 use crate::ObjectInstance;
 
 /// Type the interpreter uses for keys
@@ -95,8 +93,7 @@ impl Interpreter {
         // Include the standard library
         let stdlib_incl =
             crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
-        stdlib_incl
-            .execute(&mut i);
+        stdlib_incl.execute(&mut i);
 
         i
     }
@@ -261,7 +258,7 @@ impl Interpreter {
 
         match self.error_handler.has_errors() {
             true => Err(Error::new(ErrKind::Interpreter)),
-            false => Ok(res)
+            false => Ok(res),
         }
     }
 }

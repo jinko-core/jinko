@@ -3,7 +3,9 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{parser::Construct, ErrKind, Error, InstrKind, Instruction, Interpreter, Rename, ObjectInstance};
+use crate::{
+    parser::Construct, ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename,
+};
 
 /// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
 /// The interpreter is built from parsing the source file in the path.
@@ -82,7 +84,10 @@ impl Incl {
 
         let input = match std::fs::read_to_string(&formatted) {
             Ok(i) => i,
-            Err(e) => { interpreter.error(Error::from(e)); return None; }
+            Err(e) => {
+                interpreter.error(Error::from(e));
+                return None;
+            }
         };
 
         // We can't just parse the input, since it adds the instructions
@@ -90,16 +95,22 @@ impl Incl {
         // parse many instructions and add them to an empty interpreter
         let (remaining_input, instructions) = match Construct::many_instructions(input.as_str()) {
             Ok(tuple) => tuple,
-            Err(e) => { interpreter.error(Error::from(e)); return None }
+            Err(e) => {
+                interpreter.error(Error::from(e));
+                return None;
+            }
         };
 
         match remaining_input.len() {
             // The remaining input is empty: We parsed the whole file properly
             0 => Some((formatted, instructions)),
-            _ => { interpreter.error(Error::new(ErrKind::Parsing).with_msg(format!(
-                "error when parsing included file: {:?},\non the following input:\n{}",
-                formatted, remaining_input
-            ))); None },
+            _ => {
+                interpreter.error(Error::new(ErrKind::Parsing).with_msg(format!(
+                    "error when parsing included file: {:?},\non the following input:\n{}",
+                    formatted, remaining_input
+                )));
+                None
+            }
         }
     }
 
@@ -194,16 +205,13 @@ impl Instruction for Incl {
         // Temporarily change the path of the interpreter
         interpreter.set_path(Some(new_path));
 
-        content
-            .iter_mut()
-            .map(|instr| {
-                instr.prefix(&prefix);
+        content.iter_mut().for_each(|instr| {
+            instr.prefix(&prefix);
 
-                interpreter.debug("INCLUDING", instr.print().as_str());
+            interpreter.debug("INCLUDING", instr.print().as_str());
 
-                instr.execute(interpreter)
-            })
-            .collect::<Option<Vec<ObjectInstance>>>()?;
+            instr.execute(interpreter);
+        });
 
         // Reset the old path before leaving the instruction
         interpreter.set_path(old_path);
