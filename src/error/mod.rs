@@ -1,38 +1,42 @@
 //! The Error module contains helpful wrapper around possible errors in jinko. They
 //! are used by the interpreter as well as the parser.
 
-// FIXME: Add an error handler to the interpreter to pass around to functions and to use
-// to generate errors and maybe exit with a specific error code. The error handler can
-// also accumulate errors instead of always emitting them
-
 use std::path::{Path, PathBuf};
 
 use colored::Colorize;
 
+/// The role of the error handler is to keep track of errors and emit them properly
+/// once done
 #[derive(Default)]
 pub struct ErrorHandler {
     errors: Vec<Error>,
     file: PathBuf,
 }
 
-// FIXME: Add documentation
 impl ErrorHandler {
+    /// Emit all the errors contained in a handler
     pub fn emit(&self) {
         self.errors.iter().for_each(|e| e.emit(&self.file));
     }
 
+    /// Add a new error to the handler
     pub fn add(&mut self, err: Error) {
         self.errors.push(err)
     }
 
+    /// Remove all the errors contained in the handler
     pub fn clear(&mut self) {
         self.errors.clear()
     }
 
+    // FIXME: Remove this once location is implemented
+    /// Set the file that should be used by the error handler. This function should be
+    /// removed once locations are kept properly in the different instructions
     pub fn set_path(&mut self, file: PathBuf) {
         self.file = file;
     }
 
+    /// Has the error handler seen errors or not
     pub fn has_errors(&self) -> bool {
         self.errors.len() > 0
     }
@@ -84,15 +88,12 @@ impl Error {
         eprintln!("Error type: {}", kind_str.red());
         eprintln!(" ===> {}", file.to_string_lossy().green());
 
+        // FIXME: Is the formatting correct?
         eprintln!("    |");
         for line in self.msg.as_deref().unwrap_or("").lines() {
             eprintln!("    | {}", line);
         }
         eprintln!("    |");
-
-        // FIXME: Use somehow, somewhere
-        // The exit code depends on the kind of error
-        // std::process::exit(self.kind as i32 + 1);
     }
 
     pub fn new(kind: ErrKind) -> Error {
@@ -103,7 +104,6 @@ impl Error {
         }
     }
 
-    // FIXME: Work out something better...
     pub fn with_msg(self, msg: String) -> Error {
         Error {
             msg: Some(msg),
@@ -124,18 +124,21 @@ impl Error {
     }
 }
 
+/// I/O errors keep their messages
 impl std::convert::From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Error {
         Error::new(ErrKind::IO).with_msg(e.to_string())
     }
 }
 
+/// Nom errors are automatically parsing errors
 impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
     fn from(e: nom::Err<(&str, nom::error::ErrorKind)>) -> Error {
         Error::new(ErrKind::Parsing).with_msg(e.to_string())
     }
 }
 
+/// Likewise, if we need to convert from a nom::Err<jinko::Error> to a jinko::Error
 impl std::convert::From<nom::Err<Error>> for Error {
     fn from(e: nom::Err<Error>) -> Error {
         match e {
