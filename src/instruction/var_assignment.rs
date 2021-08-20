@@ -65,10 +65,9 @@ impl Instruction for VarAssign {
                 // for the first time. However, we entered the match arm because the variable
                 // is already present in the interpreter. Error out appropriately.
                 if self.mutable() {
-                    interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
-                        "Trying to redefine already defined variable: {}",
-                        v.name()
-                    )));
+                    let err_msg =
+                        format!("trying to redefine already defined variable: {}", v.name());
+                    interpreter.error(Error::new(ErrKind::Interpreter).with_msg(err_msg));
                     return None;
                 }
 
@@ -84,26 +83,21 @@ impl Instruction for VarAssign {
             }
         };
 
-        match var_creation {
-            // FIXME:
-            // - Cleanup
-            // - Merge two true arms together if possible
-            true => var.set_instance(self.value.execute_expression(interpreter)?),
-            false => match var.mutable() {
-                false => {
-                    // The variable already exists. So we need to error out if it isn't
-                    // mutable
-                    interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
-                        "Trying to assign value to non mutable variable `{}`: `{}`",
-                        var.name(),
-                        self.value.print()
-                    )));
-
-                    return None;
-                }
-                true => var.set_instance(self.value.execute_expression(interpreter)?),
-            },
-        };
+        match (var_creation, var.mutable()) {
+            (false, false) => {
+                // The variable already exists. So we need to error out if it isn't
+                // mutable
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                    "trying to assign value to non mutable variable `{}`: `{}`",
+                    var.name(),
+                    self.value.print()
+                )));
+                return None;
+            }
+            (true, _) | (false, true) => {
+                var.set_instance(self.value.execute_expression(interpreter)?)
+            }
+        }
 
         // We can unwrap safely since we checked that the variable does not
         // exist
