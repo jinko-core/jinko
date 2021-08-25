@@ -64,8 +64,7 @@ pub enum InstrKind {
 /// node that can be executed needs to implement it
 pub trait Instruction: InstructionClone + Downcast + Rename {
     /// Execute the instruction, altering the state of the interpreter. Executing
-    /// this method returns an InstrKind, so either a statement or an expression
-    /// containing a "return value".
+    /// this method may return an object instance
     fn execute(&self, _interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         unreachable!(
             "\n{}\n --> {}",
@@ -74,8 +73,8 @@ pub trait Instruction: InstructionClone + Downcast + Rename {
         )
     }
 
-    /// Execute the instruction, hoping for an InstrKind::Expression(Some(...)) to be
-    /// returned. If an invalid value is returned, error out.
+    /// Execute the instruction, hoping for an instance to be returned. If no instance is
+    /// returned, error out.
     fn execute_expression(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         let instance = self.execute(interpreter);
 
@@ -91,8 +90,9 @@ pub trait Instruction: InstructionClone + Downcast + Rename {
         }
     }
 
-    /// Execute the instruction, hoping for an InstrKind::Statement to be
-    /// returned. If an invalid value is returned, error out.
+    /// Execute the instruction, hoping for no instance to be returned. If an instance is
+    /// returned, error out.
+    // FIXME: Cleanup the return type of this function
     fn execute_statement(&self, interpreter: &mut Interpreter) -> Result<(), Error> {
         let instance = self.execute(interpreter);
 
@@ -109,8 +109,8 @@ pub trait Instruction: InstructionClone + Downcast + Rename {
         }
     }
 
-    /// Maybe execute the instruction, transforming it in a Rust bool if possible. It's
-    /// only possible to execute as_bool on boolean variables, boolean constants. blocks
+    /// Maybe execute the instruction, transforming it in a Rust bool if possible. It is
+    /// only possible to execute as_bool on boolean variables, boolean constants, blocks
     /// returning a boolean and functions returning a boolean.
     fn as_bool(&self, interpreter: &mut Interpreter) -> Option<bool> {
         interpreter.error(
