@@ -94,9 +94,7 @@ impl Instruction for VarAssign {
                 )));
                 return None;
             }
-            (true, _) | (false, true) => {
-                var.set_instance(self.value.execute_expression(interpreter)?)
-            }
+            (true, _) | (_, true) => var.set_instance(self.value.execute_expression(interpreter)?),
         }
 
         // We can unwrap safely since we checked that the variable does not
