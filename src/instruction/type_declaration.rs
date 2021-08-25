@@ -93,3 +93,9 @@ impl From<String> for TypeDec {
         }
     }
 }
+
+impl std::fmt::Display for TypeDec {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}

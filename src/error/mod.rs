@@ -67,6 +67,7 @@ impl ErrSpaceLocation {
 pub enum ErrKind {
     Parsing,
     Interpreter,
+    TypeChecker,
     IO,
 }
 
@@ -82,6 +83,7 @@ impl Error {
         let kind_str = match self.kind {
             ErrKind::Parsing => "Parsing",
             ErrKind::Interpreter => "Interpreter",
+            ErrKind::TypeChecker => "Typechecker",
             ErrKind::IO => "I/O",
         };
 

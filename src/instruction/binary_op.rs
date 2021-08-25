@@ -93,13 +93,14 @@ impl Instruction for BinaryOp {
         let r_value = self.execute_node(&*self.rhs, interpreter)?;
 
         if l_value.ty() != r_value.ty() {
-            interpreter.error(Error::new(ErrKind::Interpreter).with_msg(
-                // FIXME: Should be a type error
+            interpreter.error(Error::new(ErrKind::TypeChecker).with_msg(
+                // FIXME: If we unwrap and panic here, this is another typechecking
+                // error. Implement this once typechecking is implemented
                 format!(
-                    "Trying to do binary operation on invalid types: {:#?} {} {:#?}",
-                    l_value.ty(),
+                    "Trying to do binary operation on invalid types: `{}` {} `{}`",
+                    l_value.ty().unwrap(),
                     self.op.as_str(),
-                    r_value.ty() // FIXME: Display correctly
+                    r_value.ty().unwrap()
                 ),
             ));
             return None;
