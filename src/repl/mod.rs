@@ -82,6 +82,7 @@ impl Repl {
             };
 
             interpreter.emit_errors();
+            interpreter.clear_errors();
 
             line_reader.set_prompt(&Prompt::get(&interpreter))?;
         }
