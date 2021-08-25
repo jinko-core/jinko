@@ -79,7 +79,7 @@ impl Instruction for BinaryOp {
         format!(
             "{} {} {}",
             self.lhs.print(),
-            self.op.to_str(),
+            self.op.as_str(),
             self.rhs.print()
         )
     }
@@ -87,7 +87,7 @@ impl Instruction for BinaryOp {
     fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug_step("BINOP ENTER");
 
-        interpreter.debug("OP", self.op.to_str());
+        interpreter.debug("OP", self.op.as_str());
 
         let l_value = self.execute_node(&*self.lhs, interpreter)?;
         let r_value = self.execute_node(&*self.rhs, interpreter)?;
@@ -98,7 +98,7 @@ impl Instruction for BinaryOp {
                 format!(
                     "Trying to do binary operation on invalid types: {:#?} {} {:#?}",
                     l_value.ty(),
-                    self.op.to_str(),
+                    self.op.as_str(),
                     r_value.ty() // FIXME: Display correctly
                 ),
             ));
@@ -153,8 +153,8 @@ impl Rename for BinaryOp {
 mod tests {
     use super::*;
     use crate::value::JkInt;
+    use crate::Interpreter;
     use crate::ToObjectInstance;
-    use crate::{InstrKind, Interpreter};
 
     fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
         let l = Box::new(JkInt::from(l_num));
@@ -167,8 +167,9 @@ mod tests {
 
         assert_eq!(
             binop.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(res).to_instance()))
+            JkInt::from(res).to_instance(),
         );
+        assert!(!i.error_handler.has_errors());
     }
 
     #[test]
@@ -218,8 +219,9 @@ mod tests {
 
         assert_eq!(
             binary_op.rhs().execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(36).to_instance()))
+            JkInt::from(36).to_instance(),
         );
+        assert!(!i.error_handler.has_errors());
     }
 
     #[test]
@@ -241,7 +243,8 @@ mod tests {
 
         assert_eq!(
             binary_op.lhs().execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(36).to_instance()))
+            JkInt::from(36).to_instance()
         );
+        assert!(!i.error_handler.has_errors());
     }
 }

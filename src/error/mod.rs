@@ -38,7 +38,7 @@ impl ErrorHandler {
 
     /// Has the error handler seen errors or not
     pub fn has_errors(&self) -> bool {
-        self.errors.len() > 0
+        !self.errors.is_empty()
     }
 }
 

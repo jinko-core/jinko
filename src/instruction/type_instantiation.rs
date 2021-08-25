@@ -181,14 +181,16 @@ mod test {
         ];
         let t = TypeDec::new("Type_Test".to_owned(), fields);
 
-        t.execute(&mut interpreter).unwrap();
+        t.execute(&mut interpreter);
 
         let mut t_inst = TypeInstantiation::new(TypeId::from("Type_Test"));
 
-        match t_inst.execute(&mut interpreter) {
-            Ok(_) => assert!(false, "Given 0 field to 2 fields type"),
-            Err(_) => assert!(true),
-        }
+        assert!(t_inst.execute(&mut interpreter).is_none());
+        assert!(
+            interpreter.error_handler.has_errors(),
+            "Given 0 field to 2 fields type"
+        );
+        interpreter.clear_errors();
 
         t_inst.add_field(VarAssign::new(
             false,
@@ -196,10 +198,12 @@ mod test {
             Box::new(JkInt::from(12)),
         ));
 
-        match t_inst.execute(&mut interpreter) {
-            Ok(_) => assert!(false, "Given 1 field to 2 fields type"),
-            Err(_) => assert!(true),
-        }
+        assert!(t_inst.execute(&mut interpreter).is_none());
+        assert!(
+            interpreter.error_handler.has_errors(),
+            "Given 1 field to 2 fields type"
+        );
+        interpreter.clear_errors();
 
         t_inst.add_field(VarAssign::new(
             false,
@@ -208,9 +212,10 @@ mod test {
         ));
 
         assert!(
-            t_inst.execute(&mut interpreter).is_ok(),
+            t_inst.execute(&mut interpreter).is_some(),
             "Type instantiation should have a correct number of fields now"
         );
+        assert!(!interpreter.error_handler.has_errors());
     }
 
     #[test]
@@ -218,7 +223,7 @@ mod test {
         use super::super::{DecArg, TypeId};
         use crate::value::{JkInt, JkString};
 
-        const TYPE_NAME: &'static str = "Type_Name";
+        const TYPE_NAME: &str = "Type_Name";
 
         let mut interpreter = Interpreter::new();
 
@@ -229,7 +234,7 @@ mod test {
         ];
         let t = TypeDec::new(TYPE_NAME.to_owned(), fields);
 
-        t.execute(&mut interpreter).unwrap();
+        t.execute(&mut interpreter);
 
         let mut t_inst = TypeInstantiation::new(TypeId::new(TYPE_NAME.to_string()));
         t_inst.add_field(VarAssign::new(
@@ -243,13 +248,10 @@ mod test {
             Box::new(JkInt::from(12)),
         ));
 
-        let instance = match t_inst.execute(&mut interpreter).unwrap() {
-            InstrKind::Expression(Some(instance)) => instance,
-            _ => {
-                return assert!(
-                    false,
-                    "Type instantiation should have returned an Expression"
-                )
+        let instance = match t_inst.execute(&mut interpreter) {
+            Some(instance) => instance,
+            None => {
+                unreachable!("Type instantiation should have returned an Expression")
             }
         };
 
@@ -267,14 +269,8 @@ mod test {
         );
         assert_eq!(instance.size(), 33);
 
-        assert_eq!(
-            instance.fields().as_ref().unwrap().get("a"),
-            Some(&(0 as usize, 25 as usize))
-        );
-        assert_eq!(
-            instance.fields().as_ref().unwrap().get("b"),
-            Some(&(25 as usize, 8 as usize))
-        );
+        assert_eq!(instance.fields().as_ref().unwrap().get("a"), Some(&(0, 25)));
+        assert_eq!(instance.fields().as_ref().unwrap().get("b"), Some(&(25, 8)));
     }
 
     #[test]
@@ -287,6 +283,7 @@ mod test {
             .unwrap()
             .1;
 
-        assert!(instr.execute(&mut i).is_err());
+        assert!(instr.execute(&mut i).is_none());
+        assert!(i.error_handler.has_errors());
     }
 }

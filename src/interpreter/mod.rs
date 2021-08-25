@@ -24,6 +24,7 @@ type IKey = String;
 /// Name of the entry point in jinko
 const ENTRY_NAME: &str = "__entry";
 
+// FIXME: Rework visibility here
 /// An interpreter represents the state of a jinko program. It contains functions,
 /// variables, tests... and can be optimized, typechecked, executed or
 /// serialized/deserialized to bytecode.
@@ -51,7 +52,7 @@ pub struct Interpreter {
     included: HashSet<PathBuf>,
 
     /// Errors being kept by the interpreter
-    error_handler: ErrorHandler,
+    pub(crate) error_handler: ErrorHandler,
 }
 
 impl Default for Interpreter {
@@ -108,7 +109,7 @@ impl Interpreter {
         self.path = path;
         // FIXME: Is that correct? Remove that clone()...
         self.error_handler
-            .set_path(self.path.clone().unwrap_or(PathBuf::new()));
+            .set_path(self.path.clone().unwrap_or_default());
 
         match &self.path {
             Some(p) => {

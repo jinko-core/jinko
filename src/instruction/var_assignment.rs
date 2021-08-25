@@ -146,13 +146,13 @@ mod tests {
         let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
         let va_0 = Construct::var_assignment("a = 15").unwrap().1;
 
-        va_init.execute(&mut i).unwrap();
-        va_0.execute(&mut i).unwrap();
+        va_init.execute(&mut i);
+        va_0.execute(&mut i);
 
         let va_get = Construct::variable("a").unwrap().1;
         assert_eq!(
             va_get.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(15).to_instance()))
+            JkInt::from(15).to_instance()
         );
     }
 
@@ -162,11 +162,12 @@ mod tests {
         let va_init = Construct::var_assignment("a = 13").unwrap().1;
         let va_0 = Construct::var_assignment("a = 15").unwrap().1;
 
-        va_init.execute(&mut i).unwrap();
-        match va_0.execute(&mut i) {
-            Ok(_) => assert!(false, "Can't assign twice to immutable variables"),
-            Err(_) => assert!(true),
+        va_init.execute(&mut i);
+        if va_0.execute(&mut i).is_some() {
+            unreachable!("Can't assign twice to immutable variables");
         }
+
+        assert!(i.error_handler.has_errors());
     }
 
     #[test]
@@ -175,10 +176,10 @@ mod tests {
         let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
         let va_0 = Construct::var_assignment("mut a = 15").unwrap().1;
 
-        va_init.execute(&mut i).unwrap();
-        match va_0.execute(&mut i) {
-            Ok(_) => assert!(false, "Can't create variables twice"),
-            Err(_) => assert!(true),
+        va_init.execute(&mut i);
+        if va_0.execute(&mut i).is_some() {
+            unreachable!("Can't create variables twice");
         }
+        assert!(i.error_handler.has_errors());
     }
 }

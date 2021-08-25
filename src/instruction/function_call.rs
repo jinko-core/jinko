@@ -203,17 +203,20 @@ mod tests {
 
         let mut f_call = FunctionCall::new("func0".to_string());
 
-        match f_call.execute(&mut interpreter) {
-            Ok(_) => assert!(false, "Given 0 arguments to 2 arguments function"),
-            Err(_) => assert!(true),
-        }
+        assert!(f_call.execute(&mut interpreter).is_none());
+        assert!(
+            interpreter.error_handler.has_errors(),
+            "Given 0 arguments to 2 arguments function"
+        );
+        interpreter.clear_errors();
 
         f_call.add_arg(Box::new(JkInt::from(12)));
 
-        match f_call.execute(&mut interpreter) {
-            Ok(_) => assert!(false, "Given 1 arguments to 2 arguments function"),
-            Err(_) => assert!(true),
-        }
+        assert!(f_call.execute(&mut interpreter).is_none());
+        assert!(
+            interpreter.error_handler.has_errors(),
+            "Given 1 arguments to 2 arguments function"
+        );
     }
 
     #[test]
@@ -228,11 +231,11 @@ mod tests {
             .1;
         let func_call = Construct::instruction("second(1, 2)").unwrap().1;
 
-        func_dec.execute(&mut i).unwrap();
+        func_dec.execute(&mut i);
 
         assert_eq!(
             func_call.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(2).to_instance()))
+            JkInt::from(2).to_instance()
         );
     }
 
@@ -248,11 +251,11 @@ mod tests {
             .1;
         let func_call = Construct::instruction("add(1, 2)").unwrap().1;
 
-        func_dec.execute(&mut i).unwrap();
+        func_dec.execute(&mut i);
 
         assert_eq!(
             func_call.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(3).to_instance()))
+            JkInt::from(3).to_instance()
         );
     }
 
@@ -268,11 +271,11 @@ mod tests {
             .1;
         let func_call = Construct::instruction("one()").unwrap().1;
 
-        func_dec.execute(&mut i).unwrap();
+        func_dec.execute(&mut i);
 
         assert_eq!(
             func_call.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(1).to_instance()))
+            JkInt::from(1).to_instance()
         );
     }
 }

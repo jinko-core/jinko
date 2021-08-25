@@ -77,15 +77,15 @@ mod tests {
         let inst = Construct::instruction("type Point(x: int, y: int); ")
             .unwrap()
             .1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         let inst = Construct::instruction("func basic() -> Point { Point { x = 15, y = 14 }}")
             .unwrap()
             .1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         let inst = Construct::instruction("b = basic();").unwrap().1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         interpreter
     }
@@ -95,9 +95,9 @@ mod tests {
         let mut interpreter = setup();
 
         let inst = Construct::instruction("b.x").unwrap().1;
-        let res = match inst.execute(&mut interpreter).unwrap() {
-            InstrKind::Expression(Some(i)) => i,
-            _ => return assert!(false, "Error when accessing valid field"),
+        let res = match inst.execute(&mut interpreter) {
+            Some(i) => i,
+            None => return assert!(false, "Error when accessing valid field"),
         };
 
         let mut exp = JkInt::from(15).to_instance();
@@ -114,9 +114,9 @@ mod tests {
         let inst = Construct::instruction("Point { x = 1, y = 2 }.x")
             .unwrap()
             .1;
-        let res = match inst.execute(&mut interpreter).unwrap() {
-            InstrKind::Expression(Some(i)) => i,
-            _ => return assert!(false, "Error when accesing valid field"),
+        let res = match inst.execute(&mut interpreter) {
+            Some(i) => i,
+            None => unreachable!("Error when accesing valid field"),
         };
 
         let mut exp = JkInt::from(1).to_instance();
@@ -147,9 +147,9 @@ mod tests {
         inst.execute(&mut interpreter).unwrap();
 
         let inst = Construct::instruction("p.x.y").unwrap().1;
-        let res = match inst.execute(&mut interpreter).unwrap() {
-            InstrKind::Expression(Some(i)) => i,
-            _ => return assert!(false, "Error when accessing valid multi field"),
+        let res = match inst.execute(&mut interpreter) {
+            Some(i) => i,
+            None => unreachable!("Error when accessing valid multi field"),
         };
 
         let mut expected = JkInt::from(2).to_instance();
@@ -164,10 +164,11 @@ mod tests {
         let mut interpreter = setup();
 
         let inst = Construct::instruction("func void() {}").unwrap().1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         let inst = Construct::instruction("void().field").unwrap().1;
-        assert!(inst.execute(&mut interpreter).is_err())
+        assert!(inst.execute(&mut interpreter).is_none());
+        assert!(interpreter.error_handler.has_errors())
     }
 
     #[test]
@@ -175,7 +176,8 @@ mod tests {
         let mut interpreter = setup();
 
         let inst = Construct::instruction("b.not_a_field").unwrap().1;
-        assert!(inst.execute(&mut interpreter).is_err())
+        assert!(inst.execute(&mut interpreter).is_none());
+        assert!(interpreter.error_handler.has_errors());
     }
 
     #[test]
@@ -183,9 +185,10 @@ mod tests {
         let mut interpreter = setup();
 
         let inst = Construct::instruction("i = 12").unwrap().1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         let inst = Construct::instruction("i.field_on_primitive").unwrap().1;
-        assert!(inst.execute(&mut interpreter).is_err())
+        assert!(inst.execute(&mut interpreter).is_none());
+        assert!(interpreter.error_handler.has_errors())
     }
 }

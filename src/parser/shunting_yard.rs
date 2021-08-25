@@ -230,7 +230,7 @@ mod tests {
 
     fn sy_assert(input: &str, result: i64) {
         use crate::instance::ToObjectInstance;
-        use crate::{InstrKind, Interpreter};
+        use crate::Interpreter;
 
         let boxed_output = ShuntingYard::parse(input).unwrap().1;
         let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
@@ -239,7 +239,7 @@ mod tests {
 
         assert_eq!(
             output.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(result).to_instance()))
+            JkInt::from(result).to_instance()
         );
     }
 

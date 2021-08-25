@@ -148,9 +148,6 @@ mod tests {
 
         i.add_variable(v.clone()).unwrap();
 
-        assert_eq!(
-            v.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(instance))
-        );
+        assert_eq!(v.execute(&mut i).unwrap(), instance);
     }
 }

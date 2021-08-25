@@ -28,7 +28,7 @@ impl Operator {
     }
 
     /// Return the operator's representation
-    pub fn to_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         match self {
             Operator::Add => "+",
             Operator::Sub => "-",

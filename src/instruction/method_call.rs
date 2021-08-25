@@ -71,7 +71,7 @@ mod tests {
         let func_dec = Construct::instruction("func first(a: int, b: int) -> int { a }")
             .unwrap()
             .1;
-        func_dec.execute(&mut interpreter).unwrap();
+        func_dec.execute(&mut interpreter);
 
         let var1 = Box::new(JkInt::from(1));
         let var2 = Box::new(JkInt::from(2));
@@ -82,7 +82,7 @@ mod tests {
 
         assert_eq!(
             mc.execute(&mut interpreter).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(1).to_instance()))
+            JkInt::from(1).to_instance()
         );
     }
 }

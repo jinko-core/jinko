@@ -184,7 +184,8 @@ mod tests {
 
         let mut i = Interpreter::new();
 
-        assert_eq!(b.execute(&mut i).unwrap(), InstrKind::Statement);
+        assert_eq!(b.execute(&mut i), None);
+        assert!(!i.error_handler.has_errors());
     }
 
     #[test]
@@ -197,7 +198,8 @@ mod tests {
 
         let mut i = Interpreter::new();
 
-        assert_eq!(b.execute(&mut i).unwrap(), InstrKind::Statement);
+        assert_eq!(b.execute(&mut i), None);
+        assert!(!i.error_handler.has_errors());
     }
 
     #[test]
@@ -215,9 +217,7 @@ mod tests {
 
         let mut i = Interpreter::new();
 
-        assert_eq!(
-            b.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(18).to_instance()))
-        );
+        assert_eq!(b.execute(&mut i).unwrap(), JkInt::from(18).to_instance());
+        assert!(!i.error_handler.has_errors());
     }
 }
