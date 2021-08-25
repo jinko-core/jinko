@@ -126,15 +126,18 @@ impl Error {
     }
 }
 
+use std::convert::From;
+use std::io;
+
 /// I/O errors keep their messages
-impl std::convert::From<std::io::Error> for Error {
+impl From<io::Error> for Error {
     fn from(e: std::io::Error) -> Error {
         Error::new(ErrKind::IO).with_msg(e.to_string())
     }
 }
 
 /// Nom errors are automatically parsing errors
-impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
+impl From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
     fn from(e: nom::Err<(&str, nom::error::ErrorKind)>) -> Error {
         Error::new(ErrKind::Parsing).with_msg(e.to_string())
     }
@@ -145,7 +148,7 @@ impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
 /// Error or Failure state in order to specify to parse combinators how to proceed. You
 /// can see this being used with the `NomError` alias throughout the project. Thus, we
 /// might need to lower the wrapped errors back into our regular errors
-impl std::convert::From<nom::Err<Error>> for Error {
+impl From<nom::Err<Error>> for Error {
     fn from(e: nom::Err<Error>) -> Error {
         match e {
             nom::Err::Incomplete(_) => Error::new(ErrKind::Parsing),
