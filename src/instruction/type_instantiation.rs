@@ -126,16 +126,7 @@ impl Instruction for TypeInstantiation {
             let field_name = named_arg.symbol();
 
             // FIXME: Use execute_expression() here?
-            let instance = match field_instr.execute(interpreter) {
-                Some(instance) => instance,
-                _ => {
-                    interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
-                        "an expression was excepted but a statement was found: `{}`",
-                        field_name
-                    )));
-                    return None;
-                }
-            };
+            let instance = field_instr.execute_expression(interpreter)?;
 
             let inst_size = instance.size();
             size += inst_size;
