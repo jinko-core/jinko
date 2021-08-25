@@ -57,7 +57,6 @@ impl Instruction for Loop {
             },
             LoopKind::While(cond) => {
                 interpreter.debug_step("WHILE ENTER");
-                // FIXME: Add errors here too
                 while cond.as_bool(interpreter)? {
                     self.block.execute(interpreter)?;
                 }
@@ -77,7 +76,6 @@ impl Instruction for Loop {
                 // that that result, as a boolean, returns true. If it does, execute the
                 // body. If it does not, break from the for.
 
-                // FIXME: Add error here too
                 interpreter.error(
                     Error::new(ErrKind::Interpreter)
                         .with_msg("for loops are currently unimplemented".to_string()),

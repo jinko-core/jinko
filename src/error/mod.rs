@@ -73,7 +73,7 @@ pub enum ErrKind {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Error {
-    pub(crate) kind: ErrKind,
+    kind: ErrKind,
     msg: Option<String>,
     loc: Option<ErrSpaceLocation>,
 }
@@ -140,7 +140,11 @@ impl std::convert::From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
     }
 }
 
-/// Likewise, if we need to convert from a nom::Err<jinko::Error> to a jinko::Error
+/// Likewise, if we need to convert from a nom::Err<jinko::Error> to a jinko::Error.
+/// While this pattern may seem weird, nom sometimes requires you to wrap errors in an
+/// Error or Failure state in order to specify to parse combinators how to proceed. You
+/// can see this being used with the `NomError` alias throughout the project. Thus, we
+/// might need to lower the wrapped errors back into our regular errors
 impl std::convert::From<nom::Err<Error>> for Error {
     fn from(e: nom::Err<Error>) -> Error {
         match e {

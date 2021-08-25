@@ -105,7 +105,6 @@ impl Instruction for Block {
 
         self.instructions()
             .iter()
-            // FIXME: Is this the correct behavior??
             .for_each(|inst| {
                 inst.execute(interpreter);
             });
