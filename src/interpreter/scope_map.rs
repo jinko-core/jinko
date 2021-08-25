@@ -8,7 +8,7 @@ use std::collections::{HashMap, LinkedList};
 use std::rc::Rc;
 
 use crate::instruction::{FunctionDec, TypeDec, Var};
-use crate::{Instruction, JkErrKind, JkError};
+use crate::{ErrKind, Error, Instruction};
 
 /// A scope contains a set of available variables and functions
 #[derive(Clone)]
@@ -44,14 +44,10 @@ impl Scope {
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_variable(&mut self, var: Var) -> Result<(), JkError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         match self.get_variable(var.name()) {
-            Some(_) => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!("variable already declared: {}", var.name()),
-                None,
-                var.name().to_owned(),
-            )),
+            Some(_) => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("variable already declared: {}", var.name()))),
             None => {
                 self.variables.insert(var.name().to_owned(), var);
                 Ok(())
@@ -60,30 +56,22 @@ impl Scope {
     }
 
     /// Remove a variable from the most recently created scope, if it exists
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JkError> {
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
         match self.get_variable(var.name()) {
             Some(_) => {
                 self.variables.remove(var.name()).unwrap();
                 Ok(())
             }
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!("variable does not exist: {}", var.name()),
-                None,
-                var.name().to_owned(),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("variable does not exist: {}", var.name()))),
         }
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JkError> {
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
         match self.get_function(func.name()) {
-            Some(_) => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!("function already declared: {}", func.name()),
-                None,
-                func.name().to_owned(),
-            )),
+            Some(_) => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("function already declared: {}", func.name()))),
             None => {
                 self.functions.insert(func.name().to_owned(), Rc::new(func));
                 Ok(())
@@ -92,14 +80,10 @@ impl Scope {
     }
 
     /// Add a type to the most recently created scope, if it doesn't already exist
-    pub fn add_type(&mut self, type_dec: TypeDec) -> Result<(), JkError> {
+    pub fn add_type(&mut self, type_dec: TypeDec) -> Result<(), Error> {
         match self.get_type(type_dec.name()) {
-            Some(_) => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!("type already declared: {}", type_dec.name()),
-                None,
-                type_dec.name().to_owned(),
-            )),
+            Some(_) => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("type already declared: {}", type_dec.name()))),
             None => {
                 self.types
                     .insert(type_dec.name().to_owned(), Rc::new(type_dec));
@@ -194,54 +178,38 @@ impl ScopeMap {
     }
 
     /// Add a variable to the current scope if it hasn't been added before
-    pub fn add_variable(&mut self, var: Var) -> Result<(), JkError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(var),
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
-                String::from("Adding variable to empty scopemap"),
-                None,
-                var.name().to_owned(),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(String::from("Adding variable to empty scopemap"))),
         }
     }
 
     /// Remove a variable from the current scope if it hasn't been added before
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JkError> {
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.remove_variable(var),
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
-                String::from("Removing variable from empty scopemap"),
-                None,
-                var.name().to_owned(),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(String::from("Removing variable from empty scopemap"))),
         }
     }
 
     /// Add a function to the current scope if it hasn't been added before
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), JkError> {
+    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(func),
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
-                String::from("Adding function to empty scopemap"),
-                None,
-                func.name().to_owned(),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(String::from("Adding function to empty scopemap"))),
         }
     }
 
     /// Add a type to the current scope if it hasn't been added before
-    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), JkError> {
+    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_type(custom_type),
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
-                String::from("Adding new custom type to empty scopemap"),
-                None,
-                custom_type.name().to_owned(),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(String::from("Adding new custom type to empty scopemap"))),
         }
     }
 

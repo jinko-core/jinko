@@ -1,6 +1,6 @@
 use super::{DecArg, InstrKind, Instruction};
 
-use crate::{Interpreter, JkError, Rename};
+use crate::{Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
@@ -30,15 +30,18 @@ impl Instruction for TypeDec {
         InstrKind::Statement
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug_step(&format!("CUSTOM TYPE {} ENTER", self.name));
 
-        interpreter.add_type(self.clone())?;
+        if let Err(e) = interpreter.add_type(self.clone()) {
+            interpreter.error(e);
+            return None;
+        }
 
         interpreter.debug_step(&format!("CUSTOM TYPE {} EXIT", self.name));
 
         // Declaring a type is always a statement (for now)
-        Ok(InstrKind::Statement)
+        None
     }
 
     // FIXME: Really unefficient
@@ -88,5 +91,11 @@ impl From<String> for TypeDec {
             name: type_name,
             fields: vec![],
         }
+    }
+}
+
+impl std::fmt::Display for TypeDec {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }

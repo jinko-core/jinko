@@ -4,9 +4,7 @@
 //! or it's not.
 
 use crate::instruction::TypeDec;
-use crate::{
-    InstrKind, Instruction, Interpreter, JkBool, JkErrKind, JkError, ObjectInstance, Rename,
-};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, JkBool, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct Var {
@@ -65,54 +63,60 @@ impl Instruction for Var {
         )
     }
 
-    fn as_bool(&self, i: &mut Interpreter) -> Result<bool, JkError> {
+    fn as_bool(&self, interpreter: &mut Interpreter) -> Option<bool> {
         use crate::FromObjectInstance;
 
         // FIXME: Cleanup
 
-        match self.execute(i)? {
-            InstrKind::Expression(Some(instance)) => match instance.ty() {
+        match self.execute(interpreter) {
+            Some(instance) => match instance.ty() {
                 Some(ty) => match ty.name() {
                     // FIXME:
-                    "bool" => Ok(JkBool::from_instance(&instance).as_bool(i).unwrap()),
+                    "bool" => Some(
+                        JkBool::from_instance(&instance)
+                            .as_bool(interpreter)
+                            .unwrap(),
+                    ),
                     // We can safely unwrap since we checked the type of the variable
-                    _ => Err(JkError::new(
-                        JkErrKind::Interpreter,
-                        format!("var {} cannot be interpreted as boolean", self.name),
-                        None,
-                        self.print(),
-                    )),
+                    _ => {
+                        interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                            "var {} cannot be interpreted as boolean",
+                            self.name
+                        )));
+                        None
+                    }
                 },
                 None => todo!(
                     "If the type of the variable hasn't been determined yet,
                     typecheck it and call self.as_bool() again"
                 ),
             },
-            _ => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!("var {} cannot be interpreted as boolean", self.name),
-                None,
-                self.print(),
-            )),
+            _ => {
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                    "var {} cannot be interpreted as boolean",
+                    self.name
+                )));
+                None
+            }
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         let var = match interpreter.get_variable(self.name()) {
             Some(v) => v,
             None => {
-                return Err(JkError::new(
-                    JkErrKind::Interpreter,
-                    format!("variable has not been declared: {}", self.name),
-                    None,
-                    self.name().to_owned(),
-                ))
+                interpreter.error(
+                    Error::new(ErrKind::Interpreter)
+                        .with_msg(format!("variable has not been declared: {}", self.name)),
+                );
+
+                return None;
             }
         };
 
         interpreter.debug("VAR", var.print().as_ref());
 
-        Ok(InstrKind::Expression(Some(var.instance())))
+        Some(var.instance())
     }
 }
 
@@ -144,9 +148,6 @@ mod tests {
 
         i.add_variable(v.clone()).unwrap();
 
-        assert_eq!(
-            v.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(instance))
-        );
+        assert_eq!(v.execute(&mut i).unwrap(), instance);
     }
 }

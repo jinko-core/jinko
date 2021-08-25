@@ -2,7 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use crate::{Interpreter, JkErrKind, JkError, ObjectInstance};
+use crate::{ErrKind, Error, Interpreter, ObjectInstance};
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
@@ -51,19 +51,21 @@ pub use var_assignment::VarAssign;
 /// expression. An expression contains an instance of a result. For example,
 /// `1 + 1` is an expression: It will contain the result of the addition of one and one.
 /// `print("jinko")` is a statement: There is no "return value"
+// FIXME: Make InstrKind a simpler enum
 #[derive(Debug, PartialEq, Clone)]
 pub enum InstrKind {
     Statement,
     Expression(Option<ObjectInstance>),
 }
 
+// FIXME: Fix documentation for execute_*()
+
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
 pub trait Instruction: InstructionClone + Downcast + Rename {
     /// Execute the instruction, altering the state of the interpreter. Executing
-    /// this method returns an InstrKind, so either a statement or an expression
-    /// containing a "return value".
-    fn execute(&self, _interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    /// this method may return an object instance
+    fn execute(&self, _interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         unreachable!(
             "\n{}\n --> {}",
             self.print(),
@@ -71,50 +73,52 @@ pub trait Instruction: InstructionClone + Downcast + Rename {
         )
     }
 
-    /// Execute the instruction, hoping for an InstrKind::Expression(Some(...)) to be
-    /// returned. If an invalid value is returned, error out.
-    fn execute_expression(&self, i: &mut Interpreter) -> Result<ObjectInstance, JkError> {
-        match self.execute(i)? {
-            InstrKind::Expression(Some(result)) => Ok(result),
-            _ => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!(
+    /// Execute the instruction, hoping for an instance to be returned. If no instance is
+    /// returned, error out.
+    fn execute_expression(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
+        let instance = self.execute(interpreter);
+
+        match instance {
+            Some(obj) => Some(obj),
+            None => {
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
                     "statement found when expression was expected: {}",
                     self.print()
-                ),
-                None,
-                self.print(),
-            )),
+                )));
+                None
+            }
         }
     }
 
-    /// Execute the instruction, hoping for an InstrKind::Statement to be
-    /// returned. If an invalid value is returned, error out.
-    fn execute_statement(&self, i: &mut Interpreter) -> Result<(), JkError> {
-        match self.execute(i)? {
-            InstrKind::Statement => Ok(()),
-            _ => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!(
+    /// Execute the instruction, hoping for no instance to be returned. If an instance is
+    /// returned, error out.
+    // FIXME: Cleanup the return type of this function
+    fn execute_statement(&self, interpreter: &mut Interpreter) -> Result<(), Error> {
+        let instance = self.execute(interpreter);
+
+        match instance {
+            None => Ok(()),
+            Some(_) => {
+                let e = Error::new(ErrKind::Interpreter).with_msg(format!(
                     "expression found when statement was expected: {}",
                     self.print()
-                ),
-                None,
-                self.print(),
-            )),
+                ));
+                interpreter.error(e.clone());
+                Err(e)
+            }
         }
     }
 
-    /// Maybe execute the instruction, transforming it in a Rust bool if possible. It's
-    /// only possible to execute as_bool on boolean variables, boolean constants. blocks
+    /// Maybe execute the instruction, transforming it in a Rust bool if possible. It is
+    /// only possible to execute as_bool on boolean variables, boolean constants, blocks
     /// returning a boolean and functions returning a boolean.
-    fn as_bool(&self, _interpreter: &mut Interpreter) -> Result<bool, JkError> {
-        Err(JkError::new(
-            JkErrKind::Interpreter,
-            format!("cannot be used as a boolean: {}", self.print()),
-            None,
-            self.print(),
-        ))
+    fn as_bool(&self, interpreter: &mut Interpreter) -> Option<bool> {
+        interpreter.error(
+            Error::new(ErrKind::Interpreter)
+                .with_msg(format!("cannot be used as a boolean: {}", self.print())),
+        );
+
+        None
     }
 
     /// What is the type of the instruction: a Statement or an Expression.

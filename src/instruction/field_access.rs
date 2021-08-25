@@ -1,7 +1,7 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -30,28 +30,30 @@ impl Instruction for FieldAccess {
         format!("{}.{}", self.instance.print(), self.field_name)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug("FIELD ACCESS ENTER", &self.print());
 
-        let calling_instance = match self.instance.execute(interpreter)? {
-            InstrKind::Statement | InstrKind::Expression(None) => {
-                return Err(JkError::new(
-                    JkErrKind::Interpreter,
-                    format!(
-                        "instance `{}` is a statement and cannot be accessed",
-                        self.instance.print()
-                    ),
-                    None,
-                    self.print(),
-                ))
+        let calling_instance = match self.instance.execute(interpreter) {
+            None => {
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                    "instance `{}` is a statement and cannot be accessed",
+                    self.instance.print()
+                )));
+                return None;
             }
-            InstrKind::Expression(Some(i)) => i,
+            Some(i) => i,
         };
-        let field_instance = calling_instance.get_field(&self.field_name)?;
+        let field_instance = match calling_instance.get_field(&self.field_name) {
+            Ok(field) => field,
+            Err(e) => {
+                interpreter.error(e);
+                return None;
+            }
+        };
 
         interpreter.debug("FIELD ACCESS EXIT", &self.print());
 
-        Ok(InstrKind::Expression(Some(field_instance)))
+        Some(field_instance)
     }
 }
 
@@ -75,15 +77,15 @@ mod tests {
         let inst = Construct::instruction("type Point(x: int, y: int); ")
             .unwrap()
             .1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         let inst = Construct::instruction("func basic() -> Point { Point { x = 15, y = 14 }}")
             .unwrap()
             .1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         let inst = Construct::instruction("b = basic();").unwrap().1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         interpreter
     }
@@ -93,9 +95,9 @@ mod tests {
         let mut interpreter = setup();
 
         let inst = Construct::instruction("b.x").unwrap().1;
-        let res = match inst.execute(&mut interpreter).unwrap() {
-            InstrKind::Expression(Some(i)) => i,
-            _ => return assert!(false, "Error when accessing valid field"),
+        let res = match inst.execute(&mut interpreter) {
+            Some(i) => i,
+            None => return assert!(false, "Error when accessing valid field"),
         };
 
         let mut exp = JkInt::from(15).to_instance();
@@ -112,9 +114,9 @@ mod tests {
         let inst = Construct::instruction("Point { x = 1, y = 2 }.x")
             .unwrap()
             .1;
-        let res = match inst.execute(&mut interpreter).unwrap() {
-            InstrKind::Expression(Some(i)) => i,
-            _ => return assert!(false, "Error when accesing valid field"),
+        let res = match inst.execute(&mut interpreter) {
+            Some(i) => i,
+            None => unreachable!("Error when accesing valid field"),
         };
 
         let mut exp = JkInt::from(1).to_instance();
@@ -145,9 +147,9 @@ mod tests {
         inst.execute(&mut interpreter).unwrap();
 
         let inst = Construct::instruction("p.x.y").unwrap().1;
-        let res = match inst.execute(&mut interpreter).unwrap() {
-            InstrKind::Expression(Some(i)) => i,
-            _ => return assert!(false, "Error when accessing valid multi field"),
+        let res = match inst.execute(&mut interpreter) {
+            Some(i) => i,
+            None => unreachable!("Error when accessing valid multi field"),
         };
 
         let mut expected = JkInt::from(2).to_instance();
@@ -162,10 +164,11 @@ mod tests {
         let mut interpreter = setup();
 
         let inst = Construct::instruction("func void() {}").unwrap().1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         let inst = Construct::instruction("void().field").unwrap().1;
-        assert!(inst.execute(&mut interpreter).is_err())
+        assert!(inst.execute(&mut interpreter).is_none());
+        assert!(interpreter.error_handler.has_errors())
     }
 
     #[test]
@@ -173,7 +176,8 @@ mod tests {
         let mut interpreter = setup();
 
         let inst = Construct::instruction("b.not_a_field").unwrap().1;
-        assert!(inst.execute(&mut interpreter).is_err())
+        assert!(inst.execute(&mut interpreter).is_none());
+        assert!(interpreter.error_handler.has_errors());
     }
 
     #[test]
@@ -181,9 +185,10 @@ mod tests {
         let mut interpreter = setup();
 
         let inst = Construct::instruction("i = 12").unwrap().1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut interpreter);
 
         let inst = Construct::instruction("i.field_on_primitive").unwrap().1;
-        assert!(inst.execute(&mut interpreter).is_err())
+        assert!(inst.execute(&mut interpreter).is_none());
+        assert!(interpreter.error_handler.has_errors())
     }
 }

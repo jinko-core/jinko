@@ -2,7 +2,7 @@
 //! function on execution.
 
 use crate::instruction::{FunctionDec, Var};
-use crate::{InstrKind, Instruction, Interpreter, JkErrKind, JkError, Rename};
+use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -45,46 +45,32 @@ impl FunctionCall {
     }
 
     /// Get the corresponding declaration from an interpreter
-    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<FunctionDec>, JkError> {
+    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<FunctionDec>, Error> {
         match interpreter.get_function(self.name()) {
             // get_function() return a Rc, so this clones the Rc, not the FunctionDec
             Some(f) => Ok(f.clone()),
             // FIXME: Fix Location and input
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!("cannot find function {}", self.name()),
-                None,
-                self.name().to_owned(),
-            )),
+            None => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("cannot find function {}", self.name()))),
         }
     }
 
     /// Check if the arguments received and the arguments expected match
-    fn check_args_count(&self, function: &FunctionDec) -> Result<(), JkError> {
+    fn check_args_count(&self, function: &FunctionDec) -> Result<(), Error> {
         match self.args().len() == function.args().len() {
             true => Ok(()),
-            false => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!(
-                    "wrong number of arguments \
+            false => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                "wrong number of arguments \
                     for call to function `{}`: expected {}, got {}",
-                    self.name(),
-                    function.args().len(),
-                    self.args().len()
-                ),
-                None,
-                "".to_owned(),
-                // FIXME: Add input and location
-            )),
+                self.name(),
+                function.args().len(),
+                self.args().len()
+            ))),
         }
     }
 
     /// Map each argument to its corresponding instruction
-    fn map_args(
-        &self,
-        function: &FunctionDec,
-        interpreter: &mut Interpreter,
-    ) -> Result<(), JkError> {
+    fn map_args(&self, function: &FunctionDec, interpreter: &mut Interpreter) {
         for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
             interpreter.debug(
                 "VAR MAP",
@@ -94,19 +80,28 @@ impl FunctionCall {
             // Create a new variable, and execute the content of the function argument
             // passed to the call
             let mut new_var = Var::new(func_arg.name().to_owned());
-            let mut instance = call_arg.execute_expression(interpreter)?;
+            let mut instance = match call_arg.execute_expression(interpreter) {
+                Some(i) => i,
+                None => {
+                    interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                        "trying to map statement to function argument: {} -> {}",
+                        call_arg.print(),
+                        func_arg
+                    )));
+                    return;
+                }
+            };
 
             let ty = match interpreter.get_type(func_arg.get_type()) {
                 // Double dereferencing: Some(t) gives us a &Rc<TypeDec>. We dereference
                 // it to access the Rc, and dereference it again to access the TypeDec.
                 Some(t) => (**t).clone(),
                 None => {
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
-                        format!("type not found: {}", func_arg.get_type().id()),
-                        None,
-                        self.print(),
-                    ))
+                    interpreter.error(
+                        Error::new(ErrKind::Interpreter)
+                            .with_msg(format!("type not found: {}", func_arg.get_type().id())),
+                    );
+                    return;
                 }
             };
 
@@ -114,10 +109,10 @@ impl FunctionCall {
 
             new_var.set_instance(instance);
 
-            interpreter.add_variable(new_var)?;
+            if let Err(e) = interpreter.add_variable(new_var) {
+                interpreter.error(e);
+            }
         }
-
-        Ok(())
     }
 }
 
@@ -144,22 +139,25 @@ impl Instruction for FunctionCall {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
-        let function = self.get_declaration(interpreter)?;
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
+        let function = match self.get_declaration(interpreter) {
+            Ok(f) => f,
+            Err(e) => {
+                interpreter.error(e);
+                return None;
+            }
+        };
 
-        self.check_args_count(&function)?;
+        if let Err(e) = self.check_args_count(&function) {
+            interpreter.error(e);
+            return None;
+        }
 
         interpreter.scope_enter();
 
         interpreter.debug("CALL", self.name());
 
-        match self.map_args(&function, interpreter) {
-            Ok(_) => {}
-            Err(e) => {
-                interpreter.scope_exit();
-                return Err(e);
-            }
-        };
+        self.map_args(&function, interpreter);
 
         let ret_val = function.run(interpreter);
 
@@ -212,17 +210,20 @@ mod tests {
 
         let mut f_call = FunctionCall::new("func0".to_string());
 
-        match f_call.execute(&mut interpreter) {
-            Ok(_) => assert!(false, "Given 0 arguments to 2 arguments function"),
-            Err(_) => assert!(true),
-        }
+        assert!(f_call.execute(&mut interpreter).is_none());
+        assert!(
+            interpreter.error_handler.has_errors(),
+            "Given 0 arguments to 2 arguments function"
+        );
+        interpreter.clear_errors();
 
         f_call.add_arg(Box::new(JkInt::from(12)));
 
-        match f_call.execute(&mut interpreter) {
-            Ok(_) => assert!(false, "Given 1 arguments to 2 arguments function"),
-            Err(_) => assert!(true),
-        }
+        assert!(f_call.execute(&mut interpreter).is_none());
+        assert!(
+            interpreter.error_handler.has_errors(),
+            "Given 1 arguments to 2 arguments function"
+        );
     }
 
     #[test]
@@ -237,11 +238,11 @@ mod tests {
             .1;
         let func_call = Construct::instruction("second(1, 2)").unwrap().1;
 
-        func_dec.execute(&mut i).unwrap();
+        func_dec.execute(&mut i);
 
         assert_eq!(
             func_call.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(2).to_instance()))
+            JkInt::from(2).to_instance()
         );
     }
 
@@ -257,11 +258,11 @@ mod tests {
             .1;
         let func_call = Construct::instruction("add(1, 2)").unwrap().1;
 
-        func_dec.execute(&mut i).unwrap();
+        func_dec.execute(&mut i);
 
         assert_eq!(
             func_call.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(3).to_instance()))
+            JkInt::from(3).to_instance()
         );
     }
 
@@ -277,11 +278,11 @@ mod tests {
             .1;
         let func_call = Construct::instruction("one()").unwrap().1;
 
-        func_dec.execute(&mut i).unwrap();
+        func_dec.execute(&mut i);
 
         assert_eq!(
             func_call.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(1).to_instance()))
+            JkInt::from(1).to_instance()
         );
     }
 }

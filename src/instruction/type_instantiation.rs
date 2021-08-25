@@ -2,8 +2,8 @@
 //! type on execution.
 
 use super::{
-    InstrKind, Instruction, Interpreter, JkErrKind, JkError, ObjectInstance, Rename, TypeDec,
-    TypeId, VarAssign,
+    ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename, TypeDec, TypeId,
+    VarAssign,
 };
 use crate::instance::{Name, Size};
 
@@ -40,53 +40,43 @@ impl TypeInstantiation {
     }
 
     /// Get the corresponding type declaration from an interpreter
-    fn get_declaration(&self, interpreter: &mut Interpreter) -> Result<Rc<TypeDec>, JkError> {
+    fn get_declaration(&self, interpreter: &mut Interpreter) -> Option<Rc<TypeDec>> {
         match interpreter.get_type(self.name()) {
             // get_type() return a Rc, so this clones the Rc, not the TypeId
-            Some(t) => Ok(t.clone()),
+            Some(t) => Some(t.clone()),
             // FIXME: Fix Location and input
-            None => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!("Cannot find type {}", self.name().id()),
-                None,
-                self.print(),
-            )),
+            None => {
+                interpreter.error(
+                    Error::new(ErrKind::Interpreter)
+                        .with_msg(format!("Cannot find type {}", self.name().id())),
+                );
+                None
+            }
         }
     }
 
     /// Check if the fields received and the fields expected match
-    fn check_fields_count(&self, type_dec: &TypeDec) -> Result<(), JkError> {
+    fn check_fields_count(&self, type_dec: &TypeDec) -> Result<(), Error> {
         match self.fields().len() == type_dec.fields().len() {
             true => Ok(()),
-            false => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!(
-                    "Wrong number of arguments \
+            false => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                "Wrong number of arguments \
                     for type instantiation `{}`: Expected {}, got {}",
-                    self.name().id(),
-                    type_dec.fields().len(),
-                    self.fields().len()
-                ),
-                None,
-                "".to_owned(),
-                // FIXME: Add input and location
-            )),
+                self.name().id(),
+                type_dec.fields().len(),
+                self.fields().len()
+            ))),
         }
     }
 
     /// Check if the type we're currently instantiating is a primitive type or not
     // FIXME: Remove later, as it should not be needed once typechecking is implemented
-    fn check_primitive(&self) -> Result<(), JkError> {
+    fn check_primitive(&self) -> Result<(), Error> {
         match self.type_name.is_primitive() {
-            true => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!(
-                    "cannot instantiate primitive type `{}`",
-                    self.type_name.id()
-                ),
-                None,
-                self.print(),
-            )),
+            true => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+                "cannot instantiate primitive type `{}`",
+                self.type_name.id()
+            ))),
             false => Ok(()),
         }
     }
@@ -113,12 +103,18 @@ impl Instruction for TypeInstantiation {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
-        self.check_primitive()?;
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
+        if let Err(e) = self.check_primitive() {
+            interpreter.error(e);
+            return None;
+        }
 
         let type_dec = self.get_declaration(interpreter)?;
 
-        self.check_fields_count(&type_dec)?;
+        if let Err(e) = self.check_fields_count(&type_dec) {
+            interpreter.error(e);
+            return None;
+        }
 
         let mut size: usize = 0;
         let mut data: Vec<u8> = Vec::new();
@@ -129,20 +125,8 @@ impl Instruction for TypeInstantiation {
             let field_instr = named_arg.value();
             let field_name = named_arg.symbol();
 
-            let instance = match field_instr.execute(interpreter)? {
-                InstrKind::Expression(Some(instance)) => instance,
-                _ => {
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
-                        format!(
-                            "An Expression was excepted but a Statement was found: `{}`",
-                            field_name
-                        ),
-                        None,
-                        named_arg.print(),
-                    ))
-                }
-            };
+            // FIXME: Use execute_expression() here?
+            let instance = field_instr.execute_expression(interpreter)?;
 
             let inst_size = instance.size();
             size += inst_size;
@@ -150,13 +134,13 @@ impl Instruction for TypeInstantiation {
             data.append(&mut instance.data().to_vec());
         }
 
-        Ok(InstrKind::Expression(Some(ObjectInstance::new(
+        Some(ObjectInstance::new(
             // FIXME: Disgusting, maybe do not use Rc for TypeId?
             Some((*type_dec).clone()),
             size,
             data,
             Some(fields),
-        ))))
+        ))
     }
 }
 
@@ -188,14 +172,16 @@ mod test {
         ];
         let t = TypeDec::new("Type_Test".to_owned(), fields);
 
-        t.execute(&mut interpreter).unwrap();
+        t.execute(&mut interpreter);
 
         let mut t_inst = TypeInstantiation::new(TypeId::from("Type_Test"));
 
-        match t_inst.execute(&mut interpreter) {
-            Ok(_) => assert!(false, "Given 0 field to 2 fields type"),
-            Err(_) => assert!(true),
-        }
+        assert!(t_inst.execute(&mut interpreter).is_none());
+        assert!(
+            interpreter.error_handler.has_errors(),
+            "Given 0 field to 2 fields type"
+        );
+        interpreter.clear_errors();
 
         t_inst.add_field(VarAssign::new(
             false,
@@ -203,10 +189,12 @@ mod test {
             Box::new(JkInt::from(12)),
         ));
 
-        match t_inst.execute(&mut interpreter) {
-            Ok(_) => assert!(false, "Given 1 field to 2 fields type"),
-            Err(_) => assert!(true),
-        }
+        assert!(t_inst.execute(&mut interpreter).is_none());
+        assert!(
+            interpreter.error_handler.has_errors(),
+            "Given 1 field to 2 fields type"
+        );
+        interpreter.clear_errors();
 
         t_inst.add_field(VarAssign::new(
             false,
@@ -215,9 +203,10 @@ mod test {
         ));
 
         assert!(
-            t_inst.execute(&mut interpreter).is_ok(),
+            t_inst.execute(&mut interpreter).is_some(),
             "Type instantiation should have a correct number of fields now"
         );
+        assert!(!interpreter.error_handler.has_errors());
     }
 
     #[test]
@@ -225,7 +214,7 @@ mod test {
         use super::super::{DecArg, TypeId};
         use crate::value::{JkInt, JkString};
 
-        const TYPE_NAME: &'static str = "Type_Name";
+        const TYPE_NAME: &str = "Type_Name";
 
         let mut interpreter = Interpreter::new();
 
@@ -236,7 +225,7 @@ mod test {
         ];
         let t = TypeDec::new(TYPE_NAME.to_owned(), fields);
 
-        t.execute(&mut interpreter).unwrap();
+        t.execute(&mut interpreter);
 
         let mut t_inst = TypeInstantiation::new(TypeId::new(TYPE_NAME.to_string()));
         t_inst.add_field(VarAssign::new(
@@ -250,13 +239,10 @@ mod test {
             Box::new(JkInt::from(12)),
         ));
 
-        let instance = match t_inst.execute(&mut interpreter).unwrap() {
-            InstrKind::Expression(Some(instance)) => instance,
-            _ => {
-                return assert!(
-                    false,
-                    "Type instantiation should have returned an Expression"
-                )
+        let instance = match t_inst.execute(&mut interpreter) {
+            Some(instance) => instance,
+            None => {
+                unreachable!("Type instantiation should have returned an Expression")
             }
         };
 
@@ -274,14 +260,8 @@ mod test {
         );
         assert_eq!(instance.size(), 33);
 
-        assert_eq!(
-            instance.fields().as_ref().unwrap().get("a"),
-            Some(&(0 as usize, 25 as usize))
-        );
-        assert_eq!(
-            instance.fields().as_ref().unwrap().get("b"),
-            Some(&(25 as usize, 8 as usize))
-        );
+        assert_eq!(instance.fields().as_ref().unwrap().get("a"), Some(&(0, 25)));
+        assert_eq!(instance.fields().as_ref().unwrap().get("b"), Some(&(25, 8)));
     }
 
     #[test]
@@ -294,9 +274,7 @@ mod test {
             .unwrap()
             .1;
 
-        assert_eq!(
-            instr.execute(&mut i).unwrap_err().msg(),
-            "cannot instantiate primitive type `int`"
-        );
+        assert!(instr.execute(&mut i).is_none());
+        assert!(i.error_handler.has_errors());
     }
 }

@@ -3,13 +3,14 @@
 
 mod prompt;
 use prompt::Prompt;
+use std::path::PathBuf;
 
 use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, FromObjectInstance, InstrKind, Instruction, Interpreter, JkConstant,
-    JkError, ObjectInstance,
+    parser::Construct, Error, FromObjectInstance, Instruction, Interpreter, JkConstant,
+    ObjectInstance,
 };
 
 /// Empty struct for the Repl methods
@@ -41,22 +42,23 @@ impl std::fmt::Display for ObjectInstance {
 impl Repl {
     /// Parse a new instruction from the user's input. This function uses the parser's
     /// `instruction` method, and can therefore parse any valid Jinko instruction
-    fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, JkError> {
+    fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, Error> {
         match input.is_empty() {
             true => Ok(None),
             false => match Construct::instruction(input) {
                 Ok((_, value)) => Ok(Some(value)),
-                Err(e) => Err(JkError::from(e)),
+                Err(e) => Err(Error::from(e)),
             },
         }
     }
 
     /// Launch the REPL
-    pub fn launch_repl(args: &Args) -> Result<(), JkError> {
+    pub fn launch_repl(args: &Args) -> Result<(), Error> {
         let line_reader = Interface::new("jinko")?;
 
         let mut interpreter = Interpreter::new();
         interpreter.set_debug(args.debug());
+        interpreter.set_path(Some(PathBuf::from("repl")));
 
         // FIXME: Add actual prompt
         line_reader.set_prompt(&Prompt::get(&interpreter))?;
@@ -65,7 +67,7 @@ impl Repl {
             let inst = match Repl::parse_instruction(&input) {
                 Ok(i) => i,
                 Err(e) => {
-                    println!("{}", e.to_string());
+                    e.emit(PathBuf::from("repl").as_path());
                     continue;
                 }
             };
@@ -75,11 +77,12 @@ impl Repl {
                 None => continue,
             };
 
-            match inst.execute(&mut interpreter) {
-                Ok(InstrKind::Expression(None)) | Ok(InstrKind::Statement) => {}
-                Ok(InstrKind::Expression(Some(result))) => println!("{}", result),
-                Err(e) => println!("{}", e.to_string()),
+            if let Some(result) = inst.execute(&mut interpreter) {
+                println!("{}", result);
             };
+
+            interpreter.emit_errors();
+            interpreter.clear_errors();
 
             line_reader.set_prompt(&Prompt::get(&interpreter))?;
         }

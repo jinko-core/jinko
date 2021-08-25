@@ -1,2 +1,3 @@
 func h(a: int) { 12 }
+
 ext func h(); // Should error out, function already declared

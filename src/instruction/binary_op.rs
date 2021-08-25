@@ -6,8 +6,8 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::Operator, FromObjectInstance, InstrKind, Instruction, Interpreter, JkErrKind,
-    JkError, JkFloat, JkInt, ObjectInstance, Rename, Value,
+    instruction::Operator, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, Interpreter,
+    JkFloat, JkInt, ObjectInstance, Rename, Value,
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
@@ -56,18 +56,16 @@ impl BinaryOp {
         &self,
         node: &dyn Instruction,
         interpreter: &mut Interpreter,
-    ) -> Result<ObjectInstance, JkError> {
-        match node.execute(interpreter)? {
-            InstrKind::Statement | InstrKind::Expression(None) => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!(
-                    "Invalid use of statement in binary operation: {}",
-                    self.lhs.print()
-                ),
-                None,
-                self.print(),
-            )),
-            InstrKind::Expression(Some(v)) => Ok(v),
+    ) -> Option<ObjectInstance> {
+        match node.execute(interpreter) {
+            None => {
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                    "invalid use of statement in binary operation: {}",
+                    node.print()
+                )));
+                None
+            }
+            Some(v) => Some(v),
         }
     }
 }
@@ -81,31 +79,31 @@ impl Instruction for BinaryOp {
         format!(
             "{} {} {}",
             self.lhs.print(),
-            self.op.to_str(),
+            self.op.as_str(),
             self.rhs.print()
         )
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug_step("BINOP ENTER");
 
-        interpreter.debug("OP", self.op.to_str());
+        interpreter.debug("OP", self.op.as_str());
 
         let l_value = self.execute_node(&*self.lhs, interpreter)?;
         let r_value = self.execute_node(&*self.rhs, interpreter)?;
 
         if l_value.ty() != r_value.ty() {
-            return Err(JkError::new(
-                JkErrKind::Interpreter, // FIXME: Should be a type error
+            interpreter.error(Error::new(ErrKind::TypeChecker).with_msg(
+                // FIXME: If we unwrap and panic here, this is another typechecking
+                // error. Implement this once typechecking is implemented
                 format!(
-                    "Trying to do binary operation on invalid types: {:#?} {} {:#?}",
-                    l_value.ty(),
-                    self.op.to_str(),
-                    r_value.ty() // FIXME: Display correctly
+                    "Trying to do binary operation on invalid types: `{}` {} `{}`",
+                    l_value.ty().unwrap(),
+                    self.op.as_str(),
+                    r_value.ty().unwrap()
                 ),
-                None, // FIXME: Fix Location
-                self.print(),
             ));
+            return None;
         }
 
         let return_value;
@@ -114,24 +112,34 @@ impl Instruction for BinaryOp {
         match l_value.ty().unwrap().name() {
             // FIXME: Absolutely DISGUSTING
             "int" => {
-                return_value = InstrKind::Expression(Some(
-                    JkInt::from_instance(&l_value)
-                        .do_op(&JkInt::from_instance(&r_value), self.op)?,
-                ));
+                let res =
+                    JkInt::from_instance(&l_value).do_op(&JkInt::from_instance(&r_value), self.op);
+                return_value = match res {
+                    Ok(r) => r,
+                    Err(e) => {
+                        interpreter.error(e);
+                        return None;
+                    }
+                };
             }
 
             "float" => {
-                return_value = InstrKind::Expression(Some(
-                    JkFloat::from_instance(&l_value)
-                        .do_op(&JkFloat::from_instance(&r_value), self.op)?,
-                ));
+                let res = JkFloat::from_instance(&l_value)
+                    .do_op(&JkFloat::from_instance(&r_value), self.op);
+                return_value = match res {
+                    Ok(r) => r,
+                    Err(e) => {
+                        interpreter.error(e);
+                        return None;
+                    }
+                }
             }
             _ => todo!("Implement empty types?"),
         }
 
         interpreter.debug_step("BINOP EXIT");
 
-        Ok(return_value)
+        Some(return_value)
     }
 }
 
@@ -146,8 +154,8 @@ impl Rename for BinaryOp {
 mod tests {
     use super::*;
     use crate::value::JkInt;
+    use crate::Interpreter;
     use crate::ToObjectInstance;
-    use crate::{InstrKind, Interpreter};
 
     fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
         let l = Box::new(JkInt::from(l_num));
@@ -160,8 +168,9 @@ mod tests {
 
         assert_eq!(
             binop.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(res).to_instance()))
+            JkInt::from(res).to_instance(),
         );
+        assert!(!i.error_handler.has_errors());
     }
 
     #[test]
@@ -211,8 +220,9 @@ mod tests {
 
         assert_eq!(
             binary_op.rhs().execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(36).to_instance()))
+            JkInt::from(36).to_instance(),
         );
+        assert!(!i.error_handler.has_errors());
     }
 
     #[test]
@@ -234,7 +244,8 @@ mod tests {
 
         assert_eq!(
             binary_op.lhs().execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(36).to_instance()))
+            JkInt::from(36).to_instance()
         );
+        assert!(!i.error_handler.has_errors());
     }
 }

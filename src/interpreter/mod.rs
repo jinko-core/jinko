@@ -14,8 +14,9 @@ use scope_map::ScopeMap;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
-use crate::{JkErrKind, JkError};
+use crate::ObjectInstance;
 
 /// Type the interpreter uses for keys
 type IKey = String;
@@ -23,6 +24,7 @@ type IKey = String;
 /// Name of the entry point in jinko
 const ENTRY_NAME: &str = "__entry";
 
+// FIXME: Rework visibility here
 /// An interpreter represents the state of a jinko program. It contains functions,
 /// variables, tests... and can be optimized, typechecked, executed or
 /// serialized/deserialized to bytecode.
@@ -48,6 +50,9 @@ pub struct Interpreter {
 
     /// Sources included by the interpreter
     included: HashSet<PathBuf>,
+
+    /// Errors being kept by the interpreter
+    pub(crate) error_handler: ErrorHandler,
 }
 
 impl Default for Interpreter {
@@ -76,6 +81,7 @@ impl Interpreter {
             scope_map: ScopeMap::new(),
             tests: HashMap::new(),
             included: HashSet::new(),
+            error_handler: ErrorHandler::default(),
         };
 
         i.scope_enter();
@@ -88,9 +94,7 @@ impl Interpreter {
         // Include the standard library
         let stdlib_incl =
             crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
-        stdlib_incl
-            .execute(&mut i)
-            .expect("cannot include jinko's standard library - aborting");
+        stdlib_incl.execute(&mut i);
 
         i
     }
@@ -103,6 +107,9 @@ impl Interpreter {
     /// Get a rerference to an interpreter's source path
     pub fn set_path(&mut self, path: Option<PathBuf>) {
         self.path = path;
+        // FIXME: Is that correct? Remove that clone()...
+        self.error_handler
+            .set_path(self.path.clone().unwrap_or_default());
 
         match &self.path {
             Some(p) => {
@@ -112,6 +119,21 @@ impl Interpreter {
         };
     }
 
+    /// Add an error to the interpreter
+    pub fn error(&mut self, err: Error) {
+        self.error_handler.add(err)
+    }
+
+    /// Emit all the errors currently kept in the interpreter and remove them
+    pub fn emit_errors(&mut self) {
+        self.error_handler.emit();
+    }
+
+    /// Clear all the errors currently kept in the interpreter and remove them
+    pub fn clear_errors(&mut self) {
+        self.error_handler.clear();
+    }
+
     /// Set the debug mode of a previously created interpreter
     pub fn set_debug(&mut self, debug: bool) {
         self.debug_mode = debug
@@ -119,29 +141,29 @@ impl Interpreter {
 
     /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
-    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), JkError> {
+    pub fn add_function(&mut self, function: FunctionDec) -> Result<(), Error> {
         self.scope_map.add_function(function)
     }
 
     /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
-    pub fn add_variable(&mut self, var: Var) -> Result<(), JkError> {
+    pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         self.scope_map.add_variable(var)
     }
 
     /// Add a type to the interpreter. Returns `Ok` if the type was added, `Err`
     /// if it existed already and was not.
-    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), JkError> {
+    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
         self.scope_map.add_type(custom_type)
     }
 
     /// Remove a variable from the interpreter
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), JkError> {
+    pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
         self.scope_map.remove_variable(var)
     }
 
     /// Replace a variable or create it if it does not exist
-    pub fn replace_variable(&mut self, var: Var) -> Result<(), JkError> {
+    pub fn replace_variable(&mut self, var: Var) -> Result<(), Error> {
         // Remove the variable if it exists
         let _ = self.remove_variable(&var);
 
@@ -215,14 +237,10 @@ impl Interpreter {
     }
 
     /// Register a test to be executed by the interpreter
-    pub fn add_test(&mut self, test: FunctionDec) -> Result<(), JkError> {
+    pub fn add_test(&mut self, test: FunctionDec) -> Result<(), Error> {
         match self.tests.get(test.name()) {
-            Some(test) => Err(JkError::new(
-                JkErrKind::Interpreter,
-                format!("test function already declared: {}", test.name()),
-                None,
-                test.name().to_owned(),
-            )),
+            Some(test) => Err(Error::new(ErrKind::Interpreter)
+                .with_msg(format!("test function already declared: {}", test.name()))),
             None => {
                 self.tests.insert(test.name().to_owned(), test);
                 Ok(())
@@ -234,12 +252,25 @@ impl Interpreter {
     pub fn is_included(&self, source: &Path) -> bool {
         self.included.contains(source)
     }
+
+    pub fn execute(&mut self) -> Result<Option<ObjectInstance>, Error> {
+        // The entry point always has a block
+        let ep = self.entry_point.block().unwrap().clone();
+
+        let res = ep.execute(self);
+
+        self.emit_errors();
+
+        match self.error_handler.has_errors() {
+            true => Err(Error::new(ErrKind::Interpreter)),
+            false => Ok(res),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::JkErrKind;
 
     #[test]
     fn t_redefinition_of_function() {
@@ -249,10 +280,7 @@ mod tests {
         let mut i = Interpreter::new();
 
         assert_eq!(i.add_function(f0), Ok(()));
-        assert_eq!(
-            i.add_function(f0_copy).err().unwrap().kind(),
-            JkErrKind::Interpreter,
-        );
+        assert!(i.add_function(f0_copy).is_err());
     }
 
     #[test]
@@ -263,9 +291,6 @@ mod tests {
         let mut i = Interpreter::new();
 
         assert_eq!(i.add_variable(v0), Ok(()));
-        assert_eq!(
-            i.add_variable(v0_copy).err().unwrap().kind(),
-            JkErrKind::Interpreter,
-        );
+        assert!(i.add_variable(v0_copy).is_err());
     }
 }

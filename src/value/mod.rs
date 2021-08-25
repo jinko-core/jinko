@@ -1,7 +1,7 @@
 //! A `Value` is a number instance in jinko. It refers to arithmetic primtive types, such
 //! as Ints and Floats
 
-use crate::{instruction::Operator, Instruction, JkError, ObjectInstance};
+use crate::{instruction::Operator, Error, Instruction, ObjectInstance};
 
 mod jk_constant;
 
@@ -17,7 +17,7 @@ pub type JkString = JkConstant<String>;
 pub trait Value: Instruction {
     /// Call this function when an operation is not implemented, rather than implementing
     /// your own. This will format the error nicely.
-    fn no_op(&self, _other: &Self, _op: Operator) -> Result<ObjectInstance, JkError> {
+    fn no_op(&self, _other: &Self, _op: Operator) -> Result<ObjectInstance, Error> {
         unreachable!("NOP") // FIXME
     }
 
@@ -41,7 +41,7 @@ pub trait Value: Instruction {
     /// assert_eq!(res.ty(), interpreter.get_type("float"));
     /// ```
     // FIXME: Implement behavior defined here ^
-    fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, JkError> {
+    fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, Error> {
         self.no_op(other, op)
     }
 }

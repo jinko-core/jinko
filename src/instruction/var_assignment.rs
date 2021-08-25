@@ -1,7 +1,7 @@
 //! The VarAssign struct is used when assigning values to variables.
 
 use crate::instruction::{InstrKind, Var};
-use crate::{Instruction, Interpreter, JkErrKind, JkError, Rename};
+use crate::{ErrKind, Error, Instruction, Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -53,7 +53,7 @@ impl Instruction for VarAssign {
         format!("{}{} = {}", base, self.symbol, self.value.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.debug("ASSIGN VAR", self.symbol());
 
         // Are we creating the variable or not
@@ -65,12 +65,10 @@ impl Instruction for VarAssign {
                 // for the first time. However, we entered the match arm because the variable
                 // is already present in the interpreter. Error out appropriately.
                 if self.mutable() {
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
-                        format!("Trying to redefine already defined variable: {}", v.name()),
-                        None,
-                        self.print(),
-                    ));
+                    let err_msg =
+                        format!("trying to redefine already defined variable: {}", v.name());
+                    interpreter.error(Error::new(ErrKind::Interpreter).with_msg(err_msg));
+                    return None;
                 }
 
                 v.clone()
@@ -85,36 +83,26 @@ impl Instruction for VarAssign {
             }
         };
 
-        match var_creation {
-            // FIXME:
-            // - Cleanup
-            // - Merge two true arms together if possible
-            true => var.set_instance(self.value.execute_expression(interpreter)?),
-            false => match var.mutable() {
-                false => {
-                    // The variable already exists. So we need to error out if it isn't
-                    // mutable
-                    return Err(JkError::new(
-                        JkErrKind::Interpreter,
-                        format!(
-                            "Trying to assign value to non mutable variable `{}`: `{}`",
-                            var.name(),
-                            self.value.print()
-                        ),
-                        None,
-                        self.print(),
-                    ));
-                }
-                true => var.set_instance(self.value.execute_expression(interpreter)?),
-            },
-        };
+        match (var_creation, var.mutable()) {
+            (false, false) => {
+                // The variable already exists. So we need to error out if it isn't
+                // mutable
+                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                    "trying to assign value to non mutable variable `{}`: `{}`",
+                    var.name(),
+                    self.value.print()
+                )));
+                return None;
+            }
+            (true, _) | (_, true) => var.set_instance(self.value.execute_expression(interpreter)?),
+        }
 
         // We can unwrap safely since we checked that the variable does not
         // exist
         interpreter.replace_variable(var).unwrap();
 
         // A variable assignment is always a statement
-        Ok(InstrKind::Statement)
+        None
     }
 }
 
@@ -156,13 +144,13 @@ mod tests {
         let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
         let va_0 = Construct::var_assignment("a = 15").unwrap().1;
 
-        va_init.execute(&mut i).unwrap();
-        va_0.execute(&mut i).unwrap();
+        va_init.execute(&mut i);
+        va_0.execute(&mut i);
 
         let va_get = Construct::variable("a").unwrap().1;
         assert_eq!(
             va_get.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(15).to_instance()))
+            JkInt::from(15).to_instance()
         );
     }
 
@@ -172,11 +160,12 @@ mod tests {
         let va_init = Construct::var_assignment("a = 13").unwrap().1;
         let va_0 = Construct::var_assignment("a = 15").unwrap().1;
 
-        va_init.execute(&mut i).unwrap();
-        match va_0.execute(&mut i) {
-            Ok(_) => assert!(false, "Can't assign twice to immutable variables"),
-            Err(_) => assert!(true),
+        va_init.execute(&mut i);
+        if va_0.execute(&mut i).is_some() {
+            unreachable!("Can't assign twice to immutable variables");
         }
+
+        assert!(i.error_handler.has_errors());
     }
 
     #[test]
@@ -185,10 +174,10 @@ mod tests {
         let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
         let va_0 = Construct::var_assignment("mut a = 15").unwrap().1;
 
-        va_init.execute(&mut i).unwrap();
-        match va_0.execute(&mut i) {
-            Ok(_) => assert!(false, "Can't create variables twice"),
-            Err(_) => assert!(true),
+        va_init.execute(&mut i);
+        if va_0.execute(&mut i).is_some() {
+            unreachable!("Can't create variables twice");
         }
+        assert!(i.error_handler.has_errors());
     }
 }

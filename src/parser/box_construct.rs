@@ -12,11 +12,14 @@
 //! wrap the return value of `Construct::function_call` and `Construct::block` in a box,
 //! allowing to use them simultaneously when parsing multiple types of constructs.
 
-use crate::{parser::Construct, Instruction};
+use crate::{
+    parser::{Construct, ParseResult},
+    Instruction,
+};
 
 macro_rules! box_construct {
     ($func:ident) => {
-        pub fn $func(input: &str) -> nom::IResult<&str, Box<dyn Instruction>> {
+        pub fn $func(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
             BoxConstruct::wrap(input, Box::new(Construct::$func))
         }
     };
@@ -28,8 +31,8 @@ impl BoxConstruct {
     /// Call a `Construct` and box the return value
     fn wrap<T: 'static + Instruction>(
         input: &str,
-        construct: Box<dyn FnOnce(&str) -> nom::IResult<&str, T>>,
-    ) -> nom::IResult<&str, Box<dyn Instruction>> {
+        construct: Box<dyn FnOnce(&str) -> ParseResult<&str, T>>,
+    ) -> ParseResult<&str, Box<dyn Instruction>> {
         let (input, value) = construct(input)?;
 
         Ok((input, Box::new(value)))

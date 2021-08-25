@@ -17,7 +17,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{InstrKind, Instruction, Interpreter, JkError, Rename};
+use crate::{InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct Block {
@@ -99,18 +99,17 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Result<InstrKind, JkError> {
+    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
         interpreter.scope_enter();
         interpreter.debug_step("BLOCK ENTER");
 
-        self.instructions()
-            .iter()
-            .map(|inst| inst.execute(interpreter))
-            .collect::<Result<Vec<InstrKind>, JkError>>()?;
+        self.instructions().iter().for_each(|inst| {
+            inst.execute(interpreter);
+        });
 
         let ret_val = match &self.last {
             Some(e) => e.execute(interpreter),
-            None => Ok(InstrKind::Statement),
+            None => None,
         };
 
         interpreter.scope_exit();
@@ -182,7 +181,8 @@ mod tests {
 
         let mut i = Interpreter::new();
 
-        assert_eq!(b.execute(&mut i).unwrap(), InstrKind::Statement);
+        assert_eq!(b.execute(&mut i), None);
+        assert!(!i.error_handler.has_errors());
     }
 
     #[test]
@@ -195,7 +195,8 @@ mod tests {
 
         let mut i = Interpreter::new();
 
-        assert_eq!(b.execute(&mut i).unwrap(), InstrKind::Statement);
+        assert_eq!(b.execute(&mut i), None);
+        assert!(!i.error_handler.has_errors());
     }
 
     #[test]
@@ -213,9 +214,7 @@ mod tests {
 
         let mut i = Interpreter::new();
 
-        assert_eq!(
-            b.execute(&mut i).unwrap(),
-            InstrKind::Expression(Some(JkInt::from(18).to_instance()))
-        );
+        assert_eq!(b.execute(&mut i).unwrap(), JkInt::from(18).to_instance());
+        assert!(!i.error_handler.has_errors());
     }
 }
