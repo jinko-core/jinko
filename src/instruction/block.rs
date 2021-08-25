@@ -103,11 +103,9 @@ impl Instruction for Block {
         interpreter.scope_enter();
         interpreter.debug_step("BLOCK ENTER");
 
-        self.instructions()
-            .iter()
-            .for_each(|inst| {
-                inst.execute(interpreter);
-            });
+        self.instructions().iter().for_each(|inst| {
+            inst.execute(interpreter);
+        });
 
         let ret_val = match &self.last {
             Some(e) => e.execute(interpreter),

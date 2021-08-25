@@ -82,7 +82,14 @@ impl FunctionCall {
             let mut new_var = Var::new(func_arg.name().to_owned());
             let mut instance = match call_arg.execute_expression(interpreter) {
                 Some(i) => i,
-                None => return,
+                None => {
+                    interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                        "trying to map statement to function argument: {} -> {}",
+                        call_arg.print(),
+                        func_arg
+                    )));
+                    return;
+                }
             };
 
             let ty = match interpreter.get_type(func_arg.get_type()) {
