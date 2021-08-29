@@ -4,7 +4,7 @@
 //! or it's not.
 
 use crate::instruction::TypeDec;
-use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, JkBool, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct Var {
@@ -63,23 +63,19 @@ impl Instruction for Var {
         )
     }
 
-    fn as_bool(&self, interpreter: &mut Interpreter) -> Option<bool> {
+    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
         use crate::FromObjectInstance;
 
         // FIXME: Cleanup
 
-        match self.execute(interpreter) {
+        match self.execute(ctx) {
             Some(instance) => match instance.ty() {
                 Some(ty) => match ty.name() {
                     // FIXME:
-                    "bool" => Some(
-                        JkBool::from_instance(&instance)
-                            .as_bool(interpreter)
-                            .unwrap(),
-                    ),
+                    "bool" => Some(JkBool::from_instance(&instance).as_bool(ctx).unwrap()),
                     // We can safely unwrap since we checked the type of the variable
                     _ => {
-                        interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                        ctx.error(Error::new(ErrKind::Context).with_msg(format!(
                             "var {} cannot be interpreted as boolean",
                             self.name
                         )));
@@ -92,7 +88,7 @@ impl Instruction for Var {
                 ),
             },
             _ => {
-                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
                     "var {} cannot be interpreted as boolean",
                     self.name
                 )));
@@ -101,12 +97,12 @@ impl Instruction for Var {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        let var = match interpreter.get_variable(self.name()) {
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        let var = match ctx.get_variable(self.name()) {
             Some(v) => v,
             None => {
-                interpreter.error(
-                    Error::new(ErrKind::Interpreter)
+                ctx.error(
+                    Error::new(ErrKind::Context)
                         .with_msg(format!("variable has not been declared: {}", self.name)),
                 );
 
@@ -114,7 +110,7 @@ impl Instruction for Var {
             }
         };
 
-        interpreter.debug("VAR", var.print().as_ref());
+        ctx.debug("VAR", var.print().as_ref());
 
         Some(var.instance())
     }
@@ -140,7 +136,7 @@ mod tests {
 
     #[test]
     fn keep_instance() {
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
         let mut v = Var::new("a".to_string());
 
         let instance = JkInt::from(15).to_instance();

@@ -27,18 +27,18 @@ pub trait Value: Instruction {
     /// return a new JkFloat.
     ///
     /// ```
-    /// let interpreter = Interpreter::new();
+    /// let ctx = Context::new();
     ///
     /// let a = JkInt::from(126);
     /// let b = JkInt::from(4);
     ///
     /// let res = a.do_op(b, Operator::Add); // JkInt(130)
-    /// assert_eq!(res.ty(), interpreter.get_type("int"));
+    /// assert_eq!(res.ty(), ctx.get_type("int"));
     ///
     /// let f = JkFloat::from(4.0);
     ///
     /// let res = a.do_op(f, Operator::Add); // JkFloat(130.0)
-    /// assert_eq!(res.ty(), interpreter.get_type("float"));
+    /// assert_eq!(res.ty(), ctx.get_type("float"));
     /// ```
     // FIXME: Implement behavior defined here ^
     fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, Error> {

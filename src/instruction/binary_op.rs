@@ -6,7 +6,7 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::Operator, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, Interpreter,
+    instruction::Operator, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction,
     JkFloat, JkInt, ObjectInstance, Rename, Value,
 };
 
@@ -50,16 +50,12 @@ impl BinaryOp {
         &self.rhs
     }
 
-    // FIXME: Use Interpreter::execute_expression
+    // FIXME: Use Context::execute_expression
     /// Execute a node of the binary operation
-    fn execute_node(
-        &self,
-        node: &dyn Instruction,
-        interpreter: &mut Interpreter,
-    ) -> Option<ObjectInstance> {
-        match node.execute(interpreter) {
+    fn execute_node(&self, node: &dyn Instruction, ctx: &mut Context) -> Option<ObjectInstance> {
+        match node.execute(ctx) {
             None => {
-                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
                     "invalid use of statement in binary operation: {}",
                     node.print()
                 )));
@@ -84,16 +80,16 @@ impl Instruction for BinaryOp {
         )
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.debug_step("BINOP ENTER");
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug_step("BINOP ENTER");
 
-        interpreter.debug("OP", self.op.as_str());
+        ctx.debug("OP", self.op.as_str());
 
-        let l_value = self.execute_node(&*self.lhs, interpreter)?;
-        let r_value = self.execute_node(&*self.rhs, interpreter)?;
+        let l_value = self.execute_node(&*self.lhs, ctx)?;
+        let r_value = self.execute_node(&*self.rhs, ctx)?;
 
         if l_value.ty() != r_value.ty() {
-            interpreter.error(Error::new(ErrKind::TypeChecker).with_msg(
+            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(
                 // FIXME: If we unwrap and panic here, this is another typechecking
                 // error. Implement this once typechecking is implemented
                 format!(
@@ -117,7 +113,7 @@ impl Instruction for BinaryOp {
                 return_value = match res {
                     Ok(r) => r,
                     Err(e) => {
-                        interpreter.error(e);
+                        ctx.error(e);
                         return None;
                     }
                 };
@@ -129,7 +125,7 @@ impl Instruction for BinaryOp {
                 return_value = match res {
                     Ok(r) => r,
                     Err(e) => {
-                        interpreter.error(e);
+                        ctx.error(e);
                         return None;
                     }
                 }
@@ -137,7 +133,7 @@ impl Instruction for BinaryOp {
             _ => todo!("Implement empty types?"),
         }
 
-        interpreter.debug_step("BINOP EXIT");
+        ctx.debug_step("BINOP EXIT");
 
         Some(return_value)
     }
@@ -154,7 +150,7 @@ impl Rename for BinaryOp {
 mod tests {
     use super::*;
     use crate::value::JkInt;
-    use crate::Interpreter;
+    use crate::Context;
     use crate::ToObjectInstance;
 
     fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
@@ -164,7 +160,7 @@ mod tests {
 
         let binop = BinaryOp::new(l, r, op);
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         assert_eq!(
             binop.execute(&mut i).unwrap(),
@@ -216,7 +212,7 @@ mod tests {
             Operator::new("-"),
         );
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         assert_eq!(
             binary_op.rhs().execute(&mut i).unwrap(),
@@ -238,7 +234,7 @@ mod tests {
             Operator::new("-"),
         );
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         assert_eq!(binary_op.operator(), Operator::Sub);
 

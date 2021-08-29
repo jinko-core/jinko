@@ -17,7 +17,7 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
+use crate::{Context, InstrKind, Instruction, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct Block {
@@ -99,21 +99,21 @@ impl Instruction for Block {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.scope_enter();
-        interpreter.debug_step("BLOCK ENTER");
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.scope_enter();
+        ctx.debug_step("BLOCK ENTER");
 
         self.instructions().iter().for_each(|inst| {
-            inst.execute(interpreter);
+            inst.execute(ctx);
         });
 
         let ret_val = match &self.last {
-            Some(e) => e.execute(interpreter),
+            Some(e) => e.execute(ctx),
             None => None,
         };
 
-        interpreter.scope_exit();
-        interpreter.debug_step("BLOCK EXIT");
+        ctx.scope_exit();
+        ctx.debug_step("BLOCK EXIT");
 
         ret_val
     }
@@ -179,7 +179,7 @@ mod tests {
     fn block_execute_empty() {
         let b = Block::new();
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         assert_eq!(b.execute(&mut i), None);
         assert!(!i.error_handler.has_errors());
@@ -193,7 +193,7 @@ mod tests {
             vec![Box::new(JkInt::from(12)), Box::new(JkInt::from(15))];
         b.set_instructions(instr);
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         assert_eq!(b.execute(&mut i), None);
         assert!(!i.error_handler.has_errors());
@@ -212,7 +212,7 @@ mod tests {
         let last = Box::new(JkInt::from(18));
         b.set_last(Some(last));
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         assert_eq!(b.execute(&mut i).unwrap(), JkInt::from(18).to_instance());
         assert!(!i.error_handler.has_errors());

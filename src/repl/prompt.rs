@@ -1,13 +1,13 @@
-//! Creates a prompt based on the interpreter's current status
+//! Creates a prompt based on the context's current status
 
-use crate::interpreter::Interpreter;
+use crate::context::Context;
 use colored::Colorize;
 
 pub struct Prompt;
 
 impl Prompt {
-    /// Create the prompt based on the actual interpreter conditions
-    pub fn get(_: &Interpreter) -> String {
+    /// Create the prompt based on the actual context conditions
+    pub fn get(_: &Context) -> String {
         format!("jinko {} ", ">".purple())
     }
 }

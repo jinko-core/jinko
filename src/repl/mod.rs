@@ -1,4 +1,4 @@
-//! The REPL module implements an interactive mode for the jinko interpreter. You can
+//! The REPL module implements an interactive mode for the jinko ctx. You can
 //! use it as is, or run a file and then enter the interactive mode.
 
 mod prompt;
@@ -9,8 +9,7 @@ use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, Error, FromObjectInstance, Instruction, Interpreter, JkConstant,
-    ObjectInstance,
+    parser::Construct, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
 };
 
 /// Empty struct for the Repl methods
@@ -56,12 +55,12 @@ impl Repl {
     pub fn launch_repl(args: &Args) -> Result<(), Error> {
         let line_reader = Interface::new("jinko")?;
 
-        let mut interpreter = Interpreter::new();
-        interpreter.set_debug(args.debug());
-        interpreter.set_path(Some(PathBuf::from("repl")));
+        let mut ctx = Context::new();
+        ctx.set_debug(args.debug());
+        ctx.set_path(Some(PathBuf::from("repl")));
 
         // FIXME: Add actual prompt
-        line_reader.set_prompt(&Prompt::get(&interpreter))?;
+        line_reader.set_prompt(&Prompt::get(&ctx))?;
 
         while let ReadResult::Input(input) = line_reader.read_line()? {
             let inst = match Repl::parse_instruction(&input) {
@@ -77,14 +76,14 @@ impl Repl {
                 None => continue,
             };
 
-            if let Some(result) = inst.execute(&mut interpreter) {
+            if let Some(result) = inst.execute(&mut ctx) {
                 println!("{}", result);
             };
 
-            interpreter.emit_errors();
-            interpreter.clear_errors();
+            ctx.emit_errors();
+            ctx.clear_errors();
 
-            line_reader.set_prompt(&Prompt::get(&interpreter))?;
+            line_reader.set_prompt(&Prompt::get(&ctx))?;
         }
 
         Ok(())

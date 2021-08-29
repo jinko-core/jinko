@@ -1,7 +1,6 @@
 use crate::instruction::{InstrKind, Instruction, Operator, TypeDec};
 use crate::{
-    Error, FromObjectInstance, Interpreter, JkString, ObjectInstance, Rename, ToObjectInstance,
-    Value,
+    Context, Error, FromObjectInstance, JkString, ObjectInstance, Rename, ToObjectInstance, Value,
 };
 
 use std::convert::TryFrom;
@@ -95,12 +94,12 @@ macro_rules! jk_primitive {
                 self.0.to_string()
             }
 
-            fn as_bool(&self, _interpreter: &mut Interpreter) -> Option<bool> {
+            fn as_bool(&self, _ctx: &mut Context) -> Option<bool> {
                 Some(self.0)
             }
 
-            fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-                interpreter.debug("CONSTANT", &self.0.to_string());
+            fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+                ctx.debug("CONSTANT", &self.0.to_string());
 
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
@@ -145,8 +144,8 @@ macro_rules! jk_primitive {
                 self.0.to_string()
             }
 
-            fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-                interpreter.debug("CONSTANT", &self.0.to_string());
+            fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+                ctx.debug("CONSTANT", &self.0.to_string());
 
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
@@ -216,8 +215,8 @@ impl Instruction for JkString {
         format!("\"{}\"", self.0.clone())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.debug("CONSTANT", &self.0.to_string());
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug("CONSTANT", &self.0.to_string());
 
         Some(self.to_instance())
     }

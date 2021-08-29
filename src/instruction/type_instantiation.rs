@@ -2,7 +2,7 @@
 //! type on execution.
 
 use super::{
-    ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename, TypeDec, TypeId,
+    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename, TypeDec, TypeId,
     VarAssign,
 };
 use crate::instance::{Name, Size};
@@ -39,15 +39,15 @@ impl TypeInstantiation {
         &self.fields
     }
 
-    /// Get the corresponding type declaration from an interpreter
-    fn get_declaration(&self, interpreter: &mut Interpreter) -> Option<Rc<TypeDec>> {
-        match interpreter.get_type(self.name()) {
+    /// Get the corresponding type declaration from a context
+    fn get_declaration(&self, ctx: &mut Context) -> Option<Rc<TypeDec>> {
+        match ctx.get_type(self.name()) {
             // get_type() return a Rc, so this clones the Rc, not the TypeId
             Some(t) => Some(t.clone()),
             // FIXME: Fix Location and input
             None => {
-                interpreter.error(
-                    Error::new(ErrKind::Interpreter)
+                ctx.error(
+                    Error::new(ErrKind::Context)
                         .with_msg(format!("Cannot find type {}", self.name().id())),
                 );
                 None
@@ -59,7 +59,7 @@ impl TypeInstantiation {
     fn check_fields_count(&self, type_dec: &TypeDec) -> Result<(), Error> {
         match self.fields().len() == type_dec.fields().len() {
             true => Ok(()),
-            false => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+            false => Err(Error::new(ErrKind::Context).with_msg(format!(
                 "Wrong number of arguments \
                     for type instantiation `{}`: Expected {}, got {}",
                 self.name().id(),
@@ -73,7 +73,7 @@ impl TypeInstantiation {
     // FIXME: Remove later, as it should not be needed once typechecking is implemented
     fn check_primitive(&self) -> Result<(), Error> {
         match self.type_name.is_primitive() {
-            true => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+            true => Err(Error::new(ErrKind::Context).with_msg(format!(
                 "cannot instantiate primitive type `{}`",
                 self.type_name.id()
             ))),
@@ -103,16 +103,16 @@ impl Instruction for TypeInstantiation {
         format!("{})", base)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         if let Err(e) = self.check_primitive() {
-            interpreter.error(e);
+            ctx.error(e);
             return None;
         }
 
-        let type_dec = self.get_declaration(interpreter)?;
+        let type_dec = self.get_declaration(ctx)?;
 
         if let Err(e) = self.check_fields_count(&type_dec) {
-            interpreter.error(e);
+            ctx.error(e);
             return None;
         }
 
@@ -126,7 +126,7 @@ impl Instruction for TypeInstantiation {
             let field_name = named_arg.symbol();
 
             // FIXME: Use execute_expression() here?
-            let instance = field_instr.execute_expression(interpreter)?;
+            let instance = field_instr.execute_expression(ctx)?;
 
             let inst_size = instance.size();
             size += inst_size;
@@ -163,7 +163,7 @@ mod test {
         use super::super::{DecArg, TypeId};
         use crate::value::JkInt;
 
-        let mut interpreter = Interpreter::new();
+        let mut ctx = Context::new();
 
         // Create a new type with two integers fields
         let fields = vec![
@@ -172,16 +172,16 @@ mod test {
         ];
         let t = TypeDec::new("Type_Test".to_owned(), fields);
 
-        t.execute(&mut interpreter);
+        t.execute(&mut ctx);
 
         let mut t_inst = TypeInstantiation::new(TypeId::from("Type_Test"));
 
-        assert!(t_inst.execute(&mut interpreter).is_none());
+        assert!(t_inst.execute(&mut ctx).is_none());
         assert!(
-            interpreter.error_handler.has_errors(),
+            ctx.error_handler.has_errors(),
             "Given 0 field to 2 fields type"
         );
-        interpreter.clear_errors();
+        ctx.clear_errors();
 
         t_inst.add_field(VarAssign::new(
             false,
@@ -189,12 +189,12 @@ mod test {
             Box::new(JkInt::from(12)),
         ));
 
-        assert!(t_inst.execute(&mut interpreter).is_none());
+        assert!(t_inst.execute(&mut ctx).is_none());
         assert!(
-            interpreter.error_handler.has_errors(),
+            ctx.error_handler.has_errors(),
             "Given 1 field to 2 fields type"
         );
-        interpreter.clear_errors();
+        ctx.clear_errors();
 
         t_inst.add_field(VarAssign::new(
             false,
@@ -203,10 +203,10 @@ mod test {
         ));
 
         assert!(
-            t_inst.execute(&mut interpreter).is_some(),
+            t_inst.execute(&mut ctx).is_some(),
             "Type instantiation should have a correct number of fields now"
         );
-        assert!(!interpreter.error_handler.has_errors());
+        assert!(!ctx.error_handler.has_errors());
     }
 
     #[test]
@@ -216,7 +216,7 @@ mod test {
 
         const TYPE_NAME: &str = "Type_Name";
 
-        let mut interpreter = Interpreter::new();
+        let mut ctx = Context::new();
 
         // Create a new type with two integers fields
         let fields = vec![
@@ -225,7 +225,7 @@ mod test {
         ];
         let t = TypeDec::new(TYPE_NAME.to_owned(), fields);
 
-        t.execute(&mut interpreter);
+        t.execute(&mut ctx);
 
         let mut t_inst = TypeInstantiation::new(TypeId::new(TYPE_NAME.to_string()));
         t_inst.add_field(VarAssign::new(
@@ -239,7 +239,7 @@ mod test {
             Box::new(JkInt::from(12)),
         ));
 
-        let instance = match t_inst.execute(&mut interpreter) {
+        let instance = match t_inst.execute(&mut ctx) {
             Some(instance) => instance,
             None => {
                 unreachable!("Type instantiation should have returned an Expression")
@@ -268,7 +268,7 @@ mod test {
     fn t_instantiate_primitive() {
         use crate::parser::Construct;
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         let instr = Construct::instruction("i = int { no_field = 15 }")
             .unwrap()
