@@ -29,9 +29,6 @@ const ENTRY_NAME: &str = "__entry";
 /// variables, tests... and can be optimized, typechecked, executed or
 /// serialized/deserialized to bytecode.
 pub struct Context {
-    /// Is the context in an audit block or not
-    pub in_audit: bool,
-
     /// Is the context in debugging mode or not
     pub debug_mode: bool,
 
@@ -74,7 +71,6 @@ impl Context {
     /// Create a new empty context. Starts in non-audit mode
     pub fn new() -> Context {
         let mut ctx = Context {
-            in_audit: false,
             debug_mode: false,
             entry_point: Self::new_entry(),
             path: None,
@@ -193,16 +189,6 @@ impl Context {
     /// Exit the latest created scope
     pub fn scope_exit(&mut self) {
         self.scope_map.scope_exit()
-    }
-
-    /// Enter audit mode
-    pub fn audit_enter(&mut self) {
-        self.in_audit = true;
-    }
-
-    /// Exit audit mode
-    pub fn audit_exit(&mut self) {
-        self.in_audit = false;
     }
 
     /// Pretty-prints valid jinko code from a given ctx
