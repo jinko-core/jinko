@@ -1,9 +1,9 @@
 #[warn(missing_docs)]
 mod args;
+mod context;
 mod error;
 mod instance;
 mod instruction;
-mod context;
 mod parser;
 mod repl;
 mod utils;
@@ -14,10 +14,10 @@ use parser::Parser;
 use repl::Repl;
 use std::fs;
 
+pub use context::Context;
 pub use error::{ErrKind, Error};
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction, Rename};
-pub use context::Context;
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 fn handle_exit_code(result: Option<ObjectInstance>) {

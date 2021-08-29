@@ -2,7 +2,7 @@
 //! they get desugared into a normal function call.
 
 use crate::instruction::FunctionCall;
-use crate::{InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
+use crate::{Context, InstrKind, Instruction, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -27,19 +27,19 @@ impl Instruction for MethodCall {
         format!("{}.{}", self.var.print(), self.method.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.debug("METHOD CALL ENTER", &self.print());
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug("METHOD CALL ENTER", &self.print());
 
         // FIXME: No clone here
         let mut call = self.method.clone();
 
         call.add_arg_front(self.var.clone());
 
-        interpreter.debug("DESUGARING TO", &call.print());
+        ctx.debug("DESUGARING TO", &call.print());
 
-        interpreter.debug("METHOD CALL EXIT", &self.print());
+        ctx.debug("METHOD CALL EXIT", &self.print());
 
-        call.execute(interpreter)
+        call.execute(ctx)
     }
 }
 
@@ -67,11 +67,11 @@ mod tests {
 
     #[test]
     fn t_execute() {
-        let mut interpreter = Interpreter::new();
+        let mut ctx = Context::new();
         let func_dec = Construct::instruction("func first(a: int, b: int) -> int { a }")
             .unwrap()
             .1;
-        func_dec.execute(&mut interpreter);
+        func_dec.execute(&mut ctx);
 
         let var1 = Box::new(JkInt::from(1));
         let var2 = Box::new(JkInt::from(2));
@@ -80,9 +80,6 @@ mod tests {
 
         let mc = MethodCall::new(var1, method);
 
-        assert_eq!(
-            mc.execute(&mut interpreter).unwrap(),
-            JkInt::from(1).to_instance()
-        );
+        assert_eq!(mc.execute(&mut ctx).unwrap(), JkInt::from(1).to_instance());
     }
 }

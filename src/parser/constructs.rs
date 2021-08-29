@@ -533,7 +533,7 @@ impl Construct {
 
     /// Parse a test declaration. This returns a FunctionDec as well, but of
     /// kind `FunctionDec::Test`.
-    /// test functions are non-callable by the programmer. Only the interpreter can
+    /// test functions are non-callable by the programmer. Only the context can
     /// invoke them. Therefore, naming the test the same as the tested function is fine
     /// and is not any form of overloading whatsoever.
     ///
@@ -707,7 +707,7 @@ impl Construct {
         Ok(lup)
     }
 
-    /// Parse an interpreter directive. There are only a few of them, listed in
+    /// Parse a context directive. There are only a few of them, listed in
     /// the `JkInst` module
     ///
     /// `@<jinko_inst><args_list>`

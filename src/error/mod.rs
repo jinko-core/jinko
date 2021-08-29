@@ -1,5 +1,5 @@
 //! The Error module contains helpful wrapper around possible errors in jinko. They
-//! are used by the interpreter as well as the parser.
+//! are used by the context as well as the parser.
 
 use std::path::{Path, PathBuf};
 
@@ -66,7 +66,7 @@ impl ErrSpaceLocation {
 #[repr(u8)]
 pub enum ErrKind {
     Parsing,
-    Interpreter,
+    Context,
     TypeChecker,
     IO,
 }
@@ -82,7 +82,7 @@ impl Error {
     pub fn emit(&self, file: &Path) {
         let kind_str = match self.kind {
             ErrKind::Parsing => "Parsing",
-            ErrKind::Interpreter => "Interpreter",
+            ErrKind::Context => "Context",
             ErrKind::TypeChecker => "Typechecker",
             ErrKind::IO => "I/O",
         };

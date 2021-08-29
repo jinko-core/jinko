@@ -230,12 +230,12 @@ mod tests {
 
     fn sy_assert(input: &str, result: i64) {
         use crate::instance::ToObjectInstance;
-        use crate::Interpreter;
+        use crate::Context;
 
         let boxed_output = ShuntingYard::parse(input).unwrap().1;
         let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         assert_eq!(
             output.execute(&mut i).unwrap(),

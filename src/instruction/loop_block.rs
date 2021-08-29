@@ -2,7 +2,7 @@
 //! different kinds, `for`, `while` or `loop`.
 
 use crate::instruction::{Block, InstrKind, Instruction, Var};
-use crate::{ErrKind, Error, Interpreter, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, ObjectInstance, Rename};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
@@ -48,19 +48,19 @@ impl Instruction for Loop {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         match &self.kind {
             LoopKind::Loop => loop {
-                interpreter.debug_step("LOOP ENTER");
-                self.block.execute(interpreter)?;
-                interpreter.debug_step("LOOP EXIT");
+                ctx.debug_step("LOOP ENTER");
+                self.block.execute(ctx)?;
+                ctx.debug_step("LOOP EXIT");
             },
             LoopKind::While(cond) => {
-                interpreter.debug_step("WHILE ENTER");
-                while cond.as_bool(interpreter)? {
-                    self.block.execute(interpreter)?;
+                ctx.debug_step("WHILE ENTER");
+                while cond.as_bool(ctx)? {
+                    self.block.execute(ctx)?;
                 }
-                interpreter.debug_step("WHILE EXIT");
+                ctx.debug_step("WHILE EXIT");
             }
             LoopKind::For(_var, _range) => {
                 // FIXME:
@@ -76,32 +76,32 @@ impl Instruction for Loop {
                 // that that result, as a boolean, returns true. If it does, execute the
                 // body. If it does not, break from the for.
 
-                interpreter.error(
-                    Error::new(ErrKind::Interpreter)
+                ctx.error(
+                    Error::new(ErrKind::Context)
                         .with_msg("for loops are currently unimplemented".to_string()),
                 );
                 return None;
 
                 // FIXME: Rework that code
-                // interpreter.debug_step("FOR ENTER");
+                // ctx.debug_step("FOR ENTER");
                 // let var_name = var.name().to_owned();
-                // interpreter.scope_enter();
+                // ctx.scope_enter();
 
-                // interpreter.add_variable(var.clone())?;
+                // ctx.add_variable(var.clone())?;
 
                 // loop {
-                //     range.execute(interpreter)?;
+                //     range.execute(ctx)?;
 
                 //     // We can unwrap since we added the variable right before
-                //     if !interpreter.get_variable(&var_name).unwrap().as_bool() {
+                //     if !ctx.get_variable(&var_name).unwrap().as_bool() {
                 //         break;
                 //     }
 
-                //     self.block.execute(interpreter)?;
+                //     self.block.execute(ctx)?;
                 // }
 
-                // interpreter.scope_exit();
-                // interpreter.debug_step("FOR EXIT");
+                // ctx.scope_exit();
+                // ctx.debug_step("FOR EXIT");
             }
         }
 

@@ -4,11 +4,11 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    parser::Construct, ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename,
+    parser::Construct, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename,
 };
 
-/// An `Incl` is constituted of a path, an optional alias and contains an interpreter.
-/// The interpreter is built from parsing the source file in the path.
+/// An `Incl` is constituted of a path, an optional alias and contains a context.
+/// The ctx is built from parsing the source file in the path.
 /// Aliases are used to potentially rename exported functions.
 #[derive(Clone)]
 pub struct Incl {
@@ -47,11 +47,11 @@ impl Incl {
 
         match (dir_valid, file_valid) {
             // We cannot have both <path>/lib.jk and <path>.jk be valid files
-            (true, true) => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+            (true, true) => Err(Error::new(ErrKind::Context).with_msg(format!(
                 "invalid include: {:?} and {:?} are both valid candidates",
                 dir_candidate, file_candidate
             ))),
-            (false, false) => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+            (false, false) => Err(Error::new(ErrKind::Context).with_msg(format!(
                 "no candidate for include: {:?} and {:?} do not exist",
                 dir_candidate, file_candidate
             ))),
@@ -60,43 +60,43 @@ impl Incl {
         }
     }
 
-    /// Parse the code and load it in the Incl's interpreter
+    /// Parse the code and load it in the Incl's ctx
     fn inner_load(
         &self,
         base: &Path,
-        interpreter: &mut Interpreter,
+        ctx: &mut Context,
     ) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
         let formatted = match self.find_include_path(base) {
             Ok(f) => f,
             Err(e) => {
-                interpreter.error(e);
+                ctx.error(e);
                 return None;
             }
         };
 
         // If a source has already been included, skip it without returning
         // an error
-        if interpreter.is_included(&formatted) {
+        if ctx.is_included(&formatted) {
             return Some((formatted, vec![]));
         }
 
-        interpreter.debug("FINAL PATH", &format!("{:?}", formatted));
+        ctx.debug("FINAL PATH", &format!("{:?}", formatted));
 
         let input = match std::fs::read_to_string(&formatted) {
             Ok(i) => i,
             Err(e) => {
-                interpreter.error(Error::from(e));
+                ctx.error(Error::from(e));
                 return None;
             }
         };
 
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
-        // parse many instructions and add them to an empty interpreter
+        // parse many instructions and add them to an empty ctx
         let (remaining_input, instructions) = match Construct::many_instructions(input.as_str()) {
             Ok(tuple) => tuple,
             Err(e) => {
-                interpreter.error(Error::from(e));
+                ctx.error(Error::from(e));
                 return None;
             }
         };
@@ -105,7 +105,7 @@ impl Incl {
             // The remaining input is empty: We parsed the whole file properly
             0 => Some((formatted, instructions)),
             _ => {
-                interpreter.error(Error::new(ErrKind::Parsing).with_msg(format!(
+                ctx.error(Error::new(ErrKind::Parsing).with_msg(format!(
                     "error when parsing included file: {:?},\non the following input:\n{}",
                     formatted, remaining_input
                 )));
@@ -118,9 +118,9 @@ impl Incl {
     fn load_relative(
         &self,
         base: &Path,
-        i: &mut Interpreter,
+        ctx: &mut Context,
     ) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
-        self.inner_load(base, i)
+        self.inner_load(base, ctx)
     }
 
     /// Try to load code from jinko's installation path
@@ -132,12 +132,8 @@ impl Incl {
     ///
     /// There are two ways to look for a source file: First in the includer's path, and
     /// if not available in jinko's installation directory.
-    fn load(
-        &self,
-        base: &Path,
-        i: &mut Interpreter,
-    ) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
-        self.load_relative(base, i)
+    fn load(&self, base: &Path, ctx: &mut Context) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
+        self.load_relative(base, ctx)
     }
 
     /// Format the correct prefix to include content as. This depends on the presence
@@ -151,19 +147,19 @@ impl Incl {
 
         match alias {
             // If the alias is empty, then we're doing a special include from
-            // the interpreter itself. Don't add a leading `::`
+            // the context itself. Don't add a leading `::`
             "" => Some(alias.to_string()),
             _ => Some(format!("{}::", alias)),
         }
     }
 
-    fn get_base(&self, interpreter: &mut Interpreter) -> PathBuf {
-        match interpreter.path() {
-            // Get the parent directory of the interpreter's source file. We can unwrap
+    fn get_base(&self, ctx: &mut Context) -> PathBuf {
+        match ctx.path() {
+            // Get the parent directory of the context's source file. We can unwrap
             // since there's always a base
             Some(path) => path.parent().unwrap().to_owned(),
-            // The interpreter doesn't have an associated source file. Therefore, we
-            // load from where the interpreter was started. This is the case if we're
+            // The ctx doesn't have an associated source file. Therefore, we
+            // load from where the context was started. This is the case if we're
             // in dynamic mode for example
             None => PathBuf::new(),
         }
@@ -190,31 +186,31 @@ impl Instruction for Incl {
         base
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.debug("INCL ENTER", self.print().as_str());
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug("INCL ENTER", self.print().as_str());
 
-        let base = self.get_base(interpreter);
+        let base = self.get_base(ctx);
         let prefix = self.format_prefix()?;
 
-        interpreter.debug("BASE DIR", &format!("{:#?}", base));
+        ctx.debug("BASE DIR", &format!("{:#?}", base));
 
-        let old_path = interpreter.path().cloned();
+        let old_path = ctx.path().cloned();
 
-        let (new_path, mut content) = self.load(&base, interpreter)?;
+        let (new_path, mut content) = self.load(&base, ctx)?;
 
-        // Temporarily change the path of the interpreter
-        interpreter.set_path(Some(new_path));
+        // Temporarily change the path of the context
+        ctx.set_path(Some(new_path));
 
         content.iter_mut().for_each(|instr| {
             instr.prefix(&prefix);
 
-            interpreter.debug("INCLUDING", instr.print().as_str());
+            ctx.debug("INCLUDING", instr.print().as_str());
 
-            instr.execute(interpreter);
+            instr.execute(ctx);
         });
 
         // Reset the old path before leaving the instruction
-        interpreter.set_path(old_path);
+        ctx.set_path(old_path);
 
         None
     }

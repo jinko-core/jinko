@@ -5,7 +5,7 @@ use structopt::StructOpt;
 use std::path::PathBuf;
 
 #[derive(StructOpt)]
-#[structopt(name = "jinko", about = "The jinko interpreter")]
+#[structopt(name = "jinko", about = "The jinko ctx")]
 pub struct Args {
     #[structopt(short, long)]
     version: bool,
@@ -39,17 +39,17 @@ impl Args {
         args
     }
 
-    /// Is the interpreter launched in interactive mode
+    /// Is the context launched in interactive mode
     pub fn interactive(&self) -> bool {
         self.interactive
     }
 
-    /// Is the interpreter launched in debug mode
+    /// Is the context launched in debug mode
     pub fn debug(&self) -> bool {
         self.debug
     }
 
-    /// File input given to the interpreter
+    /// File input given to the context
     pub fn input(&self) -> Option<&PathBuf> {
         self.input.as_ref()
     }

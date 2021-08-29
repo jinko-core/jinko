@@ -2,7 +2,7 @@
 //! a name, a list of required arguments as well as an associated code block
 
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
-use crate::{ErrKind, Error, Interpreter, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, ObjectInstance, Rename};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -43,7 +43,7 @@ impl FunctionDec {
     }
 
     /// Add an instruction to the function declaration, in order. This is mostly useful
-    /// when adding instructions to the entry point of the interpreter, since parsing
+    /// when adding instructions to the entry point of the context, since parsing
     /// directly gives a block to the function
     pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) -> Result<(), Error> {
         match &mut self.block {
@@ -51,7 +51,7 @@ impl FunctionDec {
                 b.add_instruction(instruction);
                 Ok(())
             }
-            None => Err(Error::new(ErrKind::Interpreter).with_msg(format!(
+            None => Err(Error::new(ErrKind::Context).with_msg(format!(
                 "function {} has no instruction block. It might be an extern function or an error",
                 self.name
             ))),
@@ -105,13 +105,13 @@ impl FunctionDec {
     }
 
     /// Run through the function as if it was called. This is useful for setting
-    /// an entry point into the interpreter and executing it
-    pub fn run(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
+    /// an entry point into the context and executing it
+    pub fn run(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         let block = match self.block() {
             Some(b) => b,
             // FIXME: Fix Location and input
             None => {
-                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
                     "cannot execute function {} as it is marked `ext`",
                     self.name()
                 )));
@@ -119,7 +119,7 @@ impl FunctionDec {
             }
         };
 
-        block.execute(interpreter)
+        block.execute(ctx)
     }
 }
 
@@ -128,27 +128,27 @@ impl Instruction for FunctionDec {
         InstrKind::Statement
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.debug_step("FUNCDEC ENTER");
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug_step("FUNCDEC ENTER");
 
         match self.fn_kind() {
             FunctionKind::Func | FunctionKind::Ext => {
-                if let Err(e) = interpreter.add_function(self.clone()) {
-                    interpreter.error(e);
+                if let Err(e) = ctx.add_function(self.clone()) {
+                    ctx.error(e);
                 }
             }
             FunctionKind::Test => {
-                if let Err(e) = interpreter.add_test(self.clone()) {
-                    interpreter.error(e);
+                if let Err(e) = ctx.add_test(self.clone()) {
+                    ctx.error(e);
                 }
             }
-            FunctionKind::Mock | FunctionKind::Unknown => interpreter.error(
-                Error::new(ErrKind::Interpreter)
+            FunctionKind::Mock | FunctionKind::Unknown => ctx.error(
+                Error::new(ErrKind::Context)
                     .with_msg(format!("unknown type for function {}", self.name())),
             ),
         }
 
-        interpreter.debug_step("FUNCDEC EXIT");
+        ctx.debug_step("FUNCDEC EXIT");
 
         None
     }

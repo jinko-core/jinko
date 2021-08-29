@@ -16,7 +16,7 @@
 //! ```
 
 use crate::instruction::{Block, InstrKind, Instruction};
-use crate::{Interpreter, ObjectInstance, Rename};
+use crate::{Context, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct IfElse {
@@ -56,19 +56,19 @@ impl Instruction for IfElse {
         }
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.debug_step("IF_ELSE ENTER");
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug_step("IF_ELSE ENTER");
 
-        let cond = self.condition.as_bool(interpreter)?;
-        interpreter.debug("COND", &cond.to_string());
+        let cond = self.condition.as_bool(ctx)?;
+        ctx.debug("COND", &cond.to_string());
 
         if cond {
-            interpreter.debug_step("IF ENTER");
-            self.if_body.execute(interpreter)
+            ctx.debug_step("IF ENTER");
+            self.if_body.execute(ctx)
         } else {
-            interpreter.debug_step("ELSE ENTER");
+            ctx.debug_step("ELSE ENTER");
             match &self.else_body {
-                Some(b) => b.execute(interpreter),
+                Some(b) => b.execute(ctx),
                 // FIXME: Fix logic: If an `if` returns something, the else should too.
                 // if there is no else, then error out
                 None => None,

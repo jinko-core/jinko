@@ -1,12 +1,12 @@
-//! `JkInst`s are special directives given to the interpreter. There is only a limited
+//! `JkInst`s are special directives given to the context. There is only a limited
 //! amount of them, and they are mostly useful for debugging or testing. They aren't
 //! really an `Instruction`, and therefore their implementation lives in the parser
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::{ErrKind, Error, Interpreter, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, ObjectInstance, Rename};
 
-/// The potential interpreter instructions
+/// The potential ctx instructions
 #[derive(Clone, Debug, PartialEq)]
 pub enum JkInstKind {
     Dump,
@@ -32,7 +32,7 @@ impl JkInst {
             // FIXME: Fix location
             _ => {
                 return Err(Error::new(ErrKind::Parsing)
-                    .with_msg(format!("unknown interpreter directive @{}", func_name)))
+                    .with_msg(format!("unknown ctx directive @{}", func_name)))
             }
         };
 
@@ -62,18 +62,18 @@ impl Instruction for JkInst {
         .to_string()
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.debug("JINKO_INST", &self.print());
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug("JINKO_INST", &self.print());
 
         match self.kind {
-            JkInstKind::Dump => println!("{}", interpreter.print()),
+            JkInstKind::Dump => println!("{}", ctx.print()),
             JkInstKind::Quit => std::process::exit(0),
             JkInstKind::Ir => eprintln!("usage: {:?} <statement|expr>", JkInstKind::Ir),
         };
 
         // FIXME: Is that true?
-        // JinkInsts cannot return anything. They simply act directly from the interpreter,
-        // on the interpreter.
+        // JinkInsts cannot return anything. They simply act directly from the context,
+        // on the context.
         None
     }
 }
@@ -92,7 +92,7 @@ mod tests {
         let (_, fc) = Construct::function_call("tamer()").unwrap();
         let inst = JkInst::from_function_call(fc);
 
-        assert!(inst.is_err(), "tamer is not a valid interpreter directive")
+        assert!(inst.is_err(), "tamer is not a valid ctx directive")
     }
 
     #[test]
@@ -100,7 +100,7 @@ mod tests {
         let (_, fc) = Construct::function_call("dump()").unwrap();
         let inst = JkInst::from_function_call(fc);
 
-        assert!(inst.is_ok(), "dump is a valid interpreter directive")
+        assert!(inst.is_ok(), "dump is a valid ctx directive")
     }
 
     #[test]
@@ -110,7 +110,7 @@ mod tests {
 
         assert!(
             inst.is_ok(),
-            "ir(func) is a valid use of the ir interpreter directive"
+            "ir(func) is a valid use of the ir ctx directive"
         )
     }
 }

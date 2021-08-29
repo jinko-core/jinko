@@ -1,7 +1,7 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{ErrKind, Error, InstrKind, Instruction, Interpreter, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -30,12 +30,12 @@ impl Instruction for FieldAccess {
         format!("{}.{}", self.instance.print(), self.field_name)
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.debug("FIELD ACCESS ENTER", &self.print());
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug("FIELD ACCESS ENTER", &self.print());
 
-        let calling_instance = match self.instance.execute(interpreter) {
+        let calling_instance = match self.instance.execute(ctx) {
             None => {
-                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
                     "instance `{}` is a statement and cannot be accessed",
                     self.instance.print()
                 )));
@@ -46,12 +46,12 @@ impl Instruction for FieldAccess {
         let field_instance = match calling_instance.get_field(&self.field_name) {
             Ok(field) => field,
             Err(e) => {
-                interpreter.error(e);
+                ctx.error(e);
                 return None;
             }
         };
 
-        interpreter.debug("FIELD ACCESS EXIT", &self.print());
+        ctx.debug("FIELD ACCESS EXIT", &self.print());
 
         Some(field_instance)
     }
@@ -71,31 +71,31 @@ mod tests {
     use crate::parser::Construct;
     use crate::JkInt;
 
-    fn setup() -> Interpreter {
-        let mut interpreter = Interpreter::new();
+    fn setup() -> Context {
+        let mut ctx = Context::new();
 
         let inst = Construct::instruction("type Point(x: int, y: int); ")
             .unwrap()
             .1;
-        inst.execute(&mut interpreter);
+        inst.execute(&mut ctx);
 
         let inst = Construct::instruction("func basic() -> Point { Point { x = 15, y = 14 }}")
             .unwrap()
             .1;
-        inst.execute(&mut interpreter);
+        inst.execute(&mut ctx);
 
         let inst = Construct::instruction("b = basic();").unwrap().1;
-        inst.execute(&mut interpreter);
+        inst.execute(&mut ctx);
 
-        interpreter
+        ctx
     }
 
     #[test]
     fn t_valid_field_access() {
-        let mut interpreter = setup();
+        let mut ctx = setup();
 
         let inst = Construct::instruction("b.x").unwrap().1;
-        let res = match inst.execute(&mut interpreter) {
+        let res = match inst.execute(&mut ctx) {
             Some(i) => i,
             None => return assert!(false, "Error when accessing valid field"),
         };
@@ -109,12 +109,12 @@ mod tests {
 
     #[test]
     fn t_valid_field_access_from_type_instantiation() {
-        let mut interpreter = setup();
+        let mut ctx = setup();
 
         let inst = Construct::instruction("Point { x = 1, y = 2 }.x")
             .unwrap()
             .1;
-        let res = match inst.execute(&mut interpreter) {
+        let res = match inst.execute(&mut ctx) {
             Some(i) => i,
             None => unreachable!("Error when accesing valid field"),
         };
@@ -129,25 +129,25 @@ mod tests {
     #[test]
     #[ignore] // FIXME: Do not ignore once we can type instance fields
     fn t_valid_multi_field_access() {
-        let mut interpreter = Interpreter::new();
+        let mut ctx = Context::new();
 
         let inst = Construct::instruction("type Pair1(x: int, y: int)")
             .unwrap()
             .1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut ctx).unwrap();
 
         let inst = Construct::instruction("type Pair2(x: Pair1, y: int)")
             .unwrap()
             .1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut ctx).unwrap();
 
         let inst = Construct::instruction("p = Pair2 { x = Pair1 { x = 1, y = 2}, y = 3}")
             .unwrap()
             .1;
-        inst.execute(&mut interpreter).unwrap();
+        inst.execute(&mut ctx).unwrap();
 
         let inst = Construct::instruction("p.x.y").unwrap().1;
-        let res = match inst.execute(&mut interpreter) {
+        let res = match inst.execute(&mut ctx) {
             Some(i) => i,
             None => unreachable!("Error when accessing valid multi field"),
         };
@@ -161,34 +161,34 @@ mod tests {
 
     #[test]
     fn t_field_access_on_void() {
-        let mut interpreter = setup();
+        let mut ctx = setup();
 
         let inst = Construct::instruction("func void() {}").unwrap().1;
-        inst.execute(&mut interpreter);
+        inst.execute(&mut ctx);
 
         let inst = Construct::instruction("void().field").unwrap().1;
-        assert!(inst.execute(&mut interpreter).is_none());
-        assert!(interpreter.error_handler.has_errors())
+        assert!(inst.execute(&mut ctx).is_none());
+        assert!(ctx.error_handler.has_errors())
     }
 
     #[test]
     fn t_field_access_unknown_field() {
-        let mut interpreter = setup();
+        let mut ctx = setup();
 
         let inst = Construct::instruction("b.not_a_field").unwrap().1;
-        assert!(inst.execute(&mut interpreter).is_none());
-        assert!(interpreter.error_handler.has_errors());
+        assert!(inst.execute(&mut ctx).is_none());
+        assert!(ctx.error_handler.has_errors());
     }
 
     #[test]
     fn t_field_access_field_on_primitive() {
-        let mut interpreter = setup();
+        let mut ctx = setup();
 
         let inst = Construct::instruction("i = 12").unwrap().1;
-        inst.execute(&mut interpreter);
+        inst.execute(&mut ctx);
 
         let inst = Construct::instruction("i.field_on_primitive").unwrap().1;
-        assert!(inst.execute(&mut interpreter).is_none());
-        assert!(interpreter.error_handler.has_errors())
+        assert!(inst.execute(&mut ctx).is_none());
+        assert!(ctx.error_handler.has_errors())
     }
 }

@@ -1,7 +1,7 @@
 //! The VarAssign struct is used when assigning values to variables.
 
 use crate::instruction::{InstrKind, Var};
-use crate::{ErrKind, Error, Instruction, Interpreter, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, Instruction, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -53,21 +53,21 @@ impl Instruction for VarAssign {
         format!("{}{} = {}", base, self.symbol, self.value.print())
     }
 
-    fn execute(&self, interpreter: &mut Interpreter) -> Option<ObjectInstance> {
-        interpreter.debug("ASSIGN VAR", self.symbol());
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug("ASSIGN VAR", self.symbol());
 
         // Are we creating the variable or not
         let mut var_creation = false;
 
-        let mut var = match interpreter.get_variable(&self.symbol) {
+        let mut var = match ctx.get_variable(&self.symbol) {
             Some(v) => {
                 // If `self` is mutable, then it means that we are creating the variable
                 // for the first time. However, we entered the match arm because the variable
-                // is already present in the interpreter. Error out appropriately.
+                // is already present in the context. Error out appropriately.
                 if self.mutable() {
                     let err_msg =
                         format!("trying to redefine already defined variable: {}", v.name());
-                    interpreter.error(Error::new(ErrKind::Interpreter).with_msg(err_msg));
+                    ctx.error(Error::new(ErrKind::Context).with_msg(err_msg));
                     return None;
                 }
 
@@ -87,19 +87,19 @@ impl Instruction for VarAssign {
             (false, false) => {
                 // The variable already exists. So we need to error out if it isn't
                 // mutable
-                interpreter.error(Error::new(ErrKind::Interpreter).with_msg(format!(
+                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
                     "trying to assign value to non mutable variable `{}`: `{}`",
                     var.name(),
                     self.value.print()
                 )));
                 return None;
             }
-            (true, _) | (_, true) => var.set_instance(self.value.execute_expression(interpreter)?),
+            (true, _) | (_, true) => var.set_instance(self.value.execute_expression(ctx)?),
         }
 
         // We can unwrap safely since we checked that the variable does not
         // exist
-        interpreter.replace_variable(var).unwrap();
+        ctx.replace_variable(var).unwrap();
 
         // A variable assignment is always a statement
         None
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn assign_mutable() {
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
         let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
         let va_0 = Construct::var_assignment("a = 15").unwrap().1;
 
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn assign_immutable() {
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
         let va_init = Construct::var_assignment("a = 13").unwrap().1;
         let va_0 = Construct::var_assignment("a = 15").unwrap().1;
 
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn create_mutable_twice() {
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
         let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
         let va_0 = Construct::var_assignment("mut a = 15").unwrap().1;
 
