@@ -17,11 +17,7 @@ use nom::Err::Error as NomError;
 use nom::{branch::alt, combinator::opt, multi::many0};
 
 use crate::error::{ErrKind, Error};
-use crate::instruction::{
-    Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse,
-    Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var,
-    VarAssign,
-};
+use crate::instruction::{Block, DecArg, ExtraContent, FieldAccess, FieldAssign, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign};
 use crate::parser::{BoxConstruct, ConstantConstruct, ParseResult, ShuntingYard, Token};
 
 type Instructions = Vec<Box<dyn Instruction>>;
@@ -39,6 +35,7 @@ impl Construct {
         let (input, value) = alt((
             Construct::binary_op,
             BoxConstruct::method_call,
+            BoxConstruct::field_assign,
             BoxConstruct::field_access,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
@@ -877,6 +874,16 @@ impl Construct {
         }
 
         Ok((input, current_fa))
+    }
+
+    pub fn field_assign(input: &str) -> ParseResult<&str, FieldAssign> {
+        let (input, field_access) = Construct::field_access(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::equal(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, value) = Construct::instruction(input)?;
+
+        Ok((input, FieldAssign::new(field_access, value)))
     }
 
     /// Parse a field access on a custom type. This is very similar to a method call: The
