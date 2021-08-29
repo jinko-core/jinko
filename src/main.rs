@@ -3,7 +3,7 @@ mod args;
 mod error;
 mod instance;
 mod instruction;
-mod interpreter;
+mod context;
 mod parser;
 mod repl;
 mod utils;
@@ -17,7 +17,7 @@ use std::fs;
 pub use error::{ErrKind, Error};
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction, Rename};
-pub use interpreter::Interpreter;
+pub use context::Context;
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 fn handle_exit_code(result: Option<ObjectInstance>) {
@@ -62,14 +62,14 @@ fn main() {
     let input = fs::read_to_string(&path).unwrap();
 
     // FIXME: No unwrap()
-    let mut interpreter = Parser::parse(&input).unwrap();
-    interpreter.emit_errors();
-    interpreter.clear_errors();
+    let mut ctx = Parser::parse(&input).unwrap();
+    ctx.emit_errors();
+    ctx.clear_errors();
 
-    interpreter.set_path(Some(path.to_owned()));
-    interpreter.set_debug(args.debug());
+    ctx.set_path(Some(path.to_owned()));
+    ctx.set_debug(args.debug());
 
-    match interpreter.execute() {
+    match ctx.execute() {
         Ok(result) => handle_exit_code(result),
         Err(e) => e.exit(),
     }

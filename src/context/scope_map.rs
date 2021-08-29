@@ -46,7 +46,7 @@ impl Scope {
     /// Add a variable to the most recently created scope, if it doesn't already exist
     pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         match self.get_variable(var.name()) {
-            Some(_) => Err(Error::new(ErrKind::Interpreter)
+            Some(_) => Err(Error::new(ErrKind::Context)
                 .with_msg(format!("variable already declared: {}", var.name()))),
             None => {
                 self.variables.insert(var.name().to_owned(), var);
@@ -62,7 +62,7 @@ impl Scope {
                 self.variables.remove(var.name()).unwrap();
                 Ok(())
             }
-            None => Err(Error::new(ErrKind::Interpreter)
+            None => Err(Error::new(ErrKind::Context)
                 .with_msg(format!("variable does not exist: {}", var.name()))),
         }
     }
@@ -70,7 +70,7 @@ impl Scope {
     /// Add a variable to the most recently created scope, if it doesn't already exist
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
         match self.get_function(func.name()) {
-            Some(_) => Err(Error::new(ErrKind::Interpreter)
+            Some(_) => Err(Error::new(ErrKind::Context)
                 .with_msg(format!("function already declared: {}", func.name()))),
             None => {
                 self.functions.insert(func.name().to_owned(), Rc::new(func));
@@ -82,7 +82,7 @@ impl Scope {
     /// Add a type to the most recently created scope, if it doesn't already exist
     pub fn add_type(&mut self, type_dec: TypeDec) -> Result<(), Error> {
         match self.get_type(type_dec.name()) {
-            Some(_) => Err(Error::new(ErrKind::Interpreter)
+            Some(_) => Err(Error::new(ErrKind::Context)
                 .with_msg(format!("type already declared: {}", type_dec.name()))),
             None => {
                 self.types
@@ -133,7 +133,7 @@ impl ScopeMap {
 
     /// Exit the last added scope
     pub fn scope_exit(&mut self) {
-        // We unwrap since we want the interpreter to crash in case we pop an unexisting
+        // We unwrap since we want the context to crash in case we pop an unexisting
         // scope.
         self.scopes.pop_front().unwrap();
     }
@@ -181,7 +181,7 @@ impl ScopeMap {
     pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(var),
-            None => Err(Error::new(ErrKind::Interpreter)
+            None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding variable to empty scopemap"))),
         }
     }
@@ -190,7 +190,7 @@ impl ScopeMap {
     pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.remove_variable(var),
-            None => Err(Error::new(ErrKind::Interpreter)
+            None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Removing variable from empty scopemap"))),
         }
     }
@@ -199,7 +199,7 @@ impl ScopeMap {
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(func),
-            None => Err(Error::new(ErrKind::Interpreter)
+            None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding function to empty scopemap"))),
         }
     }
@@ -208,7 +208,7 @@ impl ScopeMap {
     pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_type(custom_type),
-            None => Err(Error::new(ErrKind::Interpreter)
+            None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding new custom type to empty scopemap"))),
         }
     }

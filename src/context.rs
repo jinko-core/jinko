@@ -1,7 +1,7 @@
-//! The jinko interpreter keeps track of variables and functions, and dispatches calls
-//! and references to their correct location. It contains a information regarding the
+//! The jinko context keeps track of variables and functions, and dispatches calls
+//! and references to their correct location. It contains information regarding the
 //! registered functions and variables. It also handles garbage collection. Parsing a
-//! source file returns an "Interpreter", which is really just a complex structure
+//! source file returns a "Context", which is really just a complex structure
 //! aggregating the necessary information to run a jinko program.
 
 use std::path::{Path, PathBuf};
@@ -18,50 +18,50 @@ use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
 use crate::ObjectInstance;
 
-/// Type the interpreter uses for keys
-type IKey = String;
+/// Type the context uses for keys
+type CtxKey = String;
 
 /// Name of the entry point in jinko
 const ENTRY_NAME: &str = "__entry";
 
 // FIXME: Rework visibility here
-/// An interpreter represents the state of a jinko program. It contains functions,
+/// A context represents the state of a jinko program. It contains functions,
 /// variables, tests... and can be optimized, typechecked, executed or
 /// serialized/deserialized to bytecode.
-pub struct Interpreter {
-    /// Is the interpreter in an audit block or not
+pub struct Context {
+    /// Is the context in an audit block or not
     pub in_audit: bool,
 
-    /// Is the interpreter in debugging mode or not
+    /// Is the context in debugging mode or not
     pub debug_mode: bool,
 
-    /// Entry point to the interpreter, the "main" function
+    /// Entry point to the context, the "main" function
     pub entry_point: FunctionDec,
 
-    /// An interpreter corresponds to a single source file (that might include other files)
+    /// A context corresponds to a single source file (that might include other files)
     /// We need to keep track of its path in order to load files relative to this one
     path: Option<PathBuf>,
 
-    /// Contains the scopes of the interpreter, in which are variables and functions
+    /// Contains the scopes of the context, in which are variables and functions
     scope_map: ScopeMap,
 
-    /// Tests registered in the interpreter
-    tests: HashMap<IKey, FunctionDec>,
+    /// Tests registered in the context
+    tests: HashMap<CtxKey, FunctionDec>,
 
-    /// Sources included by the interpreter
+    /// Sources included by the context
     included: HashSet<PathBuf>,
 
-    /// Errors being kept by the interpreter
+    /// Errors being kept by the context
     pub(crate) error_handler: ErrorHandler,
 }
 
-impl Default for Interpreter {
-    fn default() -> Interpreter {
-        Interpreter::new()
+impl Default for Context {
+    fn default() -> Context {
+        Context::new()
     }
 }
 
-impl Interpreter {
+impl Context {
     fn new_entry() -> FunctionDec {
         let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None);
 
@@ -71,9 +71,9 @@ impl Interpreter {
         ep
     }
 
-    /// Create a new empty interpreter. Starts in non-audit mode
-    pub fn new() -> Interpreter {
-        let mut i = Interpreter {
+    /// Create a new empty context. Starts in non-audit mode
+    pub fn new() -> Context {
+        let mut ctx = Context {
             in_audit: false,
             debug_mode: false,
             entry_point: Self::new_entry(),
@@ -84,27 +84,27 @@ impl Interpreter {
             error_handler: ErrorHandler::default(),
         };
 
-        i.scope_enter();
+        ctx.scope_enter();
 
         // Add all primitive types as empty types without fields
         crate::instruction::PRIMITIVE_TYPES
             .iter()
-            .for_each(|ty_name| i.add_type(TypeDec::from(*ty_name)).unwrap());
+            .for_each(|ty_name| ctx.add_type(TypeDec::from(*ty_name)).unwrap());
 
         // Include the standard library
         let stdlib_incl =
             crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
-        stdlib_incl.execute(&mut i);
+        stdlib_incl.execute(&mut ctx);
 
-        i
+        ctx
     }
 
-    /// Get a rerference to an interpreter's source path
+    /// Get a reference to a context's source path
     pub fn path(&self) -> Option<&PathBuf> {
         self.path.as_ref()
     }
 
-    /// Get a rerference to an interpreter's source path
+    /// Get a reference to a context's source path
     pub fn set_path(&mut self, path: Option<PathBuf>) {
         self.path = path;
         // FIXME: Is that correct? Remove that clone()...
@@ -119,45 +119,45 @@ impl Interpreter {
         };
     }
 
-    /// Add an error to the interpreter
+    /// Add an error to the context
     pub fn error(&mut self, err: Error) {
         self.error_handler.add(err)
     }
 
-    /// Emit all the errors currently kept in the interpreter and remove them
+    /// Emit all the errors currently kept in the context and remove them
     pub fn emit_errors(&mut self) {
         self.error_handler.emit();
     }
 
-    /// Clear all the errors currently kept in the interpreter and remove them
+    /// Clear all the errors currently kept in the context and remove them
     pub fn clear_errors(&mut self) {
         self.error_handler.clear();
     }
 
-    /// Set the debug mode of a previously created interpreter
+    /// Set the debug mode of a previously created ctx
     pub fn set_debug(&mut self, debug: bool) {
         self.debug_mode = debug
     }
 
-    /// Add a function to the interpreter. Returns `Ok` if the function was added, `Err`
+    /// Add a function to the context. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
     pub fn add_function(&mut self, function: FunctionDec) -> Result<(), Error> {
         self.scope_map.add_function(function)
     }
 
-    /// Add a variable to the interpreter. Returns `Ok` if the variable was added, `Err`
+    /// Add a variable to the context. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
     pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         self.scope_map.add_variable(var)
     }
 
-    /// Add a type to the interpreter. Returns `Ok` if the type was added, `Err`
+    /// Add a type to the context. Returns `Ok` if the type was added, `Err`
     /// if it existed already and was not.
     pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
         self.scope_map.add_type(custom_type)
     }
 
-    /// Remove a variable from the interpreter
+    /// Remove a variable from the context
     pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
         self.scope_map.remove_variable(var)
     }
@@ -205,13 +205,13 @@ impl Interpreter {
         self.in_audit = false;
     }
 
-    /// Pretty-prints valid jinko code from a given interpreter
+    /// Pretty-prints valid jinko code from a given ctx
     pub fn print(&self) -> String {
         self.scope_map.print();
         self.entry_point.print()
     }
 
-    /// Print a debug message if the interpreter is in debug mode, according to the
+    /// Print a debug message if the context is in debug mode, according to the
     /// following format:
     ///
     /// `<specifier>: <msg>`
@@ -221,12 +221,12 @@ impl Interpreter {
         }
     }
 
-    /// Print a debugging step if the interpreter is in debug mode, according to the
+    /// Print a debugging step if the context is in debug mode, according to the
     /// following format:
     ///
     /// `<specifier>`
     ///
-    /// This is used to indicate "steps" the interpreter is taking where adding a
+    /// This is used to indicate "steps" the context is taking where adding a
     /// secondary format is not necesarry. For example, when entering a block: There's
     /// no way to name a block, so no necessity to have more information other than
     /// "ENTER_BLOCK"
@@ -236,10 +236,10 @@ impl Interpreter {
         }
     }
 
-    /// Register a test to be executed by the interpreter
+    /// Register a test to be executed by the context
     pub fn add_test(&mut self, test: FunctionDec) -> Result<(), Error> {
         match self.tests.get(test.name()) {
-            Some(test) => Err(Error::new(ErrKind::Interpreter)
+            Some(test) => Err(Error::new(ErrKind::Context)
                 .with_msg(format!("test function already declared: {}", test.name()))),
             None => {
                 self.tests.insert(test.name().to_owned(), test);
@@ -262,7 +262,7 @@ impl Interpreter {
         self.emit_errors();
 
         match self.error_handler.has_errors() {
-            true => Err(Error::new(ErrKind::Interpreter)),
+            true => Err(Error::new(ErrKind::Context)),
             false => Ok(res),
         }
     }
@@ -277,7 +277,7 @@ mod tests {
         let f0 = FunctionDec::new("f0".to_owned(), None);
         let f0_copy = FunctionDec::new("f0".to_owned(), None);
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         assert_eq!(i.add_function(f0), Ok(()));
         assert!(i.add_function(f0_copy).is_err());
@@ -288,7 +288,7 @@ mod tests {
         let v0 = Var::new("v0".to_owned());
         let v0_copy = Var::new("v0".to_owned());
 
-        let mut i = Interpreter::new();
+        let mut i = Context::new();
 
         assert_eq!(i.add_variable(v0), Ok(()));
         assert!(i.add_variable(v0_copy).is_err());
