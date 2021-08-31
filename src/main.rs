@@ -12,7 +12,7 @@ mod value;
 use args::Args;
 use parser::Parser;
 use repl::Repl;
-use std::fs;
+use std::{fs, path::Path};
 
 pub use context::Context;
 pub use error::{ErrKind, Error};
@@ -20,57 +20,65 @@ pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction, Rename};
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
-fn handle_exit_code(result: Option<ObjectInstance>) {
+fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
+    use std::process::exit;
+
     match result {
         // A statement that completes succesfully returns 0
-        None => std::process::exit(0),
+        None => exit(0),
 
         // FIXME: Maybe return different stuff based on more types?
 
         // If it's an expression, return if you can (if it's an int)
         Some(i) => match i.ty() {
             Some(ty) => match ty.name() {
-                "int" => std::process::exit(JkInt::from_instance(&i).0 as i32),
-                "float" => std::process::exit(JkFloat::from_instance(&i).0 as i32),
+                "int" => exit(JkInt::from_instance(&i).0 as i32),
+                "float" => exit(JkFloat::from_instance(&i).0 as i32),
                 "bool" => {
                     let b_value = JkBool::from_instance(&i).0;
                     match b_value {
-                        true => std::process::exit(0),
-                        false => std::process::exit(1),
+                        true => exit(0),
+                        false => exit(1),
                     }
                 }
-                _ => std::process::exit(0),
+                _ => exit(0),
             },
-            None => std::process::exit(0),
+            None => exit(0),
         },
     }
 }
 
-fn main() {
-    let args = Args::handle();
+fn handle_input(args: &Args, file: &Path) -> Result<(Option<ObjectInstance>, Context), Error> {
+    let input = fs::read_to_string(file)?;
 
-    if args.interactive() || args.input().is_none() {
-        match Repl::launch_repl(&args) {
-            Ok(_) => return,
-            Err(e) => e.exit(),
-        }
-    };
+    let mut ctx = Parser::parse(&input)?;
+    ctx.set_path(Some(file.to_owned()));
+    ctx.set_debug(args.debug());
 
-    // We can unwrap since we checked for `None` in the if
-    let path = args.input().unwrap();
-
-    let input = fs::read_to_string(&path).unwrap();
-
-    // FIXME: No unwrap()
-    let mut ctx = Parser::parse(&input).unwrap();
     ctx.emit_errors();
     ctx.clear_errors();
 
-    ctx.set_path(Some(path.to_owned()));
-    ctx.set_debug(args.debug());
+    match args.interactive() {
+        true => Repl::launch_with_context(ctx),
+        false => {
+            let res = ctx.execute()?;
+            ctx.emit_errors();
 
-    match ctx.execute() {
-        Ok(result) => handle_exit_code(result),
-        Err(e) => e.exit(),
+            Ok((res, ctx))
+        }
     }
+}
+
+fn main() -> anyhow::Result<()> {
+    let args = Args::handle();
+
+    let result = args.input().map_or_else(|| Repl::launch_repl(&args), |filename| {
+        handle_input(&args, filename)
+    });
+
+    if let Ok((instance, _)) = result {
+        handle_exit_code(instance)
+    }
+
+    Ok(())
 }

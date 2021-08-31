@@ -51,8 +51,9 @@ impl Repl {
         }
     }
 
-    /// Launch the REPL
-    pub fn launch_repl(args: &Args) -> Result<(), Error> {
+    /// Launch the REP
+    // FIXME: Explain why we return an Option<ObjectInstance>
+    pub fn launch_repl(args: &Args) -> Result<(Option<ObjectInstance>, Context), Error> {
         let line_reader = Interface::new("jinko")?;
 
         let mut ctx = Context::new();
@@ -86,6 +87,46 @@ impl Repl {
             line_reader.set_prompt(&Prompt::get(&ctx))?;
         }
 
-        Ok(())
+        Ok((None, ctx))
+    }
+
+    pub fn launch_with_context(mut ctx: Context) -> Result<(Option<ObjectInstance>, Context), Error> {
+        // FIXME: Factor this
+        let line_reader = Interface::new("jinko")?;
+
+        // FIXME: Add actual prompt
+        line_reader.set_prompt(&Prompt::get(&ctx))?;
+
+        let ep = ctx.entry_point.block().unwrap().clone();
+        ep.instructions().iter().for_each(|inst| { inst.execute(&mut ctx); });
+        if let Some(last) = ep.last() {
+            last.execute(&mut ctx);
+        }
+
+        while let ReadResult::Input(input) = line_reader.read_line()? {
+            let inst = match Repl::parse_instruction(&input) {
+                Ok(i) => i,
+                Err(e) => {
+                    e.emit(PathBuf::from("repl").as_path());
+                    continue;
+                }
+            };
+
+            let inst = match inst {
+                Some(i) => i,
+                None => continue,
+            };
+
+            if let Some(result) = inst.execute(&mut ctx) {
+                println!("{}", result);
+            };
+
+            ctx.emit_errors();
+            ctx.clear_errors();
+
+            line_reader.set_prompt(&Prompt::get(&ctx))?;
+        }
+
+        Ok((None, ctx))
     }
 }

@@ -1,6 +1,7 @@
 //! The Error module contains helpful wrapper around possible errors in jinko. They
 //! are used by the context as well as the parser.
 
+use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
 use colored::Colorize;
@@ -71,6 +72,17 @@ pub enum ErrKind {
     IO,
 }
 
+impl ErrKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ErrKind::Parsing => "Parsing",
+            ErrKind::Context => "Context",
+            ErrKind::TypeChecker => "Typechecker",
+            ErrKind::IO => "I/O",
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Error {
     kind: ErrKind,
@@ -80,12 +92,7 @@ pub struct Error {
 
 impl Error {
     pub fn emit(&self, file: &Path) {
-        let kind_str = match self.kind {
-            ErrKind::Parsing => "Parsing",
-            ErrKind::Context => "Context",
-            ErrKind::TypeChecker => "Typechecker",
-            ErrKind::IO => "I/O",
-        };
+        let kind_str = self.kind.as_str();
 
         eprintln!("Error type: {}", kind_str.red());
         eprintln!(" ===> {}", file.to_string_lossy().green());
@@ -172,3 +179,11 @@ impl nom::error::ParseError<&str> for Error {
         Error::new(ErrKind::Parsing).with_msg(String::from(input)) // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
     }
 }
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.kind.as_str())
+    }
+}
+
+impl std::error::Error for Error {}
