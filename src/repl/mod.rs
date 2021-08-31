@@ -9,7 +9,8 @@ use linefeed::{Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
+    parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
+    ObjectInstance,
 };
 
 /// Empty struct for the Repl methods
@@ -53,7 +54,7 @@ impl Repl {
 
     /// Launch the REP
     // FIXME: Explain why we return an Option<ObjectInstance>
-    pub fn launch_repl(args: &Args) -> Result<(Option<ObjectInstance>, Context), Error> {
+    pub fn launch_repl(args: &Args) -> InteractResult {
         let line_reader = Interface::new("jinko")?;
 
         let mut ctx = Context::new();
@@ -90,7 +91,7 @@ impl Repl {
         Ok((None, ctx))
     }
 
-    pub fn launch_with_context(mut ctx: Context) -> Result<(Option<ObjectInstance>, Context), Error> {
+    pub fn launch_with_context(mut ctx: Context) -> InteractResult {
         // FIXME: Factor this
         let line_reader = Interface::new("jinko")?;
 
@@ -98,7 +99,9 @@ impl Repl {
         line_reader.set_prompt(&Prompt::get(&ctx))?;
 
         let ep = ctx.entry_point.block().unwrap().clone();
-        ep.instructions().iter().for_each(|inst| { inst.execute(&mut ctx); });
+        ep.instructions().iter().for_each(|inst| {
+            inst.execute(&mut ctx);
+        });
         if let Some(last) = ep.last() {
             last.execute(&mut ctx);
         }

@@ -20,6 +20,9 @@ pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction, Rename};
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
+// FIXME: Add documentation
+pub type InteractResult = Result<(Option<ObjectInstance>, Context), Error>;
+
 fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
     use std::process::exit;
 
@@ -48,7 +51,7 @@ fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
     }
 }
 
-fn handle_input(args: &Args, file: &Path) -> Result<(Option<ObjectInstance>, Context), Error> {
+fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
     let mut ctx = Parser::parse(&input)?;
@@ -72,13 +75,10 @@ fn handle_input(args: &Args, file: &Path) -> Result<(Option<ObjectInstance>, Con
 fn main() -> anyhow::Result<()> {
     let args = Args::handle();
 
-    let result = args.input().map_or_else(|| Repl::launch_repl(&args), |filename| {
-        handle_input(&args, filename)
-    });
+    let result = args.input().map_or_else(
+        || Repl::launch_repl(&args),
+        |filename| handle_input(&args, filename),
+    )?;
 
-    if let Ok((instance, _)) = result {
-        handle_exit_code(instance)
-    }
-
-    Ok(())
+    handle_exit_code(result.0)
 }
