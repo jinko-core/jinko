@@ -17,7 +17,11 @@ use nom::Err::Error as NomError;
 use nom::{branch::alt, combinator::opt, multi::many0};
 
 use crate::error::{ErrKind, Error};
-use crate::instruction::{Block, DecArg, ExtraContent, FieldAccess, FieldAssign, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var, VarAssign};
+use crate::instruction::{
+    Block, DecArg, ExtraContent, FieldAccess, FieldAssign, FunctionCall, FunctionDec, FunctionKind,
+    IfElse, Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId,
+    TypeInstantiation, Var, VarAssign,
+};
 use crate::parser::{BoxConstruct, ConstantConstruct, ParseResult, ShuntingYard, Token};
 
 type Instructions = Vec<Box<dyn Instruction>>;

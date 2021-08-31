@@ -111,7 +111,10 @@ impl ObjectInstance {
 
         // We can unwrap safely here since we already checked if the instance contained fields
         // in `set_field()`
-        self.fields.as_mut().unwrap().insert(name.to_string(), (self.size - value.size(), value.size()));
+        self.fields
+            .as_mut()
+            .unwrap()
+            .insert(name.to_string(), (self.size - value.size(), value.size()));
 
         Ok(())
     }
@@ -130,13 +133,19 @@ impl ObjectInstance {
         Ok(())
     }
 
-    pub fn set_field(&mut self, field_name: &str, field_value: ObjectInstance) -> Result<(), Error> {
+    pub fn set_field(
+        &mut self,
+        field_name: &str,
+        field_value: ObjectInstance,
+    ) -> Result<(), Error> {
         match &mut self.fields {
-            None => Err(Error::new(ErrKind::Context).with_msg(String::from("no fields on instance"))),
+            None => {
+                Err(Error::new(ErrKind::Context).with_msg(String::from("no fields on instance")))
+            }
             Some(field_map) => match field_map.contains_key(field_name) {
                 false => self.add_field(field_name, field_value),
                 true => self.mutate_field(field_name, field_value),
-            }
+            },
         }
     }
 
