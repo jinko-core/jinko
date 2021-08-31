@@ -67,6 +67,7 @@ pub enum InstrKind {
 pub trait Instruction: InstructionClone + Downcast + Rename {
     /// Execute the instruction, altering the state of the context. Executing
     /// this method may return an object instance
+    // FIXME: Should this return a mutable ref instead?? On an instance kept in the context?
     fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
         unreachable!(
             "\n{}\n --> {}",
