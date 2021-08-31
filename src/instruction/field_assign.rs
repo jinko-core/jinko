@@ -5,10 +5,11 @@
 //! assignment" for fields, as they should be initialized on the type's instantiation.
 
 use super::FieldAccess;
-use crate::{Context, InstrKind, Instruction, ObjectInstance, Rename};
+use crate::{Context, Error, ErrKind, InstrKind, Instruction, ObjectInstance, Rename};
 
 #[derive(Clone)]
 pub struct FieldAssign {
+    // FIXME: Figure out how to keep a field access or a variable here
     field: FieldAccess,
     value: Box<dyn Instruction>,
 }
@@ -37,11 +38,26 @@ impl Instruction for FieldAssign {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        let mut instance = self.field.execute(ctx)?;
+        // FIXME: We probably need to keep track of all the instances created somewhere
+        // in the context, to garbage collect them later for exemple
+        let value = self.value.execute(ctx)?;
+
+        // FIXME: How does this work when we're not dealing with a variable as an instance?
+        // Say, `fn_call().attribute = some_other_value` (Hint: It doesn't)
+        let instance = match ctx.get_variable(&self.field.instance.print()) {
+            Some(var) => &mut var.instance,
+            None => {
+                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
+                    "cannot find variable: `{}`",
+                    self.field.instance.print()
+                )));
+                return None;
+            }
+        };
 
         // FIXME: Should we check if this is the first time we're setting the field? In
         // that case, error out!
-        if let Err(e) = instance.set_field(&self.field.field_name, self.value.execute(ctx)?) {
+        if let Err(e) = instance.set_field(&self.field.field_name, value) {
             ctx.error(e);
         }
 
@@ -51,8 +67,8 @@ impl Instruction for FieldAssign {
 
 #[cfg(test)]
 mod tests {
-    use crate::{parser::Construct, Context, JkInt};
     use crate::instance::ToObjectInstance;
+    use crate::{parser::Construct, Context, JkInt};
 
     fn setup() -> Context {
         let mut ctx = Context::new();
@@ -85,4 +101,7 @@ mod tests {
         assert!(!ctx.error_handler.has_errors());
         assert_eq!(x_value, JkInt::from(99).to_instance());
     }
+
+    // FIXME: Add tests making sure that we can't modify the fields on something that
+    // isn't a variable
 }

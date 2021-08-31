@@ -10,7 +10,7 @@ use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInsta
 pub struct Var {
     name: String,
     mutable: bool,
-    instance: ObjectInstance,
+    pub(crate) instance: ObjectInstance,
 }
 
 impl Var {
@@ -26,11 +26,6 @@ impl Var {
     /// Return the name of the variable
     pub fn name(&self) -> &str {
         &self.name
-    }
-
-    /// Return a copy of the variable's instance
-    pub fn instance(&self) -> ObjectInstance {
-        self.instance.clone()
     }
 
     /// Is a variable mutable or not
@@ -110,9 +105,10 @@ impl Instruction for Var {
             }
         };
 
-        ctx.debug("VAR", var.print().as_ref());
+        // FIXME: Re-add once debugging is separate from context #210
+        // ctx.debug("VAR", var.print().as_ref());
 
-        Some(var.instance())
+        Some(var.instance.clone())
     }
 }
 
