@@ -172,7 +172,8 @@ impl Context {
     }
 
     /// Get a reference on an existing variable
-    pub fn get_variable(&self, name: &str) -> Option<&Var> {
+    // Should we get_mut or should we replace the variable??
+    pub fn get_variable(&mut self, name: &str) -> Option<&mut Var> {
         self.scope_map.get_variable(name)
     }
 

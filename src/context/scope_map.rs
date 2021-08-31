@@ -29,8 +29,8 @@ impl Scope {
     }
 
     /// Get a reference on a variable from the scope map if is has been inserted already
-    pub fn get_variable(&self, name: &str) -> Option<&Var> {
-        self.variables.get(name)
+    pub fn get_variable(&mut self, name: &str) -> Option<&mut Var> {
+        self.variables.get_mut(name)
     }
 
     /// Get a reference on a function from the scope map if is has been inserted already
@@ -139,9 +139,9 @@ impl ScopeMap {
     }
 
     /// Maybe get a variable in any available scopes
-    pub fn get_variable(&self, name: &str) -> Option<&Var> {
+    pub fn get_variable(&mut self, name: &str) -> Option<&mut Var> {
         // FIXME: Use find for code quality?
-        for scope in self.scopes.iter() {
+        for scope in self.scopes.iter_mut() {
             match scope.get_variable(name) {
                 Some(v) => return Some(v),
                 None => continue,
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn t_find_non_existent_var() {
-        let s = ScopeMap::new();
+        let mut s = ScopeMap::new();
 
         assert!(s.get_variable("a").is_none());
     }
