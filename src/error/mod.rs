@@ -76,7 +76,7 @@ impl ErrKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             ErrKind::Parsing => "Parsing",
-            ErrKind::Context => "Context",
+            ErrKind::Context => "Interpreter",
             ErrKind::TypeChecker => "Typechecker",
             ErrKind::IO => "I/O",
         }
