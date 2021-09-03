@@ -62,7 +62,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
     ctx.clear_errors();
 
     match args.interactive() {
-        true => Repl::launch_with_context(ctx),
+        true => Repl::new(args)?.with_context(ctx).launch(),
         false => {
             let res = ctx.execute()?;
             ctx.emit_errors();
@@ -76,7 +76,7 @@ fn main() -> anyhow::Result<()> {
     let args = Args::handle();
 
     let result = args.input().map_or_else(
-        || Repl::launch_repl(&args),
+        || Repl::new(&args)?.launch(),
         |filename| handle_input(&args, filename),
     )?;
 

@@ -5,16 +5,13 @@ mod prompt;
 use prompt::Prompt;
 use std::path::PathBuf;
 
-use linefeed::{Interface, ReadResult};
+use linefeed::{DefaultTerminal, Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
     parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
     ObjectInstance,
 };
-
-/// Empty struct for the Repl methods
-pub struct Repl;
 
 // FIXME:
 // - Is Display really how we want to go about it?
@@ -39,7 +36,13 @@ impl std::fmt::Display for ObjectInstance {
     }
 }
 
-impl Repl {
+pub struct Repl<'args> {
+    args: &'args Args,
+    ctx: Option<Context>,
+    reader: Interface<DefaultTerminal>,
+}
+
+impl<'args> Repl<'args> {
     /// Parse a new instruction from the user's input. This function uses the parser's
     /// `instruction` method, and can therefore parse any valid Jinko instruction
     fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, Error> {
@@ -52,61 +55,46 @@ impl Repl {
         }
     }
 
-    /// Launch the REP
-    pub fn launch_repl(args: &Args) -> InteractResult {
-        let line_reader = Interface::new("jinko")?;
+    pub fn new(args: &Args) -> std::io::Result<Repl> {
+        Ok(Repl {
+            args,
+            ctx: None,
+            reader: Interface::new("jinko")?,
+        })
+    }
 
-        let mut ctx = Context::new();
+    pub fn with_context(self, ctx: Context) -> Repl<'args> {
+        Repl {
+            ctx: Some(ctx),
+            ..self
+        }
+    }
+
+    fn setup_context(args: &Args, ctx: &mut Context) {
         ctx.set_debug(args.debug());
         ctx.set_path(Some(PathBuf::from("repl")));
 
-        // FIXME: Add actual prompt
-        line_reader.set_prompt(&Prompt::get(&ctx))?;
-
-        while let ReadResult::Input(input) = line_reader.read_line()? {
-            let inst = match Repl::parse_instruction(&input) {
-                Ok(i) => i,
-                Err(e) => {
-                    e.emit(PathBuf::from("repl").as_path());
-                    continue;
-                }
-            };
-
-            let inst = match inst {
-                Some(i) => i,
-                None => continue,
-            };
-
-            if let Some(result) = inst.execute(&mut ctx) {
-                println!("{}", result);
-            };
-
-            ctx.emit_errors();
-            ctx.clear_errors();
-
-            line_reader.set_prompt(&Prompt::get(&ctx))?;
-        }
-
-        Ok((None, ctx))
-    }
-
-    // FIXME: Explain why we return an Option<ObjectInstance>
-    pub fn launch_with_context(mut ctx: Context) -> InteractResult {
-        // FIXME: Factor this
-        let line_reader = Interface::new("jinko")?;
-
-        // FIXME: Add actual prompt
-        line_reader.set_prompt(&Prompt::get(&ctx))?;
-
         let ep = ctx.entry_point.block().unwrap().clone();
         ep.instructions().iter().for_each(|inst| {
-            inst.execute(&mut ctx);
+            inst.execute(ctx);
         });
         if let Some(last) = ep.last() {
-            last.execute(&mut ctx);
+            last.execute(ctx);
         }
+    }
 
-        while let ReadResult::Input(input) = line_reader.read_line()? {
+    /// Launch the REPL
+    pub fn launch(self) -> InteractResult {
+        let mut ctx = match self.ctx {
+            Some(ctx) => ctx,
+            None => Context::new(),
+        };
+
+        Repl::setup_context(self.args, &mut ctx);
+
+        self.reader.set_prompt(&Prompt::get(&ctx))?;
+
+        while let ReadResult::Input(input) = self.reader.read_line()? {
             let inst = match Repl::parse_instruction(&input) {
                 Ok(i) => i,
                 Err(e) => {
@@ -127,7 +115,7 @@ impl Repl {
             ctx.emit_errors();
             ctx.clear_errors();
 
-            line_reader.set_prompt(&Prompt::get(&ctx))?;
+            self.reader.set_prompt(&Prompt::get(&ctx))?;
         }
 
         Ok((None, ctx))
