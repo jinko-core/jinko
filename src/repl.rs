@@ -53,7 +53,6 @@ impl Repl {
     }
 
     /// Launch the REP
-    // FIXME: Explain why we return an Option<ObjectInstance>
     pub fn launch_repl(args: &Args) -> InteractResult {
         let line_reader = Interface::new("jinko")?;
 
@@ -91,6 +90,7 @@ impl Repl {
         Ok((None, ctx))
     }
 
+    // FIXME: Explain why we return an Option<ObjectInstance>
     pub fn launch_with_context(mut ctx: Context) -> InteractResult {
         // FIXME: Factor this
         let line_reader = Interface::new("jinko")?;
@@ -132,4 +132,19 @@ impl Repl {
 
         Ok((None, ctx))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn t_valid_parse_instruction() {
+        let inst = "a = 2";
+        let res = Repl::parse_instruction(inst);
+
+        assert!(res.is_ok());
+    }
+
+    // FIXME: Add test to parse multiple instructions in one line
 }
