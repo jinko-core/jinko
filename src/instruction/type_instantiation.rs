@@ -154,8 +154,6 @@ impl Rename for TypeInstantiation {
 
 #[cfg(test)]
 mod test {
-    use crate::instance::FieldInstance;
-
     use super::*;
 
     #[test]
