@@ -10,21 +10,33 @@
 use std::collections::HashMap;
 
 use crate::instruction::TypeDec;
-use crate::{ErrKind, Error};
+use crate::{ErrKind, Error, Indent};
 
-pub type Ty = TypeDec;
 pub type Name = String;
 type Offset = usize;
-pub type Size = usize;
-type FieldsMap = HashMap<Name, (Offset, Size)>;
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct FieldInstance(Offset, ObjectInstance);
+
+impl FieldInstance {
+    pub fn offset(&self) -> &Offset {
+        &self.0
+    }
+
+    pub fn instance(&self) -> &ObjectInstance {
+        &self.1
+    }
+}
+
+type FieldsMap = HashMap<Name, FieldInstance>;
 
 /// The type is optional. At first, the type might not be known, and will only be
 /// revealed during the typechecking phase. `size` is the size of the instance in bytes.
 /// It's the same as `data.len()`. `data` is the raw byte value of the instance.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectInstance {
-    ty: Option<Ty>,
-    size: Size,
+    ty: Option<TypeDec>,
+    size: usize,
     data: Vec<u8>,
     fields: Option<FieldsMap>,
 }
@@ -37,10 +49,10 @@ impl ObjectInstance {
 
     /// Create a new instance
     pub fn new(
-        ty: Option<Ty>,
+        ty: Option<TypeDec>,
         size: usize,
         data: Vec<u8>,
-        fields: Option<Vec<(Name, Size)>>,
+        fields: Option<Vec<(Name, ObjectInstance)>>,
     ) -> ObjectInstance {
         let fields = fields.map(ObjectInstance::fields_vec_to_hash_map);
 
@@ -54,21 +66,21 @@ impl ObjectInstance {
 
     /// Create a new instance from raw bytes instead of a vector
     pub fn from_bytes(
-        ty: Option<Ty>,
+        ty: Option<TypeDec>,
         size: usize,
         data: &[u8],
-        fields: Option<Vec<(Name, Size)>>,
+        fields: Option<Vec<(Name, ObjectInstance)>>,
     ) -> ObjectInstance {
         ObjectInstance::new(ty, size, data.to_vec(), fields)
     }
 
     /// Get a reference to the type of the instance
-    pub fn ty(&self) -> Option<&Ty> {
+    pub fn ty(&self) -> Option<&TypeDec> {
         self.ty.as_ref()
     }
 
     /// Set the type of the instance
-    pub fn set_ty(&mut self, ty: Option<Ty>) {
+    pub fn set_ty(&mut self, ty: Option<TypeDec>) {
         self.ty = ty;
     }
 
@@ -77,7 +89,7 @@ impl ObjectInstance {
         &self.data
     }
 
-    pub fn size(&self) -> Size {
+    pub fn size(&self) -> usize {
         self.size
     }
 
@@ -89,14 +101,7 @@ impl ObjectInstance {
             Some(fields) => fields.get(field_name).map_or(
                 Err(Error::new(ErrKind::Context)
                     .with_msg(format!("field `{}` does not exist on instance", field_name))),
-                |(off, size)| {
-                    Ok(ObjectInstance::from_bytes(
-                        None,
-                        *size,
-                        &self.data[*off..*off + size],
-                        None,
-                    ))
-                },
+                |FieldInstance(_, instance)| Ok(instance.clone()),
             ),
         }
     }
@@ -105,15 +110,47 @@ impl ObjectInstance {
         &self.fields
     }
 
-    fn fields_vec_to_hash_map(vec: Vec<(String, Size)>) -> FieldsMap {
+    fn fields_vec_to_hash_map(vec: Vec<(Name, ObjectInstance)>) -> FieldsMap {
         let mut current_offset: usize = 0;
         let mut hashmap = FieldsMap::new();
-        for (name, size) in vec {
-            hashmap.insert(name, (current_offset, size));
-            current_offset += size;
+        for (name, instance) in vec {
+            let inst_size = instance.size();
+            hashmap.insert(name, FieldInstance(current_offset, instance));
+            current_offset += inst_size;
         }
 
         hashmap
+    }
+
+    fn as_string_inner(instance: &ObjectInstance, indent: Indent) -> String {
+        let mut base = String::new();
+
+        match &instance.ty {
+            Some(ty) => base = format!("{}{}type: {}\n", base, indent, ty.name()),
+            None => base = format!("{}{}type: `no type`\n", base, indent),
+        }
+
+        base = format!("{}{}size: {}\n", base, indent, instance.size);
+
+        if let Some(fields) = &instance.fields {
+            base = format!("{}{}fields:\n", base, indent);
+
+            for (name, FieldInstance(_, instance)) in fields {
+                base = format!(
+                    "{}{}{}:\n{}",
+                    base,
+                    indent,
+                    name,
+                    ObjectInstance::as_string_inner(instance, indent.increment()),
+                );
+            }
+        }
+
+        base
+    }
+
+    pub fn as_string(&self) -> String {
+        ObjectInstance::as_string_inner(self, Indent::default())
     }
 }
 
@@ -127,4 +164,67 @@ pub trait ToObjectInstance {
 /// as well as user defined ones
 pub trait FromObjectInstance {
     fn from_instance(i: &ObjectInstance) -> Self;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{parser::Construct, Context, JkInt};
+
+    fn setup() -> Context {
+        let mut ctx = Context::new();
+
+        let inst = Construct::instruction("type Point(x: int, y: int); ")
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx);
+
+        let inst = Construct::instruction("type Vec2(f: Point, s: Point); ")
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx);
+
+        let inst = Construct::instruction("p = Point { x = 1, y = 2}")
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx);
+
+        let inst = Construct::instruction("v = Vec2 { f = p, s = p}")
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx);
+
+        ctx
+    }
+
+    #[test]
+    fn t_one_deep_access() {
+        let mut ctx = setup();
+
+        let inst = Construct::instruction("p").unwrap().1;
+        let p = inst.execute(&mut ctx).unwrap();
+
+        let inst = Construct::instruction("v").unwrap().1;
+        let v = inst.execute(&mut ctx).unwrap();
+        let v_f = v.get_field("f").unwrap();
+        let v_s = v.get_field("s").unwrap();
+
+        assert_eq!(v_f, p);
+        assert_eq!(v_s, p);
+    }
+
+    #[test]
+    fn t_two_deep_access() {
+        let mut ctx = setup();
+
+        let inst = Construct::instruction("v").unwrap().1;
+        let v = inst.execute(&mut ctx).unwrap();
+        let v_f = v.get_field("f").unwrap();
+        let v_s = v.get_field("s").unwrap();
+        let v_f_x = v_f.get_field("x").unwrap();
+        let v_f_y = v_s.get_field("y").unwrap();
+
+        assert_eq!(v_f_x, JkInt::from(1).to_instance());
+        assert_eq!(v_f_y, JkInt::from(2).to_instance());
+    }
 }
