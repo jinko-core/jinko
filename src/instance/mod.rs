@@ -13,8 +13,6 @@ use crate::instruction::TypeDec;
 use crate::{ErrKind, Error, Indent};
 
 pub type Name = String;
-type Ty = Option<TypeDec>;
-type Size = usize;
 type Offset = usize;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -37,8 +35,8 @@ type FieldsMap = HashMap<Name, FieldInstance>;
 /// It's the same as `data.len()`. `data` is the raw byte value of the instance.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectInstance {
-    ty: Ty,
-    size: Size,
+    ty: Option<TypeDec>,
+    size: usize,
     data: Vec<u8>,
     fields: Option<FieldsMap>,
 }
@@ -51,7 +49,7 @@ impl ObjectInstance {
 
     /// Create a new instance
     pub fn new(
-        ty: Ty,
+        ty: Option<TypeDec>,
         size: usize,
         data: Vec<u8>,
         fields: Option<Vec<(Name, ObjectInstance)>>,
@@ -68,7 +66,7 @@ impl ObjectInstance {
 
     /// Create a new instance from raw bytes instead of a vector
     pub fn from_bytes(
-        ty: Ty,
+        ty: Option<TypeDec>,
         size: usize,
         data: &[u8],
         fields: Option<Vec<(Name, ObjectInstance)>>,
@@ -83,7 +81,7 @@ impl ObjectInstance {
     }
 
     /// Set the type of the instance
-    pub fn set_ty(&mut self, ty: Ty) {
+    pub fn set_ty(&mut self, ty: Option<TypeDec>) {
         self.ty = ty;
     }
 
@@ -92,7 +90,7 @@ impl ObjectInstance {
         &self.data
     }
 
-    pub fn size(&self) -> Size {
+    pub fn size(&self) -> usize {
         self.size
     }
 
@@ -113,7 +111,6 @@ impl ObjectInstance {
         &self.fields
     }
 
-    // FIXME: Isn't this disgusting
     fn fields_vec_to_hash_map(vec: Vec<(Name, ObjectInstance)>) -> FieldsMap {
         let mut current_offset: usize = 0;
         let mut hashmap = FieldsMap::new();
@@ -153,7 +150,6 @@ impl ObjectInstance {
         base
     }
 
-    // FIXME: Remove this
     pub fn as_string(&self) -> String {
         ObjectInstance::as_string_inner(self, Indent::default())
     }
