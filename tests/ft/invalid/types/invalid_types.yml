@@ -3,4 +3,4 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/invalid/types/inexistant_type.jk"
-    exit_code: 2
+    exit_code: 1
