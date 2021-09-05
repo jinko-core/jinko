@@ -9,7 +9,8 @@ use crate::{Context, Error, ErrKind, InstrKind, Instruction, ObjectInstance, Ren
 
 #[derive(Clone)]
 pub struct FieldAssign {
-    // FIXME: Figure out how to keep a field access or a variable here
+    // FIXME: This should actually be a variable and be kinda similar to VarAssign
+    // in that regard
     field: FieldAccess,
     value: Box<dyn Instruction>,
 }
