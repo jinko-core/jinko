@@ -19,10 +19,7 @@ impl Indent {
     #[cfg(test)]
     /// Decrement an indent to the next step, stopping at zero spaces
     pub fn decrement(self) -> Indent {
-        match self.0 {
-            0 => Indent(0),
-            _ => Indent(self.0 - Indent::INDENT_STEP),
-        }
+        Indent(self.0.saturating_sub(Indent::INDENT_STEP))
     }
 }
 
