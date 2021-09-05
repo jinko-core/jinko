@@ -12,18 +12,19 @@ use std::collections::HashMap;
 use crate::instruction::TypeDec;
 use crate::{ErrKind, Error};
 
-pub type Ty = TypeDec;
+pub type Ty = Option<TypeDec>;
 pub type Name = String;
 type Offset = usize;
 pub type Size = usize;
-type FieldsMap = HashMap<Name, (Offset, Size)>;
+type RawInnerInstance = (Ty, Offset, Size);
+type FieldsMap = HashMap<Name, RawInnerInstance>;
 
 /// The type is optional. At first, the type might not be known, and will only be
 /// revealed during the typechecking phase. `size` is the size of the instance in bytes.
 /// It's the same as `data.len()`. `data` is the raw byte value of the instance.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectInstance {
-    ty: Option<Ty>,
+    ty: Ty,
     size: Size,
     data: Vec<u8>,
     fields: Option<FieldsMap>,
@@ -37,10 +38,10 @@ impl ObjectInstance {
 
     /// Create a new instance
     pub fn new(
-        ty: Option<Ty>,
+        ty: Ty,
         size: usize,
         data: Vec<u8>,
-        fields: Option<Vec<(Name, Size)>>,
+        fields: Option<Vec<(Name, (Ty, Size))>>,
     ) -> ObjectInstance {
         let fields = fields.map(ObjectInstance::fields_vec_to_hash_map);
 
@@ -54,21 +55,22 @@ impl ObjectInstance {
 
     /// Create a new instance from raw bytes instead of a vector
     pub fn from_bytes(
-        ty: Option<Ty>,
+        ty: Ty,
         size: usize,
         data: &[u8],
-        fields: Option<Vec<(Name, Size)>>,
+        fields: Option<Vec<(Name, (Ty, Size))>>,
     ) -> ObjectInstance {
         ObjectInstance::new(ty, size, data.to_vec(), fields)
     }
 
     /// Get a reference to the type of the instance
-    pub fn ty(&self) -> Option<&Ty> {
-        self.ty.as_ref()
+    // FIXME: Remove clone
+    pub fn ty(&self) -> Option<TypeDec> {
+        self.ty.clone()
     }
 
     /// Set the type of the instance
-    pub fn set_ty(&mut self, ty: Option<Ty>) {
+    pub fn set_ty(&mut self, ty: Ty) {
         self.ty = ty;
     }
 
@@ -89,9 +91,9 @@ impl ObjectInstance {
             Some(fields) => fields.get(field_name).map_or(
                 Err(Error::new(ErrKind::Context)
                     .with_msg(format!("field `{}` does not exist on instance", field_name))),
-                |(off, size)| {
+                |(ty, off, size)| {
                     Ok(ObjectInstance::from_bytes(
-                        None,
+                        ty.clone(), // FIXME: Remove this clone
                         *size,
                         &self.data[*off..*off + size],
                         None,
@@ -105,15 +107,49 @@ impl ObjectInstance {
         &self.fields
     }
 
-    fn fields_vec_to_hash_map(vec: Vec<(String, Size)>) -> FieldsMap {
+    // FIXME: Isn't this disgusting
+    fn fields_vec_to_hash_map(vec: Vec<(Name, (Ty, Size))>) -> FieldsMap {
         let mut current_offset: usize = 0;
         let mut hashmap = FieldsMap::new();
-        for (name, size) in vec {
-            hashmap.insert(name, (current_offset, size));
+        for (name, (ty, size)) in vec {
+            hashmap.insert(name, (ty, current_offset, size));
             current_offset += size;
         }
 
         hashmap
+    }
+
+    // FIXME: Remove this
+    pub fn as_string(&self) -> String {
+        let mut base = String::new();
+
+        // FIXME: This *really* needs to be somewhere else
+        match &self.ty {
+            Some(ty) => base = format!("{}type: {}\n", base, ty.name()),
+            None => base = format!("{}type: `no type`\n", base),
+        }
+
+        base = format!("{}size: {}\n", base, self.size);
+        base.push_str("fields:");
+
+        if let Some(fields) = &self.fields {
+            for (name, (ty, off, size)) in fields {
+                base = format!(
+                    "{}\n    {}: {}",
+                    base,
+                    name,
+                    ObjectInstance::from_bytes(
+                        ty.clone(),
+                        *size,
+                        &self.data[*off..*off + size],
+                        None,
+                    )
+                    .as_string()
+                );
+            }
+        }
+
+        base
     }
 }
 

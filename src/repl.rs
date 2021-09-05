@@ -16,6 +16,7 @@ use crate::{
 // FIXME:
 // - Is Display really how we want to go about it?
 // - Cleanup the code
+// - This should not be here
 impl std::fmt::Display for ObjectInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -28,7 +29,7 @@ impl std::fmt::Display for ObjectInstance {
                     "char" => JkConstant::<char>::from_instance(self).print(),
                     "string" => JkConstant::<String>::from_instance(self).print(),
                     "bool" => JkConstant::<bool>::from_instance(self).print(),
-                    _ => format!("{:?}", self),
+                    _ => self.as_string(),
                 },
                 None => format!(""),
             }
