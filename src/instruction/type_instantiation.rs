@@ -5,7 +5,7 @@ use super::{
     Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename, TypeDec, TypeId,
     VarAssign,
 };
-use crate::instance::{Name, Size, Ty};
+use crate::instance::Name;
 
 use std::rc::Rc;
 
@@ -118,20 +118,18 @@ impl Instruction for TypeInstantiation {
 
         let mut size: usize = 0;
         let mut data: Vec<u8> = Vec::new();
-        let mut fields: Vec<(Name, (Ty, Size))> = Vec::new();
+        let mut fields: Vec<(Name, ObjectInstance)> = Vec::new();
         for (_, named_arg) in self.fields.iter().enumerate() {
             // FIXME: Need to assign the correct field to the field that corresponds
             // in the typedec
             let field_instr = named_arg.value();
             let field_name = named_arg.symbol();
 
-            // FIXME: Use execute_expression() here?
             let instance = field_instr.execute_expression(ctx)?;
+            size += instance.size();
 
-            let inst_size = instance.size();
-            size += inst_size;
-            fields.push((field_name.to_string(), (instance.ty(), instance.size())));
             data.append(&mut instance.data().to_vec());
+            fields.push((field_name.to_string(), instance));
         }
 
         Some(ObjectInstance::new(

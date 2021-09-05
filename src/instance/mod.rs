@@ -12,12 +12,15 @@ use std::collections::HashMap;
 use crate::instruction::TypeDec;
 use crate::{ErrKind, Error};
 
-pub type Ty = Option<TypeDec>;
 pub type Name = String;
+type Ty = Option<TypeDec>;
+type Size = usize;
 type Offset = usize;
-pub type Size = usize;
-type RawInnerInstance = (Ty, Offset, Size);
-type FieldsMap = HashMap<Name, RawInnerInstance>;
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct FieldInstance(Offset, ObjectInstance);
+
+type FieldsMap = HashMap<Name, FieldInstance>;
 
 /// The type is optional. At first, the type might not be known, and will only be
 /// revealed during the typechecking phase. `size` is the size of the instance in bytes.
@@ -41,7 +44,7 @@ impl ObjectInstance {
         ty: Ty,
         size: usize,
         data: Vec<u8>,
-        fields: Option<Vec<(Name, (Ty, Size))>>,
+        fields: Option<Vec<(Name, ObjectInstance)>>,
     ) -> ObjectInstance {
         let fields = fields.map(ObjectInstance::fields_vec_to_hash_map);
 
@@ -58,7 +61,7 @@ impl ObjectInstance {
         ty: Ty,
         size: usize,
         data: &[u8],
-        fields: Option<Vec<(Name, (Ty, Size))>>,
+        fields: Option<Vec<(Name, ObjectInstance)>>,
     ) -> ObjectInstance {
         ObjectInstance::new(ty, size, data.to_vec(), fields)
     }
@@ -91,13 +94,8 @@ impl ObjectInstance {
             Some(fields) => fields.get(field_name).map_or(
                 Err(Error::new(ErrKind::Context)
                     .with_msg(format!("field `{}` does not exist on instance", field_name))),
-                |(ty, off, size)| {
-                    Ok(ObjectInstance::from_bytes(
-                        ty.clone(), // FIXME: Remove this clone
-                        *size,
-                        &self.data[*off..*off + size],
-                        None,
-                    ))
+                |FieldInstance(_, instance)| {
+                    Ok(instance.clone())
                 },
             ),
         }
@@ -108,12 +106,12 @@ impl ObjectInstance {
     }
 
     // FIXME: Isn't this disgusting
-    fn fields_vec_to_hash_map(vec: Vec<(Name, (Ty, Size))>) -> FieldsMap {
+    fn fields_vec_to_hash_map(vec: Vec<(Name, ObjectInstance)>) -> FieldsMap {
         let mut current_offset: usize = 0;
         let mut hashmap = FieldsMap::new();
-        for (name, (ty, size)) in vec {
-            hashmap.insert(name, (ty, current_offset, size));
-            current_offset += size;
+        for (name, instance) in vec {
+            current_offset += instance.size();
+            hashmap.insert(name, FieldInstance(current_offset, instance));
         }
 
         hashmap
@@ -133,17 +131,9 @@ impl ObjectInstance {
         base.push_str("fields:");
 
         if let Some(fields) = &self.fields {
-            for (name, (ty, off, size)) in fields {
-                base = format!(
-                    "{}\n    {}: {}",
-                    base,
-                    name,
-                    ObjectInstance::from_bytes(
-                        ty.clone(),
-                        *size,
-                        &self.data[*off..*off + size],
-                        None,
-                    )
+            for (name, FieldInstance(_, instance)) in fields {
+                base = format!("{}    {}:{}", base, name,
+                    instance
                     .as_string()
                 );
             }
