@@ -2,8 +2,7 @@
 //! type on execution.
 
 use super::{
-    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename, TypeDec, TypeId,
-    VarAssign,
+    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, TypeId, VarAssign,
 };
 use crate::instance::Name;
 
@@ -139,16 +138,6 @@ impl Instruction for TypeInstantiation {
             data,
             Some(fields),
         ))
-    }
-}
-
-impl Rename for TypeInstantiation {
-    fn prefix(&mut self, prefix: &str) {
-        self.type_name.prefix(prefix);
-        // FIXME
-        // self.fields
-        //     .iter_mut()
-        //     .for_each(|field| field.prefix(prefix));
     }
 }
 

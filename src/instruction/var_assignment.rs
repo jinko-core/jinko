@@ -1,7 +1,7 @@
 //! The VarAssign struct is used when assigning values to variables.
 
 use crate::instruction::{InstrKind, Var};
-use crate::{Context, ErrKind, Error, Instruction, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, Instruction, ObjectInstance};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -103,13 +103,6 @@ impl Instruction for VarAssign {
 
         // A variable assignment is always a statement
         None
-    }
-}
-
-impl Rename for VarAssign {
-    fn prefix(&mut self, prefix: &str) {
-        self.value.prefix(prefix);
-        self.symbol = format!("{}{}", prefix, self.symbol)
     }
 }
 

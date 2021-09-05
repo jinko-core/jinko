@@ -19,7 +19,7 @@ pub use context::Context;
 pub use error::{ErrKind, Error};
 pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
-pub use instruction::{InstrKind, Instruction, Rename};
+pub use instruction::{InstrKind, Instruction};
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 // FIXME: Add documentation

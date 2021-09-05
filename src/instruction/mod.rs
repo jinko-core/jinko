@@ -40,7 +40,6 @@ pub use jk_inst::{JkInst, JkInstKind};
 pub use loop_block::{Loop, LoopKind};
 pub use method_call::MethodCall;
 pub use operator::Operator;
-pub use rename::Rename;
 pub use type_declaration::TypeDec;
 pub use type_id::{TypeId, PRIMITIVE_TYPES};
 pub use type_instantiation::TypeInstantiation;
@@ -62,7 +61,8 @@ pub enum InstrKind {
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
-pub trait Instruction: InstructionClone + Downcast + Rename {
+pub trait Instruction: InstructionClone + Downcast {
+    // FIXME: Add Rename here
     /// Execute the instruction, altering the state of the context. Executing
     /// this method may return an object instance
     fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {

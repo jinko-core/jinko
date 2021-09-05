@@ -1,3 +1,4 @@
 incl incl_simple
 
-incl_simple::a // Return 12
+// FIXME: Should be incl_simple::a once prefixing is implemented
+a // Return 12

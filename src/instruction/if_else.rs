@@ -16,7 +16,7 @@
 //! ```
 
 use crate::instruction::{Block, InstrKind, Instruction};
-use crate::{Context, ObjectInstance, Rename};
+use crate::{Context, ObjectInstance};
 
 #[derive(Clone)]
 pub struct IfElse {
@@ -76,18 +76,3 @@ impl Instruction for IfElse {
         }
     }
 }
-
-impl Rename for IfElse {
-    fn prefix(&mut self, prefix: &str) {
-        self.condition.prefix(prefix);
-        self.if_body.prefix(prefix);
-        match &mut self.else_body {
-            Some(eb) => eb.prefix(prefix),
-            None => {}
-        }
-    }
-}
-
-// FIXME: Add printing tests for if else
-#[cfg(test)]
-mod tests {}
