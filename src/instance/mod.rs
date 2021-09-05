@@ -104,9 +104,7 @@ impl ObjectInstance {
             Some(fields) => fields.get(field_name).map_or(
                 Err(Error::new(ErrKind::Context)
                     .with_msg(format!("field `{}` does not exist on instance", field_name))),
-                |FieldInstance(_, instance)| {
-                    Ok(instance.clone())
-                },
+                |FieldInstance(_, instance)| Ok(instance.clone()),
             ),
         }
     }
@@ -142,7 +140,11 @@ impl ObjectInstance {
             base = format!("{}{}fields:\n", base, indent);
 
             for (name, FieldInstance(_, instance)) in fields {
-                base = format!("{}{}{}:\n{}", base, indent, name,
+                base = format!(
+                    "{}{}{}:\n{}",
+                    base,
+                    indent,
+                    name,
                     ObjectInstance::as_string_inner(instance, indent.increment()),
                 );
             }
@@ -167,4 +169,67 @@ pub trait ToObjectInstance {
 /// as well as user defined ones
 pub trait FromObjectInstance {
     fn from_instance(i: &ObjectInstance) -> Self;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{parser::Construct, Context, JkInt};
+
+    fn setup() -> Context {
+        let mut ctx = Context::new();
+
+        let inst = Construct::instruction("type Point(x: int, y: int); ")
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx);
+
+        let inst = Construct::instruction("type Vec2(f: Point, s: Point); ")
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx);
+
+        let inst = Construct::instruction("p = Point { x = 1, y = 2}")
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx);
+
+        let inst = Construct::instruction("v = Vec2 { f = p, s = p}")
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx);
+
+        ctx
+    }
+
+    #[test]
+    fn t_one_deep_access() {
+        let mut ctx = setup();
+
+        let inst = Construct::instruction("p").unwrap().1;
+        let p = inst.execute(&mut ctx).unwrap();
+
+        let inst = Construct::instruction("v").unwrap().1;
+        let v = inst.execute(&mut ctx).unwrap();
+        let v_f = v.get_field("f").unwrap();
+        let v_s = v.get_field("s").unwrap();
+
+        assert_eq!(v_f, p);
+        assert_eq!(v_s, p);
+    }
+
+    #[test]
+    fn t_two_deep_access() {
+        let mut ctx = setup();
+
+        let inst = Construct::instruction("v").unwrap().1;
+        let v = inst.execute(&mut ctx).unwrap();
+        let v_f = v.get_field("f").unwrap();
+        let v_s = v.get_field("s").unwrap();
+        let v_f_x = v_f.get_field("x").unwrap();
+        let v_f_y = v_s.get_field("y").unwrap();
+
+        assert_eq!(v_f_x, JkInt::from(1).to_instance());
+        assert_eq!(v_f_y, JkInt::from(2).to_instance());
+    }
 }
