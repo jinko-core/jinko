@@ -20,6 +20,16 @@ type Offset = usize;
 #[derive(Debug, PartialEq, Clone)]
 pub struct FieldInstance(Offset, ObjectInstance);
 
+impl FieldInstance {
+    pub fn offset(&self) -> &Offset {
+        &self.0
+    }
+
+    pub fn instance(&self) -> &ObjectInstance {
+        &self.1
+    }
+}
+
 type FieldsMap = HashMap<Name, FieldInstance>;
 
 /// The type is optional. At first, the type might not be known, and will only be
