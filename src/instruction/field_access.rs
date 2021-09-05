@@ -100,9 +100,7 @@ mod tests {
             None => return assert!(false, "Error when accessing valid field"),
         };
 
-        let mut exp = JkInt::from(15).to_instance();
-        // FIXME: Remove once TypeInstantiations create typed instances
-        exp.set_ty(None);
+        let exp = JkInt::from(15).to_instance();
 
         assert_eq!(res, exp)
     }
@@ -119,9 +117,7 @@ mod tests {
             None => unreachable!("Error when accesing valid field"),
         };
 
-        let mut exp = JkInt::from(1).to_instance();
-        // FIXME: Remove once TypeInstantiations create typed instances
-        exp.set_ty(None);
+        let exp = JkInt::from(1).to_instance();
 
         assert_eq!(res, exp)
     }

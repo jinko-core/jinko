@@ -251,8 +251,27 @@ mod test {
         );
         assert_eq!(instance.size(), 33);
 
-        assert_eq!(instance.fields().as_ref().unwrap().get("a"), Some(&(0, 25)));
-        assert_eq!(instance.fields().as_ref().unwrap().get("b"), Some(&(25, 8)));
+        // FIXME: Is this a valid test?
+        assert_eq!(
+            instance
+                .fields()
+                .as_ref()
+                .unwrap()
+                .get("a")
+                .unwrap()
+                .offset(),
+            &0usize
+        );
+        assert_eq!(
+            instance
+                .fields()
+                .as_ref()
+                .unwrap()
+                .get("b")
+                .unwrap()
+                .offset(),
+            &25usize
+        );
     }
 
     #[test]
