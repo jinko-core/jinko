@@ -75,9 +75,8 @@ impl ObjectInstance {
     }
 
     /// Get a reference to the type of the instance
-    // FIXME: Remove clone
-    pub fn ty(&self) -> Option<TypeDec> {
-        self.ty.clone()
+    pub fn ty(&self) -> Option<&TypeDec> {
+        self.ty.as_ref()
     }
 
     /// Set the type of the instance

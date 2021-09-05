@@ -58,10 +58,7 @@ impl Instruction for Var {
         format!(
             "{} /* : {} = {} */",
             self.name.clone(),
-            self.instance
-                .ty()
-                .unwrap_or_else(|| TypeDec::from(""))
-                .name(),
+            self.instance.ty().unwrap_or(&TypeDec::from("")).name(),
             self.instance
         )
     }
