@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 
 use crate::instruction::TypeDec;
-use crate::{ErrKind, Error};
+use crate::{ErrKind, Error, Indent};
 
 pub type Name = String;
 type Ty = Option<TypeDec>;
@@ -120,36 +120,40 @@ impl ObjectInstance {
         let mut current_offset: usize = 0;
         let mut hashmap = FieldsMap::new();
         for (name, instance) in vec {
-            current_offset += instance.size();
+            let inst_size = instance.size();
             hashmap.insert(name, FieldInstance(current_offset, instance));
+            current_offset += inst_size;
         }
 
         hashmap
     }
 
-    // FIXME: Remove this
-    pub fn as_string(&self) -> String {
+    fn as_string_inner(instance: &ObjectInstance, indent: Indent) -> String {
         let mut base = String::new();
 
-        // FIXME: This *really* needs to be somewhere else
-        match &self.ty {
-            Some(ty) => base = format!("{}type: {}\n", base, ty.name()),
-            None => base = format!("{}type: `no type`\n", base),
+        match &instance.ty {
+            Some(ty) => base = format!("{}{}type: {}\n", base, indent, ty.name()),
+            None => base = format!("{}{}type: `no type`\n", base, indent),
         }
 
-        base = format!("{}size: {}\n", base, self.size);
-        base.push_str("fields:");
+        base = format!("{}{}size: {}\n", base, indent, instance.size);
 
-        if let Some(fields) = &self.fields {
+        if let Some(fields) = &instance.fields {
+            base = format!("{}{}fields:\n", base, indent);
+
             for (name, FieldInstance(_, instance)) in fields {
-                base = format!("{}    {}:{}", base, name,
-                    instance
-                    .as_string()
+                base = format!("{}{}{}:\n{}", base, indent, name,
+                    ObjectInstance::as_string_inner(instance, indent.increment()),
                 );
             }
         }
 
         base
+    }
+
+    // FIXME: Remove this
+    pub fn as_string(&self) -> String {
+        ObjectInstance::as_string_inner(self, Indent::default())
     }
 }
 
