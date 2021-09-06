@@ -40,7 +40,8 @@
 //! fields implementing the Rename trait when being executed, allowing for an AST-like
 //! behavior
 
-pub trait Rename {
-    /// Add a prefix to self and its possible components
-    fn prefix(&mut self, prefix: &str);
-}
+// FIXME: This trait needs to be worked on and fixed. For now, do not implement it.
+// pub trait Rename {
+//     /// Add a prefix to self and its possible components
+//     fn prefix(&mut self, _prefix: &str) {}
+// }

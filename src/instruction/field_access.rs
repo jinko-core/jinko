@@ -1,7 +1,7 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -54,13 +54,6 @@ impl Instruction for FieldAccess {
         ctx.debug("FIELD ACCESS EXIT", &self.print());
 
         Some(field_instance)
-    }
-}
-
-impl Rename for FieldAccess {
-    fn prefix(&mut self, _: &str) {
-        // FIXME: Do we want to do something?
-        // todo!()
     }
 }
 

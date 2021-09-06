@@ -3,9 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{
-    parser::Construct, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename,
-};
+use crate::{parser::Construct, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
 
 /// An `Incl` is constituted of a path, an optional alias and contains a context.
 /// The ctx is built from parsing the source file in the path.
@@ -190,7 +188,7 @@ impl Instruction for Incl {
         ctx.debug("INCL ENTER", self.print().as_str());
 
         let base = self.get_base(ctx);
-        let prefix = self.format_prefix()?;
+        let _prefix = self.format_prefix()?;
 
         ctx.debug("BASE DIR", &format!("{:#?}", base));
 
@@ -202,7 +200,8 @@ impl Instruction for Incl {
         ctx.set_path(Some(new_path));
 
         content.iter_mut().for_each(|instr| {
-            instr.prefix(&prefix);
+            // FIXME: Rework prefixing
+            // instr.prefix(&prefix);
 
             ctx.debug("INCLUDING", instr.print().as_str());
 
@@ -213,16 +212,5 @@ impl Instruction for Incl {
         ctx.set_path(old_path);
 
         None
-    }
-}
-
-impl Rename for Incl {
-    fn prefix(&mut self, prefix: &str) {
-        let alias = match &self.alias {
-            None => &self.path,
-            Some(alias) => alias,
-        };
-
-        self.alias = Some(format!("{}{}", prefix, alias))
     }
 }

@@ -2,7 +2,7 @@
 //! function on execution.
 
 use crate::instruction::{FunctionDec, Var};
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -167,14 +167,6 @@ impl Instruction for FunctionCall {
     }
 }
 
-impl Rename for FunctionCall {
-    fn prefix(&mut self, prefix: &str) {
-        self.fn_name = format!("{}{}", prefix, self.fn_name);
-
-        self.args.iter_mut().for_each(|arg| arg.prefix(prefix));
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,10 +225,10 @@ mod tests {
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = Construct::instruction("func second(f: int, s: int) -> int { s }")
+        let func_dec = Construct::instruction("func __second(f: int, s: int) -> int { s }")
             .unwrap()
             .1;
-        let func_call = Construct::instruction("second(1, 2)").unwrap().1;
+        let func_call = Construct::instruction("__second(1, 2)").unwrap().1;
 
         func_dec.execute(&mut i);
 

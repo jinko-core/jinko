@@ -1,3 +1,4 @@
 incl lib as loob
 
-loob::second // return 16
+// FIXME: Should be loob::second once prefixing is implemented
+second // return 16

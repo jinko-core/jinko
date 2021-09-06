@@ -4,7 +4,7 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::{Context, ErrKind, Error, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, ObjectInstance};
 
 /// The potential ctx instructions
 #[derive(Clone, Debug, PartialEq)]
@@ -76,10 +76,6 @@ impl Instruction for JkInst {
         // on the context.
         None
     }
-}
-
-impl Rename for JkInst {
-    fn prefix(&mut self, _: &str) {}
 }
 
 #[cfg(test)]

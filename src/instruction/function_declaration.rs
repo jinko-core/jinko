@@ -2,7 +2,7 @@
 //! a name, a list of required arguments as well as an associated code block
 
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
-use crate::{Context, ErrKind, Error, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, ObjectInstance};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -184,24 +184,6 @@ impl Instruction for FunctionDec {
             Some(block) => format!("{} {}", base, block.print()),
             None => format!("{} {{}}", base),
         }
-    }
-}
-
-impl Rename for FunctionDec {
-    fn prefix(&mut self, prefix: &str) {
-        self.name = format!("{}{}", prefix, self.name);
-        self.set_ty(
-            self.ty()
-                .map(|ty| TypeId::from(format!("{}{}", prefix, ty.id()).as_str())),
-        );
-
-        // FIXME: No need to prefix the scope inside a function, right?
-        // match &mut self.block {
-        //     Some(b) => b.prefix(prefix),
-        //     None => {}
-        // };
-
-        self.args.iter_mut().for_each(|arg| arg.prefix(prefix));
     }
 }
 

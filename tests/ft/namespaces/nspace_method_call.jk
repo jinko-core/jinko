@@ -1,3 +1,4 @@
 incl lib
 
-lib::a // return 12 - 2 => 10
+// FIXME: Should be lib::a, fix once prefixing is implemented
+a // return 12 - 2 => 10

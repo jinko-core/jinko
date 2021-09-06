@@ -1,3 +1,4 @@
 incl libsubdir
 
-libsubdir::lib_subfile::b // Return 59
+// FIXME: Should be libsubdir::lib_subfile::b once prefixing is implemented
+b // Return 59

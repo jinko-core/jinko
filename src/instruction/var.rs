@@ -4,7 +4,7 @@
 //! or it's not.
 
 use crate::instruction::TypeDec;
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance, Rename};
+use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance};
 
 #[derive(Clone)]
 pub struct Var {
@@ -113,12 +113,6 @@ impl Instruction for Var {
         ctx.debug("VAR", var.print().as_ref());
 
         Some(var.instance())
-    }
-}
-
-impl Rename for Var {
-    fn prefix(&mut self, prefix: &str) {
-        self.name = format!("{}{}", prefix, self.name)
     }
 }
 

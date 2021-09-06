@@ -2,7 +2,7 @@
 //! they get desugared into a normal function call.
 
 use crate::instruction::FunctionCall;
-use crate::{Context, InstrKind, Instruction, ObjectInstance, Rename};
+use crate::{Context, InstrKind, Instruction, ObjectInstance};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -43,13 +43,6 @@ impl Instruction for MethodCall {
     }
 }
 
-impl Rename for MethodCall {
-    fn prefix(&mut self, prefix: &str) {
-        self.var.prefix(prefix);
-        self.method.prefix(prefix);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,14 +61,14 @@ mod tests {
     #[test]
     fn t_execute() {
         let mut ctx = Context::new();
-        let func_dec = Construct::instruction("func first(a: int, b: int) -> int { a }")
+        let func_dec = Construct::instruction("func __first(a: int, b: int) -> int { a }")
             .unwrap()
             .1;
         func_dec.execute(&mut ctx);
 
         let var1 = Box::new(JkInt::from(1));
         let var2 = Box::new(JkInt::from(2));
-        let mut method = FunctionCall::new("first".to_owned());
+        let mut method = FunctionCall::new("__first".to_owned());
         method.add_arg(var2);
 
         let mc = MethodCall::new(var1, method);
