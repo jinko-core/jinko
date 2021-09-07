@@ -102,7 +102,7 @@ impl Instruction for TypeInstantiation {
         format!("{})", base)
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         if let Err(e) = self.check_primitive() {
             ctx.error(e);
             return None;
@@ -128,16 +128,18 @@ impl Instruction for TypeInstantiation {
             size += instance.size();
 
             data.append(&mut instance.data().to_vec());
-            fields.push((field_name.to_string(), instance));
+            // FIXME: We need to increment the reference counting here instead of just
+            // copying the bytes
+            fields.push((field_name.to_string(), instance.to_owned()));
         }
 
-        Some(ObjectInstance::new(
+        Some(ctx.instantiate(ObjectInstance::new(
             // FIXME: Disgusting, maybe do not use Rc for TypeId?
             Some((*type_dec).clone()),
             size,
             data,
             Some(fields),
-        ))
+        )))
     }
 }
 

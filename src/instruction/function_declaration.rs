@@ -106,7 +106,7 @@ impl FunctionDec {
 
     /// Run through the function as if it was called. This is useful for setting
     /// an entry point into the context and executing it
-    pub fn run(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    pub fn run<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         let block = match self.block() {
             Some(b) => b,
             // FIXME: Fix Location and input
@@ -128,7 +128,7 @@ impl Instruction for FunctionDec {
         InstrKind::Statement
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         ctx.debug_step("FUNCDEC ENTER");
 
         match self.fn_kind() {

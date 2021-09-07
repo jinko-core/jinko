@@ -2,10 +2,10 @@
 mod args;
 mod context;
 mod error;
+mod gc;
 mod indent;
 mod instance;
 mod instruction;
-mod gc;
 mod parser;
 mod repl;
 mod utils;
@@ -18,10 +18,10 @@ use std::{fs, path::Path};
 
 pub use context::Context;
 pub use error::{ErrKind, Error};
+pub use gc::Gc;
 pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
-pub use gc::Gc;
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 // FIXME: Add documentation

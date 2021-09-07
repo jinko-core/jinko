@@ -79,18 +79,7 @@ impl FunctionCall {
 
             // Create a new variable, and execute the content of the function argument
             // passed to the call
-            let mut new_var = Var::new(func_arg.name().to_owned());
-            let mut instance = match call_arg.execute_expression(ctx) {
-                Some(i) => i,
-                None => {
-                    ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                        "trying to map statement to function argument: {} -> {}",
-                        call_arg.print(),
-                        func_arg
-                    )));
-                    return;
-                }
-            };
+            let new_var = Var::new(func_arg.name().to_owned());
 
             let ty = match ctx.get_type(func_arg.get_type()) {
                 // Double dereferencing: Some(t) gives us a &Rc<TypeDec>. We dereference
@@ -105,9 +94,23 @@ impl FunctionCall {
                 }
             };
 
+            let instance = match call_arg.execute_expression(ctx) {
+                Some(i) => i,
+                None => {
+                    ctx.error(Error::new(ErrKind::Context).with_msg(format!(
+                        "trying to map statement to function argument: {} -> {}",
+                        call_arg.print(),
+                        func_arg
+                    )));
+                    return;
+                }
+            };
+
             instance.set_ty(Some(ty));
 
-            new_var.set_instance(instance);
+            // FIXME: Each variable needs to point to an instance still? Associate
+            // instances with variables in the Garbage collector?
+            // new_var.set_instance(instance);
 
             if let Err(e) = ctx.add_variable(new_var) {
                 ctx.error(e);
@@ -139,7 +142,7 @@ impl Instruction for FunctionCall {
         format!("{})", base)
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         let function = match self.get_declaration(ctx) {
             Ok(f) => f,
             Err(e) => {

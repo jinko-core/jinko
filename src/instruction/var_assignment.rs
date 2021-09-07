@@ -53,7 +53,7 @@ impl Instruction for VarAssign {
         format!("{}{} = {}", base, self.symbol, self.value.print())
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         ctx.debug("ASSIGN VAR", self.symbol());
 
         // Are we creating the variable or not
@@ -94,15 +94,18 @@ impl Instruction for VarAssign {
                 )));
                 return None;
             }
-            (true, _) | (_, true) => var.set_instance(self.value.execute_expression(ctx)?),
+            // FIXME: Same here, keep the var tied to an instance in the GC
+            // (true, _) | (_, true) => var.set_instance(self.value.execute_expression(ctx)?),
+            (true, _) | (_, true) => Some(self.value.execute_expression(ctx)?)
         }
 
+        // FIXME: Rework this
         // We can unwrap safely since we checked that the variable does not
         // exist
-        ctx.replace_variable(var).unwrap();
+        // ctx.replace_variable(var).unwrap();
 
-        // A variable assignment is always a statement
-        None
+        // // A variable assignment is always a statement
+        // None
     }
 }
 

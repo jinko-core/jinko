@@ -65,7 +65,7 @@ pub trait Instruction: InstructionClone + Downcast {
     // FIXME: Add Rename here
     /// Execute the instruction, altering the state of the context. Executing
     /// this method may return an object instance
-    fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, _ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         unreachable!(
             "\n{}\n --> {}",
             self.print(),
@@ -75,19 +75,15 @@ pub trait Instruction: InstructionClone + Downcast {
 
     /// Execute the instruction, hoping for an instance to be returned. If no instance is
     /// returned, error out.
-    fn execute_expression(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        let instance = self.execute(ctx);
-
-        match instance {
-            Some(obj) => Some(obj),
-            None => {
-                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                    "statement found when expression was expected: {}",
-                    self.print()
-                )));
-                None
-            }
+    fn execute_expression<'ctx>(&self, ctx: &'ctx mut Context) -> &'ctx mut ObjectInstance {
+        self.execute(ctx).map_none()
+            ctx.error(Error::new(ErrKind::Context).with_msg(format!(
+                        "statement found when expression was expected: {}",
+                        self.print()
+            )));
         }
+
+        res
     }
 
     /// Execute the instruction, hoping for no instance to be returned. If an instance is

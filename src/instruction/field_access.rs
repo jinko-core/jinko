@@ -30,7 +30,7 @@ impl Instruction for FieldAccess {
         format!("{}.{}", self.instance.print(), self.field_name)
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         ctx.debug("FIELD ACCESS ENTER", &self.print());
 
         let calling_instance = match self.instance.execute(ctx) {
@@ -53,7 +53,7 @@ impl Instruction for FieldAccess {
 
         ctx.debug("FIELD ACCESS EXIT", &self.print());
 
-        Some(field_instance)
+        Some(ctx.instantiate(field_instance))
     }
 }
 

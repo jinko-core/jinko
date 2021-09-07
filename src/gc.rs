@@ -21,7 +21,7 @@ impl RefCount {
     pub fn _decrement(self) -> RefCount {
         match self.1 {
             0 => unreachable!("Logic error: Trying to decrement RefCount of zero"),
-            _ => RefCount(self.0, self.1 - 1)
+            _ => RefCount(self.0, self.1 - 1),
         }
     }
 
@@ -45,7 +45,8 @@ impl<'gc> Gc {
         let hash_copy = instance.hash();
 
         // FIXME: Should we check something here?
-        self.instances.insert(instance.hash(), RefCount::new(instance));
+        self.instances
+            .insert(instance.hash(), RefCount::new(instance));
 
         // We can unwrap safely here since we just inserted said instance
         self.instances.get_mut(&hash_copy).unwrap().instance_mut()

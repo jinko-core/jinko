@@ -48,7 +48,7 @@ impl Instruction for Loop {
         }
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         match &self.kind {
             LoopKind::Loop => loop {
                 ctx.debug_step("LOOP ENTER");

@@ -184,7 +184,7 @@ impl Instruction for Incl {
         base
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         ctx.debug("INCL ENTER", self.print().as_str());
 
         let base = self.get_base(ctx);

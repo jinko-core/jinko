@@ -3,14 +3,12 @@
 //! need to keep an option of an instance. A variable is either there, fully initialized,
 //! or it's not.
 
-use crate::instruction::TypeDec;
 use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance};
 
 #[derive(Clone)]
 pub struct Var {
     name: String,
     mutable: bool,
-    instance: ObjectInstance,
 }
 
 impl Var {
@@ -19,7 +17,6 @@ impl Var {
         Var {
             name,
             mutable: false,
-            instance: ObjectInstance::empty(),
         }
     }
 
@@ -28,19 +25,9 @@ impl Var {
         &self.name
     }
 
-    /// Return a copy of the variable's instance
-    pub fn instance(&self) -> ObjectInstance {
-        self.instance.clone()
-    }
-
     /// Is a variable mutable or not
     pub fn mutable(&self) -> bool {
         self.mutable
-    }
-
-    /// Set the instance contained in a variable
-    pub fn set_instance(&mut self, instance: ObjectInstance) {
-        self.instance = instance;
     }
 
     /// Change the mutability of a variable
@@ -55,12 +42,7 @@ impl Instruction for Var {
     }
 
     fn print(&self) -> String {
-        format!(
-            "{} /* : {} = {} */",
-            self.name.clone(),
-            self.instance.ty().unwrap_or(&TypeDec::from("")).name(),
-            self.instance
-        )
+        self.name.clone()
     }
 
     fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
@@ -97,7 +79,7 @@ impl Instruction for Var {
         }
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         let var = match ctx.get_variable(self.name()) {
             Some(v) => v,
             None => {
@@ -112,7 +94,9 @@ impl Instruction for Var {
 
         ctx.debug("VAR", var.print().as_ref());
 
-        Some(var.instance())
+        // FIXME: We need to get the instance in some way or another, maybe through the GC?
+        // Some(var.instance())
+        None
     }
 }
 

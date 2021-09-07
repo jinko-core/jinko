@@ -52,7 +52,11 @@ impl BinaryOp {
 
     // FIXME: Use Context::execute_expression
     /// Execute a node of the binary operation
-    fn execute_node(&self, node: &dyn Instruction, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute_node<'ctx>(
+        &self,
+        node: &dyn Instruction,
+        ctx: &'ctx mut Context,
+    ) -> Option<&'ctx mut ObjectInstance> {
         match node.execute(ctx) {
             None => {
                 ctx.error(Error::new(ErrKind::Context).with_msg(format!(
@@ -80,7 +84,7 @@ impl Instruction for BinaryOp {
         )
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         ctx.debug_step("BINOP ENTER");
 
         ctx.debug("OP", self.op.as_str());
@@ -135,7 +139,7 @@ impl Instruction for BinaryOp {
 
         ctx.debug_step("BINOP EXIT");
 
-        Some(return_value)
+        Some(ctx.instantiate(return_value))
     }
 }
 

@@ -62,7 +62,7 @@ impl Instruction for JkInst {
         .to_string()
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         ctx.debug("JINKO_INST", &self.print());
 
         match self.kind {

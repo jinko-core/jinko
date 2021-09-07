@@ -30,7 +30,7 @@ impl Instruction for TypeDec {
         InstrKind::Statement
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         ctx.debug_step(&format!("CUSTOM TYPE {} ENTER", self.name));
 
         if let Err(e) = ctx.add_type(self.clone()) {

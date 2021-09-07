@@ -16,8 +16,8 @@ use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
-use crate::ObjectInstance;
 use crate::Gc;
+use crate::ObjectInstance;
 
 /// Type the context uses for keys
 type CtxKey = String;
@@ -258,7 +258,8 @@ impl Context {
 
         match self.error_handler.has_errors() {
             true => Err(Error::new(ErrKind::Context)),
-            false => Ok(res),
+            // Clone the last instance to return
+            false => Ok(res.map(|instance_ref| instance_ref.to_owned())),
         }
     }
 }

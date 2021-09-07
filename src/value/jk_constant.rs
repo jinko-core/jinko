@@ -98,12 +98,12 @@ macro_rules! jk_primitive {
                 Some(self.0)
             }
 
-            fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+            fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
                 ctx.debug("CONSTANT", &self.0.to_string());
 
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
-                Some(self.to_instance())
+                Some(ctx.instantiate(self.to_instance()))
             }
         }
     };
@@ -144,12 +144,12 @@ macro_rules! jk_primitive {
                 self.0.to_string()
             }
 
-            fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+            fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
                 ctx.debug("CONSTANT", &self.0.to_string());
 
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
-                Some(self.to_instance())
+                Some(ctx.instantiate(self.to_instance()))
             }
         }
     };
@@ -211,10 +211,10 @@ impl Instruction for JkString {
         format!("\"{}\"", self.0.clone())
     }
 
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute<'ctx>(&self, ctx: &'ctx mut Context) -> Option<&'ctx mut ObjectInstance> {
         ctx.debug("CONSTANT", &self.0.to_string());
 
-        Some(self.to_instance())
+        Some(ctx.instantiate(self.to_instance()))
     }
 }
 
