@@ -152,6 +152,11 @@ impl ObjectInstance {
     pub fn as_string(&self) -> String {
         ObjectInstance::as_string_inner(self, Indent::default())
     }
+
+    pub fn hash(&self) -> String {
+        // FIXME: This is incorrect behavior
+        self.as_string()
+    }
 }
 
 /// Convert a Jinko type to an instance. This is handled by jinko's primitive types
