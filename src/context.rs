@@ -17,6 +17,7 @@ use std::rc::Rc;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
 use crate::ObjectInstance;
+use crate::Gc;
 
 /// Type the context uses for keys
 type CtxKey = String;
@@ -48,6 +49,9 @@ pub struct Context {
     /// Sources included by the context
     included: HashSet<PathBuf>,
 
+    /// Garbeg collector instance
+    gc: Gc,
+
     /// Errors being kept by the context
     pub(crate) error_handler: ErrorHandler,
 }
@@ -77,6 +81,7 @@ impl Context {
             scope_map: ScopeMap::new(),
             tests: HashMap::new(),
             included: HashSet::new(),
+            gc: Gc::default(),
             error_handler: ErrorHandler::default(),
         };
 
@@ -113,6 +118,10 @@ impl Context {
             }
             None => {}
         };
+    }
+
+    pub fn instantiate(&mut self, i: ObjectInstance) -> &mut ObjectInstance {
+        self.gc.new_instance(i)
     }
 
     /// Add an error to the context
