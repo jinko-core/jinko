@@ -5,6 +5,7 @@ mod error;
 mod indent;
 mod instance;
 mod instruction;
+mod gc;
 mod parser;
 mod repl;
 mod utils;
@@ -20,6 +21,7 @@ pub use error::{ErrKind, Error};
 pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
+pub use gc::Gc;
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 // FIXME: Add documentation
