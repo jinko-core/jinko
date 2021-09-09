@@ -19,8 +19,8 @@ use nom::{branch::alt, combinator::opt, multi::many0};
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
     Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse,
-    Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var,
-    VarAssign,
+    Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, Return, TypeDec, TypeId,
+    TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ParseResult, ShuntingYard, Token};
 
@@ -49,6 +49,7 @@ impl Construct {
             BoxConstruct::function_call,
             BoxConstruct::incl,
             BoxConstruct::if_else,
+            BoxConstruct::jk_return,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
@@ -641,6 +642,21 @@ impl Construct {
         let if_else = IfElse::new(condition, if_body, else_body);
 
         Ok((input, if_else))
+    }
+
+    /// Parse return construct. Consumes a return with its potential value
+    ///
+    /// `<return> [ <xxx> ]`
+    pub(crate) fn jk_return(input: &str) -> ParseResult<&str, Return> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::jk_return(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, val) = opt(Construct::instruction)(input)?;
+
+        let return_inst = Return::new(val);
+
+        Ok((input, return_inst))
     }
 
     /// Parse a loop block, meaning the `loop` keyword and a corresponding block
@@ -1623,5 +1639,22 @@ func void() { }"##;
                 .0,
             ""
         );
+    }
+
+    #[test]
+    fn t_naked_return() {
+        let ie = Construct::jk_return("return");
+
+        assert!(&ie.is_ok());
+
+        let res = ie.unwrap().1;
+        println!("Test {}", res.print());
+    }
+
+    #[test]
+    fn t_return_something() {
+        let ie = Construct::jk_return("return 42");
+
+        assert!(&ie.is_ok());
     }
 }

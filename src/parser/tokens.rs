@@ -14,9 +14,9 @@ use crate::{parser::ParseResult, ErrKind, Error};
 use nom::Err::Error as NomError;
 
 /// Reserved Keywords by jinko
-const RESERVED_KEYWORDS: [&str; 13] = [
+const RESERVED_KEYWORDS: [&str; 14] = [
     "func", "test", "mock", "type", "ext", "for", "while", "loop", "mut", "true", "false", "incl",
-    "as",
+    "as", "return",
 ];
 
 const OPERATORS: [&str; 6] = ["+", "-", "*", "/", "(", ")"];
@@ -154,6 +154,10 @@ impl Token {
 
     pub fn else_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "else")
+    }
+
+    pub fn jk_return(input: &str) -> ParseResult<&str, &str> {
+        Token::specific_token(input, "return")
     }
 
     pub fn _type_tok(input: &str) -> ParseResult<&str, &str> {
