@@ -18,7 +18,7 @@ pub struct Return {
 }
 
 impl Return {
-    /// Create a new IfElse block and return it
+    /// Create a new Return instruction
     pub fn new(value: Option<Box<dyn Instruction>>) -> Return {
         Return { value }
     }

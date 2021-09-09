@@ -156,7 +156,7 @@ impl Token {
         Token::specific_token(input, "else")
     }
 
-    pub fn jk_return(input: &str) -> ParseResult<&str, &str> {
+    pub fn return_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "return")
     }
 

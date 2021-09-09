@@ -666,7 +666,7 @@ impl Construct {
     /// `<return> [ <xxx> ]`
     pub(crate) fn jk_return(input: &str) -> ParseResult<&str, Return> {
         let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::jk_return(input)?;
+        let (input, _) = Token::return_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, val) = opt(Construct::instruction)(input)?;
