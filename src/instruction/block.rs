@@ -17,26 +17,23 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{Context, InstrKind, Instruction, ObjectInstance};
+use crate::{typechecker::CheckedType, Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
     last: Option<Box<dyn Instruction>>,
-}
-
-impl Default for Block {
-    fn default() -> Block {
-        Block::new()
-    }
+    ty: CheckedType,
 }
 
 impl Block {
     /// Create a new block
     pub fn new() -> Block {
+        // FIXME: Remove this method
         Block {
             instructions: Vec::new(),
             last: None,
+            ty: CheckedType::Unknown,
         }
     }
 
@@ -116,6 +113,15 @@ impl Instruction for Block {
         ctx.debug_step("BLOCK EXIT");
 
         ret_val
+    }
+}
+
+impl TypeCheck for Block {
+    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+        match &self.last {
+            None => CheckedType::Void,
+            Some(last) => todo!("last.resolve_type(ctx)"), // FIXME: Not implemented yet
+        }
     }
 }
 
