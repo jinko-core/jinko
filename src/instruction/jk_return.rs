@@ -9,7 +9,7 @@
 //! return 42
 //! ```
 
-use crate::instruction::{Block, InstrKind, Instruction};
+use crate::instruction::{InstrKind, Instruction};
 use crate::{Context, ObjectInstance};
 
 #[derive(Clone)]
@@ -26,7 +26,10 @@ impl Return {
 
 impl Instruction for Return {
     fn kind(&self) -> InstrKind {
-        InstrKind::Statement
+        match &self.value {
+            Some(val) => val.kind(),
+            None => InstrKind::Statement,
+        }
     }
 
     fn print(&self) -> String {
@@ -39,6 +42,9 @@ impl Instruction for Return {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        None
+        match &self.value {
+            Some(val) => val.execute(ctx),
+            None => None,
+        }
     }
 }

@@ -14,7 +14,7 @@
 //! is the grammar for a variable assignment.
 
 use nom::Err::Error as NomError;
-use nom::{branch::alt, combinator::opt, multi::many0};
+use nom::{branch::alt, combinator::opt, combinator::peek, multi::many0, multi::many_till};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
@@ -49,7 +49,7 @@ impl Construct {
             BoxConstruct::function_call,
             BoxConstruct::incl,
             BoxConstruct::if_else,
-            BoxConstruct::jk_return,
+            // BoxConstruct::jk_return,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
@@ -58,6 +58,12 @@ impl Construct {
             Construct::constant,
             BoxConstruct::extra,
         ))(input)?;
+
+        Ok((input, value))
+    }
+
+    pub fn early_return(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+        let (input, value) = BoxConstruct::jk_return(input)?;
 
         Ok((input, value))
     }
@@ -346,7 +352,8 @@ impl Construct {
     /// Parse multiple statements and a possible return Instruction
     fn stmts_and_maybe_last(input: &str) -> ParseResult<&str, (Instructions, MaybeInstruction)> {
         let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
-        let (input, last_expr) = opt(Construct::instruction)(input)?;
+        let (input, last_expr) =
+            opt(alt((Construct::early_return, Construct::instruction)))(input)?;
 
         Ok((input, (instructions, last_expr)))
     }
@@ -357,8 +364,18 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, (instructions, last)) = Construct::stmts_and_maybe_last(input)?;
-
         let (input, _) = Token::maybe_consume_extra(input)?;
+
+        if last.is_some() {
+            let (_, dead_code) = opt(Construct::instruction)(input)?;
+            if dead_code.is_some() {
+                return Err(NomError(
+                    Error::new(ErrKind::Parsing)
+                        .with_msg(format!("Dead code after early return: {}", input)),
+                ));
+            }
+        }
+
         let (input, _) = Token::right_curly_bracket(input)?;
 
         Ok((input, (instructions, last)))
@@ -653,6 +670,7 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, val) = opt(Construct::instruction)(input)?;
+        let (input, _) = opt(Token::semicolon)(input)?;
 
         let return_inst = Return::new(val);
 
