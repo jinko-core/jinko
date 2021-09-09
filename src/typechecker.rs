@@ -13,6 +13,12 @@ pub enum CheckedType {
     Unknown,
 }
 
+impl Default for CheckedType {
+    fn default() -> CheckedType {
+        CheckedType::Unknown
+    }
+}
+
 pub trait TypeCheck {
     fn set_type(&mut self, ty: CheckedType);
     fn get_type(&self) -> &CheckedType;
