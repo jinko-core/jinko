@@ -1675,4 +1675,12 @@ func void() { }"##;
 
         assert!(&ie.is_ok());
     }
+
+    #[test]
+    fn t_return_block_dead_code() {
+        let ie = Construct::instruction("{ return 42; 5; }");
+
+        // This should fail, ``5;`` is dead code because of the ``return``
+        assert!(&ie.is_err());
+    }
 }
