@@ -4,13 +4,16 @@
 //! or it's not.
 
 use crate::instruction::TypeDec;
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance};
+use crate::typechecker::CheckedType;
+use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct Var {
     name: String,
     mutable: bool,
     instance: ObjectInstance,
+    // FIXME: Maybe we can refactor this using the instance's type?
+    ty: CheckedType,
 }
 
 impl Var {
@@ -20,6 +23,7 @@ impl Var {
             name,
             mutable: false,
             instance: ObjectInstance::empty(),
+            ty: CheckedType::Unknown,
         }
     }
 
@@ -113,6 +117,17 @@ impl Instruction for Var {
         ctx.debug("VAR", var.print().as_ref());
 
         Some(var.instance())
+    }
+}
+
+impl TypeCheck for Var {
+    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
+        // FIXME: Is this correct? Does no type correspond to void? Can we use
+        // CheckedType for the Instances?
+        match self.instance.ty() {
+            None => CheckedType::Void,
+            Some(ty) => CheckedType::Resolved(ty.into()),
+        }
     }
 }
 
