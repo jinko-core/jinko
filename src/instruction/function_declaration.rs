@@ -1,8 +1,10 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use crate::type_cache;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
-use crate::{Context, ErrKind, Error, ObjectInstance};
+use crate::typechecker::CheckedType;
+use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -22,6 +24,7 @@ pub struct FunctionDec {
     kind: FunctionKind,
     args: Vec<DecArg>,
     block: Option<Block>,
+    cached_type: CheckedType,
 }
 
 impl FunctionDec {
@@ -33,6 +36,7 @@ impl FunctionDec {
             kind: FunctionKind::Unknown,
             args: Vec::new(),
             block: None,
+            cached_type: CheckedType::Unknown,
         }
     }
 
@@ -183,6 +187,17 @@ impl Instruction for FunctionDec {
         match &self.block {
             Some(block) => format!("{} {}", base, block.print()),
             None => format!("{} {{}}", base),
+        }
+    }
+}
+
+impl TypeCheck for FunctionDec {
+    type_cache!(cached_type);
+
+    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+        match &self.block {
+            None => CheckedType::Unknown, // FIXME: Is that correct?
+            Some(b) => b.resolve_type(ctx),
         }
     }
 }
