@@ -14,7 +14,7 @@
 //! is the grammar for a variable assignment.
 
 use nom::Err::Error as NomError;
-use nom::{branch::alt, combinator::opt, combinator::peek, multi::many0, multi::many_till};
+use nom::{branch::alt, combinator::opt, multi::many0};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
@@ -49,7 +49,6 @@ impl Construct {
             BoxConstruct::function_call,
             BoxConstruct::incl,
             BoxConstruct::if_else,
-            // BoxConstruct::jk_return,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
@@ -369,6 +368,7 @@ impl Construct {
         if last.is_some() {
             let (_, dead_code) = opt(Construct::instruction)(input)?;
             if dead_code.is_some() {
+                // FIXME: This should be a warning
                 return Err(NomError(
                     Error::new(ErrKind::Parsing)
                         .with_msg(format!("Dead code after early return: {}", input)),
