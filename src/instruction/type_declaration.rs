@@ -1,13 +1,9 @@
 use super::{DecArg, InstrKind, Instruction, TypeId};
 
-<<<<<<< HEAD
 use crate::{
     typechecker::{CheckedType, TypeCtx},
     Context, ObjectInstance, TypeCheck,
 };
-=======
-use crate::{typechecker::CheckedType, Context, ObjectInstance, TypeCheck};
->>>>>>> a3e2a3c (type_declaration: Implement typechecking)
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {

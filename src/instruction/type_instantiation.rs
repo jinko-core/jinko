@@ -5,6 +5,7 @@ use super::{
     Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, TypeId, VarAssign,
 };
 use crate::instance::Name;
+use crate::{typechecker::CheckedType, TypeCheck};
 
 use std::rc::Rc;
 
@@ -138,6 +139,12 @@ impl Instruction for TypeInstantiation {
             data,
             Some(fields),
         ))
+    }
+}
+
+impl TypeCheck for TypeInstantiation {
+    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
+        CheckedType::Resolved(self.type_name.clone())
     }
 }
 
