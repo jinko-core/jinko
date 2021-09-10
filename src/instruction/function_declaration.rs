@@ -1,7 +1,6 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::type_cache;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
 use crate::typechecker::CheckedType;
 use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
@@ -192,12 +191,29 @@ impl Instruction for FunctionDec {
 }
 
 impl TypeCheck for FunctionDec {
-    type_cache!(cached_type);
-
     fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+        let expected_ty = match &self.ty {
+            // FIXME: Remove clone?
+            Some(ty) => CheckedType::Resolved(ty.clone()),
+            None => CheckedType::Void,
+        };
+
         match &self.block {
-            None => CheckedType::Unknown, // FIXME: Is that correct?
-            Some(b) => b.resolve_type(ctx),
+            Some(b) => {
+                let block_ty = b.resolve_type(ctx);
+
+                if block_ty != expected_ty {
+                    ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                        "invalid type returned in function, expected type {}, block type {}",
+                        expected_ty, block_ty
+                    )));
+                    CheckedType::Unknown
+                } else {
+                    block_ty
+                }
+            }
+            // If the function has no block, trust the declaration and return the type
+            None => expected_ty,
         }
     }
 }
