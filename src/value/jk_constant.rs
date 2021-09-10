@@ -1,4 +1,5 @@
-use crate::instruction::{InstrKind, Instruction, Operator, TypeDec};
+use crate::instruction::{InstrKind, Instruction, Operator, TypeDec, TypeId};
+use crate::typechecker::{CheckedType, TypeCheck};
 use crate::{
     Context, Error, FromObjectInstance, JkString, ObjectInstance, ToObjectInstance, Value,
 };
@@ -106,6 +107,12 @@ macro_rules! jk_primitive {
                 Some(self.to_instance())
             }
         }
+
+        impl TypeCheck for JkConstant<bool> {
+            fn resolve_type(&self, _: &mut Context) -> CheckedType {
+                CheckedType::Resolved(TypeId::from("bool"))
+            }
+        }
     };
     ($t:ty, $s:expr) => {
         impl ToObjectInstance for JkConstant<$t> {
@@ -150,6 +157,12 @@ macro_rules! jk_primitive {
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
                 Some(self.to_instance())
+            }
+        }
+
+        impl TypeCheck for JkConstant<$t> {
+            fn resolve_type(&self, _: &mut Context) -> CheckedType {
+                CheckedType::Resolved(TypeId::from($s))
             }
         }
     };
@@ -215,6 +228,12 @@ impl Instruction for JkString {
         ctx.debug("CONSTANT", &self.0.to_string());
 
         Some(self.to_instance())
+    }
+}
+
+impl TypeCheck for JkString {
+    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
+        CheckedType::Resolved(TypeId::from("string"))
     }
 }
 
