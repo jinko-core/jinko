@@ -1,7 +1,9 @@
 //! The VarAssign struct is used when assigning values to variables.
 
 use crate::instruction::{InstrKind, Var};
-use crate::{Context, ErrKind, Error, Instruction, ObjectInstance};
+use crate::{
+    typechecker::CheckedType, Context, ErrKind, Error, Instruction, ObjectInstance, TypeCheck,
+};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -103,6 +105,30 @@ impl Instruction for VarAssign {
 
         // A variable assignment is always a statement
         None
+    }
+}
+
+impl TypeCheck for VarAssign {
+    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+        match ctx.get_variable(&self.symbol) {
+            // The variable is being created. No typechecking error here
+            None => CheckedType::Void,
+            Some(var) => {
+                // FIXME: Remove clone
+                let expected_ty = var.clone().resolve_type(ctx);
+                let value_ty = self.value.resolve_type(ctx);
+
+                if expected_ty != value_ty {
+                    ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                        "invalid variable assignment: expected type {}, got {}",
+                        expected_ty, value_ty
+                    )));
+                    CheckedType::Unknown
+                } else {
+                    CheckedType::Void
+                }
+            }
+        }
     }
 }
 
