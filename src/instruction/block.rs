@@ -120,7 +120,7 @@ impl TypeCheck for Block {
     fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
         match &self.last {
             None => CheckedType::Void,
-            Some(last) => todo!("last.resolve_type(ctx)"), // FIXME: Not implemented yet
+            Some(last) => last.resolve_type(ctx),
         }
     }
 }
@@ -130,6 +130,7 @@ mod tests {
     use super::*;
     use crate::instruction::Var;
     use crate::value::JkInt;
+    use crate::TypeCheck;
 
     #[test]
     fn empty() {
@@ -209,5 +210,19 @@ mod tests {
 
         assert_eq!(b.execute(&mut i).unwrap(), JkInt::from(18).to_instance());
         assert!(!i.error_handler.has_errors());
+    }
+
+    // FIXME: Add test for type of block containing `last` once TypeChecker is implemented
+    // for all Instructions
+    #[test]
+    fn block_no_last_tychk() {
+        let mut b = Block::new();
+        let instr: Vec<Box<dyn Instruction>> =
+            vec![Box::new(JkInt::from(12)), Box::new(JkInt::from(15))];
+        b.set_instructions(instr);
+
+        let mut ctx = Context::new();
+
+        assert_eq!(b.resolve_type(&mut ctx), CheckedType::Void)
     }
 }
