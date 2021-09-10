@@ -51,7 +51,7 @@ impl Instruction for IfElse {
         let base = format!("if {} {}", self.condition.print(), self.if_body.print());
 
         match &self.else_body {
-            Some(body) => format!(" else {}", body.print()),
+            Some(body) => format!("{} else {}", base, body.print()),
             None => base,
         }
     }
