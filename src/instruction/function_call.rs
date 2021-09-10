@@ -2,7 +2,11 @@
 //! function on execution.
 
 use crate::instruction::{FunctionDec, Var};
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
+use crate::typechecker::TypeCtx;
+use crate::{
+    typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
+    TypeCheck,
+};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -55,20 +59,6 @@ impl FunctionCall {
         }
     }
 
-    /// Check if the arguments received and the arguments expected match
-    fn check_args_count(&self, function: &FunctionDec) -> Result<(), Error> {
-        match self.args().len() == function.args().len() {
-            true => Ok(()),
-            false => Err(Error::new(ErrKind::Context).with_msg(format!(
-                "wrong number of arguments \
-                    for call to function `{}`: expected {}, got {}",
-                self.name(),
-                function.args().len(),
-                self.args().len()
-            ))),
-        }
-    }
-
     /// Map each argument to its corresponding instruction
     fn map_args(&self, function: &FunctionDec, ctx: &mut Context) {
         for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
@@ -114,6 +104,15 @@ impl FunctionCall {
             }
         }
     }
+
+    fn type_args(&self, mut args: Vec<(String, CheckedType)>, ctx: &mut TypeCtx) {
+        ctx.scope_enter();
+
+        args.drain(..)
+            .for_each(|(arg_name, arg_ty)| ctx.declare_var(arg_name, arg_ty));
+
+        ctx.scope_exit();
+    }
 }
 
 impl Instruction for FunctionCall {
@@ -148,11 +147,6 @@ impl Instruction for FunctionCall {
             }
         };
 
-        if let Err(e) = self.check_args_count(&function) {
-            ctx.error(e);
-            return None;
-        }
-
         ctx.scope_enter();
 
         ctx.debug("CALL", self.name());
@@ -164,6 +158,55 @@ impl Instruction for FunctionCall {
         ctx.scope_exit();
 
         ret_val
+    }
+}
+
+impl TypeCheck for FunctionCall {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let (args_type, return_type) = match ctx.get_function(self.name()) {
+            Some(checked_type) => checked_type,
+            // FIXME: This does not account for functions declared later in the code
+            None => {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "function `{}` was not declared in this scope",
+                    self.name()
+                )));
+                return CheckedType::Unknown;
+            }
+        };
+
+        let mut errors = vec![];
+        let mut args = vec![];
+
+        if self.args().len() != args_type.len() {
+            errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                "wrong number of arguments \
+                    for call to function `{}`: expected {}, got {}",
+                self.name(),
+                args_type.len(),
+                self.args().len()
+            )));
+        }
+
+        for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(self.args.iter().map(
+            |_given_arg| CheckedType::Void, /* given_arg.resolve_type() */
+        )) {
+            if expected_ty != &given_ty {
+                errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "invalid type used for function argument: expected `{}`, got `{}`:",
+                    expected_ty, given_ty
+                )));
+            }
+
+            args.push((expected_name.clone(), expected_ty.clone()));
+        }
+
+        let return_type = return_type.to_owned();
+
+        errors.drain(..).for_each(|err| ctx.error(err));
+        self.type_args(args, ctx);
+
+        return_type
     }
 }
 
