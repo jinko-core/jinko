@@ -365,15 +365,12 @@ impl Construct {
         let (input, (instructions, last)) = Construct::stmts_and_maybe_last(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        if last.is_some() {
-            let (_, dead_code) = opt(Construct::instruction)(input)?;
-            if dead_code.is_some() {
-                // FIXME: This should be a warning
-                return Err(NomError(
-                    Error::new(ErrKind::Parsing)
-                        .with_msg(format!("Dead code after early return: {}", input)),
-                ));
-            }
+        if let (_, Some(dead_code)) = opt(Construct::instruction)(input)? {
+            // FIXME: This should be a warning
+            return Err(NomError(Error::new(ErrKind::Parsing).with_msg(format!(
+                "Dead code after early return, starting at {}",
+                dead_code.print()
+            ))));
         }
 
         let (input, _) = Token::right_curly_bracket(input)?;
@@ -670,11 +667,10 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, val) = opt(Construct::instruction)(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = opt(Token::semicolon)(input)?;
 
-        let return_inst = Return::new(val);
-
-        Ok((input, return_inst))
+        Ok((input, Return::new(val)))
     }
 
     /// Parse a loop block, meaning the `loop` keyword and a corresponding block
