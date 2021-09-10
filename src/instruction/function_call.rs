@@ -2,7 +2,10 @@
 //! function on execution.
 
 use crate::instruction::{FunctionDec, Var};
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
+use crate::{
+    typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
+    TypeCheck,
+};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -164,6 +167,25 @@ impl Instruction for FunctionCall {
         ctx.scope_exit();
 
         ret_val
+    }
+}
+
+impl TypeCheck for FunctionCall {
+    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+        // FIXME: We need to cache the type here
+        let function = match self.get_declaration(ctx) {
+            Ok(f) => f,
+            Err(e) => {
+                ctx.error(e);
+                return CheckedType::Unknown;
+            }
+        };
+
+        // FIXME: We can add a conversion from Option<Ty> to CheckedType<Ty>
+        match function.ty() {
+            Some(ty) => CheckedType::Resolved(ty.clone()),
+            None => CheckedType::Void,
+        }
     }
 }
 
