@@ -1,7 +1,10 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
+use crate::{
+    typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
+    TypeCheck,
+};
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -17,22 +20,9 @@ impl FieldAccess {
             field_name,
         }
     }
-}
 
-impl Instruction for FieldAccess {
-    fn kind(&self) -> InstrKind {
-        // A field access can only ever be an expression, since we cannot store statements
-        // in a type
-        InstrKind::Expression(None)
-    }
-
-    fn print(&self) -> String {
-        format!("{}.{}", self.instance.print(), self.field_name)
-    }
-
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug("FIELD ACCESS ENTER", &self.print());
-
+    /// Get a reference to the accessed field's instance
+    fn get_field_instance(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         let calling_instance = match self.instance.execute(ctx) {
             None => {
                 ctx.error(Error::new(ErrKind::Context).with_msg(format!(
@@ -51,9 +41,44 @@ impl Instruction for FieldAccess {
             }
         };
 
+        Some(field_instance)
+    }
+}
+
+impl Instruction for FieldAccess {
+    fn kind(&self) -> InstrKind {
+        // A field access can only ever be an expression, since we cannot store statements
+        // in a type
+        InstrKind::Expression(None)
+    }
+
+    fn print(&self) -> String {
+        format!("{}.{}", self.instance.print(), self.field_name)
+    }
+
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug("FIELD ACCESS ENTER", &self.print());
+
+        let field_instance = self.get_field_instance(ctx);
+
         ctx.debug("FIELD ACCESS EXIT", &self.print());
 
-        Some(field_instance)
+        field_instance
+    }
+}
+
+impl TypeCheck for FieldAccess {
+    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+        let field_instance = self.get_field_instance(ctx);
+
+        // Errors will already have been found in the `get_field_instance` method
+        match field_instance {
+            None => CheckedType::Unknown,
+            Some(instance) => match instance.ty() {
+                None => CheckedType::Void,
+                Some(ty) => CheckedType::Resolved(ty.into()),
+            },
+        }
     }
 }
 
