@@ -76,3 +76,79 @@ impl Instruction for IfElse {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn t_if_print() {
+        use crate::value::JkBool;
+
+        let if_block = IfElse::new(Box::new(JkBool::from(true)), Block::new(), None);
+
+        assert_eq!(if_block.print(), "if true {\n}".to_string());
+    }
+
+    #[test]
+    fn t_if_else_print() {
+        use crate::value::JkBool;
+
+        let if_block = IfElse::new(
+            Box::new(JkBool::from(true)),
+            Block::new(),
+            Some(Block::new()),
+        );
+
+        assert_eq!(if_block.print(), "if true {\n} else {\n}".to_string());
+    }
+
+    #[test]
+    fn t_if_kind() {
+        use crate::value::JkBool;
+
+        let if_block = IfElse::new(Box::new(JkBool::from(true)), Block::new(), None);
+
+        assert_eq!(if_block.kind(), InstrKind::Statement);
+    }
+
+    #[test]
+    fn t_if_execute() {
+        use crate::instance::ToObjectInstance;
+        use crate::value::{JkBool, JkInt};
+
+        let mut ctx = Context::new();
+
+        let mut if_block = Block::new();
+        let mut else_block = Block::new();
+        if_block.set_last(Some(Box::new(JkInt::from(42))));
+        else_block.set_last(Some(Box::new(JkInt::from(69))));
+
+        let if_else = IfElse::new(Box::new(JkBool::from(true)), if_block, Some(else_block));
+
+        assert_eq!(
+            if_else.execute(&mut ctx).unwrap(),
+            JkInt::from(42).to_instance()
+        );
+    }
+
+    #[test]
+    fn t_else_execute() {
+        use crate::instance::ToObjectInstance;
+        use crate::value::{JkBool, JkInt};
+
+        let mut ctx = Context::new();
+
+        let mut if_block = Block::new();
+        let mut else_block = Block::new();
+        if_block.set_last(Some(Box::new(JkInt::from(42))));
+        else_block.set_last(Some(Box::new(JkInt::from(69))));
+
+        let if_else = IfElse::new(Box::new(JkBool::from(false)), if_block, Some(else_block));
+
+        assert_eq!(
+            if_else.execute(&mut ctx).unwrap(),
+            JkInt::from(69).to_instance()
+        );
+    }
+}
