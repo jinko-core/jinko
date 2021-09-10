@@ -4,6 +4,7 @@
 
 use crate::{instruction::TypeId, Context};
 use std::fmt::{Display, Formatter, Result};
+use colored::Colorize;
 
 /// The [`CheckedType`] enum contains three possible states about the type. Either the
 /// type has been properly resolved to something, or it corresponds to a Void type. If the
@@ -29,7 +30,7 @@ impl Display for CheckedType {
             CheckedType::Unknown => "!!unknown!!",
         };
 
-        write!(f, "{}", ty_str)
+        write!(f, "{}", ty_str.purple())
     }
 }
 
