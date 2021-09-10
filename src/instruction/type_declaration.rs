@@ -1,6 +1,6 @@
 use super::{DecArg, InstrKind, Instruction};
 
-use crate::{Context, ObjectInstance};
+use crate::{typechecker::CheckedType, Context, ObjectInstance, TypeCheck};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
@@ -60,6 +60,12 @@ impl Instruction for TypeDec {
             .skip(1)
             .for_each(|field| base.push_str(format!(", {}", field).as_str()));
         format!("{});", base)
+    }
+}
+
+impl TypeCheck for TypeDec {
+    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
+        CheckedType::Void
     }
 }
 
