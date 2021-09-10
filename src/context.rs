@@ -16,7 +16,7 @@ use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
-use crate::ObjectInstance;
+use crate::{ObjectInstance, TypeCheck};
 
 /// Type the context uses for keys
 type CtxKey = String;
@@ -243,6 +243,7 @@ impl Context {
         // The entry point always has a block
         let ep = self.entry_point.block().unwrap().clone();
 
+        ep.resolve_type(self);
         let res = ep.execute(self);
 
         self.emit_errors();
