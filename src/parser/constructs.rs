@@ -19,8 +19,8 @@ use nom::{branch::alt, combinator::opt, multi::many0};
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
     Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse,
-    Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, TypeDec, TypeId, TypeInstantiation, Var,
-    VarAssign,
+    Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, Return, TypeDec, TypeId,
+    TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ParseResult, ShuntingYard, Token};
 
@@ -57,6 +57,12 @@ impl Construct {
             Construct::constant,
             BoxConstruct::extra,
         ))(input)?;
+
+        Ok((input, value))
+    }
+
+    pub fn early_return(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+        let (input, value) = BoxConstruct::jk_return(input)?;
 
         Ok((input, value))
     }
@@ -345,7 +351,8 @@ impl Construct {
     /// Parse multiple statements and a possible return Instruction
     fn stmts_and_maybe_last(input: &str) -> ParseResult<&str, (Instructions, MaybeInstruction)> {
         let (input, instructions) = many0(Construct::stmt_semicolon)(input)?;
-        let (input, last_expr) = opt(Construct::instruction)(input)?;
+        let (input, last_expr) =
+            opt(alt((Construct::early_return, Construct::instruction)))(input)?;
 
         Ok((input, (instructions, last_expr)))
     }
@@ -356,8 +363,16 @@ impl Construct {
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         let (input, (instructions, last)) = Construct::stmts_and_maybe_last(input)?;
-
         let (input, _) = Token::maybe_consume_extra(input)?;
+
+        if let (_, Some(dead_code)) = opt(Construct::instruction)(input)? {
+            // FIXME: This should be a warning
+            return Err(NomError(Error::new(ErrKind::Parsing).with_msg(format!(
+                "Dead code after early return, starting at {}",
+                dead_code.print()
+            ))));
+        }
+
         let (input, _) = Token::right_curly_bracket(input)?;
 
         Ok((input, (instructions, last)))
@@ -641,6 +656,21 @@ impl Construct {
         let if_else = IfElse::new(condition, if_body, else_body);
 
         Ok((input, if_else))
+    }
+
+    /// Parse return construct. Consumes a return with its potential value
+    ///
+    /// `<return> [ <xxx> ]`
+    pub(crate) fn jk_return(input: &str) -> ParseResult<&str, Return> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::return_tok(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+
+        let (input, val) = opt(Construct::instruction)(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = opt(Token::semicolon)(input)?;
+
+        Ok((input, Return::new(val)))
     }
 
     /// Parse a loop block, meaning the `loop` keyword and a corresponding block
@@ -1623,5 +1653,30 @@ func void() { }"##;
                 .0,
             ""
         );
+    }
+
+    #[test]
+    fn t_naked_return() {
+        let ie = Construct::jk_return("return");
+
+        assert!(&ie.is_ok());
+
+        let res = ie.unwrap().1;
+        println!("Test {}", res.print());
+    }
+
+    #[test]
+    fn t_return_something() {
+        let ie = Construct::jk_return("return 42");
+
+        assert!(&ie.is_ok());
+    }
+
+    #[test]
+    fn t_return_block_dead_code() {
+        let ie = Construct::instruction("{ return 42; 5; }");
+
+        // This should fail, ``5;`` is dead code because of the ``return``
+        assert!(&ie.is_err());
     }
 }
