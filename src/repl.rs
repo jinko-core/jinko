@@ -9,8 +9,8 @@ use linefeed::{DefaultTerminal, Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
-    ObjectInstance,
+    parser::Construct, typechecker::CheckedType, Context, Error, FromObjectInstance, Instruction,
+    InteractResult, JkConstant, ObjectInstance,
 };
 
 // FIXME:
@@ -77,9 +77,11 @@ impl<'args> Repl<'args> {
 
         let ep = ctx.entry_point.block().unwrap().clone();
         ep.instructions().iter().for_each(|inst| {
+            inst.resolve_type(ctx);
             inst.execute(ctx);
         });
         if let Some(last) = ep.last() {
+            last.resolve_type(ctx);
             last.execute(ctx);
         }
     }
@@ -108,6 +110,12 @@ impl<'args> Repl<'args> {
                 Some(i) => i,
                 None => continue,
             };
+
+            if let CheckedType::Unknown = inst.resolve_type(&mut ctx) {
+                ctx.emit_errors();
+                ctx.clear_errors();
+                continue;
+            }
 
             if let Some(result) = inst.execute(&mut ctx) {
                 println!("{}", result);
