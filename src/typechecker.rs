@@ -3,8 +3,8 @@
 //! trait on top of it.
 
 use crate::{instruction::TypeId, Context};
-use std::fmt::{Display, Formatter, Result};
 use colored::Colorize;
+use std::fmt::{Display, Formatter, Result};
 
 /// The [`CheckedType`] enum contains three possible states about the type. Either the
 /// type has been properly resolved to something, or it corresponds to a Void type. If the
