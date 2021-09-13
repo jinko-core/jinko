@@ -4,3 +4,13 @@ tests:
     args:
       - "tests/ft/invalid/types/inexistant_type.jk"
     exit_code: 1
+  - name: "Typechecking error"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/invalid/types/typecheck_error.jk"
+    exit_code: 1
+  - name: "Typechecking error on complex types"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/invalid/types/typecheck_error_complex.jk"
+    exit_code: 1

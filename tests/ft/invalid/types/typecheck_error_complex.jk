@@ -1,0 +1,10 @@
+type Vec2(f: int, s: int);
+
+func zero_vec() -> Vec2 {
+    Vec2 { f = 0, s = 0 }
+}
+
+v = Vec2 { f = 15, s = 14 };
+
+mut integer = 15;
+integer = zero_vec()
