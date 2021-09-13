@@ -2,7 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use crate::{Context, ErrKind, Error, ObjectInstance};
+use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
@@ -63,7 +63,7 @@ pub enum InstrKind {
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
-pub trait Instruction: InstructionClone + Downcast {
+pub trait Instruction: TypeCheck + InstructionClone + Downcast {
     // FIXME: Add Rename here
     /// Execute the instruction, altering the state of the context. Executing
     /// this method may return an object instance
