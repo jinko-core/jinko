@@ -181,6 +181,8 @@ impl TypeCheck for FunctionCall {
             }
         };
 
+        self.map_args(&function, ctx);
+
         // FIXME: We can add a conversion from Option<Ty> to CheckedType<Ty>
         match function.ty() {
             Some(ty) => CheckedType::Resolved(ty.clone()),
