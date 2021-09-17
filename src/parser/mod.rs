@@ -20,6 +20,13 @@ pub type ParseResult<T, I> = nom::IResult<T, I, Error>;
 
 pub struct Parser;
 
+#[macro_export]
+macro_rules! jinko {
+    ($($t:tt) *) => {
+        $crate::Parser::parse(stringify!( $( $t ) * )).unwrap().execute();
+    }
+}
+
 impl Parser {
     /// Parses the entire user input and returns a hashmap corresponding to the user
     /// program
