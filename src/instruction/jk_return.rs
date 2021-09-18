@@ -52,6 +52,7 @@ impl Instruction for Return {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jinko_ex;
 
     #[test]
     fn t_return_kind() {
@@ -85,24 +86,23 @@ mod tests {
     }
 
     #[test]
-    fn t_return_execute() {
-        let mut ctx = Context::new();
-        let return_inst = Return::new(None);
+    fn t_return_execute_macro() {
+        let res = jinko_ex! {
+            { return }
+        };
 
-        assert_eq!(return_inst.execute(&mut ctx), None);
+        assert_eq!(res, None);
     }
 
     #[test]
-    fn t_return_execute_with_value() {
+    fn t_return_execute_with_value_macro() {
         use crate::instance::ToObjectInstance;
         use crate::value::JkInt;
 
-        let mut ctx = Context::new();
-        let return_inst = Return::new(Some(Box::new(JkInt::from(42))));
+        let res = jinko_ex! {
+            {return 42}
+        };
 
-        assert_eq!(
-            return_inst.execute(&mut ctx).unwrap(),
-            JkInt::from(42).to_instance()
-        );
+        assert_eq!(res, Some(JkInt::from(42).to_instance()));
     }
 }
