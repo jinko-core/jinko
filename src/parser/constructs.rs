@@ -136,18 +136,6 @@ impl Construct {
         Ok(extra)
     }
 
-    /// Parse a function call with no arguments
-    ///
-    /// `<identifier> ( )`
-    fn function_call_no_args(input: &str) -> ParseResult<&str, FunctionCall> {
-        let (input, fn_id) = Token::identifier(input)?;
-        let (input, _) = Token::left_parenthesis(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::right_parenthesis(input)?;
-
-        Ok((input, FunctionCall::new(fn_id)))
-    }
-
     /// Parse an argument given to a function. Consumes the whitespaces before and after
     /// the argument
     fn arg(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
@@ -163,41 +151,24 @@ impl Construct {
     /// Parse a list of arguments separated by comma
     fn args_list(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
         /// Parse an argument and the comma that follows it
-        fn arg_and_comma(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+        fn comma_and_arg(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+            let (input, _) = Token::comma(input)?;
             let (input, _) = Token::maybe_consume_extra(input)?;
             let (input, constant) = Construct::instruction(input)?;
             let (input, _) = Token::maybe_consume_extra(input)?;
-            let (input, _) = Token::comma(input)?;
 
             Ok((input, constant))
         }
 
-        // Get 0 or more arguments with a comma to the function call
-        let (input, mut arg_vec) = many0(arg_and_comma)(input)?;
-
-        // Parse the last argument, which does not have a comma. There needs to be
-        // at least one argument, which can be this one
-        let (input, last_arg) = Construct::arg(input)?;
+        // Get first arg
+        let (input, arg) = Construct::arg(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
-        arg_vec.push(last_arg);
+        // Get 0 or more arguments with a comma to the function call
+        let (input, mut arg_vec) = many0(comma_and_arg)(input)?;
+        arg_vec.insert(0, arg);
 
         Ok((input, arg_vec))
-    }
-
-    /// Parse a function call with arguments
-    fn function_call_args(input: &str) -> ParseResult<&str, FunctionCall> {
-        let (input, fn_id) = Token::identifier(input)?;
-        let (input, _) = Token::left_parenthesis(input)?;
-
-        let mut fn_call = FunctionCall::new(fn_id);
-
-        let (input, mut arg_vec) = Construct::args_list(input)?;
-        let (input, _) = Token::right_parenthesis(input)?;
-
-        arg_vec.drain(0..).for_each(|arg| fn_call.add_arg(arg));
-
-        Ok((input, fn_call))
     }
 
     /// Parse a named argument. The syntax is similar to variable assignments, but they
@@ -273,12 +244,18 @@ impl Construct {
     /// `<arg_list> := [(<constant> | <variable> | <instruction>)*]`
     /// `<identifier> ( <arg_list> )`
     pub(crate) fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
-        let call = alt((
-            Construct::function_call_no_args,
-            Construct::function_call_args,
-        ))(input)?;
+        let (input, fn_id) = Token::identifier(input)?;
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, arg_vec) = opt(Construct::args_list)(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
 
-        Ok(call)
+        let mut fn_call = FunctionCall::new(fn_id);
+        if let Some(arg_vec) = arg_vec {
+            arg_vec.into_iter().for_each(|arg| fn_call.add_arg(arg));
+        }
+
+        Ok((input, fn_call))
     }
 
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
