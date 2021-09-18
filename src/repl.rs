@@ -84,6 +84,8 @@ impl<'args> Repl<'args> {
             last.resolve_type(ctx);
             last.execute(ctx);
         }
+
+        ctx.emit_errors();
     }
 
     /// Launch the REPL
