@@ -65,25 +65,6 @@ mod tests {
     use crate::parser::Construct;
     use crate::JkInt;
 
-    // fn setup() -> Context {
-    //     let mut ctx = Context::new();
-    //
-    //     let inst = Construct::instruction("type Point(x: int, y: int); ")
-    //         .unwrap()
-    //         .1;
-    //     inst.execute(&mut ctx);
-    //
-    //     let inst = Construct::instruction("func basic() -> Point { Point { x = 15, y = 14 }}")
-    //         .unwrap()
-    //         .1;
-    //     inst.execute(&mut ctx);
-    //
-    //     let inst = Construct::instruction("b = basic();").unwrap().1;
-    //     inst.execute(&mut ctx);
-    //
-    //     ctx
-    // }
-
     fn setup() -> Context {
         let mut ctx = jinko! {
             type Point(x: int, y:int);
