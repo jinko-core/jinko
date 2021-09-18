@@ -51,6 +51,10 @@ impl Var {
     pub fn set_mutable(&mut self, mutable: bool) {
         self.mutable = mutable;
     }
+
+    pub fn set_type(&mut self, ty: TypeDec) {
+        self.instance.set_ty(Some(ty))
+    }
 }
 
 impl Instruction for Var {
@@ -121,12 +125,16 @@ impl Instruction for Var {
 }
 
 impl TypeCheck for Var {
-    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
-        // FIXME: Is this correct? Does no type correspond to void? Can we use
-        // CheckedType for the Instances?
-        match self.instance.ty() {
-            None => CheckedType::Void,
-            Some(ty) => CheckedType::Resolved(ty.into()),
+    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+        match ctx.get_variable(self.name()) {
+            // FIXME: Is this correct? Does no type correspond to void? Can we use
+            // CheckedType for the Instances?
+            Some(var) => match var.instance.ty() {
+                None => CheckedType::Void,
+                Some(ty) => CheckedType::Resolved(ty.into()),
+            },
+            // FIXME: Is that correct?
+            None => CheckedType::Unknown,
         }
     }
 }
