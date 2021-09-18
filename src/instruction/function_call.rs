@@ -72,6 +72,37 @@ impl FunctionCall {
         }
     }
 
+    fn check_args_type(&self, function: &FunctionDec, ctx: &mut Context) -> bool {
+        let mut valid = true;
+        for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
+            ctx.debug(
+                "VAR MAP TYPE",
+                format!(
+                    "Mapping type`{}` to `{}`",
+                    func_arg.name(),
+                    call_arg.print()
+                )
+                .as_ref(),
+            );
+
+            let given_type = call_arg.resolve_type(ctx);
+            // FIXME: Is this correct? Can we have something else than a resolved type
+            // at this point?
+            // FIXME: Remove clone?
+            let expected_type = CheckedType::Resolved(func_arg.get_type().clone());
+
+            if given_type != expected_type {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "passing value of type {} to argument of type {}",
+                    given_type, expected_type
+                )));
+                valid = false;
+            }
+        }
+
+        valid
+    }
+
     /// Map each argument to its corresponding instruction
     fn map_args(&self, function: &FunctionDec, ctx: &mut Context) {
         for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
@@ -181,7 +212,10 @@ impl TypeCheck for FunctionCall {
             }
         };
 
-        self.map_args(&function, ctx);
+        // FIXME: Disgusting
+        if !self.check_args_type(&function, ctx) {
+            return CheckedType::Unknown;
+        }
 
         // FIXME: We can add a conversion from Option<Ty> to CheckedType<Ty>
         match function.ty() {
