@@ -5,9 +5,8 @@
 use nom::{
     branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
     bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
-    character::complete::char, character::is_alphabetic, character::is_alphanumeric,
-    character::is_digit, combinator::opt, combinator::peek, multi::many0, sequence::delimited,
-    sequence::pair,
+    character::complete::char, character::is_alphanumeric, character::is_digit, combinator::opt,
+    combinator::peek, multi::many0, sequence::delimited, sequence::pair,
 };
 
 use crate::{parser::ParseResult, ErrKind, Error};
@@ -19,7 +18,7 @@ const RESERVED_KEYWORDS: [&str; 14] = [
     "as", "return",
 ];
 
-const OPERATORS: [&str; 6] = ["+", "-", "*", "/", "(", ")"];
+const OPERATORS: [char; 6] = ['+', '-', '*', '/', '(', ')'];
 
 pub struct Token;
 
@@ -254,12 +253,9 @@ impl Token {
             ));
         }
 
-        // FIXME: Ugly
         // At least one alphabetical character is required
-        for c in id.chars() {
-            if is_alphabetic(c as u8) {
-                return Ok((input, id));
-            }
+        if id.chars().any(|c| c.is_alphabetic()) {
+            return Ok((input, id));
         }
 
         Err(NomError(
@@ -369,11 +365,7 @@ impl Token {
 
     // FIXME: Documentation
     pub fn is_operator(c: char) -> bool {
-        // We can unwrap since all operators are at least one character wide
-        OPERATORS
-            .iter()
-            .map(|op| op.chars().next().unwrap())
-            .any(|x| x == c)
+        OPERATORS.contains(&c)
     }
 
     /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
@@ -417,14 +409,13 @@ impl Token {
     }
 
     /// Consumes what is considered as "extra": Whitespaces, comments...
-    pub fn maybe_consume_extra(input: &str) -> ParseResult<&str, &str> {
-        let (input, _) = many0(Token::consume_comment)(input)?;
-        let (input, _) = many0(pair(Token::consume_whitespaces, Token::consume_comment))(input)?;
-
-        // We can discard the accumulated comments
-        let comments = many0(Token::consume_whitespaces)(input).map(|(input, _)| (input, ""))?;
-
-        Ok(comments)
+    pub fn maybe_consume_extra(mut input: &str) -> ParseResult<&str, &str> {
+        while let Ok((new_input, _)) =
+            alt((Token::consume_comment, Token::consume_whitespaces))(input)
+        {
+            input = new_input;
+        }
+        Ok((input, ""))
     }
 }
 
