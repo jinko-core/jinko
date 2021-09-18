@@ -66,13 +66,11 @@ mod tests {
     use crate::JkInt;
 
     fn setup() -> Context {
-        let mut ctx = jinko! {
+        let ctx = jinko! {
             type Point(x: int, y:int);
             func basic() -> Point { Point { x = 15, y = 14 }}
             b = basic();
         };
-
-        ctx.execute().unwrap();
 
         ctx
     }
