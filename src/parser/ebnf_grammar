@@ -1,4 +1,4 @@
-instruction = binary_op
+instruction = maybe_consume_extra [ binary_op
               | method_call
               | field_access
               | function_declaration
@@ -16,7 +16,7 @@ instruction = binary_op
               | var_assignment
               | variable
               | constant
-              | extra
+              | extra ]
 
 
 (* BINARY_OP *)
@@ -30,13 +30,8 @@ binary_op = ? shunting-yard algorithm ?
 
 method_call = method_caller '.' function_call
 
-method_caller = function_call
-              | variable
+method_caller = instance
               | constant
-              | if_else
-              | block
-              | any_loop
-              | jinko_inst
 
 
 (* FIELD_ACCESS *)
@@ -60,7 +55,7 @@ function_content = maybe_consume_extra identifier maybe_consume_extra args_dec r
 (* TYPE_DECLARATION *)
 
 
-type_declaration = maybe_consume_extra 'type' maybe_consume_extra identifier maybe_consume_extra args_dec_non_empty
+type_declaration = 'type' maybe_consume_extra identifier maybe_consume_extra args_dec_non_empty
 
 
 (* EXT_DECLARATION *)
@@ -104,7 +99,7 @@ arg = maybe_consume_extra instruction maybe_consume_extra
 (* INCL *)
 
 
-incl = maybe_consume_extra 'incl' path az_identifier maybe_consume_extra
+incl = 'incl' path az_identifier maybe_consume_extra
 
 path = maybe_consume_extra identifier maybe_consume_extra
 
@@ -114,7 +109,7 @@ az_identifier = maybe_consume_extra [ 'as' maybe_consume_extra identifier ] mayb
 (* IF_ELSE *)
 
 
-if_else = maybe_consume_extra 'if' maybe_consume_extra instruction maybe_consume_extra block [ else_block ]
+if_else = 'if' maybe_consume_extra instruction maybe_consume_extra block [ else_block ]
 
 else_block = maybe_consume_extra 'else' maybe_consume_extra block
 
@@ -126,11 +121,11 @@ any_loop = loop_block
          | for_block
          | while_block
 
-loop_block = maybe_consume_extra 'loop' maybe_consume_extra block
+loop_block = 'loop' maybe_consume_extra block
 
-for_block = maybe_consume_extra 'for' maybe_consume_extra variable maybe_consume_extra 'in' maybe_consume_extra instruction maybe_consume_extra block
+for_block = 'for' maybe_consume_extra variable maybe_consume_extra 'in' maybe_consume_extra instruction maybe_consume_extra block
 
-while_block = maybe_consume_extra 'while' maybe_consume_extra instruction maybe_consume_extra block
+while_block = 'while' maybe_consume_extra instruction maybe_consume_extra block
 
 
 
@@ -204,3 +199,11 @@ return_type_non_void = maybe_consume_extra '->' identifier maybe_consume_extra
 
 maybe_consume_extra = comment
                     | whitespace
+
+instance = function_call
+         | type_instantiation
+         | variable
+         | if_else
+         | block
+         | any_loop
+         | jinko_inst

@@ -36,6 +36,10 @@ impl Construct {
         // FIXME: If input is empty, return an error or do nothing
         // FIXME: We need to parse the remaining input after a correct instruction
         // has been parsed
+        if let Ok((input, value)) = BoxConstruct::extra(input) {
+            return Ok((input, value));
+        }
+
         let (input, value) = alt((
             Construct::binary_op,
             BoxConstruct::method_call,
@@ -55,7 +59,6 @@ impl Construct {
             BoxConstruct::var_assignment,
             BoxConstruct::variable,
             Construct::constant,
-            BoxConstruct::extra,
         ))(input)?;
 
         Ok((input, value))
@@ -619,7 +622,6 @@ impl Construct {
     ///
     /// `<if> <block> [ <else> <block> ]`
     pub(crate) fn if_else(input: &str) -> ParseResult<&str, IfElse> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::if_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -654,7 +656,6 @@ impl Construct {
     ///
     /// `<loop> <block>`
     fn loop_block(input: &str) -> ParseResult<&str, Loop> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::loop_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, block) = Construct::block(input)?;
@@ -667,7 +668,6 @@ impl Construct {
     ///
     /// `<while> <instruction> <block>`
     fn while_block(input: &str) -> ParseResult<&str, Loop> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::while_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, condition) = Construct::instruction(input)?;
@@ -682,7 +682,6 @@ impl Construct {
     ///
     /// `<for> <variable> <in> <instruction> <block>`
     fn for_block(input: &str) -> ParseResult<&str, Loop> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::for_tok(input)?;
 
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -748,7 +747,6 @@ impl Construct {
     ///
     /// `<type> <TypeName> ( <typed_arg_list> ) ;`
     pub(crate) fn type_declaration(input: &str) -> ParseResult<&str, TypeDec> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::_type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
@@ -796,8 +794,6 @@ impl Construct {
     ///
     /// `<incl> <path> [ <as> <alias> ]
     pub(crate) fn incl(input: &str) -> ParseResult<&str, Incl> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
-
         let (input, _) = Token::incl_tok(input)?;
         let (input, path) = Construct::path(input)?;
 
@@ -1476,6 +1472,10 @@ mod tests {
             Construct::method_call("func_call().method()").is_ok(),
             "Valid to have call as caller"
         );
+        assert!(
+            Construct::instruction("    \ta.b()").is_ok(),
+            "Valid to have simple identifiers"
+        );
     }
 
     #[test]
@@ -1595,6 +1595,7 @@ func void() { }"##;
  * Some documentation
  *//* Some more */
 func void() { }"##;
+        println!("{}", input);
 
         let (input, _) = Construct::instruction(input).unwrap();
         let (input, _) = Construct::instruction(input).unwrap();
