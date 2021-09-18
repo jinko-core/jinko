@@ -1,0 +1,2 @@
+func id(x: int) -> int { x }
+func not_id(x: int) -> int { x }

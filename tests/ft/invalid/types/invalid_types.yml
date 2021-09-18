@@ -14,3 +14,10 @@ tests:
     args:
       - "tests/ft/invalid/types/typecheck_error_complex.jk"
     exit_code: 1
+
+    # FIXME: Move this to valid
+  - name: "Functions resolve correctly with different args with the same name"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/invalid/types/multi_function_same_arg_name.jk"
+    exit_code: 0
