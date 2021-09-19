@@ -66,20 +66,22 @@ impl Construct {
     pub fn method_call_or_field_access(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         let (input, instance) = Construct::instance(input)?;
         let (input, _) = Token::dot(input)?;
-        Construct::method_call(input, instance.clone())
-            .or_else(|_| Construct::field_access(input, instance))
+        let (input, field_name) = Token::identifier(input)?;
+        Construct::method_call(input, &instance, &field_name)
+            .or_else(|_| Construct::field_access(input, instance, field_name))
     }
 
     /// Parse a method call
     ///
     /// function_call
-    pub fn method_call(
-        input: &str,
-        caller: Box<dyn Instruction>,
-    ) -> ParseResult<&str, Box<dyn Instruction>> {
-        let (input, method) = Construct::function_call(input)?;
+    pub fn method_call<'a>(
+        input: &'a str,
+        caller: &Box<dyn Instruction>,
+        field_name: &str,
+    ) -> ParseResult<&'a str, Box<dyn Instruction>> {
+        let (input, method) = Construct::_function_call(input, field_name)?;
 
-        Ok((input, Box::new(MethodCall::new(caller, method))))
+        Ok((input, Box::new(MethodCall::new(caller.clone(), method))))
     }
 
     /// Parse a field access
@@ -88,8 +90,8 @@ impl Construct {
     pub fn field_access(
         input: &str,
         first_fa: Box<dyn Instruction>,
+        field_name: String,
     ) -> ParseResult<&str, Box<dyn Instruction>> {
-        let (input, field_name) = Token::identifier(input)?;
         let (input, dot_field_vec) = many0(preceded(Token::dot, Token::identifier))(input)?;
 
         let mut current_fa = FieldAccess::new(first_fa, field_name);
@@ -111,7 +113,7 @@ impl Construct {
         input: &str,
     ) -> ParseResult<&str, Box<dyn Instruction>> {
         let (input, identifier) = Token::identifier(input)?;
-        Construct::_function_call(input, &identifier)
+        BoxConstruct::_function_call(input, &identifier)
             .or_else(|_| Construct::type_instanciation(input, &identifier))
             .or_else(|_| BoxConstruct::var_assignment(input, &identifier))
             .or_else(|_| Ok((input, Box::new(Var::new(identifier)))))
@@ -120,10 +122,7 @@ impl Construct {
     /// Parse a function call
     ///
     /// '(' maybe_consume_extra [ args_list ] ')'
-    pub fn _function_call<'a>(
-        input: &'a str,
-        fn_name: &str,
-    ) -> ParseResult<&'a str, Box<dyn Instruction>> {
+    pub fn _function_call<'a>(input: &'a str, fn_name: &str) -> ParseResult<&'a str, FunctionCall> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arg_vec) = opt(Construct::args_list)(input)?;
@@ -134,7 +133,7 @@ impl Construct {
             arg_vec.into_iter().for_each(|arg| fn_call.add_arg(arg));
         }
 
-        Ok((input, Box::new(fn_call)))
+        Ok((input, fn_call))
     }
 
     /// Parse a type instantiation
@@ -376,17 +375,7 @@ impl Construct {
     /// `<identifier> ( <arg_list> )`
     pub(crate) fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
-        let (input, _) = Token::left_parenthesis(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, arg_vec) = opt(Construct::args_list)(input)?;
-        let (input, _) = Token::right_parenthesis(input)?;
-
-        let mut fn_call = FunctionCall::new(fn_id);
-        if let Some(arg_vec) = arg_vec {
-            arg_vec.into_iter().for_each(|arg| fn_call.add_arg(arg));
-        }
-
-        Ok((input, fn_call))
+        Construct::_function_call(input, &fn_id)
     }
 
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
@@ -946,6 +935,12 @@ impl Construct {
         ))(input)?;
 
         Ok(instance)
+    }
+
+    pub fn function_call_or_var(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+        let (input, id) = Token::identifier(input)?;
+        BoxConstruct::_function_call(input, &id).
+            or_else(|_| Ok((input, Box::new(Var::new(id)))))
     }
 }
 
@@ -1537,14 +1532,11 @@ mod tests {
 
     #[test]
     fn t_method_call_invalid() {
-        let (input, instance) = Construct::instance("a.b").expect("Missing caller");
+        let (input, _) =
+            Construct::method_call_or_field_access("a.b(").expect("Not parsed as field");
+        assert_eq!(input, "(", "Missing parentheses");
         assert!(
-            Construct::method_call(input, instance).is_err(),
-            "Missing parentheses"
-        );
-        let (input, instance) = Construct::instance("a.()").expect("Missing caller");
-        assert!(
-            Construct::method_call(input, instance).is_err(),
+            Construct::method_call_or_field_access("a.()").is_err(),
             "Missing method name"
         );
         assert!(Construct::instance(".method()").is_err(), "Missing caller");

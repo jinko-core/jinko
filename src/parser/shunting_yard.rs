@@ -79,10 +79,9 @@ impl ShuntingYard {
 
     fn operand<'i>(&mut self, input: &'i str) -> ParseResult<&'i str, ()> {
         let (input, expr) = alt((
+            Construct::function_call_or_var,
             Construct::method_call_or_field_access,
-            BoxConstruct::function_call,
             Construct::constant,
-            BoxConstruct::variable,
         ))(input)?;
 
         self.output.push(SyPair::Num(expr));

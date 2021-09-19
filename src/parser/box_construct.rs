@@ -62,4 +62,12 @@ impl BoxConstruct {
         let (input, assignment) = Construct::var_assignment(input, var_name)?;
         Ok((input, Box::new(assignment)))
     }
+
+    pub fn _function_call<'a>(
+        input: &'a str,
+        var_name: &str,
+    ) -> ParseResult<&'a str, Box<dyn Instruction>> {
+        let (input, assignment) = Construct::_function_call(input, var_name)?;
+        Ok((input, Box::new(assignment)))
+    }
 }

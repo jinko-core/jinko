@@ -14,12 +14,12 @@ instruction = extra
             | var_assignment
             | constant
 
-method_call_or_field_access = instance '.' method_call
-                            | instance '.' field_access
+method_call_or_field_access = instance '.' identifier method_call
+                            | instance '.' identifier field_access
 
-method_call = function_call
+method_call = _function_call
 
-field_access = identifier ( '.' identifier )*
+field_access = ( '.' identifier )*
 
 
 type_inst_or_function_call_or_variable = identifier function_call
