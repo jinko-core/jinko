@@ -1,8 +1,5 @@
 instruction = extra
             | method_call_or_field_access
-            | identifier maybe_consume_extra '{' named_arg_list '}'
-            | identifier '(' maybe_consume_extra [ args_list ] ')'
-            | identifier
             | binary_op
             | function_declaration
             | type_declaration
@@ -24,6 +21,19 @@ method_call = function_call
 
 field_access = identifier ( '.' identifier )*
 
+
+type_inst_or_function_call_or_variable = identifier function_call
+                                       | identifier type_instantiation
+                                       | identifier var_assignment
+                                       | identifier (* variable *)
+
+function_call = '(' maybe_consume_extra [ args_list ] ')'
+
+type_instantiation = maybe_consume_extra '{' named_arg_list '}'
+
+var_assignment = maybe_consume_extra '=' maybe_consume_extra instruction
+
+mut var_assignment = 'mut' maybe_consume_extra identifier var_assignment
 
 (* BINARY_OP *)
 

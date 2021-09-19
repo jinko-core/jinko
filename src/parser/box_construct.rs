@@ -46,7 +46,7 @@ impl BoxConstruct {
     box_construct! {block}
     box_construct! {jinko_inst}
     box_construct! {any_loop}
-    box_construct! {var_assignment}
+    box_construct! {mut_var_assignment}
     box_construct! {if_else}
     box_construct! {type_declaration}
     box_construct! {test_declaration}
@@ -54,4 +54,12 @@ impl BoxConstruct {
     box_construct! {incl}
     box_construct! {extra}
     box_construct! {jk_return}
+
+    pub fn var_assignment<'a>(
+        input: &'a str,
+        var_name: &str,
+    ) -> ParseResult<&'a str, Box<dyn Instruction>> {
+        let (input, assignment) = Construct::var_assignment(input, var_name)?;
+        Ok((input, Box::new(assignment)))
+    }
 }

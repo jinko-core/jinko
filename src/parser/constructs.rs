@@ -14,7 +14,7 @@
 //! is the grammar for a variable assignment.
 
 use nom::Err::Error as NomError;
-use nom::{branch::alt, combinator::opt, multi::many0, multi::many1, sequence::preceded};
+use nom::{branch::alt, combinator::opt, multi::many0, sequence::preceded};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
@@ -39,21 +39,20 @@ impl Construct {
         let (input, value) = alt((
             BoxConstruct::extra,
             Construct::method_call_or_field_access,
+            // binary_op must be parsed before variable and constant
             Construct::binary_op,
+            Construct::type_inst_or_function_call_or_var,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
             BoxConstruct::test_declaration,
             BoxConstruct::mock_declaration,
-            BoxConstruct::type_instantiation,
-            BoxConstruct::function_call,
             BoxConstruct::incl,
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
-            BoxConstruct::var_assignment,
-            BoxConstruct::variable,
+            BoxConstruct::mut_var_assignment,
             Construct::constant,
         ))(input)?;
 
@@ -83,9 +82,9 @@ impl Construct {
         Ok((input, Box::new(MethodCall::new(caller, method))))
     }
 
-    // Parse a field access
-    //
-    // identifer ( '.' identifier )*
+    /// Parse a field access
+    ///
+    /// identifer ( '.' identifier )*
     pub fn field_access(
         input: &str,
         first_fa: Box<dyn Instruction>,
@@ -100,6 +99,97 @@ impl Construct {
         }
 
         Ok((input, Box::new(current_fa)))
+    }
+
+    /// Parse a type instantiation, a function call, a var assignment or a variable
+    ///
+    /// type_inst_or_function_call_or_variable = identifier function_call
+    ///                                        | identifier type_instantiation
+    ///                                        | identifier var_assignment
+    ///                                        | identifier (* variable *)
+    pub fn type_inst_or_function_call_or_var(
+        input: &str,
+    ) -> ParseResult<&str, Box<dyn Instruction>> {
+        let (input, identifier) = Token::identifier(input)?;
+        Construct::_function_call(input, &identifier)
+            .or_else(|_| Construct::type_instanciation(input, &identifier))
+            .or_else(|_| BoxConstruct::var_assignment(input, &identifier))
+            .or_else(|_| Ok((input, Box::new(Var::new(identifier)))))
+    }
+
+    /// Parse a function call
+    ///
+    /// '(' maybe_consume_extra [ args_list ] ')'
+    pub fn _function_call<'a>(
+        input: &'a str,
+        fn_name: &str,
+    ) -> ParseResult<&'a str, Box<dyn Instruction>> {
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, arg_vec) = opt(Construct::args_list)(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        let mut fn_call = FunctionCall::new(fn_name.to_owned());
+        if let Some(arg_vec) = arg_vec {
+            arg_vec.into_iter().for_each(|arg| fn_call.add_arg(arg));
+        }
+
+        Ok((input, Box::new(fn_call)))
+    }
+
+    /// Parse a type instantiation
+    ///
+    /// maybe_consume_extra '{' named_arg_list '}'
+    pub fn type_instanciation<'a>(
+        input: &'a str,
+        type_name: &str,
+    ) -> ParseResult<&'a str, Box<dyn Instruction>> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::left_curly_bracket(input)?;
+        let (input, arg_vec) = Construct::named_arg_list(input)?;
+        let (input, _) = Token::right_curly_bracket(input)?;
+
+        let type_id = TypeId::new(type_name.to_owned());
+        let mut type_instantiation = TypeInstantiation::new(type_id);
+        arg_vec
+            .into_iter()
+            .for_each(|field| type_instantiation.add_field(field));
+
+        Ok((input, Box::new(type_instantiation)))
+    }
+
+    /// Parse a var assigment
+    /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
+    /// `void` type.
+    ///
+    /// ```
+    /// x = 12; // Store 12 into the variable `x`
+    /// x = 456; // Forbidden, `x` is immutable
+    /// ```
+    ///
+    /// A variable assignment is a Statement. It cannot be used as an Expression
+    ///
+    /// ```
+    /// {
+    ///     x = 12; // Block returns void
+    /// }
+    /// {
+    ///     x = 12 // Forbidden
+    /// }
+    /// {
+    ///     x = call();
+    ///     x // Okay
+    /// }
+    /// ```
+    ///
+    /// maybe_consume_extra '=' maybe_consume_extra instruction
+    pub fn var_assignment<'a>(input: &'a str, var_name: &str) -> ParseResult<&'a str, VarAssign> {
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::equal(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, value) = Construct::instruction(input)?;
+
+        Ok((input, VarAssign::new(false, var_name.to_owned(), value)))
     }
 
     pub fn early_return(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
@@ -303,8 +393,6 @@ impl Construct {
     /// `void` type.
     ///
     /// ```
-    /// x = 12; // Store 12 into the variable `x`
-    /// x = 456; // Forbidden, `x` is immutable
     /// mut n = 12; // Store 12 into `n`, a mutable variable
     /// n = 1586; // Allowed
     /// ```
@@ -327,21 +415,16 @@ impl Construct {
     /// }
     /// ```
     ///
-    /// `[mut] <identifier> = <instruction>`
-    pub(crate) fn var_assignment(input: &str) -> ParseResult<&str, VarAssign> {
-        let (input, mut_opt) = opt(Token::mut_tok)(input)?;
+    /// 'mut' maybe_consume_extra identifier var_assignment
+    pub(crate) fn mut_var_assignment(input: &str) -> ParseResult<&str, VarAssign> {
+        let (input, _) = Token::mut_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
-
         let (input, id) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, _) = Token::equal(input)?;
-        let (input, _) = Token::maybe_consume_extra(input)?;
-        let (input, value) = Construct::instruction(input)?;
+        let (input, mut assignment) = Construct::var_assignment(input, &id)?;
 
-        match mut_opt {
-            Some(_) => Ok((input, VarAssign::new(true, id, value))),
-            None => Ok((input, VarAssign::new(false, id, value))),
-        }
+        assignment.set_mutable(true);
+
+        Ok((input, assignment))
     }
 
     /// Parse a valid variable name
@@ -856,7 +939,7 @@ impl Construct {
             BoxConstruct::block,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
-            // DESIGN CHANGE, we can do "hello".field which fail later on like
+            // DESIGN CHANGE, we can do "hello".field which fails later on like
             // "hello".invalid_method() would
             // Previously "hello".field was a parser error
             Construct::constant,
@@ -873,39 +956,52 @@ mod tests {
 
     #[test]
     fn t_var_assign_valid() {
+        let (input, id) = Token::identifier("x = 12;").unwrap();
         assert_eq!(
-            Construct::var_assignment("x = 12;").unwrap().1.mutable(),
+            Construct::var_assignment(input, &id).unwrap().1.mutable(),
             false
         );
+        let (input, id) = Token::identifier("x = 12;").unwrap();
         assert_eq!(
-            Construct::var_assignment("x = 12;").unwrap().1.symbol(),
+            Construct::var_assignment(input, &id).unwrap().1.symbol(),
             "x"
         );
 
         assert_eq!(
-            Construct::var_assignment("mut x_99 = 129;")
+            Construct::mut_var_assignment("mut x_99 = 129;")
                 .unwrap()
                 .1
                 .mutable(),
             true
         );
         assert_eq!(
-            Construct::var_assignment("mut x_99 = 129;")
+            Construct::mut_var_assignment("mut x_99 = 129;")
                 .unwrap()
                 .1
                 .symbol(),
             "x_99"
         );
 
+        let (input, id) = Token::identifier("mut_x_99 = 129;").unwrap();
         assert_eq!(
-            Construct::var_assignment("mut_x_99 = 129;")
-                .unwrap()
-                .1
-                .mutable(),
+            Construct::var_assignment(input, &id).unwrap().1.mutable(),
             false
         );
+        let (input, id) = Token::identifier("mut_x_99 = 129;").unwrap();
         assert_eq!(
-            Construct::var_assignment("mut_x_99 = 129;")
+            Construct::var_assignment(input, &id).unwrap().1.symbol(),
+            "mut_x_99"
+        );
+
+        assert_eq!(
+            Construct::mut_var_assignment("mut mut_x_99 = 129;")
+                .unwrap()
+                .1
+                .mutable(),
+            true
+        );
+        assert_eq!(
+            Construct::mut_var_assignment("mut mut_x_99 = 129;")
                 .unwrap()
                 .1
                 .symbol(),
@@ -913,36 +1009,22 @@ mod tests {
         );
 
         assert_eq!(
-            Construct::var_assignment("mut mut_x_99 = 129;")
-                .unwrap()
-                .1
-                .mutable(),
-            true
-        );
-        assert_eq!(
-            Construct::var_assignment("mut mut_x_99 = 129;")
-                .unwrap()
-                .1
-                .symbol(),
-            "mut_x_99"
-        );
-
-        assert_eq!(
-            Construct::var_assignment("mut\nname = 129;")
+            Construct::mut_var_assignment("mut\nname = 129;")
                 .unwrap()
                 .1
                 .mutable(),
             true
         );
 
-        assert!(Construct::var_assignment("mut x=12;").is_ok());
-        assert!(Construct::var_assignment("mut x= 12;").is_ok());
-        assert!(Construct::var_assignment("mut x =12;").is_ok());
+        assert!(Construct::mut_var_assignment("mut x=12;").is_ok());
+        assert!(Construct::mut_var_assignment("mut x= 12;").is_ok());
+        assert!(Construct::mut_var_assignment("mut x =12;").is_ok());
     }
 
     #[test]
     fn t_var_assign_invalid() {
-        assert!(Construct::var_assignment("mutable x = 12").is_err());
+        let (input, id) = Token::identifier("mutable x = 12").unwrap();
+        assert!(Construct::var_assignment(input, &id).is_err());
     }
 
     #[test]
