@@ -39,10 +39,8 @@ impl BoxConstruct {
     }
 
     box_construct! {type_instantiation}
-    box_construct! {function_call}
     box_construct! {function_declaration}
     box_construct! {ext_declaration}
-    box_construct! {variable}
     box_construct! {block}
     box_construct! {jinko_inst}
     box_construct! {any_loop}
@@ -63,11 +61,11 @@ impl BoxConstruct {
         Ok((input, Box::new(assignment)))
     }
 
-    pub fn _function_call<'a>(
+    pub fn function_call<'a>(
         input: &'a str,
         var_name: &str,
     ) -> ParseResult<&'a str, Box<dyn Instruction>> {
-        let (input, assignment) = Construct::_function_call(input, var_name)?;
+        let (input, assignment) = Construct::function_call(input, var_name)?;
         Ok((input, Box::new(assignment)))
     }
 }

@@ -81,11 +81,12 @@ impl Instruction for JkInst {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::Construct;
+    use crate::parser::{Construct, Token};
 
     #[test]
     fn t_invalid_jkinst() {
-        let (_, fc) = Construct::function_call("tamer()").unwrap();
+        let (input, id) = Token::identifier("tamer()").unwrap();
+        let (_, fc) = Construct::function_call(input, &id).unwrap();
         let inst = JkInst::from_function_call(fc);
 
         assert!(inst.is_err(), "tamer is not a valid ctx directive")
@@ -93,7 +94,8 @@ mod tests {
 
     #[test]
     fn t_valid_inst_no_args() {
-        let (_, fc) = Construct::function_call("dump()").unwrap();
+        let (input, id) = Token::identifier("dump()").unwrap();
+        let (_, fc) = Construct::function_call(input, &id).unwrap();
         let inst = JkInst::from_function_call(fc);
 
         assert!(inst.is_ok(), "dump is a valid ctx directive")
@@ -101,7 +103,8 @@ mod tests {
 
     #[test]
     fn t_valid_inst_with_args() {
-        let (_, fc) = Construct::function_call("ir(fn)").unwrap();
+        let (input, id) = Token::identifier("ir(fn)").unwrap();
+        let (_, fc) = Construct::function_call(input, &id).unwrap();
         let inst = JkInst::from_function_call(fc);
 
         assert!(

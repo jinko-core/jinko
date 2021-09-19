@@ -79,7 +79,7 @@ impl Construct {
         caller: &Box<dyn Instruction>,
         field_name: &str,
     ) -> ParseResult<&'a str, Box<dyn Instruction>> {
-        let (input, method) = Construct::_function_call(input, field_name)?;
+        let (input, method) = Construct::function_call(input, field_name)?;
 
         Ok((input, Box::new(MethodCall::new(caller.clone(), method))))
     }
@@ -113,16 +113,23 @@ impl Construct {
         input: &str,
     ) -> ParseResult<&str, Box<dyn Instruction>> {
         let (input, identifier) = Token::identifier(input)?;
-        BoxConstruct::_function_call(input, &identifier)
+        BoxConstruct::function_call(input, &identifier)
             .or_else(|_| Construct::type_instanciation(input, &identifier))
             .or_else(|_| BoxConstruct::var_assignment(input, &identifier))
             .or_else(|_| Ok((input, Box::new(Var::new(identifier)))))
     }
 
     /// Parse a function call
+    /// When a function is called in the source code.
+    ///
+    /// ```
+    /// fn(); // Function call
+    /// fn() // Call the function `fn` and use the return result as an instruction
+    /// x = fn(); // Assign the result of the function call to the variable x
+    /// ```
     ///
     /// '(' maybe_consume_extra [ args_list ] ')'
-    pub fn _function_call<'a>(input: &'a str, fn_name: &str) -> ParseResult<&'a str, FunctionCall> {
+    pub fn function_call<'a>(input: &'a str, fn_name: &str) -> ParseResult<&'a str, FunctionCall> {
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arg_vec) = opt(Construct::args_list)(input)?;
@@ -361,21 +368,6 @@ impl Construct {
             .for_each(|field| type_instantiation.add_field(field));
 
         Ok((input, type_instantiation))
-    }
-
-    /// When a function is called in the source code.
-    ///
-    /// ```
-    /// fn(); // Function call
-    /// fn() // Call the function `fn` and use the return result as an instruction
-    /// x = fn(); // Assign the result of the function call to the variable x
-    /// ```
-    ///
-    /// `<arg_list> := [(<constant> | <variable> | <instruction>)*]`
-    /// `<identifier> ( <arg_list> )`
-    pub(crate) fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
-        let (input, fn_id) = Token::identifier(input)?;
-        Construct::_function_call(input, &fn_id)
     }
 
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
@@ -829,7 +821,8 @@ impl Construct {
     /// `@<jinko_inst><args_list>`
     pub(crate) fn jinko_inst(input: &str) -> ParseResult<&str, JkInst> {
         let (input, _) = Token::at_sign(input)?;
-        let (input, fc) = Construct::function_call(input)?;
+        let (input, id) = Token::identifier(input)?;
+        let (input, fc) = Construct::function_call(input, &id)?;
 
         // FIXME: No unwrap(), use something else than just the name
         //        this is very awkward, we have a Error coming up and we shouldn't be creating
@@ -921,9 +914,8 @@ impl Construct {
     /// contain no fields.
     fn instance(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         let instance = alt((
-            BoxConstruct::function_call,
             BoxConstruct::type_instantiation,
-            BoxConstruct::variable,
+            Construct::function_call_or_var,
             BoxConstruct::if_else,
             BoxConstruct::block,
             BoxConstruct::any_loop,
@@ -939,8 +931,7 @@ impl Construct {
 
     pub fn function_call_or_var(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         let (input, id) = Token::identifier(input)?;
-        BoxConstruct::_function_call(input, &id).
-            or_else(|_| Ok((input, Box::new(Var::new(id)))))
+        BoxConstruct::function_call(input, &id).or_else(|_| Ok((input, Box::new(Var::new(id)))))
     }
 }
 
@@ -948,6 +939,11 @@ impl Construct {
 mod tests {
     use super::*;
     use crate::instruction::JkInstKind;
+
+    fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
+        let (input, fn_id) = Token::identifier(input)?;
+        Construct::function_call(input, &fn_id)
+    }
 
     #[test]
     fn t_var_assign_valid() {
@@ -1024,68 +1020,39 @@ mod tests {
 
     #[test]
     fn t_function_call_no_args_valid() {
-        assert_eq!(Construct::function_call("fn()").unwrap().1.name(), "fn");
-        assert_eq!(Construct::function_call("fn()").unwrap().1.args().len(), 0);
+        assert_eq!(function_call("fn()").unwrap().1.name(), "fn");
+        assert_eq!(function_call("fn()").unwrap().1.args().len(), 0);
 
-        assert_eq!(Construct::function_call("fn(    )").unwrap().1.name(), "fn");
-        assert_eq!(
-            Construct::function_call("fn(    )").unwrap().1.args().len(),
-            0
-        );
+        assert_eq!(function_call("fn(    )").unwrap().1.name(), "fn");
+        assert_eq!(function_call("fn(    )").unwrap().1.args().len(), 0);
     }
 
     #[test]
     fn t_function_call_valid() {
-        assert_eq!(Construct::function_call("fn(2)").unwrap().1.name(), "fn");
-        assert_eq!(Construct::function_call("fn(2)").unwrap().1.args().len(), 1);
+        assert_eq!(function_call("fn(2)").unwrap().1.name(), "fn");
+        assert_eq!(function_call("fn(2)").unwrap().1.args().len(), 1);
 
-        assert_eq!(
-            Construct::function_call("fn(1, 2, 3)").unwrap().1.name(),
-            "fn"
-        );
-        assert_eq!(
-            Construct::function_call("fn(a, hey(), 3.12)")
-                .unwrap()
-                .1
-                .name(),
-            "fn"
-        );
-        assert_eq!(
-            Construct::function_call("fn(1, 2, 3)")
-                .unwrap()
-                .1
-                .args()
-                .len(),
-            3
-        );
+        assert_eq!(function_call("fn(1, 2, 3)").unwrap().1.name(), "fn");
+        assert_eq!(function_call("fn(a, hey(), 3.12)").unwrap().1.name(), "fn");
+        assert_eq!(function_call("fn(1, 2, 3)").unwrap().1.args().len(), 3);
 
-        assert_eq!(
-            Construct::function_call("fn(1   , 2,3)").unwrap().1.name(),
-            "fn"
-        );
-        assert_eq!(
-            Construct::function_call("fn(1   , 2,3)")
-                .unwrap()
-                .1
-                .args()
-                .len(),
-            3
-        );
+        assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.name(), "fn");
+        assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.args().len(), 3);
     }
 
     #[test]
     fn t_function_call_invalid() {
-        assert!(Construct::function_call("fn(").is_err());
-        assert!(Construct::function_call("fn))").is_err());
-        assert!(Construct::function_call("fn((").is_err());
-        assert!(Construct::function_call("fn((").is_err());
-        assert!(Construct::function_call("fn((").is_err());
+        assert!(function_call("fn(").is_err());
+        assert!(function_call("fn))").is_err());
+        assert!(function_call("fn((").is_err());
+        assert!(function_call("fn((").is_err());
+        assert!(function_call("fn((").is_err());
     }
 
     #[test]
     fn t_function_call_multiarg_invalid() {
-        assert!(Construct::function_call("fn(1, 2, 3, 4,)").is_err());
-        assert!(Construct::function_call("fn(1, 2, 3, 4,   )").is_err());
+        assert!(function_call("fn(1, 2, 3, 4,)").is_err());
+        assert!(function_call("fn(1, 2, 3, 4,   )").is_err());
     }
 
     #[test]
