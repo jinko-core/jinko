@@ -1,47 +1,34 @@
-instruction = maybe_consume_extra [ binary_op
-              | method_call
-              | field_access
-              | function_declaration
-              | type_declaration
-              | ext_declaration
-              | test_declaration
-              | mock_declaration
-              | type_instantiation
-              | function_call
-              | incl
-              | if_else
-              | any_loop
-              | jinko_inst
-              | block
-              | var_assignment
-              | variable
-              | constant
-              | extra ]
+instruction = extra
+            | method_call_or_field_access
+            | identifier maybe_consume_extra '{' named_arg_list '}'
+            | identifier '(' maybe_consume_extra [ args_list ] ')'
+            | identifier
+            | binary_op
+            | function_declaration
+            | type_declaration
+            | ext_declaration
+            | test_declaration
+            | mock_declaration
+            | incl
+            | if_else
+            | any_loop
+            | jinko_inst
+            | block
+            | var_assignment
+            | constant
+
+method_call_or_field_access = instance '.' method_call
+                            | instance '.' field_access
+
+method_call = function_call
+
+field_access = identifier ( '.' identifier )*
 
 
 (* BINARY_OP *)
 
 
 binary_op = ? shunting-yard algorithm ?
-
-
-(* METHOD_CALL *)
-
-
-method_call = method_caller '.' function_call
-
-method_caller = instance
-              | constant
-
-
-(* FIELD_ACCESS *)
-
-
-field_access = inner_field_access ( dot_field )*
-
-inner_field_access = instance dot_field 
-
-dot_field = '.' identifier
 
 
 (* FUNCTION_DECLARATION *)

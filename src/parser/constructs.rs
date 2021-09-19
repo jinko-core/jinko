@@ -14,7 +14,7 @@
 //! is the grammar for a variable assignment.
 
 use nom::Err::Error as NomError;
-use nom::{branch::alt, combinator::opt, multi::many0};
+use nom::{branch::alt, combinator::opt, multi::many0, multi::many1, sequence::preceded};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
@@ -36,14 +36,10 @@ impl Construct {
         // FIXME: If input is empty, return an error or do nothing
         // FIXME: We need to parse the remaining input after a correct instruction
         // has been parsed
-        if let Ok((input, value)) = BoxConstruct::extra(input) {
-            return Ok((input, value));
-        }
-
         let (input, value) = alt((
+            BoxConstruct::extra,
+            Construct::method_call_or_field_access,
             Construct::binary_op,
-            BoxConstruct::method_call,
-            BoxConstruct::field_access,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -62,6 +58,48 @@ impl Construct {
         ))(input)?;
 
         Ok((input, value))
+    }
+
+    /// Parse a method call or a field access
+    ///
+    /// method_call_or_field_access = instance '.' method_call
+    ///                             | instance '.' field_access
+    pub fn method_call_or_field_access(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+        let (input, instance) = Construct::instance(input)?;
+        let (input, _) = Token::dot(input)?;
+        Construct::method_call(input, instance.clone())
+            .or_else(|_| Construct::field_access(input, instance))
+    }
+
+    /// Parse a method call
+    ///
+    /// function_call
+    pub fn method_call(
+        input: &str,
+        caller: Box<dyn Instruction>,
+    ) -> ParseResult<&str, Box<dyn Instruction>> {
+        let (input, method) = Construct::function_call(input)?;
+
+        Ok((input, Box::new(MethodCall::new(caller, method))))
+    }
+
+    // Parse a field access
+    //
+    // identifer ( '.' identifier )*
+    pub fn field_access(
+        input: &str,
+        first_fa: Box<dyn Instruction>,
+    ) -> ParseResult<&str, Box<dyn Instruction>> {
+        let (input, field_name) = Token::identifier(input)?;
+        let (input, dot_field_vec) = many0(preceded(Token::dot, Token::identifier))(input)?;
+
+        let mut current_fa = FieldAccess::new(first_fa, field_name);
+        for field_name in dot_field_vec {
+            let fa = FieldAccess::new(Box::new(current_fa), field_name);
+            current_fa = fa;
+        }
+
+        Ok((input, Box::new(current_fa)))
     }
 
     pub fn early_return(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
@@ -806,25 +844,6 @@ impl Construct {
         Ok((input, incl))
     }
 
-    /// Parse a viable caller for a method call
-    fn method_caller(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-        // FIXME: Right now, we cannot chain method calls and no error is produced:
-        // `1.double().double()` returns 2 instead of the expected 4, since
-        // only one call is resolved and the remaining input (`.double()`) is
-        // silently ignored
-        let caller = alt((
-            BoxConstruct::function_call,
-            BoxConstruct::variable,
-            Construct::constant,
-            BoxConstruct::if_else,
-            BoxConstruct::block,
-            BoxConstruct::any_loop,
-            BoxConstruct::jinko_inst,
-        ))(input)?;
-
-        Ok(caller)
-    }
-
     /// Parse a viable instance for a field access.
     /// This is similar to Construct::method_caller, without allowing constants, as they
     /// contain no fields.
@@ -837,57 +856,13 @@ impl Construct {
             BoxConstruct::block,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
+            // DESIGN CHANGE, we can do "hello".field which fail later on like
+            // "hello".invalid_method() would
+            // Previously "hello".field was a parser error
+            Construct::constant,
         ))(input)?;
 
         Ok(instance)
-    }
-
-    /// Parse a method like function call, that shall be desugared
-    /// to a simple function call later on
-    ///
-    /// `<identifier>.<identifier>()`
-    pub fn method_call(input: &str) -> ParseResult<&str, MethodCall> {
-        let (input, caller) = Construct::method_caller(input)?;
-        let (input, _) = Token::dot(input)?;
-        let (input, method) = Construct::function_call(input)?;
-
-        Ok((input, MethodCall::new(caller, method)))
-    }
-
-    fn dot_field(input: &str) -> ParseResult<&str, String> {
-        let (input, _) = Token::dot(input)?;
-
-        Token::identifier(input)
-    }
-
-    fn inner_field_access(input: &str) -> ParseResult<&str, FieldAccess> {
-        let (input, instance) = Construct::instance(input)?;
-        let (input, field_name) = Construct::dot_field(input)?;
-
-        Ok((input, FieldAccess::new(instance, field_name)))
-    }
-
-    fn multi_field_access(input: &str) -> ParseResult<&str, FieldAccess> {
-        let (input, first_fa) = Construct::inner_field_access(input)?;
-
-        let (input, dot_field_vec) = many0(Construct::dot_field)(input)?;
-
-        let mut current_fa = first_fa;
-
-        for field_name in dot_field_vec {
-            let fa = FieldAccess::new(Box::new(current_fa), field_name);
-            current_fa = fa;
-        }
-
-        Ok((input, current_fa))
-    }
-
-    /// Parse a field access on a custom type. This is very similar to a method call: The
-    /// only difference is that the method call shall have parentheses
-    ///
-    /// `<identifier>.<identifier>[.<identifier>]*`
-    pub fn field_access(input: &str) -> ParseResult<&str, FieldAccess> {
-        Construct::multi_field_access(input)
     }
 }
 
@@ -1457,19 +1432,19 @@ mod tests {
     #[test]
     fn t_method_call_simple() {
         assert!(
-            Construct::method_call("a.b()").is_ok(),
+            Construct::method_call_or_field_access("a.b()").is_ok(),
             "Valid to have simple identifiers"
         );
         assert!(
-            Construct::method_call("135.method()").is_ok(),
+            Construct::method_call_or_field_access("135.method()").is_ok(),
             "Valid to have constant as caller"
         );
         assert!(
-            Construct::method_call("{ hey }.method()").is_ok(),
+            Construct::method_call_or_field_access("{ hey }.method()").is_ok(),
             "Valid to have block as caller"
         );
         assert!(
-            Construct::method_call("func_call().method()").is_ok(),
+            Construct::method_call_or_field_access("func_call().method()").is_ok(),
             "Valid to have call as caller"
         );
         assert!(
@@ -1480,18 +1455,17 @@ mod tests {
 
     #[test]
     fn t_method_call_invalid() {
+        let (input, instance) = Construct::instance("a.b").expect("Missing caller");
         assert!(
-            Construct::method_call("a.b").is_err(),
+            Construct::method_call(input, instance).is_err(),
             "Missing parentheses"
         );
+        let (input, instance) = Construct::instance("a.()").expect("Missing caller");
         assert!(
-            Construct::method_call("a.()").is_err(),
+            Construct::method_call(input, instance).is_err(),
             "Missing method name"
         );
-        assert!(
-            Construct::method_call(".method()").is_err(),
-            "Missing caller"
-        );
+        assert!(Construct::instance(".method()").is_err(), "Missing caller");
     }
 
     #[test]
@@ -1504,32 +1478,34 @@ mod tests {
 
     #[test]
     fn t_field_access_valid() {
-        assert!(Construct::field_access("s.a").is_ok());
-        assert!(Construct::field_access("longer_identifier.a").is_ok());
-        assert!(Construct::field_access("longer_identifier.with_numbers32").is_ok());
+        assert!(Construct::method_call_or_field_access("s.a").is_ok());
+        assert!(Construct::method_call_or_field_access("longer_identifier.a").is_ok());
+        assert!(Construct::method_call_or_field_access("longer_identifier.with_numbers32").is_ok());
     }
 
     #[test]
     fn t_field_access_from_type_instantiation() {
-        assert!(Construct::field_access("CustomType { k = a, v = b }.c").is_ok());
+        assert!(Construct::method_call_or_field_access("CustomType { k = a, v = b }.c").is_ok());
     }
 
     #[test]
     fn t_field_access_with_constant_field() {
-        assert!(Construct::field_access("s.1").is_err());
-        assert!(Construct::field_access("a.\"string\"").is_err());
+        assert!(Construct::method_call_or_field_access("s.1").is_err());
+        assert!(Construct::method_call_or_field_access("a.\"string\"").is_err());
     }
 
-    #[test]
+    // TODO Remove if design change accepted
+    /*#[test]
     fn t_field_access_invalid_with_constant_instance() {
-        assert!(Construct::field_access("1.a").is_err());
-        assert!(Construct::field_access("\"string\".a").is_err());
+        assert!(Construct::method_call_or_field_access("1.a").is_err());
+        assert!(Construct::method_call_or_field_access("\"string\".a").is_err());
     }
+    */
 
     #[test]
     fn t_field_access_with_spaces() {
-        assert!(Construct::field_access("sdot. space").is_err());
-        assert!(Construct::field_access("s .dotspace").is_err());
+        assert!(Construct::method_call_or_field_access("sdot. space").is_err());
+        assert!(Construct::method_call_or_field_access("s .dotspace").is_err());
     }
 
     // In the following tests about comments, we always need an extra call to `instruction`
@@ -1609,24 +1585,34 @@ func void() { }"##;
 
     #[test]
     fn t_multi_field_access_3() {
-        assert!(Construct::field_access("top.middle.bottom").is_ok());
-        assert_eq!(Construct::field_access("top.middle.bottom").unwrap().0, "");
+        assert!(Construct::method_call_or_field_access("top.middle.bottom").is_ok());
+        assert_eq!(
+            Construct::method_call_or_field_access("top.middle.bottom")
+                .unwrap()
+                .0,
+            ""
+        );
     }
 
     #[test]
     fn t_multi_field_access_4() {
-        assert!(Construct::field_access("top.middle.bottom.last").is_ok());
+        assert!(Construct::method_call_or_field_access("top.middle.bottom.last").is_ok());
         assert_eq!(
-            Construct::field_access("top.middle.bottom.last").unwrap().0,
+            Construct::method_call_or_field_access("top.middle.bottom.last")
+                .unwrap()
+                .0,
             ""
         );
     }
 
     #[test]
     fn t_multi_field_access_n() {
-        assert!(Construct::field_access("jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk").is_ok());
+        assert!(Construct::method_call_or_field_access(
+            "jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk"
+        )
+        .is_ok());
         assert_eq!(
-            Construct::field_access("jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk")
+            Construct::method_call_or_field_access("jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk.jk")
                 .unwrap()
                 .0,
             ""

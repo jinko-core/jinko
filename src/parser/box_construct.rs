@@ -52,8 +52,6 @@ impl BoxConstruct {
     box_construct! {test_declaration}
     box_construct! {mock_declaration}
     box_construct! {incl}
-    box_construct! {method_call}
-    box_construct! {field_access}
     box_construct! {extra}
     box_construct! {jk_return}
 }
