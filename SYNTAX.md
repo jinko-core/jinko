@@ -77,7 +77,7 @@ x = for elt in array -> int {
 }
 
 // There's type inference
-x = for i in range(0, n) {
+x = for i in range(0, n + 1) {
     i
 } // x now equals n
 
