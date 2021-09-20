@@ -124,21 +124,16 @@ impl TypeCheck for BinaryOp {
         let r_type = self.rhs.resolve_type(ctx);
 
         if l_type != r_type {
-            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(
-                // FIXME: If we unwrap and panic here, this is another typechecking
-                // error. Implement this once typechecking is implemented
-                format!(
-                    "trying to do binary operation on invalid types: {} {} {}",
-                    l_type,
-                    self.op.as_str(),
-                    r_type,
-                ),
-            ));
+            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                "trying to do binary operation on invalid types: {} {} {}",
+                l_type,
+                self.op.as_str(),
+                r_type,
+            )));
             return CheckedType::Unknown;
         }
 
-        /* FIXME: CheckedType::Resolved("l_type") */
-        CheckedType::Unknown
+        l_type
     }
 }
 
