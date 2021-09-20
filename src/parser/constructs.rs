@@ -1202,6 +1202,18 @@ mod tests {
     }
 
     #[test]
+    fn t_function_declaration_valid_space() {
+        let func = Construct::function_declaration("func something        \t() {}")
+            .unwrap()
+            .1;
+
+        assert_eq!(func.name(), "something");
+        assert_eq!(func.ty(), None);
+        assert_eq!(func.args().len(), 0);
+        assert_eq!(func.fn_kind(), FunctionKind::Func);
+    }
+
+    #[test]
     fn t_function_declaration_valid() {
         let func = Construct::function_declaration("func add(lhs: ty, rhs: ty) -> ty {}")
             .unwrap()
