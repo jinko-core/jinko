@@ -370,11 +370,10 @@ impl Token {
 
     /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
     pub fn consume_whitespaces(input: &str) -> ParseResult<&str, &str> {
-        let ws = take_while1(Token::is_whitespace)(input)?;
-
-        Ok(ws)
+        take_while1(Token::is_whitespace)(input)
     }
 
+    #[inline(always)]
     pub fn consume_multi_comment(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = Token::comment_multi_start(input)?;
         let (input, content) = take_until("*/")(input)?;
@@ -383,6 +382,7 @@ impl Token {
         Ok((input, content))
     }
 
+    #[inline(always)]
     pub fn consume_single_comment(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = Token::comment_single(input)?;
         let comment = take_while(|c| c != '\n' && c != '\0')(input)?;
@@ -390,6 +390,7 @@ impl Token {
         Ok(comment)
     }
 
+    #[inline(always)]
     pub fn consume_shebang_comment(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = Token::comment_shebang(input)?;
         let comment = take_while(|c| c != '\n' && c != '\0')(input)?;
@@ -399,13 +400,11 @@ impl Token {
 
     /// Consumes all kinds of comments: Multi-line or single-line
     fn consume_comment(input: &str) -> ParseResult<&str, &str> {
-        let (input, _) = alt((
+        alt((
             Token::consume_shebang_comment,
             Token::consume_single_comment,
             Token::consume_multi_comment,
-        ))(input)?;
-
-        Ok((input, ""))
+        ))(input)
     }
 
     /// Consumes what is considered as "extra": Whitespaces, comments...
