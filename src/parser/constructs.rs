@@ -150,7 +150,7 @@ impl Construct {
 
     /// Parse a list of arguments separated by comma
     fn args_list(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
-        /// Parse an argument and the comma that follows it
+        /// Parse a comma and the argument that follows it
         fn comma_and_arg(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
             let (input, _) = Token::comma(input)?;
             let (input, _) = Token::maybe_consume_extra(input)?;
@@ -161,12 +161,12 @@ impl Construct {
         }
 
         // Get first arg
-        let (input, arg) = Construct::arg(input)?;
+        let (input, first_arg) = Construct::arg(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         // Get 0 or more arguments with a comma to the function call
         let (input, mut arg_vec) = many0(comma_and_arg)(input)?;
-        arg_vec.insert(0, arg);
+        arg_vec.insert(0, first_arg);
 
         Ok((input, arg_vec))
     }
@@ -245,6 +245,7 @@ impl Construct {
     /// `<identifier> ( <arg_list> )`
     pub(crate) fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_parenthesis(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, arg_vec) = opt(Construct::args_list)(input)?;
@@ -1022,6 +1023,10 @@ mod tests {
                 .args()
                 .len(),
             3
+        );
+        assert_eq!(
+            Construct::function_call("fn     ()").unwrap().1.name(),
+            "fn"
         );
     }
 
