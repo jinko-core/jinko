@@ -63,7 +63,7 @@ pub enum InstrKind {
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
-pub trait Instruction: TypeCheck + InstructionClone + Downcast {
+pub trait Instruction: InstructionClone + Downcast {
     // FIXME: Add Rename here
     /// Execute the instruction, altering the state of the context. Executing
     /// this method may return an object instance
