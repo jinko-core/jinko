@@ -77,11 +77,13 @@ impl<'args> Repl<'args> {
 
         let ep = ctx.entry_point.block().unwrap().clone();
         ep.instructions().iter().for_each(|inst| {
-            inst.resolve_type(ctx);
+            // TODO: Add this once TypeChecker is complete
+            // inst.resolve_type(ctx);
             inst.execute(ctx);
         });
         if let Some(last) = ep.last() {
-            last.resolve_type(ctx);
+            // TODO: Add this once TypeChecker is complete
+            // last.resolve_type(ctx);
             last.execute(ctx);
         }
 
@@ -113,11 +115,12 @@ impl<'args> Repl<'args> {
                 None => continue,
             };
 
-            if let CheckedType::Unknown = inst.resolve_type(&mut ctx) {
-                ctx.emit_errors();
-                ctx.clear_errors();
-                continue;
-            }
+            // TODO: Add this once TypeChecker is complete
+            // if let CheckedType::Unknown = inst.resolve_type(&mut ctx) {
+            //     ctx.emit_errors();
+            //     ctx.clear_errors();
+            //     continue;
+            // }
 
             if let Some(result) = inst.execute(&mut ctx) {
                 println!("{}", result);
