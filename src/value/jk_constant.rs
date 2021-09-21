@@ -248,3 +248,54 @@ impl<T> From<T> for JkConstant<T> {
         JkConstant(rust_value)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{JkBool, JkFloat, JkInt};
+
+    use super::*;
+
+    #[test]
+    fn tc_string_type() {
+        let mut ctx = Context::new();
+        let s = JkString::from("that's a jk string");
+
+        assert_eq!(
+            s.resolve_type(&mut ctx),
+            CheckedType::Resolved(TypeId::from("string"))
+        );
+    }
+
+    #[test]
+    fn tc_bool_type() {
+        let mut ctx = Context::new();
+        let s = JkBool::from(false);
+
+        assert_eq!(
+            s.resolve_type(&mut ctx),
+            CheckedType::Resolved(TypeId::from("bool"))
+        );
+    }
+
+    #[test]
+    fn tc_i_type() {
+        let mut ctx = Context::new();
+        let s = JkInt::from(0);
+
+        assert_eq!(
+            s.resolve_type(&mut ctx),
+            CheckedType::Resolved(TypeId::from("int"))
+        );
+    }
+
+    #[test]
+    fn tc_f_type() {
+        let mut ctx = Context::new();
+        let s = JkFloat::from(15.4);
+
+        assert_eq!(
+            s.resolve_type(&mut ctx),
+            CheckedType::Resolved(TypeId::from("float"))
+        );
+    }
+}
