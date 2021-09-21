@@ -7,6 +7,7 @@ mod instance;
 mod instruction;
 mod parser;
 mod repl;
+mod typechecker;
 mod utils;
 mod value;
 
@@ -20,6 +21,7 @@ pub use error::{ErrKind, Error};
 pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
+pub use typechecker::TypeCheck;
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 // FIXME: Add documentation
