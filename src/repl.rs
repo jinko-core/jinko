@@ -9,8 +9,8 @@ use linefeed::{DefaultTerminal, Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, typechecker::CheckedType, Context, Error, FromObjectInstance, Instruction,
-    InteractResult, JkConstant, ObjectInstance,
+    parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
+    ObjectInstance,
 };
 
 // FIXME:

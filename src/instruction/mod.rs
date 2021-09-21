@@ -2,7 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
+use crate::{Context, ErrKind, Error, ObjectInstance};
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
