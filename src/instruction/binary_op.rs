@@ -17,19 +17,12 @@ pub struct BinaryOp {
     lhs: Box<dyn Instruction>,
     rhs: Box<dyn Instruction>,
     op: Operator,
-
-    value: Option<Box<dyn Instruction>>,
 }
 
 impl BinaryOp {
     /// Create a new `BinaryOp` from two instructions and an operator
     pub fn new(lhs: Box<dyn Instruction>, rhs: Box<dyn Instruction>, op: Operator) -> Self {
-        BinaryOp {
-            lhs,
-            rhs,
-            op,
-            value: None,
-        }
+        BinaryOp { lhs, rhs, op }
     }
 
     /// Return the operator used by the BinaryOp
