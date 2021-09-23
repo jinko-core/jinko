@@ -2,6 +2,8 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
+use std::fmt::Display;
+
 use crate::{Context, ErrKind, Error, ObjectInstance};
 
 use colored::Colorize;
@@ -63,14 +65,14 @@ pub enum InstrKind {
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
-pub trait Instruction: InstructionClone + Downcast {
+pub trait Instruction: InstructionClone + Downcast + Display {
     // FIXME: Add Rename here
     /// Execute the instruction, altering the state of the context. Executing
     /// this method may return an object instance
     fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
         unreachable!(
             "\n{}\n --> {}",
-            self.print(),
+            self,
             "The execution of this instruction is not implemented yet. This is a bug".red(),
         )
     }
@@ -85,7 +87,7 @@ pub trait Instruction: InstructionClone + Downcast {
             None => {
                 ctx.error(Error::new(ErrKind::Context).with_msg(format!(
                     "statement found when expression was expected: {}",
-                    self.print()
+                    self
                 )));
                 None
             }
@@ -103,7 +105,7 @@ pub trait Instruction: InstructionClone + Downcast {
             Some(_) => {
                 let e = Error::new(ErrKind::Context).with_msg(format!(
                     "expression found when statement was expected: {}",
-                    self.print()
+                    self
                 ));
                 ctx.error(e.clone());
                 Err(e)
@@ -117,7 +119,7 @@ pub trait Instruction: InstructionClone + Downcast {
     fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
         ctx.error(
             Error::new(ErrKind::Context)
-                .with_msg(format!("cannot be used as a boolean: {}", self.print())),
+                .with_msg(format!("cannot be used as a boolean: {}", self)),
         );
 
         None
@@ -128,9 +130,6 @@ pub trait Instruction: InstructionClone + Downcast {
     /// expression. This method does not care about the return value or the execution
     /// of the instruction, just the kind of it.
     fn kind(&self) -> InstrKind;
-
-    /// Pretty-print the instruction to valid jinko code
-    fn print(&self) -> String;
 }
 
 impl_downcast!(Instruction);
