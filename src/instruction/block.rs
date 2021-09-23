@@ -117,14 +117,15 @@ impl Instruction for Block {
 }
 
 impl TypeCheck for Block {
-    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
         match &self.last {
             None => CheckedType::Void,
-            Some(last) => last.resolve_type(ctx),
+            Some(_last) => CheckedType::Unknown, // FIXME: last.resolve_type(ctx),
         }
     }
 }
 
+// TODO: Add tests once TypeCheck is a trait bound on Instruction
 #[cfg(test)]
 mod tests {
     use super::*;
