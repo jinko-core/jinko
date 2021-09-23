@@ -111,8 +111,9 @@ impl Instruction for Loop {
 }
 
 impl TypeCheck for Loop {
-    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
-        self.block.resolve_type(ctx)
+    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
+        // TODO: Fix this once TypeChecker is a trait bound on Instruction
+        CheckedType::Void // FIXME: self.block.resolve_type(ctx)
     }
 }
 
