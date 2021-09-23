@@ -10,17 +10,17 @@ use std::rc::Rc;
 use crate::instruction::{FunctionDec, TypeDec, Var};
 use crate::{ErrKind, Error, Instruction};
 
-/// A scope contains a set of available variables and functions
+/// A scope contains a set of available variables, functions and types
 #[derive(Clone)]
-struct Scope {
-    variables: HashMap<String, Var>,
-    functions: HashMap<String, Rc<FunctionDec>>,
-    types: HashMap<String, Rc<TypeDec>>,
+struct Scope<V: Instruction, F: Instruction, T: Instruction> {
+    variables: HashMap<String, V>,
+    functions: HashMap<String, Rc<F>>,
+    types: HashMap<String, Rc<T>>,
 }
 
-impl Scope {
+impl<V: Instruction, F: Instruction, T: Instruction> Scope<V, F, T> {
     /// Create a new empty Scope
-    pub fn new() -> Scope {
+    pub fn new() -> Scope<V, F, T> {
         Scope {
             variables: HashMap::new(),
             functions: HashMap::new(),
@@ -29,64 +29,67 @@ impl Scope {
     }
 
     /// Get a reference on a variable from the scope map if is has been inserted already
-    pub fn get_variable(&self, name: &str) -> Option<&Var> {
+    pub fn get_variable(&self, name: &str) -> Option<&V> {
         self.variables.get(name)
     }
 
     /// Get a reference on a function from the scope map if is has been inserted already
-    pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
+    pub fn get_function(&self, name: &str) -> Option<&Rc<F>> {
         self.functions.get(name)
     }
 
     /// Get a reference on a type from the scope map if is has been inserted already
-    pub fn get_type(&self, name: &str) -> Option<&Rc<TypeDec>> {
+    pub fn get_type(&self, name: &str) -> Option<&Rc<T>> {
         self.types.get(name)
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
-        match self.get_variable(var.name()) {
+    pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
+        match self.get_variable(&name) {
             Some(_) => Err(Error::new(ErrKind::Context)
-                .with_msg(format!("variable already declared: {}", var.name()))),
+                .with_msg(format!("variable already declared: {}", name))),
             None => {
-                self.variables.insert(var.name().to_owned(), var);
+                self.variables.insert(name, var);
                 Ok(())
             }
         }
     }
 
     /// Remove a variable from the most recently created scope, if it exists
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
-        match self.get_variable(var.name()) {
+    pub fn remove_variable(&mut self, name: &str) -> Result<(), Error> {
+        match self.get_variable(name) {
             Some(_) => {
-                self.variables.remove(var.name()).unwrap();
+                self.variables.remove(name).unwrap();
                 Ok(())
             }
-            None => Err(Error::new(ErrKind::Context)
-                .with_msg(format!("variable does not exist: {}", var.name()))),
+            None => {
+                Err(Error::new(ErrKind::Context)
+                    .with_msg(format!("variable does not exist: {}", name)))
+            }
         }
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
-        match self.get_function(func.name()) {
+    pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
+        match self.get_function(&name) {
             Some(_) => Err(Error::new(ErrKind::Context)
-                .with_msg(format!("function already declared: {}", func.name()))),
+                .with_msg(format!("function already declared: {}", name))),
             None => {
-                self.functions.insert(func.name().to_owned(), Rc::new(func));
+                self.functions.insert(name, Rc::new(func));
                 Ok(())
             }
         }
     }
 
     /// Add a type to the most recently created scope, if it doesn't already exist
-    pub fn add_type(&mut self, type_dec: TypeDec) -> Result<(), Error> {
-        match self.get_type(type_dec.name()) {
-            Some(_) => Err(Error::new(ErrKind::Context)
-                .with_msg(format!("type already declared: {}", type_dec.name()))),
+    pub fn add_type(&mut self, name: String, type_dec: T) -> Result<(), Error> {
+        match self.get_type(&name) {
+            Some(_) => {
+                Err(Error::new(ErrKind::Context)
+                    .with_msg(format!("type already declared: {}", name)))
+            }
             None => {
-                self.types
-                    .insert(type_dec.name().to_owned(), Rc::new(type_dec));
+                self.types.insert(name, Rc::new(type_dec));
                 Ok(())
             }
         }
@@ -115,7 +118,7 @@ type ScopeStack<T> = LinkedList<T>;
 /// level.
 #[derive(Clone)]
 pub struct ScopeMap {
-    scopes: ScopeStack<Scope>,
+    scopes: ScopeStack<Scope<Var, FunctionDec, TypeDec>>,
 }
 
 impl ScopeMap {
@@ -180,7 +183,7 @@ impl ScopeMap {
     /// Add a variable to the current scope if it hasn't been added before
     pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.add_variable(var),
+            Some(head) => head.add_variable(var.name().to_owned(), var),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding variable to empty scopemap"))),
         }
@@ -189,7 +192,7 @@ impl ScopeMap {
     /// Remove a variable from the current scope if it hasn't been added before
     pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.remove_variable(var),
+            Some(head) => head.remove_variable(var.name()),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Removing variable from empty scopemap"))),
         }
@@ -198,7 +201,7 @@ impl ScopeMap {
     /// Add a function to the current scope if it hasn't been added before
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.add_function(func),
+            Some(head) => head.add_function(func.name().to_owned(), func),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding function to empty scopemap"))),
         }
@@ -207,7 +210,7 @@ impl ScopeMap {
     /// Add a type to the current scope if it hasn't been added before
     pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.add_type(custom_type),
+            Some(head) => head.add_type(custom_type.name().to_owned(), custom_type),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding new custom type to empty scopemap"))),
         }
