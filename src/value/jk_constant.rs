@@ -5,6 +5,7 @@ use crate::{
 };
 
 use std::convert::TryFrom;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 #[derive(Clone)]
 /// A JkConstant represents a primitive type in Jinko. It is used in order to
@@ -86,13 +87,15 @@ macro_rules! jk_primitive {
             }
         }
 
+        impl Display for JkConstant<bool> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+                write!(f, "{}", self.0.to_string())
+            }
+        }
+
         impl Instruction for JkConstant<bool> {
             fn kind(&self) -> InstrKind {
                 InstrKind::Expression(None)
-            }
-
-            fn print(&self) -> String {
-                self.0.to_string()
             }
 
             fn as_bool(&self, _ctx: &mut Context) -> Option<bool> {
@@ -105,6 +108,10 @@ macro_rules! jk_primitive {
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
                 Some(self.to_instance())
+            }
+
+            fn print(&self) -> String {
+                self.0.to_string()
             }
         }
 
@@ -142,13 +149,15 @@ macro_rules! jk_primitive {
             }
         }
 
+        impl Display for JkConstant<$t> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+                write!(f, "{}", self.0.to_string())
+            }
+        }
+
         impl Instruction for JkConstant<$t> {
             fn kind(&self) -> InstrKind {
                 InstrKind::Expression(None)
-            }
-
-            fn print(&self) -> String {
-                self.0.to_string()
             }
 
             fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
@@ -157,6 +166,10 @@ macro_rules! jk_primitive {
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
                 Some(self.to_instance())
+            }
+
+            fn print(&self) -> String {
+                self.0.to_string()
             }
         }
 
@@ -215,13 +228,19 @@ impl FromObjectInstance for JkString {
     }
 }
 
+impl Display for JkString {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "\"{}\"", self.0.clone())
+    }
+}
+
 impl Instruction for JkString {
     fn kind(&self) -> InstrKind {
         InstrKind::Expression(None)
     }
 
     fn print(&self) -> String {
-        format!("\"{}\"", self.0.clone())
+        format!("\"{}\"", self.0.to_string())
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
@@ -297,5 +316,33 @@ mod tests {
             s.resolve_type(&mut ctx),
             CheckedType::Resolved(TypeId::from("float"))
         );
+    }
+
+    #[test]
+    fn pp_jkint() {
+        let value = JkInt::from(15);
+
+        assert_eq!(value.to_string(), "15")
+    }
+
+    #[test]
+    fn pp_jkbool() {
+        let value = JkBool::from(true);
+
+        assert_eq!(value.to_string(), "true")
+    }
+
+    #[test]
+    fn pp_jkstring() {
+        let value = JkString::from("jk");
+
+        assert_eq!(value.to_string(), "\"jk\"")
+    }
+
+    #[test]
+    fn pp_jkfloat() {
+        let value = JkFloat::from(15.4);
+
+        assert_eq!(value.to_string(), "15.4")
     }
 }
