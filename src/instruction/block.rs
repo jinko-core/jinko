@@ -17,26 +17,23 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{Context, InstrKind, Instruction, ObjectInstance};
+use crate::{typechecker::CheckedType, Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
     last: Option<Box<dyn Instruction>>,
-}
-
-impl Default for Block {
-    fn default() -> Block {
-        Block::new()
-    }
+    ty: CheckedType,
 }
 
 impl Block {
     /// Create a new block
     pub fn new() -> Block {
+        // FIXME: Remove this method
         Block {
             instructions: Vec::new(),
             last: None,
+            ty: CheckedType::Unknown,
         }
     }
 
@@ -119,11 +116,22 @@ impl Instruction for Block {
     }
 }
 
+impl TypeCheck for Block {
+    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
+        match &self.last {
+            None => CheckedType::Void,
+            Some(_last) => CheckedType::Unknown, // FIXME: last.resolve_type(ctx),
+        }
+    }
+}
+
+// TODO: Add tests once TypeCheck is a trait bound on Instruction
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::instruction::Var;
     use crate::value::JkInt;
+    use crate::TypeCheck;
 
     #[test]
     fn empty() {
@@ -203,5 +211,19 @@ mod tests {
 
         assert_eq!(b.execute(&mut i).unwrap(), JkInt::from(18).to_instance());
         assert!(!i.error_handler.has_errors());
+    }
+
+    // FIXME: Add test for type of block containing `last` once TypeChecker is implemented
+    // for all Instructions
+    #[test]
+    fn block_no_last_tychk() {
+        let mut b = Block::new();
+        let instr: Vec<Box<dyn Instruction>> =
+            vec![Box::new(JkInt::from(12)), Box::new(JkInt::from(15))];
+        b.set_instructions(instr);
+
+        let mut ctx = Context::new();
+
+        assert_eq!(b.resolve_type(&mut ctx), CheckedType::Void)
     }
 }
