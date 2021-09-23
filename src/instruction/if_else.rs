@@ -80,12 +80,17 @@ impl Instruction for IfElse {
 
 impl TypeCheck for IfElse {
     fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
-        let if_ty = self.if_body.resolve_type(ctx);
-        let else_ty = if let Some(else_body) = &self.else_body {
-            Some(else_body.resolve_type(ctx))
-        } else {
-            None
-        };
+        // TODO: Fix this once typechecking is implemented for Instructions
+        let if_ty = CheckedType::Void; // FIXME: self.if_body.resolve_type(ctx);
+
+        let else_ty = self.else_body.as_ref().map(|_else_body| CheckedType::Void);
+
+        // FIXME: Use this instead
+        // let else_ty = if let Some(_else_body) = &self.else_body {
+        //     Some(CheckedType::Void) // FIXME: Some(else_body.resolve_type(ctx))
+        // } else {
+        //     None
+        // };
 
         match (if_ty, else_ty) {
             (CheckedType::Void, None) => CheckedType::Void,
