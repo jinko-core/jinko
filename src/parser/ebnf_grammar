@@ -17,7 +17,7 @@ instruction = extra
 method_call_or_field_access = instance '.' identifier method_call
                             | instance '.' identifier field_access
 
-method_call = _function_call
+method_call = function_call
 
 field_access = ( '.' identifier )*
 
@@ -34,6 +34,7 @@ type_instantiation = maybe_consume_extra '{' named_arg_list '}'
 var_assignment = maybe_consume_extra '=' maybe_consume_extra instruction
 
 mut var_assignment = 'mut' maybe_consume_extra identifier var_assignment
+
 
 (* BINARY_OP *)
 
@@ -76,8 +77,6 @@ mock_declaration = 'mock' function_content
 (* TYPE_INSTANTIATION *)
 
 
-type_instantiation = identifier maybe_consume_extra '{' named_arg_list '}'
-
 named_arg_list = ( named_arg ',' )* named_arg
 
 named_arg = maybe_consume_extra identifier maybe_consume_extra '=' maybe_consume_extra instruction maybe_consume_extra
@@ -85,8 +84,6 @@ named_arg = maybe_consume_extra identifier maybe_consume_extra '=' maybe_consume
 
 (* FUNCTION_CALL *)
 
-
-function_call = identifier '(' maybe_consume_extra [ args_list ] ')'
 
 args_list = arg maybe_consume_extra ( ',' maybe_consume_extra instruction maybe_consume_extra )*
 
@@ -142,18 +139,6 @@ block_instruction = '{' maybe_consume_extra stmts_and_maybe_last maybe_consume_e
 stmts_and_maybe_last = ( stmt_semicolon )* ( early_return | instruction )
 
 early_return = maybe_consume_extra 'return' maybe_consume_extra [instruction] maybe_consume_extra [ ';' ]
-
-
-(* VAR_ASSIGNMENT *)
-
-
-var_assignment = [ 'mut' ] maybe_consume_extra identifier maybe_consume_extra '=' maybe_consume_extra instruction
-
-
-(* VARIABLE *)
-
-
-variable = identifier
 
 
 (* CONSTANT *)
