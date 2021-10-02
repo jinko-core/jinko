@@ -5,18 +5,15 @@
 //! before the current one, until it finds the correct component.
 
 use std::collections::{HashMap, LinkedList};
-use std::fmt::{Display, Formatter, Result as FmtResult};
-use std::rc::Rc;
 
-use crate::instruction::{FunctionDec, TypeDec, Var};
-use crate::{ErrKind, Error, Instruction};
+use crate::{ErrKind, Error};
 
 /// A scope contains a set of available variables, functions and types
 #[derive(Clone)]
-struct Scope<V, F, T> {
-    variables: HashMap<String, V>,
-    functions: HashMap<String, F>,
-    types: HashMap<String, T>,
+pub struct Scope<V, F, T> {
+    pub(crate) variables: HashMap<String, V>,
+    pub(crate) functions: HashMap<String, F>,
+    pub(crate) types: HashMap<String, T>,
 }
 
 impl<V, F, T> Scope<V, F, T> {
@@ -98,21 +95,26 @@ impl<V, F, T> Scope<V, F, T> {
 }
 
 /// A scope stack is a reversed stack. This alias is made for code clarity
-type ScopeStack<T> = LinkedList<T>;
+pub type ScopeStack<T> = LinkedList<T>;
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
 #[derive(Clone)]
-pub struct ScopeMap {
-    scopes: ScopeStack<Scope<Var, Rc<FunctionDec>, Rc<TypeDec>>>,
+pub struct ScopeMap<V, F, T> {
+    scopes: ScopeStack<Scope<V, F, T>>,
 }
 
-impl ScopeMap {
+impl<V, F, T> ScopeMap<V, F, T> {
     /// Create a new empty scope map, at depth 0
-    pub fn new() -> ScopeMap {
+    pub fn new() -> ScopeMap<V, F, T> {
         ScopeMap {
             scopes: ScopeStack::new(),
         }
+    }
+
+    /// Get a reference on the scopes inside a ScopeMap
+    pub fn scopes(&self) -> &ScopeStack<Scope<V, F, T>> {
+        &self.scopes
     }
 
     /// Enter into a new scope
@@ -128,7 +130,7 @@ impl ScopeMap {
     }
 
     /// Maybe get a variable in any available scopes
-    pub fn get_variable(&self, name: &str) -> Option<&Var> {
+    pub fn get_variable(&self, name: &str) -> Option<&V> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_variable(name) {
@@ -141,7 +143,7 @@ impl ScopeMap {
     }
 
     /// Maybe get a function in any available scopes
-    pub fn get_function(&self, name: &str) -> Option<&Rc<FunctionDec>> {
+    pub fn get_function(&self, name: &str) -> Option<&F> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_function(name) {
@@ -154,7 +156,7 @@ impl ScopeMap {
     }
 
     /// Maybe get a type in any available scopes
-    pub fn get_type(&self, name: &str) -> Option<&Rc<TypeDec>> {
+    pub fn get_type(&self, name: &str) -> Option<&T> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_type(name) {
@@ -167,76 +169,61 @@ impl ScopeMap {
     }
 
     /// Add a variable to the current scope if it hasn't been added before
-    pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
+    pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.add_variable(var.name().to_owned(), var),
+            Some(head) => head.add_variable(name, var),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding variable to empty scopemap"))),
         }
     }
 
     /// Remove a variable from the current scope if it hasn't been added before
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
+    pub fn remove_variable(&mut self, name: &str) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.remove_variable(var.name()),
+            Some(head) => head.remove_variable(name),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Removing variable from empty scopemap"))),
         }
     }
 
     /// Add a function to the current scope if it hasn't been added before
-    pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
+    pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.add_function(func.name().to_owned(), Rc::new(func)),
+            Some(head) => head.add_function(name, func),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding function to empty scopemap"))),
         }
     }
 
     /// Add a type to the current scope if it hasn't been added before
-    pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
+    pub fn add_type(&mut self, name: String, custom_type: T) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.add_type(custom_type.name().to_owned(), Rc::new(custom_type)),
+            Some(head) => head.add_type(name, custom_type),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding new custom type to empty scopemap"))),
         }
-    }
-
-    /// Display all contained information on stdout
-    pub fn print(&self) {
-        for stack in &self.scopes {
-            println!("{}", stack)
-        }
-    }
-}
-
-/// Printer for the usual usage of the ScopeMap
-impl<V: Instruction, F: Instruction, T: Instruction> Display for Scope<V, Rc<F>, Rc<T>> {
-    fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        for ty in self.types.values() {
-            writeln!(f, "{}", ty.print())?;
-        }
-
-        for var in self.variables.values() {
-            writeln!(f, "{}", var.print())?;
-        }
-
-        for func in self.functions.values() {
-            writeln!(f, "{}", func.print())?;
-        }
-
-        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instruction::Var;
+
+    macro_rules! s {
+        ($s:literal) => {
+            String::from($s)
+        };
+    }
+
+    fn new_scopemap() -> ScopeMap<Var, (), ()> {
+        ScopeMap::new()
+    }
 
     #[test]
     #[should_panic]
     fn t_pop_non_existent_scope() {
-        let mut s = ScopeMap::new();
+        let mut s = new_scopemap();
 
         s.scope_enter();
         s.scope_exit();
@@ -246,34 +233,35 @@ mod tests {
     #[test]
     #[should_panic]
     fn t_add_var_non_existent_scope() {
-        let mut s = ScopeMap::new();
+        let mut s = new_scopemap();
 
-        s.add_variable(Var::new("Something".to_owned())).unwrap();
+        s.add_variable(s!("Something"), Var::new("Something".to_owned()))
+            .unwrap();
     }
 
     #[test]
     fn t_find_non_existent_var() {
-        let s = ScopeMap::new();
+        let s = new_scopemap();
 
         assert!(s.get_variable("a").is_none());
     }
 
     #[test]
     fn t_add_var_and_get_it() {
-        let mut s = ScopeMap::new();
+        let mut s = new_scopemap();
 
         s.scope_enter();
-        s.add_variable(Var::new("a".to_owned())).unwrap();
+        s.add_variable(s!("a"), Var::new("a".to_owned())).unwrap();
 
         assert!(s.get_variable("a").is_some());
     }
 
     #[test]
     fn t_add_var_and_get_it_from_inner_scope() {
-        let mut s = ScopeMap::new();
+        let mut s = new_scopemap();
 
         s.scope_enter();
-        s.add_variable(Var::new("a".to_owned())).unwrap();
+        s.add_variable(s!("a"), Var::new("a".to_owned())).unwrap();
 
         s.scope_enter();
         s.scope_enter();
@@ -286,11 +274,11 @@ mod tests {
 
     #[test]
     fn t_add_var_and_get_it_from_outer_scope() {
-        let mut s = ScopeMap::new();
+        let mut s = new_scopemap();
 
         s.scope_enter();
 
-        s.add_variable(Var::new("a".to_owned())).unwrap();
+        s.add_variable(s!("a"), Var::new("a".to_owned())).unwrap();
 
         s.scope_exit();
 
