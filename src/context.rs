@@ -9,9 +9,10 @@ use std::path::{Path, PathBuf};
 use colored::Colorize;
 
 mod scope_map;
-use scope_map::ScopeMap;
+use scope_map::{Scope, ScopeMap};
 
 use std::collections::{HashMap, HashSet};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
@@ -40,7 +41,7 @@ pub struct Context {
     path: Option<PathBuf>,
 
     /// Contains the scopes of the context, in which are variables and functions
-    scope_map: ScopeMap,
+    scope_map: ScopeMap<Var, Rc<FunctionDec>, Rc<TypeDec>>,
 
     /// Tests registered in the context
     tests: HashMap<CtxKey, FunctionDec>,
@@ -138,24 +139,26 @@ impl Context {
     /// Add a function to the context. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
     pub fn add_function(&mut self, function: FunctionDec) -> Result<(), Error> {
-        self.scope_map.add_function(function)
+        self.scope_map
+            .add_function(function.name().to_owned(), Rc::new(function))
     }
 
     /// Add a variable to the context. Returns `Ok` if the variable was added, `Err`
     /// if it existed already and was not.
     pub fn add_variable(&mut self, var: Var) -> Result<(), Error> {
-        self.scope_map.add_variable(var)
+        self.scope_map.add_variable(var.name().to_owned(), var)
     }
 
     /// Add a type to the context. Returns `Ok` if the type was added, `Err`
     /// if it existed already and was not.
     pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
-        self.scope_map.add_type(custom_type)
+        self.scope_map
+            .add_type(custom_type.name().to_owned(), Rc::new(custom_type))
     }
 
     /// Remove a variable from the context
     pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
-        self.scope_map.remove_variable(var)
+        self.scope_map.remove_variable(var.name())
     }
 
     /// Replace a variable or create it if it does not exist
@@ -193,8 +196,10 @@ impl Context {
 
     /// Pretty-prints valid jinko code from a given ctx
     pub fn print(&self) -> String {
-        self.scope_map.print();
-        self.entry_point.print()
+        let mut s = format!("{}\n", self.scope_map);
+        s = format!("{}{}", s, self.entry_point.print());
+
+        s
     }
 
     /// Print a debug message if the context is in debug mode, according to the
@@ -254,6 +259,35 @@ impl Context {
     }
 }
 
+/// Printer for the context's usage of the ScopeMap
+impl<V: Instruction, F: Instruction, T: Instruction> Display for ScopeMap<V, Rc<F>, Rc<T>> {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        for stack in self.scopes() {
+            writeln!(f, "{}", stack)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<V: Instruction, F: Instruction, T: Instruction> Display for Scope<V, Rc<F>, Rc<T>> {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        for ty in self.types.values() {
+            writeln!(f, "{}", ty.print())?;
+        }
+
+        for var in self.variables.values() {
+            writeln!(f, "{}", var.print())?;
+        }
+
+        for func in self.functions.values() {
+            writeln!(f, "{}", func.print())?;
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,5 +312,31 @@ mod tests {
 
         assert_eq!(i.add_variable(v0), Ok(()));
         assert!(i.add_variable(v0_copy).is_err());
+    }
+
+    #[test]
+    fn t_print_scopemap() {
+        let ctx = Context::new();
+
+        let output = format!("{}", ctx.scope_map);
+
+        // Let's make sure the output contains type declarations and functions
+        assert!(output.contains("type"));
+        assert!(output.contains("func"));
+    }
+
+    #[test]
+    fn t_print_eb() {
+        let mut ctx = Context::new();
+
+        ctx.add_variable(Var::new(String::from("a_var_named_a")))
+            .unwrap();
+
+        let output = ctx.print();
+
+        // Let's make sure the output contains type declarations and functions
+        assert!(output.contains("type"));
+        assert!(output.contains("func"));
+        assert!(output.contains("a_var_named_a"));
     }
 }
