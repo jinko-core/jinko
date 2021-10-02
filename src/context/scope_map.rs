@@ -5,10 +5,11 @@
 //! before the current one, until it finds the correct component.
 
 use std::collections::{HashMap, LinkedList};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::rc::Rc;
 
 use crate::instruction::{FunctionDec, TypeDec, Var};
-use crate::{ErrKind, Error};
+use crate::{ErrKind, Error, Instruction};
 
 /// A scope contains a set of available variables, functions and types
 #[derive(Clone)]
@@ -94,23 +95,6 @@ impl<V, F, T> Scope<V, F, T> {
             }
         }
     }
-
-    // FIXME: This shouldn't be present in the ScopeMap struct. Printing logic should
-    // be separate from this. So until this is reworked, no @dump() anymore
-    // /// Display all contained information on stdout
-    // pub fn print(&self) {
-    //     for ty in self.types.values() {
-    //         println!("{}", ty.print());
-    //     }
-    //
-    //     for var in self.variables.values() {
-    //         println!("{}", var.print());
-    //     }
-    //
-    //     for f in self.functions.values() {
-    //         println!("{}", f.print());
-    //     }
-    // }
 }
 
 /// A scope stack is a reversed stack. This alias is made for code clarity
@@ -220,11 +204,28 @@ impl ScopeMap {
 
     /// Display all contained information on stdout
     pub fn print(&self) {
-        for _stack in &self.scopes {
-            // FIXME: Rework once printing logic is implemented correctly for the
-            // scope map
-            // stack.print()
+        for stack in &self.scopes {
+            println!("{}", stack)
         }
+    }
+}
+
+/// Printer for the usual usage of the ScopeMap
+impl<V: Instruction, F: Instruction, T: Instruction> Display for Scope<V, Rc<F>, Rc<T>> {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        for ty in self.types.values() {
+            writeln!(f, "{}", ty.print())?;
+        }
+
+        for var in self.variables.values() {
+            writeln!(f, "{}", var.print())?;
+        }
+
+        for func in self.functions.values() {
+            writeln!(f, "{}", func.print())?;
+        }
+
+        Ok(())
     }
 }
 
