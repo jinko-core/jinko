@@ -38,9 +38,10 @@ impl Construct {
         // has been parsed
         let (input, value) = alt((
             BoxConstruct::extra,
-            Construct::method_call_or_field_access,
-            // binary_op must be parsed before variable and constant
+            // binary_op must be parsed before variables, constants, function calls and
+            // method_calls
             Construct::binary_op,
+            Construct::method_call_or_field_access,
             Construct::type_inst_or_function_call_or_var,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
