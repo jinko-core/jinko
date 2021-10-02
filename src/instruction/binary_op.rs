@@ -6,8 +6,8 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::Operator, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction,
-    JkFloat, JkInt, ObjectInstance, Value,
+    instruction::Operator, typechecker::CheckedType, Context, ErrKind, Error, FromObjectInstance,
+    InstrKind, Instruction, JkFloat, JkInt, ObjectInstance, TypeCheck, Value,
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
@@ -17,19 +17,12 @@ pub struct BinaryOp {
     lhs: Box<dyn Instruction>,
     rhs: Box<dyn Instruction>,
     op: Operator,
-
-    value: Option<Box<dyn Instruction>>,
 }
 
 impl BinaryOp {
     /// Create a new `BinaryOp` from two instructions and an operator
     pub fn new(lhs: Box<dyn Instruction>, rhs: Box<dyn Instruction>, op: Operator) -> Self {
-        BinaryOp {
-            lhs,
-            rhs,
-            op,
-            value: None,
-        }
+        BinaryOp { lhs, rhs, op }
     }
 
     /// Return the operator used by the BinaryOp
@@ -88,20 +81,6 @@ impl Instruction for BinaryOp {
         let l_value = self.execute_node(&*self.lhs, ctx)?;
         let r_value = self.execute_node(&*self.rhs, ctx)?;
 
-        if l_value.ty() != r_value.ty() {
-            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(
-                // FIXME: If we unwrap and panic here, this is another typechecking
-                // error. Implement this once typechecking is implemented
-                format!(
-                    "Trying to do binary operation on invalid types: `{}` {} `{}`",
-                    l_value.ty().unwrap(),
-                    self.op.as_str(),
-                    r_value.ty().unwrap()
-                ),
-            ));
-            return None;
-        }
-
         let return_value;
 
         // FIXME: DISGUSTING and do not unwap
@@ -139,6 +118,27 @@ impl Instruction for BinaryOp {
     }
 }
 
+impl TypeCheck for BinaryOp {
+    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+        // TODO: Use the correct calls once TypeCheck is a bound on Instruction
+        let l_type = CheckedType::Void; // FIXME: self.lhs.resolve_type(ctx);
+        let r_type = CheckedType::Void; // FIXME: self.rhs.resolve_type(ctx);
+
+        if l_type != r_type {
+            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                "trying to do binary operation on invalid types: {} {} {}",
+                l_type,
+                self.op.as_str(),
+                r_type,
+            )));
+            return CheckedType::Unknown;
+        }
+
+        l_type
+    }
+}
+
+// TODO: Add typechecking tests
 #[cfg(test)]
 mod tests {
     use super::*;

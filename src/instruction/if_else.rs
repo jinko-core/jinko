@@ -16,7 +16,8 @@
 //! ```
 
 use crate::instruction::{Block, InstrKind, Instruction};
-use crate::{Context, ObjectInstance};
+use crate::{typechecker::CheckedType, Context, ObjectInstance, TypeCheck};
+use crate::{ErrKind, Error};
 
 #[derive(Clone)]
 pub struct IfElse {
@@ -72,6 +73,44 @@ impl Instruction for IfElse {
                 // FIXME: Fix logic: If an `if` returns something, the else should too.
                 // if there is no else, then error out
                 None => None,
+            }
+        }
+    }
+}
+
+impl TypeCheck for IfElse {
+    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+        // TODO: Fix this once typechecking is implemented for Instructions
+        let if_ty = CheckedType::Void; // FIXME: self.if_body.resolve_type(ctx);
+
+        let else_ty = self.else_body.as_ref().map(|_else_body| CheckedType::Void);
+
+        // FIXME: Use this instead
+        // let else_ty = if let Some(_else_body) = &self.else_body {
+        //     Some(CheckedType::Void) // FIXME: Some(else_body.resolve_type(ctx))
+        // } else {
+        //     None
+        // };
+
+        match (if_ty, else_ty) {
+            (CheckedType::Void, None) => CheckedType::Void,
+            (if_ty, Some(else_ty)) => {
+                if if_ty != else_ty {
+                    ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                        "incompatible types for `if` and `else` block: {} and {}",
+                        if_ty, else_ty,
+                    )));
+                    CheckedType::Unknown
+                } else {
+                    if_ty
+                }
+            }
+            (if_ty, None) => {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "`if` block has a return type ({}) but no else block to match it",
+                    if_ty
+                )));
+                CheckedType::Unknown
             }
         }
     }

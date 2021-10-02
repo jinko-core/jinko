@@ -287,7 +287,7 @@ impl Construct {
 
     /// Parse a list of arguments separated by comma
     fn args_list(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
-        /// Parse an argument and the comma that follows it
+        /// Parse a comma and the argument that follows it
         fn comma_and_arg(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
             let (input, _) = Token::comma(input)?;
             let (input, _) = Token::maybe_consume_extra(input)?;
@@ -298,12 +298,12 @@ impl Construct {
         }
 
         // Get first arg
-        let (input, arg) = Construct::arg(input)?;
+        let (input, first_arg) = Construct::arg(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
 
         // Get 0 or more arguments with a comma to the function call
         let (input, mut arg_vec) = many0(comma_and_arg)(input)?;
-        arg_vec.insert(0, arg);
+        arg_vec.insert(0, first_arg);
 
         Ok((input, arg_vec))
     }
@@ -369,7 +369,7 @@ impl Construct {
 
         Ok((input, type_instantiation))
     }
-
+  
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
     /// `void` type.
     ///
@@ -1036,8 +1036,23 @@ mod tests {
         assert_eq!(function_call("fn(a, hey(), 3.12)").unwrap().1.name(), "fn");
         assert_eq!(function_call("fn(1, 2, 3)").unwrap().1.args().len(), 3);
 
-        assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.name(), "fn");
-        assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.args().len(), 3);
+        assert_eq!(
+            Construct::function_call("fn(1   , 2,3)").unwrap().1.name(),
+            "fn"
+        );
+        assert_eq!(
+            Construct::function_call("fn(1   , 2,3)")
+                .unwrap()
+                .1
+                .args()
+                .len(),
+            3
+        );
+        assert_eq!(
+            Construct::function_call("fn     ()").unwrap().1.name(),
+            "fn"
+        );
+
     }
 
     #[test]
@@ -1202,6 +1217,18 @@ mod tests {
     #[test]
     fn t_function_declaration_valid_simple() {
         let func = Construct::function_declaration("func something() {}")
+            .unwrap()
+            .1;
+
+        assert_eq!(func.name(), "something");
+        assert_eq!(func.ty(), None);
+        assert_eq!(func.args().len(), 0);
+        assert_eq!(func.fn_kind(), FunctionKind::Func);
+    }
+
+    #[test]
+    fn t_function_declaration_valid_space() {
+        let func = Construct::function_declaration("func something        \t() {}")
             .unwrap()
             .1;
 

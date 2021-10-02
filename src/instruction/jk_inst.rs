@@ -17,7 +17,7 @@ pub enum JkInstKind {
 #[derive(Clone)]
 pub struct JkInst {
     kind: JkInstKind,
-    args: Vec<Box<dyn Instruction>>,
+    _args: Vec<Box<dyn Instruction>>,
 }
 
 impl JkInst {
@@ -38,7 +38,7 @@ impl JkInst {
 
         Ok(Self {
             kind,
-            args: fc.args().clone(),
+            _args: fc.args().clone(),
         })
     }
 

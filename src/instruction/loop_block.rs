@@ -2,7 +2,7 @@
 //! different kinds, `for`, `while` or `loop`.
 
 use crate::instruction::{Block, InstrKind, Instruction, Var};
-use crate::{Context, ErrKind, Error, ObjectInstance};
+use crate::{typechecker::CheckedType, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
@@ -107,6 +107,13 @@ impl Instruction for Loop {
 
         // FIXME: Add logic. Right now they only return on error, not the actual value
         None
+    }
+}
+
+impl TypeCheck for Loop {
+    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
+        // TODO: Fix this once TypeChecker is a trait bound on Instruction
+        CheckedType::Void // FIXME: self.block.resolve_type(ctx)
     }
 }
 
