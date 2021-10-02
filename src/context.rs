@@ -196,8 +196,10 @@ impl Context {
 
     /// Pretty-prints valid jinko code from a given ctx
     pub fn print(&self) -> String {
-        println!("{}", self.scope_map);
-        self.entry_point.print()
+        let mut s = format!("{}\n", self.scope_map);
+        s = format!("{}{}", s, self.entry_point.print());
+
+        s
     }
 
     /// Print a debug message if the context is in debug mode, according to the
@@ -321,5 +323,20 @@ mod tests {
         // Let's make sure the output contains type declarations and functions
         assert!(output.contains("type"));
         assert!(output.contains("func"));
+    }
+
+    #[test]
+    fn t_print_eb() {
+        let mut ctx = Context::new();
+
+        ctx.add_variable(Var::new(String::from("a_var_named_a")))
+            .unwrap();
+
+        let output = ctx.print();
+
+        // Let's make sure the output contains type declarations and functions
+        assert!(output.contains("type"));
+        assert!(output.contains("func"));
+        assert!(output.contains("a_var_named_a"));
     }
 }
