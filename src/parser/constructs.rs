@@ -61,8 +61,8 @@ impl Construct {
 
     /// Parse a method call or a field access
     ///
-    /// method_call_or_field_access = instance '.' identifer method_call
-    ///                             | instance '.' identifer field_access
+    /// method_call_or_field_access = instance '.' identifier method_call
+    ///                             | instance '.' identifier field_access
     pub fn method_call_or_field_access(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         let (input, instance) = Construct::instance(input)?;
         let (input, _) = Token::dot(input)?;
