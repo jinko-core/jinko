@@ -8,17 +8,17 @@ use std::collections::{HashMap, LinkedList};
 use std::rc::Rc;
 
 use crate::instruction::{FunctionDec, TypeDec, Var};
-use crate::{ErrKind, Error, Instruction};
+use crate::{ErrKind, Error};
 
 /// A scope contains a set of available variables, functions and types
 #[derive(Clone)]
-struct Scope<V: Instruction, F: Instruction, T: Instruction> {
+struct Scope<V, F, T> {
     variables: HashMap<String, V>,
-    functions: HashMap<String, Rc<F>>,
-    types: HashMap<String, Rc<T>>,
+    functions: HashMap<String, F>,
+    types: HashMap<String, T>,
 }
 
-impl<V: Instruction, F: Instruction, T: Instruction> Scope<V, F, T> {
+impl<V, F, T> Scope<V, F, T> {
     /// Create a new empty Scope
     pub fn new() -> Scope<V, F, T> {
         Scope {
@@ -34,12 +34,12 @@ impl<V: Instruction, F: Instruction, T: Instruction> Scope<V, F, T> {
     }
 
     /// Get a reference on a function from the scope map if is has been inserted already
-    pub fn get_function(&self, name: &str) -> Option<&Rc<F>> {
+    pub fn get_function(&self, name: &str) -> Option<&F> {
         self.functions.get(name)
     }
 
     /// Get a reference on a type from the scope map if is has been inserted already
-    pub fn get_type(&self, name: &str) -> Option<&Rc<T>> {
+    pub fn get_type(&self, name: &str) -> Option<&T> {
         self.types.get(name)
     }
 
@@ -75,7 +75,7 @@ impl<V: Instruction, F: Instruction, T: Instruction> Scope<V, F, T> {
             Some(_) => Err(Error::new(ErrKind::Context)
                 .with_msg(format!("function already declared: {}", name))),
             None => {
-                self.functions.insert(name, Rc::new(func));
+                self.functions.insert(name, func);
                 Ok(())
             }
         }
@@ -89,26 +89,28 @@ impl<V: Instruction, F: Instruction, T: Instruction> Scope<V, F, T> {
                     .with_msg(format!("type already declared: {}", name)))
             }
             None => {
-                self.types.insert(name, Rc::new(type_dec));
+                self.types.insert(name, type_dec);
                 Ok(())
             }
         }
     }
 
-    /// Display all contained information on stdout
-    pub fn print(&self) {
-        for ty in self.types.values() {
-            println!("{}", ty.print());
-        }
-
-        for var in self.variables.values() {
-            println!("{}", var.print());
-        }
-
-        for f in self.functions.values() {
-            println!("{}", f.print());
-        }
-    }
+    // FIXME: This shouldn't be present in the ScopeMap struct. Printing logic should
+    // be separate from this. So until this is reworked, no @dump() anymore
+    // /// Display all contained information on stdout
+    // pub fn print(&self) {
+    //     for ty in self.types.values() {
+    //         println!("{}", ty.print());
+    //     }
+    //
+    //     for var in self.variables.values() {
+    //         println!("{}", var.print());
+    //     }
+    //
+    //     for f in self.functions.values() {
+    //         println!("{}", f.print());
+    //     }
+    // }
 }
 
 /// A scope stack is a reversed stack. This alias is made for code clarity
@@ -118,7 +120,7 @@ type ScopeStack<T> = LinkedList<T>;
 /// level.
 #[derive(Clone)]
 pub struct ScopeMap {
-    scopes: ScopeStack<Scope<Var, FunctionDec, TypeDec>>,
+    scopes: ScopeStack<Scope<Var, Rc<FunctionDec>, Rc<TypeDec>>>,
 }
 
 impl ScopeMap {
@@ -201,7 +203,7 @@ impl ScopeMap {
     /// Add a function to the current scope if it hasn't been added before
     pub fn add_function(&mut self, func: FunctionDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.add_function(func.name().to_owned(), func),
+            Some(head) => head.add_function(func.name().to_owned(), Rc::new(func)),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding function to empty scopemap"))),
         }
@@ -210,7 +212,7 @@ impl ScopeMap {
     /// Add a type to the current scope if it hasn't been added before
     pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.add_type(custom_type.name().to_owned(), custom_type),
+            Some(head) => head.add_type(custom_type.name().to_owned(), Rc::new(custom_type)),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding new custom type to empty scopemap"))),
         }
@@ -218,8 +220,10 @@ impl ScopeMap {
 
     /// Display all contained information on stdout
     pub fn print(&self) {
-        for stack in &self.scopes {
-            stack.print()
+        for _stack in &self.scopes {
+            // FIXME: Rework once printing logic is implemented correctly for the
+            // scope map
+            // stack.print()
         }
     }
 }
@@ -290,5 +294,11 @@ mod tests {
         s.scope_exit();
 
         assert!(s.get_variable("a").is_none());
+    }
+
+    #[test]
+    fn t_scope_of_anything() {
+        let _ = Scope::<i32, i32, String>::new();
+        let _ = Scope::<(), (), ()>::new();
     }
 }
