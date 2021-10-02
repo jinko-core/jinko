@@ -141,6 +141,7 @@ mod tests {
         let mut i = Context::new();
         let va_init = Construct::mut_var_assignment("mut a = 13").unwrap().1;
         let (input, id) = Token::identifier("a = 15").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
         let va_0 = Construct::var_assignment(input, &id).unwrap().1;
 
         va_init.execute(&mut i);
@@ -157,8 +158,10 @@ mod tests {
     fn assign_immutable() {
         let mut i = Context::new();
         let (input, id) = Token::identifier("a = 13").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
         let va_init = Construct::var_assignment(input, &id).unwrap().1;
         let (input, id) = Token::identifier("a = 1b").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
         let va_0 = Construct::var_assignment(input, &id).unwrap().1;
 
         va_init.execute(&mut i);

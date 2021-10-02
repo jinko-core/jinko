@@ -113,9 +113,10 @@ impl Construct {
         input: &str,
     ) -> ParseResult<&str, Box<dyn Instruction>> {
         let (input, identifier) = Token::identifier(input)?;
-        BoxConstruct::function_call(input, &identifier)
-            .or_else(|_| Construct::type_instanciation(input, &identifier))
-            .or_else(|_| BoxConstruct::var_assignment(input, &identifier))
+        let (trimmed, _) = Token::maybe_consume_extra(input)?;
+        BoxConstruct::function_call(trimmed, &identifier)
+            .or_else(|_| Construct::type_instanciation(trimmed, &identifier))
+            .or_else(|_| BoxConstruct::var_assignment(trimmed, &identifier))
             .or_else(|_| Ok((input, Box::new(Var::new(identifier)))))
     }
 
@@ -150,7 +151,6 @@ impl Construct {
         input: &'a str,
         type_name: &str,
     ) -> ParseResult<&'a str, Box<dyn Instruction>> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::left_curly_bracket(input)?;
         let (input, arg_vec) = Construct::named_arg_list(input)?;
         let (input, _) = Token::right_curly_bracket(input)?;
@@ -190,7 +190,6 @@ impl Construct {
     ///
     /// maybe_consume_extra '=' maybe_consume_extra instruction
     pub fn var_assignment<'a>(input: &'a str, var_name: &str) -> ParseResult<&'a str, VarAssign> {
-        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, _) = Token::equal(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, value) = Construct::instruction(input)?;
@@ -369,7 +368,7 @@ impl Construct {
 
         Ok((input, type_instantiation))
     }
-  
+
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
     /// `void` type.
     ///
@@ -401,6 +400,7 @@ impl Construct {
         let (input, _) = Token::mut_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
         let (input, mut assignment) = Construct::var_assignment(input, &id)?;
 
         assignment.set_mutable(true);
@@ -942,17 +942,20 @@ mod tests {
 
     fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
         let (input, fn_id) = Token::identifier(input)?;
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
         Construct::function_call(input, &fn_id)
     }
 
     #[test]
     fn t_var_assign_valid() {
         let (input, id) = Token::identifier("x = 12;").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
         assert_eq!(
             Construct::var_assignment(input, &id).unwrap().1.mutable(),
             false
         );
         let (input, id) = Token::identifier("x = 12;").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
         assert_eq!(
             Construct::var_assignment(input, &id).unwrap().1.symbol(),
             "x"
@@ -974,11 +977,13 @@ mod tests {
         );
 
         let (input, id) = Token::identifier("mut_x_99 = 129;").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
         assert_eq!(
             Construct::var_assignment(input, &id).unwrap().1.mutable(),
             false
         );
         let (input, id) = Token::identifier("mut_x_99 = 129;").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
         assert_eq!(
             Construct::var_assignment(input, &id).unwrap().1.symbol(),
             "mut_x_99"
@@ -1036,23 +1041,9 @@ mod tests {
         assert_eq!(function_call("fn(a, hey(), 3.12)").unwrap().1.name(), "fn");
         assert_eq!(function_call("fn(1, 2, 3)").unwrap().1.args().len(), 3);
 
-        assert_eq!(
-            Construct::function_call("fn(1   , 2,3)").unwrap().1.name(),
-            "fn"
-        );
-        assert_eq!(
-            Construct::function_call("fn(1   , 2,3)")
-                .unwrap()
-                .1
-                .args()
-                .len(),
-            3
-        );
-        assert_eq!(
-            Construct::function_call("fn     ()").unwrap().1.name(),
-            "fn"
-        );
-
+        assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.name(), "fn");
+        assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.args().len(), 3);
+        assert_eq!(function_call("fn     ()").unwrap().1.name(), "fn");
     }
 
     #[test]
