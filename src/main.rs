@@ -16,7 +16,7 @@ use parser::Parser;
 use repl::Repl;
 use std::{fs, path::Path};
 
-pub use context::Context;
+pub use context::{Context, Scope, ScopeMap};
 pub use error::{ErrKind, Error};
 pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
