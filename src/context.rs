@@ -257,7 +257,17 @@ impl Context {
     }
 }
 
-/// Printer for the usual usage of the ScopeMap
+/// Printer for the context's usage of the ScopeMap
+impl<V: Instruction, F: Instruction, T: Instruction> Display for ScopeMap<V, Rc<F>, Rc<T>> {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        for stack in self.scopes() {
+            writeln!(f, "{}", stack)?;
+        }
+
+        Ok(())
+    }
+}
+
 impl<V: Instruction, F: Instruction, T: Instruction> Display for Scope<V, Rc<F>, Rc<T>> {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         for ty in self.types.values() {
@@ -270,16 +280,6 @@ impl<V: Instruction, F: Instruction, T: Instruction> Display for Scope<V, Rc<F>,
 
         for func in self.functions.values() {
             writeln!(f, "{}", func.print())?;
-        }
-
-        Ok(())
-    }
-}
-
-impl<V: Instruction, F: Instruction, T: Instruction> Display for ScopeMap<V, Rc<F>, Rc<T>> {
-    fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        for stack in self.scopes() {
-            writeln!(f, "{}", stack)?;
         }
 
         Ok(())
@@ -310,5 +310,16 @@ mod tests {
 
         assert_eq!(i.add_variable(v0), Ok(()));
         assert!(i.add_variable(v0_copy).is_err());
+    }
+
+    #[test]
+    fn t_print_scopemap() {
+        let ctx = Context::new();
+
+        let output = format!("{}", ctx.scope_map);
+
+        // Let's make sure the output contains type declarations and functions
+        assert!(output.contains("type"));
+        assert!(output.contains("func"));
     }
 }
