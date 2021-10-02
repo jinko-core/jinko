@@ -6,8 +6,10 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::Operator, typechecker::CheckedType, Context, ErrKind, Error, FromObjectInstance,
-    InstrKind, Instruction, JkFloat, JkInt, ObjectInstance, TypeCheck, Value,
+    instruction::Operator,
+    typechecker::{CheckedType, TypeCtx},
+    Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkFloat, JkInt,
+    ObjectInstance, TypeCheck, Value,
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
@@ -119,7 +121,7 @@ impl Instruction for BinaryOp {
 }
 
 impl TypeCheck for BinaryOp {
-    fn resolve_type(&self, ctx: &mut Context) -> CheckedType {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
         // TODO: Use the correct calls once TypeCheck is a bound on Instruction
         let l_type = CheckedType::Void; // FIXME: self.lhs.resolve_type(ctx);
         let r_type = CheckedType::Void; // FIXME: self.rhs.resolve_type(ctx);
