@@ -38,11 +38,6 @@ impl Construct {
         // has been parsed
         let (input, value) = alt((
             BoxConstruct::extra,
-            // binary_op must be parsed before variables, constants, function calls and
-            // method_calls
-            Construct::binary_op,
-            Construct::method_call_or_field_access,
-            Construct::type_inst_or_function_call_or_var,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -54,6 +49,11 @@ impl Construct {
             BoxConstruct::jinko_inst,
             BoxConstruct::block,
             BoxConstruct::mut_var_assignment,
+            // binary_op must be parsed before variables, constants, function calls and
+            // method_calls
+            Construct::binary_op,
+            Construct::method_call_or_field_access,
+            Construct::type_inst_or_function_call_or_var,
             Construct::constant,
         ))(input)?;
 
