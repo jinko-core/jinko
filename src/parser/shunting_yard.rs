@@ -3,7 +3,7 @@
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{BinaryOp, Instruction, Operator};
-use crate::parser::{BoxConstruct, Construct, ParseResult, Token};
+use crate::parser::{Construct, ParseResult, Token};
 use crate::utils::{Queue, Stack};
 
 use nom::branch::alt;
@@ -79,10 +79,9 @@ impl ShuntingYard {
 
     fn operand<'i>(&mut self, input: &'i str) -> ParseResult<&'i str, ()> {
         let (input, expr) = alt((
-            BoxConstruct::method_call,
-            BoxConstruct::function_call,
+            Construct::function_call_or_var,
+            Construct::method_call_or_field_access,
             Construct::constant,
-            BoxConstruct::variable,
         ))(input)?;
 
         self.output.push(SyPair::Num(expr));
