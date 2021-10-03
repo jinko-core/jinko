@@ -47,13 +47,13 @@ impl Construct {
             BoxConstruct::if_else,
             BoxConstruct::any_loop,
             BoxConstruct::jinko_inst,
-            BoxConstruct::block,
             BoxConstruct::mut_var_assignment,
             // binary_op must be parsed before variables, constants, function calls and
             // method_calls
             Construct::binary_op,
             Construct::method_call_or_field_access,
             Construct::type_inst_or_function_call_or_var,
+            BoxConstruct::block,
             Construct::constant,
         ))(input)?;
 
