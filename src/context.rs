@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use colored::Colorize;
 
 mod scope_map;
-use scope_map::{Scope, ScopeMap};
+pub use scope_map::{Scope, ScopeMap};
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter, Result as FmtResult};

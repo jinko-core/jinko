@@ -17,15 +17,6 @@ pub struct Scope<V, F, T> {
 }
 
 impl<V, F, T> Scope<V, F, T> {
-    /// Create a new empty Scope
-    pub fn new() -> Scope<V, F, T> {
-        Scope {
-            variables: HashMap::new(),
-            functions: HashMap::new(),
-            types: HashMap::new(),
-        }
-    }
-
     /// Get a reference on a variable from the scope map if is has been inserted already
     pub fn get_variable(&self, name: &str) -> Option<&V> {
         self.variables.get(name)
@@ -94,12 +85,23 @@ impl<V, F, T> Scope<V, F, T> {
     }
 }
 
+impl<V, F, T> Default for Scope<V, F, T> {
+    /// Create a new empty Scope
+    fn default() -> Scope<V, F, T> {
+        Scope {
+            variables: HashMap::new(),
+            functions: HashMap::new(),
+            types: HashMap::new(),
+        }
+    }
+}
+
 /// A scope stack is a reversed stack. This alias is made for code clarity
 pub type ScopeStack<T> = LinkedList<T>;
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ScopeMap<V, F, T> {
     scopes: ScopeStack<Scope<V, F, T>>,
 }
@@ -119,7 +121,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
 
     /// Enter into a new scope
     pub fn scope_enter(&mut self) {
-        self.scopes.push_front(Scope::new());
+        self.scopes.push_front(Scope::default());
     }
 
     /// Exit the last added scope
@@ -287,7 +289,7 @@ mod tests {
 
     #[test]
     fn t_scope_of_anything() {
-        let _ = Scope::<i32, i32, String>::new();
-        let _ = Scope::<(), (), ()>::new();
+        let _ = Scope::<i32, i32, String>::default();
+        let _ = Scope::<(), (), ()>::default();
     }
 }

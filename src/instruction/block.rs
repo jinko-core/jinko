@@ -17,7 +17,10 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{typechecker::CheckedType, Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
+use crate::{
+    typechecker::{CheckedType, TypeCtx},
+    Context, InstrKind, Instruction, ObjectInstance, TypeCheck,
+};
 
 #[derive(Clone, Default)]
 pub struct Block {
@@ -117,7 +120,7 @@ impl Instruction for Block {
 }
 
 impl TypeCheck for Block {
-    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
         match &self.last {
             None => CheckedType::Void,
             Some(_last) => CheckedType::Unknown, // FIXME: last.resolve_type(ctx),
@@ -223,6 +226,7 @@ mod tests {
         b.set_instructions(instr);
 
         let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new(&mut ctx);
 
         assert_eq!(b.resolve_type(&mut ctx), CheckedType::Void)
     }

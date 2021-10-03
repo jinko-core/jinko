@@ -1,5 +1,5 @@
 use crate::instruction::{InstrKind, Instruction, Operator, TypeDec, TypeId};
-use crate::typechecker::{CheckedType, TypeCheck};
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 use crate::{
     Context, Error, FromObjectInstance, JkString, ObjectInstance, ToObjectInstance, Value,
 };
@@ -109,7 +109,7 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<bool> {
-            fn resolve_type(&self, _: &mut Context) -> CheckedType {
+            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
                 CheckedType::Resolved(TypeId::from("bool"))
             }
         }
@@ -161,7 +161,7 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<$t> {
-            fn resolve_type(&self, _: &mut Context) -> CheckedType {
+            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
                 CheckedType::Resolved(TypeId::from($s))
             }
         }
@@ -232,7 +232,7 @@ impl Instruction for JkString {
 }
 
 impl TypeCheck for JkString {
-    fn resolve_type(&self, _ctx: &mut Context) -> CheckedType {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
         CheckedType::Resolved(TypeId::from("string"))
     }
 }
@@ -258,6 +258,7 @@ mod tests {
     #[test]
     fn tc_string_type() {
         let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new(&mut ctx);
         let s = JkString::from("that's a jk string");
 
         assert_eq!(
@@ -269,6 +270,7 @@ mod tests {
     #[test]
     fn tc_bool_type() {
         let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new(&mut ctx);
         let s = JkBool::from(false);
 
         assert_eq!(
@@ -280,6 +282,7 @@ mod tests {
     #[test]
     fn tc_i_type() {
         let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new(&mut ctx);
         let s = JkInt::from(0);
 
         assert_eq!(
@@ -291,6 +294,7 @@ mod tests {
     #[test]
     fn tc_f_type() {
         let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new(&mut ctx);
         let s = JkFloat::from(15.4);
 
         assert_eq!(
