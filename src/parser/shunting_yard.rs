@@ -3,7 +3,7 @@
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{BinaryOp, Instruction, Operator};
-use crate::parser::{BoxConstruct, Construct, ParseResult, Token};
+use crate::parser::{Construct, ParseResult, Token};
 use crate::utils::{Queue, Stack};
 
 use nom::branch::alt;
