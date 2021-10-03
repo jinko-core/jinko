@@ -68,7 +68,7 @@ impl Construct {
         let (input, instance) = Construct::instance(input)?;
         let (input, _) = Token::dot(input)?;
         let (input, field_name) = Token::identifier(input)?;
-        Construct::method_call(input, &instance, &field_name)
+        Construct::method_call(input, instance.clone(), &field_name)
             .or_else(|_| Construct::field_access(input, instance, field_name))
     }
 
@@ -77,12 +77,12 @@ impl Construct {
     /// function_call
     pub fn method_call<'a>(
         input: &'a str,
-        caller: &Box<dyn Instruction>,
+        caller: Box<dyn Instruction>,
         field_name: &str,
     ) -> ParseResult<&'a str, Box<dyn Instruction>> {
         let (input, method) = Construct::function_call(input, field_name)?;
 
-        Ok((input, Box::new(MethodCall::new(caller.clone(), method))))
+        Ok((input, Box::new(MethodCall::new(caller, method))))
     }
 
     /// Parse a field access
