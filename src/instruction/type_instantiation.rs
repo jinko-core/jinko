@@ -158,7 +158,7 @@ impl TypeCheck for TypeInstantiation {
         };
 
         let mut errors = vec![];
-        for (field_ty, value_ty) in fields_ty.iter().zip(self.fields.iter().map(
+        for ((_, field_ty), value_ty) in fields_ty.iter().zip(self.fields.iter().map(
             // FIXME: Once trait bound yada yada
             |_var_assign| CheckedType::Void, /* var_assign.value().resolve_type(ctx) */
         )) {

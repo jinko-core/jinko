@@ -1,7 +1,12 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
+use crate::{
+    typechecker::{CheckedType, TypeCtx},
+    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
+};
+
+use super::TypeId;
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -17,22 +22,9 @@ impl FieldAccess {
             field_name,
         }
     }
-}
 
-impl Instruction for FieldAccess {
-    fn kind(&self) -> InstrKind {
-        // A field access can only ever be an expression, since we cannot store statements
-        // in a type
-        InstrKind::Expression(None)
-    }
-
-    fn print(&self) -> String {
-        format!("{}.{}", self.instance.print(), self.field_name)
-    }
-
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug("FIELD ACCESS ENTER", &self.print());
-
+    /// Get a reference to the accessed field's instance
+    fn get_field_instance(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         let calling_instance = match self.instance.execute(ctx) {
             None => {
                 ctx.error(Error::new(ErrKind::Context).with_msg(format!(
@@ -51,9 +43,65 @@ impl Instruction for FieldAccess {
             }
         };
 
+        Some(field_instance)
+    }
+}
+
+impl Instruction for FieldAccess {
+    fn kind(&self) -> InstrKind {
+        // A field access can only ever be an expression, since we cannot store statements
+        // in a type
+        InstrKind::Expression(None)
+    }
+
+    fn print(&self) -> String {
+        format!("{}.{}", self.instance.print(), self.field_name)
+    }
+
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug("FIELD ACCESS ENTER", &self.print());
+
+        let field_instance = self.get_field_instance(ctx);
+
         ctx.debug("FIELD ACCESS EXIT", &self.print());
 
-        Some(field_instance)
+        field_instance
+    }
+}
+
+impl TypeCheck for FieldAccess {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: Wait for trait bound
+        /* self.instance.resolve_type(ctx); */
+        let instance_ty = CheckedType::Resolved(TypeId::new(String::from("CustomType")));
+        let instance_ty_name = match &instance_ty {
+            CheckedType::Resolved(ti) => ti.id(),
+            _ => {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "trying to access field `{}` on statement",
+                    self.field_name
+                )));
+                return CheckedType::Unknown;
+            }
+        };
+
+        // We can unwrap here since the type that was resolved from the instance HAS
+        // to exist. If it does not, this is an interpreter error
+        let (_, fields_ty) = ctx.get_custom_type(instance_ty_name).unwrap();
+
+        match fields_ty
+            .iter()
+            .find(|(field_name, _)| *field_name == self.field_name)
+        {
+            Some((_, field_ty)) => field_ty.clone(),
+            None => {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "trying to access field `{}` on instance of type `{}`",
+                    self.field_name, instance_ty
+                )));
+                CheckedType::Unknown
+            }
+        }
     }
 }
 
