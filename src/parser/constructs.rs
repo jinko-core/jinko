@@ -18,14 +18,120 @@ use nom::{branch::alt, combinator::opt, multi::many0, sequence::preceded};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
-    Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse,
-    Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, Return, TypeDec, TypeId,
-    TypeInstantiation, Var, VarAssign,
+    BinaryOp, Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind,
+    IfElse, Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, Operator, Return, TypeDec,
+    TypeId, TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ParseResult, ShuntingYard, Token};
 
 type Instructions = Vec<Box<dyn Instruction>>;
 type MaybeInstruction = Option<Box<dyn Instruction>>;
+
+/// Parse as many instructions as possible
+/// exprs = ( expr_scl )*
+pub fn exprs(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
+    many0(expr_scl)(input)
+}
+
+/// Parse an instruction and maybe the semicolon that follows.
+///
+/// expr_scl = expr [ ';' ]
+pub fn expr_scl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, expr) = expr(input)?;
+    let (input, _) = opt(Token::semicolon)(input)?;
+
+    Ok((input, expr))
+}
+
+/// expr = term ( '+' term | '-' term )*
+pub fn expr(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (mut input, mut expr) = term(input)?;
+    while let Ok((new_input, op)) = alt((Token::add, Token::sub))(input) {
+        let (new_input, rhs) = term(new_input)?;
+        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op)));
+        input = new_input;
+    }
+    Ok((input, expr))
+}
+
+/// term = factor next ( '*' factor next | '/' factor next )*
+pub fn term(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (mut input, mut term) = factor(input)?;
+    while let Ok((new_input, op)) = alt((Token::mul, Token::div))(input) {
+        let (new_input, rhs) = factor(new_input)?;
+        term = Box::new(BinaryOp::new(term, rhs, Operator::new(op)));
+        input = new_input;
+    }
+    Ok((input, term))
+}
+
+/// factor = next unit factor_rest
+pub fn factor(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, unit) = unit(input)?;
+    factor_rest(input, unit)
+}
+
+/// factor_rest = '.' IDENTIFIER next method_or_field factor_rest
+///             | ε
+pub fn factor_rest(
+    input: &str,
+    expr: Box<dyn Instruction>,
+) -> ParseResult<&str, Box<dyn Instruction>> {
+    match Token::dot(input) {
+        Ok((input, _)) => {
+            let (input, id) = Token::identifier(input)?;
+            let input = next(input);
+            let (input, expr) = method_or_field(input, expr, id)?;
+            factor_rest(input, expr)
+        }
+        _ => Ok((input, expr)),
+    }
+}
+
+/// method_or_field = '(' args
+///                 | ε
+pub fn method_or_field(
+    input: &str,
+    expr: Box<dyn Instruction>,
+    id: String,
+) -> ParseResult<&str, Box<dyn Instruction>> {
+    match Token::left_parenthesis(input) {
+        Ok((input, _)) => {
+            let (input, args) = args(input)?;
+            let method_call = MethodCall::new(expr, FunctionCall::with_args(id, args));
+            Ok((input, Box::new(method_call)))
+        }
+        _ => Ok((input, Box::new(FieldAccess::new(expr, id)))),
+    }
+}
+
+pub fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
+    Ok((input, vec![]))
+}
+
+pub fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    Construct::constant(input)
+}
+
+/// next = extra*
+/// extra = WHITESPACE
+///       | '/*' [^'*/'] '*/'
+///       | '//' [^\n]   '\n'
+///       | '#'  [^\n]   '\n'
+pub fn next(input: &str) -> &str {
+    let input = input.trim_start();
+    let mut comments = alt((
+        Token::consume_shebang_comment,
+        Token::consume_single_comment,
+        Token::consume_multi_comment,
+    ));
+    if let Ok((input, _)) = comments(input) {
+        next(input)
+    } else {
+        input
+    }
+}
 
 pub struct Construct;
 

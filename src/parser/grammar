@@ -2,7 +2,7 @@ expr = term ( '+' term | '-' term )*
 
 term = factor next ( '*' factor next | '/' factor next )*
 
-factor = next unit ( '.' IDENTIFIER method_or_field )*
+factor = next unit ( '.' IDENTIFIER next method_or_field )*
 
 unit = 'if' expr block next [ 'else' next block ]
      | 'while' expr block

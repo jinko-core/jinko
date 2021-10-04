@@ -50,7 +50,7 @@ impl Parser {
 
         let entry_block = ctx.entry_point.block_mut().unwrap();
 
-        let (_, instructions) = Construct::many_instructions(input)?;
+        let (_, instructions) = constructs::exprs(input)?;
 
         entry_block.set_instructions(instructions);
 

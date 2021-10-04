@@ -26,6 +26,11 @@ impl FunctionCall {
             args: Vec::new(),
         }
     }
+    /// Create a new function call and return it
+    /// TODO better name
+    pub fn with_args(fn_name: String, args: Vec<Box<dyn Instruction>>) -> FunctionCall {
+        FunctionCall { fn_name, args }
+    }
 
     /// Add an argument to the given function call
     pub fn add_arg(&mut self, arg: Box<dyn Instruction>) {
