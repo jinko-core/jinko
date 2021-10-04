@@ -1,6 +1,9 @@
-use super::{DecArg, InstrKind, Instruction};
+use super::{DecArg, InstrKind, Instruction, TypeId};
 
-use crate::{Context, ObjectInstance};
+use crate::{
+    typechecker::{CheckedType, TypeCtx},
+    Context, ObjectInstance, TypeCheck,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
@@ -60,6 +63,24 @@ impl Instruction for TypeDec {
             .skip(1)
             .for_each(|field| base.push_str(format!(", {}", field).as_str()));
         format!("{});", base)
+    }
+}
+
+impl TypeCheck for TypeDec {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        // TODO: FunctionDecs and TypeDec are very similar. Should we factor them together?
+        let fields_ty = self
+            .fields
+            .iter()
+            .map(|dec_arg| CheckedType::Resolved(dec_arg.get_type().clone()))
+            .collect();
+        ctx.declare_custom_type(
+            self.name.clone(),
+            CheckedType::Resolved(TypeId::from(self.name())),
+            fields_ty,
+        );
+
+        CheckedType::Void
     }
 }
 

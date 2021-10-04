@@ -46,7 +46,8 @@ pub struct TypeCtx<'ctx> {
     context: &'ctx mut Context,
     /// The Type Context stores [`CheckedType`]s for all three generics kept in the scope
     /// map: Variables, Functions and Types
-    types: ScopeMap<CheckedType, CheckedType, CheckedType>,
+    /// Custom types need to keep a type for themselves, as well as types for all their fields
+    types: ScopeMap<CheckedType, CheckedType, (CheckedType, Vec<CheckedType>)>,
 }
 
 impl<'ctx> TypeCtx<'ctx> {
@@ -84,10 +85,10 @@ impl<'ctx> TypeCtx<'ctx> {
     }
 
     /// Declare a newly-created custom type
-    pub fn declare_custom_type(&mut self, name: String, ty: CheckedType) {
+    pub fn declare_custom_type(&mut self, name: String, ty: CheckedType, fields: Vec<CheckedType>) {
         // We can unwrap since this is an interpreter error if we can't add a new
         // type to the scope map
-        self.types.add_type(name, ty).unwrap();
+        self.types.add_type(name, (ty, fields)).unwrap();
     }
 
     /// Access a previously declared variable's type
@@ -101,7 +102,7 @@ impl<'ctx> TypeCtx<'ctx> {
     }
 
     /// Access a previously declared custom type
-    pub fn get_custom_type(&mut self, name: &str) -> Option<&CheckedType> {
+    pub fn get_custom_type(&mut self, name: &str) -> Option<&(CheckedType, Vec<CheckedType>)> {
         self.types.get_type(name)
     }
 
