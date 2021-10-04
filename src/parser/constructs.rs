@@ -76,10 +76,7 @@ fn factor(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 
 /// factor_rest = '.' IDENTIFIER next method_or_field factor_rest
 ///             | ε
-pub fn factor_rest(
-    input: &str,
-    expr: Box<dyn Instruction>,
-) -> ParseResult<&str, Box<dyn Instruction>> {
+fn factor_rest(input: &str, expr: Box<dyn Instruction>) -> ParseResult<&str, Box<dyn Instruction>> {
     match Token::dot(input) {
         Ok((input, _)) => {
             let (input, id) = Token::identifier(input)?;
@@ -93,7 +90,7 @@ pub fn factor_rest(
 
 /// method_or_field = '(' args
 ///                 | ε
-pub fn method_or_field(
+fn method_or_field(
     input: &str,
     expr: Box<dyn Instruction>,
     id: String,
@@ -108,12 +105,135 @@ pub fn method_or_field(
     }
 }
 
-pub fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
+fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
     Ok((input, vec![]))
 }
 
-pub fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-    Construct::constant(input)
+/// unit = 'if' expr block next [ 'else' next block ]
+///      (* loop *)
+///      | 'while' expr block
+///      | 'loop' next block
+///      | 'for' next IDENTIFIER next 'in' expr block
+///
+///      | 'type' next IDENTIFIER next '{' named_args
+///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
+///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
+///      | '@' next IDENTIFIER next '(' args
+///      (* func declarations *)
+///      | 'func' function_declaration block
+///      | 'test' function_declaration block
+///      | 'mock' function_declaration block
+///
+///      | 'extern' 'func' function_declaration ';'
+///      | 'return' expr
+///      | '{' next inner_block
+///      (* constants *)
+///      | 'true'
+///      | 'false'
+///      | "'" CHAR "'"
+///      | '"' [^"] '"'
+///      | INT
+///      | DOUBLE
+///
+///      (* identifier *)
+///      | IDENTIFIER next func_type_or_var
+fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    // function declarations
+    if let Ok((input, kind)) = alt((Token::func_tok, Token::test_tok, Token::mock_tok))(input) {
+        let (input, mut function) = func_declaration(input)?;
+        let (input, body) = block(input)?;
+        function.set_block(body);
+        function.set_kind(FunctionKind::from(kind));
+        Ok((input, Box::new(function)))
+    } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
+        let input = next(input);
+        box_inner_block(input)
+    } else {
+        Construct::constant(input)
+    }
+}
+
+/// function_declaration = next IDENTIFIER next '(' typed_args next return_type
+fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
+    let input = next(input);
+    let (input, id) = Token::identifier(input)?;
+    let input = next(input);
+    let (input, _) = Token::left_parenthesis(input)?;
+    let (input, args) = typed_args(input)?;
+    let input = next(input);
+    let (input, return_type) = return_type(input)?;
+
+    let mut function = FunctionDec::new(id, return_type);
+    function.set_args(args);
+    Ok((input, function))
+}
+
+/// typed_args = typed_arg ( ',' typed_arg )* ')'
+///            | ')'
+fn typed_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
+    if let Ok((input, _)) = Token::right_parenthesis(input) {
+        return Ok((input, vec![]));
+    }
+    let (input, first_arg) = typed_arg(input)?;
+    let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
+    let (input, _) = Token::right_parenthesis(input)?;
+
+    args.insert(0, first_arg);
+    Ok((input, args))
+}
+
+/// typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
+fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
+    let input = next(input);
+    let (input, id) = Token::identifier(input)?;
+    let input = next(input);
+    let (input, _) = Token::semicolon(input)?;
+    let input = next(input);
+    let (input, ty) = Token::identifier(input)?;
+    let input = next(input);
+
+    Ok((input, DecArg::new(id, TypeId::new(ty))))
+}
+
+/// return_type = '->' next IDENTIFIER next
+///             | ε
+fn return_type(input: &str) -> ParseResult<&str, Option<TypeId>> {
+    match Token::arrow(input) {
+        Ok((input, _)) => {
+            let input = next(input);
+            let (input, ty) = Token::identifier(input)?;
+            let input = next(input);
+            Ok((input, Some(TypeId::from(ty.as_str()))))
+        }
+        _ => Ok((input, None)),
+    }
+}
+
+/// block = '{' next inner_block
+fn block(input: &str) -> ParseResult<&str, Block> {
+    let (input, _) = Token::left_curly_bracket(input)?;
+    let input = next(input);
+    inner_block(input)
+}
+
+/// inner_block = expr ( ';' expr )* '}'
+///             | '}'
+fn inner_block(input: &str) -> ParseResult<&str, Block> {
+    let mut block = Block::new();
+    if let Ok((input, _)) = Token::right_curly_bracket(input) {
+        return Ok((input, block));
+    }
+
+    let (mut input, inst) = expr(input)?;
+    block.add_instruction(inst);
+    while let Ok((new_input, _)) = Token::semicolon(input) {
+        let (new_input, inst) = expr(new_input)?;
+        block.add_instruction(inst);
+        input = new_input;
+    }
+    let (input, _) = Token::right_curly_bracket(input)?;
+
+    Ok((input, block))
 }
 
 /// next = extra*
@@ -133,6 +253,12 @@ pub fn next(input: &str) -> &str {
     } else {
         input
     }
+}
+
+/// TEMPORARY, Rust doesn't know how to cast from a struct to a dyn when with other returns
+fn box_inner_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, block) = inner_block(input)?;
+    Ok((input, Box::new(block)))
 }
 
 pub struct Construct;

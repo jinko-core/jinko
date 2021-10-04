@@ -9,8 +9,8 @@ use linefeed::{DefaultTerminal, Interface, ReadResult};
 
 use crate::args::Args;
 use crate::{
-    parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
-    ObjectInstance,
+    parser::constructs, Context, Error, FromObjectInstance, Instruction, InteractResult,
+    JkConstant, ObjectInstance,
 };
 
 // FIXME:
@@ -49,7 +49,7 @@ impl<'args> Repl<'args> {
     fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, Error> {
         match input.is_empty() {
             true => Ok(None),
-            false => match Construct::instruction(input) {
+            false => match constructs::expr(input) {
                 Ok((_, value)) => Ok(Some(value)),
                 Err(e) => Err(Error::from(e)),
             },

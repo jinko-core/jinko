@@ -52,7 +52,8 @@ impl Block {
 
     /// Add an instruction at the end of the block's instructions
     pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) {
-        self.instructions.push(instruction)
+        self.instructions.push(instruction.clone());
+        self.last = Some(instruction);
     }
 
     /// Pop an instruction from the block, removing it from the execution pool

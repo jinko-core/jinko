@@ -239,6 +239,18 @@ impl std::fmt::Debug for FunctionDec {
     }
 }
 
+impl From<&str> for FunctionKind {
+    fn from(function_kind: &str) -> FunctionKind {
+        match function_kind {
+            "func" => FunctionKind::Func,
+            "test" => FunctionKind::Test,
+            "mock" => FunctionKind::Mock,
+            "extern" => FunctionKind::Ext,
+            _ => FunctionKind::Unknown,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

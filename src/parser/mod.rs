@@ -6,7 +6,7 @@ use crate::{Context, Error, InstrKind};
 
 mod box_construct;
 mod constant_construct;
-mod constructs;
+pub mod constructs;
 mod shunting_yard;
 mod tokens;
 
@@ -23,7 +23,7 @@ pub struct Parser;
 #[macro_export]
 macro_rules! jinko_ex {
     ($($t:tt) *) => {
-        $crate::Parser::parse(stringify!( $( $t ) * )).unwrap().execute().unwrap();
+        $crate::Parser::parse(stringify!( $( $t ) * )).unwrap().execute().unwrap()
     }
 }
 
@@ -32,7 +32,7 @@ macro_rules! jinko {
     ($($t:tt) *) => {
         {
             let mut ctx = Context::new();
-            let (_, insts) = $crate::parser::Construct::many_instructions(stringify!( $( $t ) * )).unwrap();
+            let (_, insts) = $crate::parser::constructs::exprs(stringify!( $( $t ) * )).unwrap();
             for inst in insts {
                 inst.execute(&mut ctx);
             }
