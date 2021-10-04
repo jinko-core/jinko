@@ -48,25 +48,27 @@ pub fn expr(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (mut input, mut expr) = term(input)?;
     while let Ok((new_input, op)) = alt((Token::add, Token::sub))(input) {
         let (new_input, rhs) = term(new_input)?;
-        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op)));
         input = new_input;
+        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op)));
     }
     Ok((input, expr))
 }
 
 /// term = factor next ( '*' factor next | '/' factor next )*
-pub fn term(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-    let (mut input, mut term) = factor(input)?;
+fn term(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, mut term) = factor(input)?;
+    let mut input = next(input);
     while let Ok((new_input, op)) = alt((Token::mul, Token::div))(input) {
         let (new_input, rhs) = factor(new_input)?;
-        term = Box::new(BinaryOp::new(term, rhs, Operator::new(op)));
+        let new_input = next(new_input);
         input = new_input;
+        term = Box::new(BinaryOp::new(term, rhs, Operator::new(op)));
     }
     Ok((input, term))
 }
 
 /// factor = next unit factor_rest
-pub fn factor(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn factor(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let input = next(input);
     let (input, unit) = unit(input)?;
     factor_rest(input, unit)
