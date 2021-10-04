@@ -199,7 +199,12 @@ impl TypeCheck for FunctionDec {
         let args_ty = self
             .args
             .iter()
-            .map(|dec_arg| CheckedType::Resolved(dec_arg.get_type().clone()))
+            .map(|dec_arg| {
+                (
+                    dec_arg.name().to_string(),
+                    CheckedType::Resolved(dec_arg.get_type().clone()),
+                )
+            })
             .collect();
 
         ctx.declare_function(self.name.clone(), args_ty, return_ty.clone());

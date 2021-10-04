@@ -35,7 +35,8 @@ impl Display for CheckedType {
 }
 
 struct FunctionType {
-    args_ty: Vec<CheckedType>,
+    /// We need to keep track of the function's arguments name and expected type
+    args_ty: Vec<(String, CheckedType)>,
     return_ty: CheckedType,
 }
 
@@ -96,7 +97,7 @@ impl<'ctx> TypeCtx<'ctx> {
     pub fn declare_function(
         &mut self,
         name: String,
-        args_ty: Vec<CheckedType>,
+        args_ty: Vec<(String, CheckedType)>,
         return_ty: CheckedType,
     ) {
         // We can unwrap since this is an interpreter error if we can't add a new
@@ -126,7 +127,10 @@ impl<'ctx> TypeCtx<'ctx> {
     }
 
     /// Access a previously declared function's type
-    pub fn get_function(&mut self, name: &str) -> Option<(&Vec<CheckedType>, &CheckedType)> {
+    pub fn get_function(
+        &mut self,
+        name: &str,
+    ) -> Option<(&Vec<(String, CheckedType)>, &CheckedType)> {
         self.types
             .get_function(name)
             .map(|func| (&func.args_ty, &func.return_ty))
