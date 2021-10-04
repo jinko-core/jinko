@@ -72,7 +72,12 @@ impl TypeCheck for TypeDec {
         let fields_ty = self
             .fields
             .iter()
-            .map(|dec_arg| CheckedType::Resolved(dec_arg.get_type().clone()))
+            .map(|dec_arg| {
+                (
+                    dec_arg.name().to_string(),
+                    CheckedType::Resolved(dec_arg.get_type().clone()),
+                )
+            })
             .collect();
         ctx.declare_custom_type(
             self.name.clone(),
