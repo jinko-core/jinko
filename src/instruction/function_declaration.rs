@@ -2,7 +2,8 @@
 //! a name, a list of required arguments as well as an associated code block
 
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
-use crate::{Context, ErrKind, Error, ObjectInstance};
+use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -187,6 +188,40 @@ impl Instruction for FunctionDec {
     }
 }
 
+impl TypeCheck for FunctionDec {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let return_ty = match &self.ty {
+            // FIXME: Remove clone?
+            Some(ty) => CheckedType::Resolved(ty.clone()),
+            None => CheckedType::Void,
+        };
+
+        let args_ty = self
+            .args
+            .iter()
+            .map(|dec_arg| CheckedType::Resolved(dec_arg.get_type().clone()))
+            .collect();
+
+        ctx.declare_function(self.name.clone(), args_ty, return_ty.clone());
+
+        // If the function has no block, trust the declaration
+        if let Some(b) = &self.block {
+            let block_ty = b.resolve_type(ctx);
+
+            if block_ty != return_ty {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "invalid type returned in function `{}`: expected type {}, found type {}",
+                    self.name(),
+                    return_ty,
+                    block_ty
+                )));
+                return CheckedType::Unknown;
+            }
+        }
+        CheckedType::Void
+    }
+}
+
 impl Default for FunctionDec {
     fn default() -> Self {
         FunctionDec::new(String::new(), None)
@@ -202,7 +237,7 @@ impl std::fmt::Debug for FunctionDec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruction::TypeId;
+    use crate::{instruction::TypeId, parser::Construct};
 
     #[test]
     fn simple_no_arg() {
@@ -224,5 +259,51 @@ mod tests {
         function.set_args(args);
 
         assert_eq!(function.print(), "func fn(arg0: int, arg1: int) -> int {}");
+    }
+
+    #[test]
+    fn tc_ext_func() {
+        let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")));
+        function.set_kind(FunctionKind::Ext);
+
+        let mut ctx = Context::new();
+        let mut ty_ctx = TypeCtx::new(&mut ctx);
+
+        assert_eq!(function.resolve_type(&mut ty_ctx), CheckedType::Void);
+        assert!(!ctx.error_handler.has_errors());
+    }
+
+    // FIXME: Don't ignore once TypeCheck is a bound on Instruction
+
+    #[test]
+    #[ignore]
+    fn tc_valid() {
+        let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")));
+        function.set_kind(FunctionKind::Func);
+
+        let block = Construct::block("{ 15 }").unwrap().1;
+        function.set_block(block);
+
+        let mut ctx = Context::new();
+        let mut ty_ctx = TypeCtx::new(&mut ctx);
+
+        assert_eq!(function.resolve_type(&mut ty_ctx), CheckedType::Void);
+        assert!(!ctx.error_handler.has_errors());
+    }
+
+    #[test]
+    #[ignore]
+    fn tc_invalid() {
+        let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("string")));
+        function.set_kind(FunctionKind::Func);
+
+        let block = Construct::block("{ 15 }").unwrap().1;
+        function.set_block(block);
+
+        let mut ctx = Context::new();
+        let mut ty_ctx = TypeCtx::new(&mut ctx);
+
+        assert_eq!(function.resolve_type(&mut ty_ctx), CheckedType::Unknown);
+        assert!(ctx.error_handler.has_errors());
     }
 }

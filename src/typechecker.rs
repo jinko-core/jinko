@@ -34,6 +34,16 @@ impl Display for CheckedType {
     }
 }
 
+struct FunctionType {
+    args_ty: Vec<CheckedType>,
+    return_ty: CheckedType,
+}
+
+struct CustomTypeType {
+    self_ty: CheckedType,
+    fields_ty: Vec<CheckedType>,
+}
+
 // TODO: Should we factor this into a `Context` trait? All contexts will share some
 // similarities, such as the ability to emit errors or enter and exit scopes
 /// The [`TypeCtx`]'s role is to keep track of declared types based on the scope they
@@ -45,19 +55,24 @@ pub struct TypeCtx<'ctx> {
     /// Reference to the original context in order to emit errors properly
     context: &'ctx mut Context,
     /// The Type Context stores [`CheckedType`]s for all three generics kept in the scope
-    /// map: Variables, Functions and Types
+    /// map: Variables, Functions and Types.
+    /// For functions, we keep a vector of argument types as well as the return type.
     /// Custom types need to keep a type for themselves, as well as types for all their fields
-    types: ScopeMap<CheckedType, CheckedType, (CheckedType, Vec<CheckedType>)>,
+    types: ScopeMap<CheckedType, FunctionType, CustomTypeType>,
 }
 
 impl<'ctx> TypeCtx<'ctx> {
     /// Create a new empty [`TypeCtx`]
     pub fn new(ctx: &'ctx mut Context) -> TypeCtx {
         // FIXME: This doesn't contain builtins
-        TypeCtx {
+        let mut ctx = TypeCtx {
             context: ctx,
             types: ScopeMap::new(),
-        }
+        };
+
+        ctx.scope_enter();
+
+        ctx
     }
 
     /// Enter a new scope. This is the same as lexical scopes
@@ -78,17 +93,31 @@ impl<'ctx> TypeCtx<'ctx> {
     }
 
     /// Declare a newly-created function's type
-    pub fn declare_function(&mut self, name: String, ty: CheckedType) {
+    pub fn declare_function(
+        &mut self,
+        name: String,
+        args_ty: Vec<CheckedType>,
+        return_ty: CheckedType,
+    ) {
         // We can unwrap since this is an interpreter error if we can't add a new
         // type to the scope map
-        self.types.add_function(name, ty).unwrap();
+        self.types
+            .add_function(name, FunctionType { args_ty, return_ty })
+            .unwrap();
     }
 
     /// Declare a newly-created custom type
-    pub fn declare_custom_type(&mut self, name: String, ty: CheckedType, fields: Vec<CheckedType>) {
+    pub fn declare_custom_type(
+        &mut self,
+        name: String,
+        self_ty: CheckedType,
+        fields_ty: Vec<CheckedType>,
+    ) {
         // We can unwrap since this is an interpreter error if we can't add a new
         // type to the scope map
-        self.types.add_type(name, (ty, fields)).unwrap();
+        self.types
+            .add_type(name, CustomTypeType { self_ty, fields_ty })
+            .unwrap();
     }
 
     /// Access a previously declared variable's type
@@ -97,13 +126,17 @@ impl<'ctx> TypeCtx<'ctx> {
     }
 
     /// Access a previously declared function's type
-    pub fn get_function(&mut self, name: &str) -> Option<&CheckedType> {
-        self.types.get_function(name)
+    pub fn get_function(&mut self, name: &str) -> Option<(&Vec<CheckedType>, &CheckedType)> {
+        self.types
+            .get_function(name)
+            .map(|func| (&func.args_ty, &func.return_ty))
     }
 
     /// Access a previously declared custom type
-    pub fn get_custom_type(&mut self, name: &str) -> Option<&(CheckedType, Vec<CheckedType>)> {
-        self.types.get_type(name)
+    pub fn get_custom_type(&mut self, name: &str) -> Option<(&CheckedType, &Vec<CheckedType>)> {
+        self.types
+            .get_type(name)
+            .map(|custom_type| (&custom_type.self_ty, &custom_type.fields_ty))
     }
 
     /// Create a new error to propagate to the original context
