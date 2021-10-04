@@ -5,6 +5,8 @@ use super::{
     Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, TypeId, VarAssign,
 };
 use crate::instance::Name;
+use crate::typechecker::TypeCtx;
+use crate::{typechecker::CheckedType, TypeCheck};
 
 use std::rc::Rc;
 
@@ -138,6 +140,42 @@ impl Instruction for TypeInstantiation {
             data,
             Some(fields),
         ))
+    }
+}
+
+impl TypeCheck for TypeInstantiation {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let (_, fields_ty) = match ctx.get_custom_type(self.type_name.id()) {
+            Some(ty) => ty,
+            None => {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "use of undeclared type `{}`",
+                    // FIXME: Remove this clone, not useful
+                    CheckedType::Resolved(self.type_name.clone())
+                )));
+                return CheckedType::Unknown;
+            }
+        };
+
+        let mut errors = vec![];
+        for (field_ty, value_ty) in fields_ty.iter().zip(self.fields.iter().map(
+            // FIXME: Once trait bound yada yada
+            |_var_assign| CheckedType::Void, /* var_assign.value().resolve_type(ctx) */
+        )) {
+            if field_ty != &value_ty {
+                errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "trying to assign value of type `{}` to field of type `{}`",
+                    value_ty, field_ty
+                )));
+            }
+        }
+
+        // Propagate all errors at once in the context
+        for err in errors.drain(..) {
+            ctx.error(err);
+        }
+
+        CheckedType::Resolved(self.type_name.clone())
     }
 }
 
