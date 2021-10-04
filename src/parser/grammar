@@ -1,0 +1,60 @@
+expr = term ( '+' term | '-' term )*
+
+term = factor next ( '*' factor next | '/' factor next )*
+
+factor = next unit ( '.' IDENTIFIER method_or_field )*
+
+unit = 'if' expr block next [ 'else' next block ]
+     | 'while' expr block
+     | 'loop' next block
+     | 'for' next IDENTIFIER next 'in' expr block 
+     | 'type' next IDENTIFIER next '{' named_args
+     | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
+     | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
+     | '@' next IDENTIFIER next '(' args
+     | 'func' function_declaration body
+     | 'test' function_declaration body
+     | 'mock' function_declaration body
+     | 'extern' 'func' function_declaration ';'
+     | 'return' expr
+     | '{' inner_block
+     | 'true'
+     | 'false'
+     | "'" CHAR "'"
+     | '"' [^"] '"'
+     | INT
+     | DOUBLE
+     | IDENTIFIER next func_type_or_var
+
+method_or_field = '(' args                 (* method call *)
+                | ε                        (* field access *)
+
+func_type_or_var = '(' args                (* function_call *)
+                 | '{' named_args          (* type instanciation *)
+                 | '=' expr                (* variable assigment *)
+                 | ε                       (* variable *)
+
+block = '{' inner_block
+inner_block = expr ( ';' expr )* '}'
+            | '}'
+
+function_declaration = next IDENTIFIER next '(' typed_args [ '->' IDENTIFIER ]
+
+typed_args = typed_arg ( ',' typed_arg )* ')'
+           | ')'
+typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
+
+named_args = named_arg ( ',' named_arg )* '}'
+           | '}'
+named_arg = next IDENTIFIER next '=' next expr next
+
+args = arg ( ',' args )* ')'
+     | ')'
+arg = next IDENTIFIER next
+
+next = extra*
+
+extra = WHITESPACE
+      | '/*' [^'*/'] '*/'
+      | '//' [^\n] '\n'
+      | '#'  [^\n] '\n'
