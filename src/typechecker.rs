@@ -45,19 +45,24 @@ pub struct TypeCtx<'ctx> {
     /// Reference to the original context in order to emit errors properly
     context: &'ctx mut Context,
     /// The Type Context stores [`CheckedType`]s for all three generics kept in the scope
-    /// map: Variables, Functions and Types
+    /// map: Variables, Functions and Types.
+    /// For functions, we keep a vector of argument types as well as the return type.
     /// Custom types need to keep a type for themselves, as well as types for all their fields
-    types: ScopeMap<CheckedType, CheckedType, (CheckedType, Vec<CheckedType>)>,
+    types: ScopeMap<CheckedType, (Vec<CheckedType>, CheckedType), (CheckedType, Vec<CheckedType>)>,
 }
 
 impl<'ctx> TypeCtx<'ctx> {
     /// Create a new empty [`TypeCtx`]
     pub fn new(ctx: &'ctx mut Context) -> TypeCtx {
         // FIXME: This doesn't contain builtins
-        TypeCtx {
+        let mut ctx = TypeCtx {
             context: ctx,
             types: ScopeMap::new(),
-        }
+        };
+
+        ctx.scope_enter();
+
+        ctx
     }
 
     /// Enter a new scope. This is the same as lexical scopes
@@ -78,10 +83,15 @@ impl<'ctx> TypeCtx<'ctx> {
     }
 
     /// Declare a newly-created function's type
-    pub fn declare_function(&mut self, name: String, ty: CheckedType) {
+    pub fn declare_function(
+        &mut self,
+        name: String,
+        args: Vec<CheckedType>,
+        return_ty: CheckedType,
+    ) {
         // We can unwrap since this is an interpreter error if we can't add a new
         // type to the scope map
-        self.types.add_function(name, ty).unwrap();
+        self.types.add_function(name, (args, return_ty)).unwrap();
     }
 
     /// Declare a newly-created custom type
@@ -97,7 +107,7 @@ impl<'ctx> TypeCtx<'ctx> {
     }
 
     /// Access a previously declared function's type
-    pub fn get_function(&mut self, name: &str) -> Option<&CheckedType> {
+    pub fn get_function(&mut self, name: &str) -> Option<&(Vec<CheckedType>, CheckedType)> {
         self.types.get_function(name)
     }
 
