@@ -54,9 +54,8 @@ named_args = named_arg ( ',' named_arg )* '}'
            | '}'
 named_arg = next IDENTIFIER next '=' next expr next
 
-args = arg ( ',' args )* ')'
+args = expr ( ',' expr )* ')'
      | ')'
-arg = next IDENTIFIER next
 
 next = extra*
 

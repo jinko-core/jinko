@@ -14,7 +14,7 @@
 //! is the grammar for a variable assignment.
 
 use nom::Err::Error as NomError;
-use nom::{branch::alt, combinator::opt, multi::many0, sequence::preceded};
+use nom::{branch::alt, combinator::opt, multi::many0, multi::separated_list0, sequence::preceded};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
@@ -105,10 +105,6 @@ fn method_or_field(
     }
 }
 
-fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
-    Ok((input, vec![]))
-}
-
 /// unit = 'if' expr block next [ 'else' next block ]
 ///      (* loop *)
 ///      | 'while' expr block
@@ -148,8 +144,12 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
         let input = next(input);
         box_inner_block(input)
+    } else if let Ok(res) = Construct::constant(input) {
+        Ok(res)
     } else {
-        Construct::constant(input)
+        let (input, id) = Token::identifier(input)?;
+        let input = next(input);
+        func_type_or_var(input, id)
     }
 }
 
@@ -166,33 +166,6 @@ fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
     let mut function = FunctionDec::new(id, return_type);
     function.set_args(args);
     Ok((input, function))
-}
-
-/// typed_args = typed_arg ( ',' typed_arg )* ')'
-///            | ')'
-fn typed_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
-    if let Ok((input, _)) = Token::right_parenthesis(input) {
-        return Ok((input, vec![]));
-    }
-    let (input, first_arg) = typed_arg(input)?;
-    let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
-    let (input, _) = Token::right_parenthesis(input)?;
-
-    args.insert(0, first_arg);
-    Ok((input, args))
-}
-
-/// typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
-fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
-    let input = next(input);
-    let (input, id) = Token::identifier(input)?;
-    let input = next(input);
-    let (input, _) = Token::semicolon(input)?;
-    let input = next(input);
-    let (input, ty) = Token::identifier(input)?;
-    let input = next(input);
-
-    Ok((input, DecArg::new(id, TypeId::new(ty))))
 }
 
 /// return_type = '->' next IDENTIFIER next
@@ -234,6 +207,69 @@ fn inner_block(input: &str) -> ParseResult<&str, Block> {
     let (input, _) = Token::right_curly_bracket(input)?;
 
     Ok((input, block))
+}
+
+/// func_type_or_var = '(' args                (* function_call *)
+///                  | '{' named_args          (* type instanciation *)
+///                  | '=' expr                (* variable assigment *)
+///                  | ε                       (* variable *)
+fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
+    if let Ok((input, _)) = Token::left_parenthesis(input) {
+        let (input, args) = args(input)?;
+        Ok((input, Box::new(FunctionCall::with_args(id, args))))
+    } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
+        unimplemented!()
+    } else if let Ok((input, _)) = Token::equal(input) {
+        let (input, value) = expr(input)?;
+        Ok((input, Box::new(VarAssign::new(false, id, value))))
+    } else {
+        Ok((input, Box::new(Var::new(id))))
+    }
+}
+
+///
+/// ARGS
+///
+
+/// args = expr ( ',' expr )* ')'
+///      | ')'
+fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
+    if let Ok((input, _)) = Token::right_parenthesis(input) {
+        return Ok((input, vec![]));
+    }
+    let (input, first_arg) = expr(input)?;
+    let (input, mut args) = many0(preceded(Token::comma, expr))(input)?;
+    let (input, _) = Token::right_parenthesis(input)?;
+
+    args.insert(0, first_arg);
+    Ok((input, args))
+}
+
+/// typed_args = typed_arg ( ',' typed_arg )* ')'
+///            | ')'
+fn typed_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
+    if let Ok((input, _)) = Token::right_parenthesis(input) {
+        return Ok((input, vec![]));
+    }
+    let (input, first_arg) = typed_arg(input)?;
+    let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
+    let (input, _) = Token::right_parenthesis(input)?;
+
+    args.insert(0, first_arg);
+    Ok((input, args))
+}
+
+/// typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
+fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
+    let input = next(input);
+    let (input, id) = Token::identifier(input)?;
+    let input = next(input);
+    let (input, _) = Token::colon(input)?;
+    let input = next(input);
+    let (input, ty) = Token::identifier(input)?;
+    let input = next(input);
+
+    Ok((input, DecArg::new(id, TypeId::new(ty))))
 }
 
 /// next = extra*
