@@ -3,7 +3,11 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{parser::Construct, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
+use crate::{
+    parser::Construct,
+    typechecker::{CheckedType, TypeCtx},
+    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
+};
 
 /// An `Incl` is constituted of a path, an optional alias and contains a context.
 /// The ctx is built from parsing the source file in the path.
@@ -205,6 +209,8 @@ impl Instruction for Incl {
 
             ctx.debug("INCLUDING", instr.print().as_str());
 
+            // FIXME: Should this be done here?
+            /* instr.resolve_type(ctx); */
             instr.execute(ctx);
         });
 
@@ -212,5 +218,11 @@ impl Instruction for Incl {
         ctx.set_path(old_path);
 
         None
+    }
+}
+
+impl TypeCheck for Incl {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+        CheckedType::Void
     }
 }
