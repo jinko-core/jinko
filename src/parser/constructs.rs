@@ -134,8 +134,12 @@ fn method_or_field(
 ///      (* identifier *)
 ///      | IDENTIFIER next func_type_or_var
 fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    if let Ok((input, _)) = Token::if_tok(input) {
+        unit_if(input)
     // function declarations
-    if let Ok((input, kind)) = alt((Token::func_tok, Token::test_tok, Token::mock_tok))(input) {
+    } else if let Ok((input, kind)) =
+        alt((Token::func_tok, Token::test_tok, Token::mock_tok))(input)
+    {
         let (input, mut function) = func_declaration(input)?;
         let (input, body) = block(input)?;
         function.set_block(body);
@@ -150,6 +154,19 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         let (input, id) = Token::identifier(input)?;
         let input = next(input);
         func_type_or_var(input, id)
+    }
+}
+
+fn unit_if(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, cond) = expr(input)?;
+    let (input, success) = block(input)?;
+    let input = next(input);
+    if let Ok((input, _)) = Token::else_tok(input) {
+        let input = next(input);
+        let (input, failure) = block(input)?;
+        Ok((input, Box::new(IfElse::new(cond, success, Some(failure)))))
+    } else {
+        Ok((input, Box::new(IfElse::new(cond, success, None))))
     }
 }
 
