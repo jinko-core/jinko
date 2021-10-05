@@ -10,7 +10,10 @@
 //! ```
 
 use crate::instruction::{InstrKind, Instruction};
-use crate::{Context, ObjectInstance};
+use crate::{
+    typechecker::{CheckedType, TypeCtx},
+    Context, ObjectInstance, TypeCheck,
+};
 
 #[derive(Clone)]
 pub struct Return {
@@ -46,6 +49,13 @@ impl Instruction for Return {
             Some(val) => val.execute(ctx),
             None => None,
         }
+    }
+}
+
+impl TypeCheck for Return {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+        /* FIXME: self.value.resolve_type(ctx) */
+        CheckedType::Void
     }
 }
 
