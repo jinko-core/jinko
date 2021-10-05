@@ -2,7 +2,8 @@
 //! they get desugared into a normal function call.
 
 use crate::instruction::FunctionCall;
-use crate::{Context, InstrKind, Instruction, ObjectInstance};
+use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -40,6 +41,15 @@ impl Instruction for MethodCall {
         ctx.debug("METHOD CALL EXIT", &self.print());
 
         call.execute(ctx)
+    }
+}
+
+impl TypeCheck for MethodCall {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let mut call = self.method.clone();
+        call.add_arg_front(self.var.clone());
+
+        call.resolve_type(ctx)
     }
 }
 
