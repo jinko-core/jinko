@@ -14,7 +14,7 @@
 //! is the grammar for a variable assignment.
 
 use nom::Err::Error as NomError;
-use nom::{branch::alt, combinator::opt, multi::many0, multi::separated_list0, sequence::preceded};
+use nom::{branch::alt, combinator::opt, multi::many0, sequence::preceded};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
@@ -218,7 +218,12 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
         let (input, args) = args(input)?;
         Ok((input, Box::new(FunctionCall::with_args(id, args))))
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
-        unimplemented!()
+        let (input, named_args) = named_args(input)?;
+        let mut inst = TypeInstantiation::new(TypeId::new(id));
+        for named_arg in named_args.into_iter() {
+            inst.add_field(named_arg)
+        }
+        Ok((input, Box::new(inst)))
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
@@ -270,6 +275,33 @@ fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
     let input = next(input);
 
     Ok((input, DecArg::new(id, TypeId::new(ty))))
+}
+
+/// named_args = named_arg ( ',' named_arg )* '}'
+///            | '}'
+fn named_args(input: &str) -> ParseResult<&str, Vec<VarAssign>> {
+    if let Ok((input, _)) = Token::right_curly_bracket(input) {
+        return Ok((input, vec![]));
+    }
+    let (input, first_arg) = named_arg(input)?;
+    let (input, mut args) = many0(preceded(Token::comma, named_arg))(input)?;
+    let (input, _) = Token::right_curly_bracket(input)?;
+
+    args.insert(0, first_arg);
+    Ok((input, args))
+}
+
+/// named_arg = next IDENTIFIER next '=' next expr next
+fn named_arg(input: &str) -> ParseResult<&str, VarAssign> {
+    let input = next(input);
+    let (input, id) = Token::identifier(input)?;
+    let input = next(input);
+    let (input, _) = Token::equal(input)?;
+    let input = next(input);
+    let (input, value) = expr(input)?;
+    let input = next(input);
+
+    Ok((input, VarAssign::new(false, id, value)))
 }
 
 /// next = extra*
