@@ -20,6 +20,11 @@ tests:
     args:
       - "tests/ft/type_checking/valid/if_else.jk"
     exit_code: 0
+  - name: "BinaryOp typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/binary_op.jk"
+    exit_code: 0
 
   # Invalid
   - name: "Invalid Function typechecking"
@@ -36,4 +41,14 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/type_checking/invalid/if_else.jk"
+    exit_code: 1
+  - name: "Invalid Block typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/block.jk"
+    exit_code: 1
+  - name: "Invalid BinaryOp typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/binary_op.jk"
     exit_code: 1
