@@ -83,36 +83,77 @@ impl Instruction for BinaryOp {
         let l_value = self.execute_node(&*self.lhs, ctx)?;
         let r_value = self.execute_node(&*self.rhs, ctx)?;
 
+        // FIXME: This produces unhelpful errors for now
+        if l_value.ty() != r_value.ty() {
+            return None;
+        }
+
         let return_value;
 
-        // FIXME: DISGUSTING and do not unwap
-        match l_value.ty().unwrap().name() {
-            // FIXME: Absolutely DISGUSTING
-            "int" => {
-                let res =
-                    JkInt::from_instance(&l_value).do_op(&JkInt::from_instance(&r_value), self.op);
-                return_value = match res {
-                    Ok(r) => r,
-                    Err(e) => {
-                        ctx.error(e);
-                        return None;
-                    }
-                };
-            }
-
-            "float" => {
-                let res = JkFloat::from_instance(&l_value)
-                    .do_op(&JkFloat::from_instance(&r_value), self.op);
-                return_value = match res {
-                    Ok(r) => r,
-                    Err(e) => {
-                        ctx.error(e);
-                        return None;
-                    }
+        // At this point, we will already have checked whether or not a binary op
+        // is valid type-wise. So we can unwrap at will. If a type is still unknown
+        // at this point, this is an interpreter error
+        match l_value.ty() {
+            CheckedType::Resolved(ty) => match ty.id() {
+                "int" => {
+                    let res = JkInt::from_instance(&l_value)
+                        .do_op(&JkInt::from_instance(&r_value), self.op);
+                    return_value = match res {
+                        Ok(r) => r,
+                        Err(e) => {
+                            ctx.error(e);
+                            return None;
+                        }
+                    };
                 }
-            }
-            _ => todo!("Implement empty types?"),
+                "float" => {
+                    let res = JkFloat::from_instance(&l_value)
+                        .do_op(&JkFloat::from_instance(&r_value), self.op);
+                    return_value = match res {
+                        Ok(r) => r,
+                        Err(e) => {
+                            ctx.error(e);
+                            return None;
+                        }
+                    };
+                }
+                _ => unreachable!(
+                    "attempting binary operation with void type or unknown type AFTER typechecking"
+                ),
+            },
+            _ => unreachable!(
+                "attempting binary operation with void type or unknown type AFTER typechecking"
+            ),
         }
+
+        // // FIXME: DISGUSTING and do not unwap
+        // match l_value.ty().unwrap().name() {
+        //     // FIXME: Absolutely DISGUSTING
+        //     "int" => {
+        //         let res =
+        //             JkInt::from_instance(&l_value).do_op(&JkInt::from_instance(&r_value), self.op);
+        //         return_value = match res {
+        //             Ok(r) => r,
+        //             Err(e) => {
+        //                 ctx.error(e);
+        //                 return None;
+        //             }
+        //         };
+        //     }
+
+        //     "float" => {
+        //         let res = JkFloat::from_instance(&l_value)
+        //             .do_op(&JkFloat::from_instance(&r_value), self.op);
+        //         return_value = match res {
+        //             Ok(r) => r,
+        //             Err(e) => {
+        //                 ctx.error(e);
+        //                 return None;
+        //             }
+        //         }
+        //     }
+        //     _ => todo!("Implement empty types?"),
+        // }
 
         ctx.debug_step("BINOP EXIT");
 
@@ -143,6 +184,7 @@ impl TypeCheck for BinaryOp {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jinko;
     use crate::value::JkInt;
     use crate::Context;
     use crate::ToObjectInstance;
@@ -237,5 +279,16 @@ mod tests {
             JkInt::from(36).to_instance()
         );
         assert!(!i.error_handler.has_errors());
+    }
+
+    #[test]
+    fn tc_binop_valid() {
+        let mut ctx = jinko! {
+            t0 = 1 + 1;
+            t2 = 1.0 + 1.4;
+        };
+
+        assert!(ctx.execute().is_ok());
+        assert!(!ctx.has_errors());
     }
 }
