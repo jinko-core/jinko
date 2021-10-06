@@ -4,7 +4,8 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::{Context, ErrKind, Error, ObjectInstance};
+use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
+use crate::typechecker::{CheckedType, TypeCtx};
 
 /// The potential ctx instructions
 #[derive(Clone, Debug, PartialEq)]
@@ -75,6 +76,15 @@ impl Instruction for JkInst {
         // JinkInsts cannot return anything. They simply act directly from the context,
         // on the context.
         None
+    }
+}
+
+impl TypeCheck for JkInst {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: Is that true?
+        // JinkInsts cannot return anything. They simply act directly from the context,
+        // on the context.
+        CheckedType::Void
     }
 }
 
