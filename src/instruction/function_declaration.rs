@@ -196,7 +196,7 @@ impl TypeCheck for FunctionDec {
             None => CheckedType::Void,
         };
 
-        let args_ty = self
+        let args_ty: Vec<(String, CheckedType)> = self
             .args
             .iter()
             .map(|dec_arg| {
@@ -207,6 +207,7 @@ impl TypeCheck for FunctionDec {
             })
             .collect();
 
+        args_ty.iter().for_each(|(name, ty)| ctx.declare_var(name.clone(), ty.clone()));
         ctx.declare_function(self.name.clone(), args_ty, return_ty.clone());
 
         // If the function has no block, trust the declaration
