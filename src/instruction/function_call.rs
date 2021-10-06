@@ -199,7 +199,7 @@ impl TypeCheck for FunctionCall {
         ) {
             if expected_ty != &given_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "invalid type used for function argument: expected `{}`, got `{}`:",
+                    "invalid type used for function argument: expected `{}`, got `{}`",
                     expected_ty, given_ty
                 )));
             }
