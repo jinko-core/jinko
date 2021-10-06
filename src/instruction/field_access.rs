@@ -177,9 +177,7 @@ mod tests {
             None => unreachable!("Error when accessing valid multi field"),
         };
 
-        let mut expected = JkInt::from(2).to_instance();
-        // FIXME: Remove once typechecking is implemented
-        expected.set_ty(None);
+        let expected = JkInt::from(2).to_instance();
 
         assert_eq!(res, expected)
     }

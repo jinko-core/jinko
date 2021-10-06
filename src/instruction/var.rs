@@ -53,7 +53,7 @@ impl Var {
     }
 
     pub fn set_type(&mut self, ty: TypeDec) {
-        self.instance.set_ty(Some(ty))
+        self.instance.set_ty(CheckedType::Resolved(ty.into()))
     }
 }
 
@@ -63,12 +63,12 @@ impl Instruction for Var {
     }
 
     fn print(&self) -> String {
-        format!(
-            "{} /* : {} = {} */",
-            self.name.clone(),
-            self.instance.ty().unwrap_or(&TypeDec::from("")).name(),
-            self.instance
-        )
+        let mut base = self.name.clone();
+        if let CheckedType::Resolved(ty) = self.instance.ty() {
+            base = format!("{} /* : {} */", base, ty.id());
+        }
+
+        format!("{} = {}", base, self.instance)
     }
 
     fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
@@ -78,7 +78,7 @@ impl Instruction for Var {
 
         match self.execute(ctx) {
             Some(instance) => match instance.ty() {
-                Some(ty) => match ty.name() {
+                CheckedType::Resolved(ty) => match ty.id() {
                     // FIXME:
                     "bool" => Some(JkBool::from_instance(&instance).as_bool(ctx).unwrap()),
                     // We can safely unwrap since we checked the type of the variable
@@ -90,7 +90,7 @@ impl Instruction for Var {
                         None
                     }
                 },
-                None => todo!(
+                _ => todo!(
                     "If the type of the variable hasn't been determined yet,
                     typecheck it and call self.as_bool() again"
                 ),
@@ -148,6 +148,7 @@ impl Default for Var {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jinko;
     use crate::value::JkInt;
     use crate::ToObjectInstance;
 
@@ -162,5 +163,28 @@ mod tests {
         i.add_variable(v.clone()).unwrap();
 
         assert_eq!(v.execute(&mut i).unwrap(), instance);
+    }
+
+    #[test]
+    fn tc_valid() {
+        // FIXME: Add assertion directly from jinko
+        let mut ctx = jinko! {
+            a = 15;
+            a
+        };
+
+        assert!(ctx.execute().is_ok());
+        assert!(!ctx.has_errors())
+    }
+
+    #[test]
+    fn tc_invalid() {
+        let mut ctx = jinko! {
+            // undeclared variable
+            a
+        };
+
+        assert!(ctx.execute().is_err());
+        assert!(ctx.has_errors())
     }
 }

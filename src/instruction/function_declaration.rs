@@ -207,7 +207,9 @@ impl TypeCheck for FunctionDec {
             })
             .collect();
 
-        args_ty.iter().for_each(|(name, ty)| ctx.declare_var(name.clone(), ty.clone()));
+        args_ty
+            .iter()
+            .for_each(|(name, ty)| ctx.declare_var(name.clone(), ty.clone()));
         ctx.declare_function(self.name.clone(), args_ty, return_ty.clone());
 
         // If the function has no block, trust the declaration

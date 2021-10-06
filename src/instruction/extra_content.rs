@@ -3,8 +3,8 @@
 //! of such an instruction produces no results. But they are useful when it comes to
 //! pretty printing and code formatting.
 
-use crate::{Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub enum CommentKind {

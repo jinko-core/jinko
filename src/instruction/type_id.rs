@@ -35,3 +35,9 @@ impl From<&TypeDec> for TypeId {
         TypeId::from(td.name())
     }
 }
+
+impl From<TypeDec> for TypeId {
+    fn from(td: TypeDec) -> Self {
+        TypeId::from(&td)
+    }
+}

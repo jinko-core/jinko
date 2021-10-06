@@ -8,11 +8,11 @@ use std::path::PathBuf;
 use linefeed::{DefaultTerminal, Interface, ReadResult};
 
 use crate::args::Args;
+use crate::typechecker::{CheckedType, TypeCtx};
 use crate::{
     parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
     ObjectInstance,
 };
-use crate::typechecker::{CheckedType, TypeCtx};
 
 // FIXME:
 // - Is Display really how we want to go about it?
@@ -24,7 +24,7 @@ impl std::fmt::Display for ObjectInstance {
             f,
             "{}",
             match self.ty() {
-                Some(ty) => match ty.name() {
+                CheckedType::Resolved(ty) => match ty.id() {
                     "int" => JkConstant::<i64>::from_instance(self).print(),
                     "float" => JkConstant::<f64>::from_instance(self).print(),
                     "char" => JkConstant::<char>::from_instance(self).print(),
@@ -32,7 +32,7 @@ impl std::fmt::Display for ObjectInstance {
                     "bool" => JkConstant::<bool>::from_instance(self).print(),
                     _ => self.as_string(),
                 },
-                None => format!(""),
+                _ => format!(""),
             }
         )
     }

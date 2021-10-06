@@ -121,7 +121,9 @@ impl Instruction for Block {
 
 impl TypeCheck for Block {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        self.instructions.iter().for_each(|inst| { inst.resolve_type(ctx); });
+        self.instructions.iter().for_each(|inst| {
+            inst.resolve_type(ctx);
+        });
 
         match &self.last {
             None => CheckedType::Void,

@@ -4,8 +4,8 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// The potential ctx instructions
 #[derive(Clone, Debug, PartialEq)]

@@ -21,7 +21,7 @@ pub use error::{ErrKind, Error};
 pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
-pub use typechecker::TypeCheck;
+pub use typechecker::{CheckedType, TypeCheck, TypeCtx};
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 // FIXME: Add documentation
@@ -38,7 +38,7 @@ fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
 
         // If it's an expression, return if you can (if it's an int)
         Some(i) => match i.ty() {
-            Some(ty) => match ty.name() {
+            CheckedType::Resolved(ty) => match ty.id() {
                 "int" => exit(JkInt::from_instance(&i).0 as i32),
                 "float" => exit(JkFloat::from_instance(&i).0 as i32),
                 "bool" => {
@@ -50,7 +50,8 @@ fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
                 }
                 _ => exit(0),
             },
-            None => exit(0),
+            CheckedType::Void => exit(0),
+            CheckedType::Unknown => unreachable!("this shouldn't happen"),
         },
     }
 }

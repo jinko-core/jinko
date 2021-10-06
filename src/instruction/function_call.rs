@@ -95,7 +95,7 @@ impl FunctionCall {
                 }
             };
 
-            instance.set_ty(Some(ty));
+            instance.set_ty(CheckedType::Resolved(ty.into()));
 
             new_var.set_instance(instance);
 
@@ -192,9 +192,11 @@ impl TypeCheck for FunctionCall {
             )));
         }
 
-        for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(self.args.iter().map(
-            |given_arg| given_arg.clone().resolve_type(ctx)
-        )) {
+        for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(
+            self.args
+                .iter()
+                .map(|given_arg| given_arg.clone().resolve_type(ctx)),
+        ) {
             if expected_ty != &given_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
                     "invalid type used for function argument: expected `{}`, got `{}`:",
