@@ -120,10 +120,10 @@ impl Instruction for Block {
 }
 
 impl TypeCheck for Block {
-    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
         match &self.last {
             None => CheckedType::Void,
-            Some(_last) => CheckedType::Unknown, // FIXME: last.resolve_type(ctx),
+            Some(last) => last.resolve_type(ctx),
         }
     }
 }

@@ -120,8 +120,7 @@ impl TypeCheck for VarAssign {
                 checked_ty.clone()
             }
             None => {
-                // FIXME: Add once trait bound
-                let instance_ty = CheckedType::Void; /* self.value.resolve_type(ctx); */
+                let instance_ty = self.value.resolve_type(ctx);
                 ctx.declare_var(self.symbol.clone(), instance_ty);
 
                 // We can return here since it's a new variable. This avoids checking
@@ -130,8 +129,8 @@ impl TypeCheck for VarAssign {
             }
         };
 
-        // FIXME: We resolve value twice...
-        let value_ty = CheckedType::Void; /* self.value.resolve_type(ctx); */
+        // FIXME: We resolve the value twice
+        let value_ty = self.value.resolve_type(ctx);
         if value_ty == CheckedType::Void {
             ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
                 "trying to assign statement `{}` to variable `{}`",

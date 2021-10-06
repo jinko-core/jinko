@@ -6,8 +6,6 @@ use crate::{
     Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
 };
 
-use super::TypeId;
-
 #[derive(Clone)]
 pub struct FieldAccess {
     instance: Box<dyn Instruction>,
@@ -71,9 +69,7 @@ impl Instruction for FieldAccess {
 
 impl TypeCheck for FieldAccess {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        // FIXME: Wait for trait bound
-        /* self.instance.resolve_type(ctx); */
-        let instance_ty = CheckedType::Resolved(TypeId::new(String::from("CustomType")));
+        let instance_ty = self.instance.resolve_type(ctx);
         let instance_ty_name = match &instance_ty {
             CheckedType::Resolved(ti) => ti.id(),
             _ => {

@@ -163,8 +163,9 @@ impl Instruction for FunctionCall {
 
 impl TypeCheck for FunctionCall {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: This function is very large and should be refactored
         let (args_type, return_type) = match ctx.get_function(self.name()) {
-            Some(checked_type) => checked_type,
+            Some(checked_type) => checked_type.clone(),
             // FIXME: This does not account for functions declared later in the code
             None => {
                 ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
@@ -174,6 +175,9 @@ impl TypeCheck for FunctionCall {
                 return CheckedType::Unknown;
             }
         };
+
+        let args_type = args_type.clone();
+        let return_type = return_type.clone();
 
         let mut errors = vec![];
         let mut args = vec![];
@@ -189,7 +193,7 @@ impl TypeCheck for FunctionCall {
         }
 
         for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(self.args.iter().map(
-            |_given_arg| CheckedType::Void, /* given_arg.resolve_type() */
+            |given_arg| given_arg.clone().resolve_type(ctx)
         )) {
             if expected_ty != &given_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(

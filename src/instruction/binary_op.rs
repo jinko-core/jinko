@@ -122,9 +122,8 @@ impl Instruction for BinaryOp {
 
 impl TypeCheck for BinaryOp {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        // TODO: Use the correct calls once TypeCheck is a bound on Instruction
-        let l_type = CheckedType::Void; // FIXME: self.lhs.resolve_type(ctx);
-        let r_type = CheckedType::Void; // FIXME: self.rhs.resolve_type(ctx);
+        let l_type = self.lhs.resolve_type(ctx);
+        let r_type = self.rhs.resolve_type(ctx);
 
         if l_type != r_type {
             ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
