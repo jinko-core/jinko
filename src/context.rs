@@ -17,7 +17,7 @@ use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
-use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
+use crate::typechecker::TypeCtx;
 use crate::ObjectInstance;
 
 /// Type the context uses for keys
@@ -255,12 +255,14 @@ impl Context {
     fn type_check(&mut self, entry_point: &Block) -> Result<(), Error> {
         let mut ctx = TypeCtx::new(self);
 
-        entry_point.instructions().iter().for_each(|inst| { inst.resolve_type(&mut ctx); });
+        entry_point.instructions().iter().for_each(|inst| {
+            inst.resolve_type(&mut ctx);
+        });
         entry_point.last().map(|l| l.resolve_type(&mut ctx));
 
         match self.error_handler.has_errors() {
             true => Err(Error::new(ErrKind::TypeChecker)),
-            false => Ok(())
+            false => Ok(()),
         }
     }
 
@@ -284,6 +286,10 @@ impl Context {
             true => Err(Error::new(ErrKind::Context)),
             false => Ok(res.flatten()),
         }
+    }
+
+    pub fn has_errors(&self) -> bool {
+        self.error_handler.has_errors()
     }
 }
 
