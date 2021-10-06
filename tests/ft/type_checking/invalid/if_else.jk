@@ -1,0 +1,11 @@
+if true {
+    15
+} else {
+    false
+}
+
+if 15 {
+    15
+} else {
+    14
+}

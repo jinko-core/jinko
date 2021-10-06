@@ -1,0 +1,39 @@
+tests:
+  # Valid
+  - name: "Function typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/func.jk"
+    exit_code: 0
+  - name: "Function argument mapping typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/function_type_mapping.jk"
+    exit_code: 0
+  - name: "Variable typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/variables.jk"
+    exit_code: 0
+  - name: "IfElse typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/if_else.jk"
+    exit_code: 0
+
+  # Invalid
+  - name: "Invalid Function typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/func.jk"
+    exit_code: 1
+  - name: "Invalid Variable typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/variables.jk"
+    exit_code: 1
+  - name: "Invalid IfElse typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/if_else.jk"
+    exit_code: 1
