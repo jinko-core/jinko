@@ -12,6 +12,7 @@ use crate::{
     parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
     ObjectInstance,
 };
+use crate::typechecker::{CheckedType, TypeCtx};
 
 // FIXME:
 // - Is Display really how we want to go about it?
@@ -77,13 +78,13 @@ impl<'args> Repl<'args> {
 
         let ep = ctx.entry_point.block().unwrap().clone();
         ep.instructions().iter().for_each(|inst| {
-            // TODO: Add this once TypeChecker is complete
-            // inst.resolve_type(ctx);
+            // FIXME: Should we do this?
+            // inst.resolve_type(&mut ty_ctx);
             inst.execute(ctx);
         });
         if let Some(last) = ep.last() {
-            // TODO: Add this once TypeChecker is complete
-            // last.resolve_type(ctx);
+            // FIXME: Should we do this?
+            // last.resolve_type(&mut ty_ctx);
             last.execute(ctx);
         }
 
@@ -115,12 +116,13 @@ impl<'args> Repl<'args> {
                 None => continue,
             };
 
-            // TODO: Add this once TypeChecker is complete
-            // if let CheckedType::Unknown = inst.resolve_type(&mut ctx) {
-            //     ctx.emit_errors();
-            //     ctx.clear_errors();
-            //     continue;
-            // }
+            let mut ty_ctx = TypeCtx::new(&mut ctx);
+
+            if let CheckedType::Unknown = inst.resolve_type(&mut ty_ctx) {
+                ctx.emit_errors();
+                ctx.clear_errors();
+                continue;
+            }
 
             if let Some(result) = inst.execute(&mut ctx) {
                 println!("{}", result);
