@@ -11,13 +11,22 @@ then
     exit 1
 fi
 
-files=$(find tests -name "*.yml")
-
-printf "Test files:\n$files\n\n"
-
 cargo build
 
 # Print a newline for cleaner formatting
 echo ""
 
-ft -f $files
+if [ $# -ne 0 ]
+then
+    printf "Test files:\n$@\n\n"
+
+    for file in $@; do
+        ft -f $file
+    done
+else
+    files=$(find tests -name "*.yml")
+
+    printf "Test files:\n$files\n\n"
+
+    ft -f $files
+fi
