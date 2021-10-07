@@ -54,7 +54,7 @@ struct CustomTypeType {
 /// to all instructions in the avaialble scopes.
 pub struct TypeCtx<'ctx> {
     /// Reference to the original context in order to emit errors properly
-    context: &'ctx mut Context,
+    pub(crate) context: &'ctx mut Context,
     /// The Type Context stores [`CheckedType`]s for all three generics kept in the scope
     /// map: Variables, Functions and Types.
     /// For functions, we keep a vector of argument types as well as the return type.

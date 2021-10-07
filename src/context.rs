@@ -115,13 +115,6 @@ impl Context {
         // FIXME: Is that correct? Remove that clone()...
         self.error_handler
             .set_path(self.path.clone().unwrap_or_default());
-
-        match &self.path {
-            Some(p) => {
-                self.included.insert(p.clone());
-            }
-            None => {}
-        };
     }
 
     /// Add an error to the context
@@ -250,6 +243,10 @@ impl Context {
     /// Check if a source is included or not
     pub fn is_included(&self, source: &Path) -> bool {
         self.included.contains(source)
+    }
+
+    pub fn include_path(&mut self, source: PathBuf) {
+        self.included.insert(source);
     }
 
     fn type_check(&mut self, entry_point: &Block) -> Result<(), Error> {

@@ -201,7 +201,8 @@ impl Instruction for Incl {
         let (new_path, mut content) = self.load(&base, ctx)?;
 
         // Temporarily change the path of the context
-        ctx.set_path(Some(new_path));
+        ctx.set_path(Some(new_path.clone()));
+        ctx.include_path(new_path);
 
         content.iter_mut().for_each(|instr| {
             // FIXME: Rework prefixing
@@ -209,8 +210,6 @@ impl Instruction for Incl {
 
             ctx.debug("INCLUDING", instr.print().as_str());
 
-            // FIXME: Should this be done here?
-            /* instr.resolve_type(ctx); */
             instr.execute(ctx);
         });
 
@@ -222,7 +221,28 @@ impl Instruction for Incl {
 }
 
 impl TypeCheck for Incl {
-    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+    // FIXME: We need to not add the path to the interpreter here
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: This is a lot of code in common with execute()
+        let base = self.get_base(ctx.context);
+
+        let old_path = ctx.context.path().cloned();
+
+        let (new_path, mut content) = match self.load(&base, ctx.context) {
+            None => return CheckedType::Unknown,
+            Some(tuple) => tuple
+        };
+
+        // Temporarily change the path of the context
+        ctx.context.set_path(Some(new_path));
+
+        content.iter_mut().for_each(|instr| {
+            instr.resolve_type(ctx);
+        });
+
+        // Reset the old path before leaving the instruction
+        ctx.context.set_path(old_path);
+
         CheckedType::Void
     }
 }
