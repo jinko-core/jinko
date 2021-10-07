@@ -69,8 +69,20 @@ impl Context {
         ep
     }
 
-    /// Create a new empty context. Starts in non-audit mode
+    /// Create a new context, including the standard library
     pub fn new() -> Context {
+        let mut ctx = Context::empty();
+
+        // Include the standard library
+        let stdlib_incl =
+            crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
+        stdlib_incl.execute(&mut ctx);
+
+        ctx
+    }
+
+    /// Create a new empty context without the standard library
+    pub fn empty() -> Context {
         let mut ctx = Context {
             debug_mode: false,
             entry_point: Self::new_entry(),
@@ -87,11 +99,6 @@ impl Context {
         crate::instruction::PRIMITIVE_TYPES
             .iter()
             .for_each(|ty_name| ctx.add_type(TypeDec::from(*ty_name)).unwrap());
-
-        // Include the standard library
-        let stdlib_incl =
-            crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
-        stdlib_incl.execute(&mut ctx);
 
         ctx
     }
@@ -248,13 +255,17 @@ impl Context {
         // The entry point always has a block
         let ep = self.entry_point.block().unwrap().clone();
 
-        let res = ep.execute(self);
+        self.scope_enter();
+        ep.instructions().iter().for_each(|inst| {
+            inst.execute(self);
+        });
+        let res = ep.last().map(|last| last.execute(self));
 
         self.emit_errors();
 
         match self.error_handler.has_errors() {
             true => Err(Error::new(ErrKind::Context)),
-            false => Ok(res),
+            false => Ok(res.flatten()),
         }
     }
 }
