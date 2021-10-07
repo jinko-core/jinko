@@ -62,7 +62,7 @@ impl TypeCheck for Return {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::jinko_ex;
+    use crate::jk_execute;
 
     #[test]
     fn t_return_kind() {
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn t_return_execute_macro() {
-        let res = jinko_ex! {
+        let res = jk_execute! {
             { return }
         };
 
@@ -109,7 +109,7 @@ mod tests {
         use crate::instance::ToObjectInstance;
         use crate::value::JkInt;
 
-        let res = jinko_ex! {
+        let res = jk_execute! {
             {return 42}
         };
 
