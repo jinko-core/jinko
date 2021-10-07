@@ -147,7 +147,7 @@ mod tests {
             .1;
         let res = match inst.execute(&mut ctx) {
             Some(i) => i,
-            None => unreachable!("Error when accesing valid field"),
+            None => unreachable!("Error when accessing valid field"),
         };
 
         let exp = JkInt::from(1).to_instance();
