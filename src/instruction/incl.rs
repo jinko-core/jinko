@@ -201,8 +201,7 @@ impl Instruction for Incl {
         let (new_path, mut content) = self.load(&base, ctx)?;
 
         // Temporarily change the path of the context
-        ctx.set_path(Some(new_path.clone()));
-        ctx.include_path(new_path);
+        ctx.set_path(Some(new_path));
 
         content.iter_mut().for_each(|instr| {
             // FIXME: Rework prefixing
@@ -234,7 +233,7 @@ impl TypeCheck for Incl {
         };
 
         // Temporarily change the path of the context
-        ctx.context.set_path(Some(new_path));
+        ctx.context.set_path(Some(new_path.clone()));
 
         content.iter_mut().for_each(|instr| {
             instr.resolve_type(ctx);
@@ -242,6 +241,7 @@ impl TypeCheck for Incl {
 
         // Reset the old path before leaving the instruction
         ctx.context.set_path(old_path);
+        ctx.context.remove_included(&new_path);
 
         CheckedType::Void
     }
