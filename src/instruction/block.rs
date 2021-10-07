@@ -248,7 +248,9 @@ mod tests {
         assert!(!ctx.has_errors());
     }
 
+    // FIXME: Do not ignore once jinko! macro is reworked for testing
     #[test]
+    #[ignore]
     fn tc_block_invalid() {
         let mut ctx = jinko! {
             func takes_int(i: int) {}
