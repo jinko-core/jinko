@@ -1,1 +1,1 @@
-func sub(lhs: int, rhs: int) { lhs - rhs }
+func sub(lhs: int, rhs: int) -> int { lhs - rhs }

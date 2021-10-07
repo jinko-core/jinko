@@ -1,12 +1,12 @@
-func hey() {
+func hey() -> int {
     1
 }
 
-func ho() {
+func ho() -> int {
     2
 }
 
-func heyho() {
+func heyho() -> int {
     hey() + ho()
 }
 

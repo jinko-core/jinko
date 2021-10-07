@@ -2,10 +2,14 @@ if true {
     15
 } else {
     false
-}
+} // type mismatch
 
-if 15 {
+if 15 { // not a boolean condition
     15
 } else {
     14
 }
+
+if true {
+    12
+} // no else
