@@ -249,7 +249,7 @@ impl std::fmt::Debug for FunctionDec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{instruction::TypeId, parser::Construct};
+    use crate::{jinko, instruction::TypeId, parser::Construct};
 
     #[test]
     fn simple_no_arg() {
@@ -313,5 +313,13 @@ mod tests {
 
         assert_eq!(function.resolve_type(&mut ty_ctx), CheckedType::Unknown);
         assert!(ctx.error_handler.has_errors());
+    }
+
+    #[test]
+    fn tc_function_dec_same_args() {
+        jinko! {
+            func takes_int_i(i: int) {}
+            func return_int_i(i: int) -> int { i }
+        };
     }
 }
