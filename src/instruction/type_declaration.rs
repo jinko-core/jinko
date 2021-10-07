@@ -79,11 +79,13 @@ impl TypeCheck for TypeDec {
                 )
             })
             .collect();
-        ctx.declare_custom_type(
+        if let Err(e) = ctx.declare_custom_type(
             self.name.clone(),
             CheckedType::Resolved(TypeId::from(self.name())),
             fields_ty,
-        );
+        ) {
+            ctx.error(e);
+        }
 
         CheckedType::Void
     }

@@ -229,7 +229,7 @@ impl TypeCheck for Incl {
 
         let (new_path, mut content) = match self.load(&base, ctx.context) {
             None => return CheckedType::Unknown,
-            Some(tuple) => tuple
+            Some(tuple) => tuple,
         };
 
         // Temporarily change the path of the context

@@ -121,7 +121,9 @@ impl TypeCheck for VarAssign {
             }
             None => {
                 let instance_ty = self.value.resolve_type(ctx);
-                ctx.declare_var(self.symbol.clone(), instance_ty);
+                if let Err(e) = ctx.declare_var(self.symbol.clone(), instance_ty) {
+                    ctx.error(e);
+                }
 
                 // We can return here since it's a new variable. This avoids checking
                 // the type later on

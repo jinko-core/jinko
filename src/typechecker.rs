@@ -4,7 +4,7 @@
 
 use crate::{instruction::TypeId, Context, Error, ScopeMap};
 use colored::Colorize;
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 /// The [`CheckedType`] enum contains three possible states about the type. Either the
 /// type has been properly resolved to something, or it corresponds to a Void type. If the
@@ -23,7 +23,7 @@ impl Default for CheckedType {
 }
 
 impl Display for CheckedType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         let ty_str = match self {
             CheckedType::Resolved(ty) => ty.id(),
             CheckedType::Void => "void",
@@ -87,10 +87,8 @@ impl<'ctx> TypeCtx<'ctx> {
     }
 
     /// Declare a newly-created variable's type
-    pub fn declare_var(&mut self, name: String, ty: CheckedType) {
-        // We can unwrap since this is an interpreter error if we can't add a new
-        // type to the scope map
-        self.types.add_variable(name, ty).unwrap();
+    pub fn declare_var(&mut self, name: String, ty: CheckedType) -> Result<(), Error> {
+        self.types.add_variable(name, ty)
     }
 
     /// Declare a newly-created function's type
@@ -99,12 +97,9 @@ impl<'ctx> TypeCtx<'ctx> {
         name: String,
         args_ty: Vec<(String, CheckedType)>,
         return_ty: CheckedType,
-    ) {
-        // We can unwrap since this is an interpreter error if we can't add a new
-        // type to the scope map
+    ) -> Result<(), Error> {
         self.types
             .add_function(name, FunctionType { args_ty, return_ty })
-            .unwrap();
     }
 
     /// Declare a newly-created custom type
@@ -113,12 +108,9 @@ impl<'ctx> TypeCtx<'ctx> {
         name: String,
         self_ty: CheckedType,
         fields_ty: Vec<(String, CheckedType)>,
-    ) {
-        // We can unwrap since this is an interpreter error if we can't add a new
-        // type to the scope map
+    ) -> Result<(), Error> {
         self.types
             .add_type(name, CustomTypeType { self_ty, fields_ty })
-            .unwrap();
     }
 
     /// Access a previously declared variable's type

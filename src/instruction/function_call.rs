@@ -108,8 +108,11 @@ impl FunctionCall {
     fn type_args(&self, mut args: Vec<(String, CheckedType)>, ctx: &mut TypeCtx) {
         ctx.scope_enter();
 
-        args.drain(..)
-            .for_each(|(arg_name, arg_ty)| ctx.declare_var(arg_name, arg_ty));
+        args.drain(..).for_each(|(arg_name, arg_ty)| {
+            if let Err(e) = ctx.declare_var(arg_name, arg_ty) {
+                ctx.error(e)
+            }
+        });
 
         ctx.scope_exit();
     }
@@ -165,7 +168,7 @@ impl TypeCheck for FunctionCall {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
         // FIXME: This function is very large and should be refactored
         let (args_type, return_type) = match ctx.get_function(self.name()) {
-            Some(checked_type) => checked_type.clone(),
+            Some(checked_type) => checked_type,
             // FIXME: This does not account for functions declared later in the code
             None => {
                 ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
@@ -206,8 +209,6 @@ impl TypeCheck for FunctionCall {
 
             args.push((expected_name.clone(), expected_ty.clone()));
         }
-
-        let return_type = return_type.to_owned();
 
         errors.drain(..).for_each(|err| ctx.error(err));
         self.type_args(args, ctx);

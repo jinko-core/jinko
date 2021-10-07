@@ -207,10 +207,14 @@ impl TypeCheck for FunctionDec {
             })
             .collect();
 
-        args_ty
-            .iter()
-            .for_each(|(name, ty)| ctx.declare_var(name.clone(), ty.clone()));
-        ctx.declare_function(self.name.clone(), args_ty, return_ty.clone());
+        args_ty.iter().for_each(|(name, ty)| {
+            if let Err(e) = ctx.declare_var(name.clone(), ty.clone()) {
+                ctx.error(e);
+            }
+        });
+        if let Err(e) = ctx.declare_function(self.name.clone(), args_ty, return_ty.clone()) {
+            ctx.error(e);
+        }
 
         // If the function has no block, trust the declaration
         if let Some(b) = &self.block {
