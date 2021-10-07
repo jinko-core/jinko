@@ -71,7 +71,24 @@ impl<'ctx> TypeCtx<'ctx> {
             types: ScopeMap::new(),
         };
 
+        macro_rules! declare_primitive {
+            ($ty_name:ident) => {
+                ctx.declare_custom_type(
+                    String::from(stringify!($ty_name)),
+                    CheckedType::Resolved(TypeId::from(stringify!($ty_name))),
+                    vec![],
+                )
+                .unwrap();
+            };
+        }
+
         ctx.scope_enter();
+
+        declare_primitive!(bool);
+        declare_primitive!(int);
+        declare_primitive!(float);
+        declare_primitive!(char);
+        declare_primitive!(string);
 
         ctx
     }
