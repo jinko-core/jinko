@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use linefeed::{DefaultTerminal, Interface, ReadResult};
 
 use crate::args::Args;
-use crate::typechecker::{CheckedType, TypeCtx};
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 use crate::{
     parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
     ObjectInstance,
@@ -77,14 +77,14 @@ impl<'args> Repl<'args> {
         ctx.set_path(Some(PathBuf::from("repl")));
 
         let ep = ctx.entry_point.block().unwrap().clone();
+        let mut ty_ctx = TypeCtx::new(ctx);
+
+        ep.resolve_type(&mut ty_ctx);
+
         ep.instructions().iter().for_each(|inst| {
-            // FIXME: Should we do this?
-            // inst.resolve_type(&mut ty_ctx);
             inst.execute(ctx);
         });
         if let Some(last) = ep.last() {
-            // FIXME: Should we do this?
-            // last.resolve_type(&mut ty_ctx);
             last.execute(ctx);
         }
 
@@ -116,13 +116,12 @@ impl<'args> Repl<'args> {
                 None => continue,
             };
 
-            let mut ty_ctx = TypeCtx::new(&mut ctx);
-
-            if let CheckedType::Unknown = inst.resolve_type(&mut ty_ctx) {
-                ctx.emit_errors();
-                ctx.clear_errors();
-                continue;
-            }
+            // FIXME: Add typechecking to REPL
+            // if let CheckedType::Unknown = inst.resolve_type(&mut ty_ctx) {
+            //     ctx.emit_errors();
+            //     ctx.clear_errors();
+            //     continue;
+            // }
 
             if let Some(result) = inst.execute(&mut ctx) {
                 println!("{}", result);
