@@ -184,10 +184,10 @@ impl TypeCheck for BinaryOp {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::jinko;
     use crate::value::JkInt;
     use crate::Context;
     use crate::ToObjectInstance;
+    use crate::{jinko, jinko_fail};
 
     fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
         let l = Box::new(JkInt::from(l_num));
@@ -283,12 +283,25 @@ mod tests {
 
     #[test]
     fn tc_binop_valid() {
-        let mut ctx = jinko! {
+        jinko! {
             t0 = 1 + 1;
             t2 = 1.0 + 1.4;
         };
+    }
 
-        assert!(ctx.execute().is_ok());
-        assert!(!ctx.has_errors());
+    #[test]
+    fn tc_binop_from_func() {
+        jinko! {
+            func id(x: int) -> int { x }
+            t0 = id(1) + id(id(id(id(14))));
+        };
+    }
+
+    #[test]
+    fn tc_binop_mismatched_valid() {
+        jinko_fail! {
+            t0 = 1 + '4';
+            t2 = 1.0 + "hey";
+        };
     }
 }

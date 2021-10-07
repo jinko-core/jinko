@@ -114,6 +114,7 @@ impl TypeCheck for IfElse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn t_if_print() {
@@ -184,5 +185,51 @@ mod tests {
             if_else.execute(&mut ctx).unwrap(),
             JkInt::from(69).to_instance()
         );
+    }
+
+    #[test]
+    fn tc_if_else_simple() {
+        jinko! {
+            if true {
+                15
+            } else {
+                14
+            }
+        };
+    }
+
+    #[test]
+    fn tc_if_else_in_func() {
+        jinko! {
+            func bool_to_int(b: bool) -> int {
+                if b {
+                    1
+                } else {
+                    0
+                }
+            }
+        };
+    }
+
+    #[test]
+    fn tc_if_else_not_bool_in_cond() {
+        jinko_fail! {
+            if 4.5 {
+                15
+            } else {
+                14
+            }
+        };
+    }
+
+    #[test]
+    fn tc_if_else_mismatched_types() {
+        jinko_fail! {
+            if true {
+                1
+            } else {
+                4.5
+            }
+        };
     }
 }

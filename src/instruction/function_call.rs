@@ -221,6 +221,7 @@ impl TypeCheck for FunctionCall {
 mod tests {
     use super::*;
     use crate::instruction::TypeId;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn t_pretty_print_empty() {
@@ -326,5 +327,39 @@ mod tests {
             func_call.execute(&mut i).unwrap(),
             JkInt::from(1).to_instance()
         );
+    }
+
+    #[test]
+    fn tc_invalid_type_for_arg() {
+        jinko_fail! {
+            func take_char(a: char) {}
+            take_char("hey");
+            take_char(15);
+            take_char(true);
+            take_char(4.5);
+        };
+    }
+
+    #[test]
+    fn tc_invalid_type_for_arg_complex() {
+        jinko_fail! {
+            type ComplexType(inner: char);
+            type SameButDiff(inner: char);
+            func take_char(a: ComplexType) {}
+            take_char("hey");
+            take_char(15);
+            take_char(true);
+            take_char(4.5);
+            take_char(SameButDiff { inner = 'a' })
+        };
+    }
+
+    #[test]
+    fn tc_valid_type_for_arg_complex() {
+        jinko! {
+            type ComplexType(inner: char);
+            func take_char(a: ComplexType) {}
+            take_char(ComplexType { inner = 'a' })
+        };
     }
 }

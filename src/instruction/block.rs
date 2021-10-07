@@ -137,9 +137,9 @@ impl TypeCheck for Block {
 mod tests {
     use super::*;
     use crate::instruction::Var;
-    use crate::jinko;
     use crate::value::JkInt;
     use crate::TypeCheck;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn empty() {
@@ -238,27 +238,19 @@ mod tests {
 
     #[test]
     fn tc_block_valid() {
-        let mut ctx = jinko! {
+        jinko! {
             func takes_int(i: int) {}
             takes_int({ 15 });
             takes_int({ { { 14 } } });
         };
-
-        assert!(ctx.execute().is_ok());
-        assert!(!ctx.has_errors());
     }
 
-    // FIXME: Do not ignore once jinko! macro is reworked for testing
     #[test]
-    #[ignore]
     fn tc_block_invalid() {
-        let mut ctx = jinko! {
+        jinko_fail! {
             func takes_int(i: int) {}
             takes_int({ 0.4 });
             takes_int({ { { true } } });
         };
-
-        assert!(ctx.execute().is_err());
-        assert!(ctx.has_errors());
     }
 }

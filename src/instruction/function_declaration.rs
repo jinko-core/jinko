@@ -285,10 +285,7 @@ mod tests {
         assert!(!ctx.error_handler.has_errors());
     }
 
-    // FIXME: Don't ignore once TypeCheck is a bound on Instruction
-
     #[test]
-    #[ignore]
     fn tc_valid() {
         let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")));
         function.set_kind(FunctionKind::Func);
@@ -304,7 +301,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn tc_invalid() {
         let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("string")));
         function.set_kind(FunctionKind::Func);

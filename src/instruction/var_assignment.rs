@@ -157,6 +157,7 @@ impl TypeCheck for VarAssign {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jinko_fail;
     use crate::parser::{Construct, Token};
     use crate::value::{JkInt, JkString};
     use crate::ToObjectInstance;
@@ -215,18 +216,11 @@ mod tests {
         assert!(i.error_handler.has_errors());
     }
 
-    // Don't ignore once TypeCheck is a bound on Instruction
     #[test]
-    #[ignore]
     fn create_mutable_twice() {
-        let mut i = Context::new();
-        let va_init = Construct::mut_var_assignment("mut a = 13").unwrap().1;
-        let va_0 = Construct::mut_var_assignment("mut a = 15").unwrap().1;
-
-        va_init.execute(&mut i);
-        if va_0.execute(&mut i).is_some() {
-            unreachable!("Can't create variables twice");
-        }
-        assert!(i.error_handler.has_errors());
+        jinko_fail! {
+            mut a0 = 15;
+            mut a0 = 14;
+        };
     }
 }

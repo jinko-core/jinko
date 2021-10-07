@@ -246,3 +246,14 @@ impl TypeCheck for Incl {
         CheckedType::Void
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::Context;
+
+    #[test]
+    fn t_incl_typechecking_stdlib() {
+        let mut ctx = Context::new();
+        assert!(ctx.execute().is_ok());
+    }
+}

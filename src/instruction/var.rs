@@ -148,9 +148,9 @@ impl Default for Var {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::jinko;
     use crate::value::JkInt;
     use crate::ToObjectInstance;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn keep_instance() {
@@ -167,24 +167,17 @@ mod tests {
 
     #[test]
     fn tc_valid() {
-        // FIXME: Add assertion directly from jinko
-        let mut ctx = jinko! {
+        jinko! {
             a = 15;
             a
         };
-
-        assert!(ctx.execute().is_ok());
-        assert!(!ctx.has_errors())
     }
 
     #[test]
     fn tc_invalid() {
-        let mut ctx = jinko! {
+        jinko_fail! {
             // undeclared variable
             a
         };
-
-        assert!(ctx.execute().is_err());
-        assert!(ctx.has_errors())
     }
 }
