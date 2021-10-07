@@ -265,7 +265,10 @@ impl Context {
         entry_point.last().map(|l| l.resolve_type(&mut ctx));
 
         match self.error_handler.has_errors() {
-            true => Err(Error::new(ErrKind::TypeChecker)),
+            true => {
+                self.emit_errors();
+                Err(Error::new(ErrKind::TypeChecker))
+            }
             false => Ok(()),
         }
     }
