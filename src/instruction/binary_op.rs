@@ -126,35 +126,6 @@ impl Instruction for BinaryOp {
             ),
         }
 
-        // // FIXME: DISGUSTING and do not unwap
-        // match l_value.ty().unwrap().name() {
-        //     // FIXME: Absolutely DISGUSTING
-        //     "int" => {
-        //         let res =
-        //             JkInt::from_instance(&l_value).do_op(&JkInt::from_instance(&r_value), self.op);
-        //         return_value = match res {
-        //             Ok(r) => r,
-        //             Err(e) => {
-        //                 ctx.error(e);
-        //                 return None;
-        //             }
-        //         };
-        //     }
-
-        //     "float" => {
-        //         let res = JkFloat::from_instance(&l_value)
-        //             .do_op(&JkFloat::from_instance(&r_value), self.op);
-        //         return_value = match res {
-        //             Ok(r) => r,
-        //             Err(e) => {
-        //                 ctx.error(e);
-        //                 return None;
-        //             }
-        //         }
-        //     }
-        //     _ => todo!("Implement empty types?"),
-        // }
-
         ctx.debug_step("BINOP EXIT");
 
         Some(return_value)
