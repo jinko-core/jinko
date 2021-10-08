@@ -19,6 +19,7 @@ use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
 use crate::typechecker::TypeCtx;
 use crate::ObjectInstance;
+use crate::Builtins;
 
 /// Type the context uses for keys
 type CtxKey = String;
@@ -43,6 +44,9 @@ pub struct Context {
 
     /// Contains the scopes of the context, in which are variables and functions
     scope_map: ScopeMap<Var, Rc<FunctionDec>, Rc<TypeDec>>,
+
+    /// Contains the functions shipping with the interpreter
+    builtins: Builtins,
 
     /// Tests registered in the context
     tests: HashMap<CtxKey, FunctionDec>,
@@ -89,6 +93,7 @@ impl Context {
             entry_point: Self::new_entry(),
             path: None,
             scope_map: ScopeMap::new(),
+            builtins: Builtins::new(),
             tests: HashMap::new(),
             included: HashSet::new(),
             error_handler: ErrorHandler::default(),
