@@ -1,7 +1,2 @@
-file = "jinko".concat(" .jk");
-
-@dump();
-
-l = file.len();
-
-@dump();
+s = "jinko".concat(".jk")
+s.display()

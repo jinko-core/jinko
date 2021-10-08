@@ -8,5 +8,4 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/stdlib/string/concat.jk"
-    exit_code: 9
     stdout: "jinko.jk"
