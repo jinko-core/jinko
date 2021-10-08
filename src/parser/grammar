@@ -11,7 +11,7 @@ method_or_field = '(' args
 unit = 'if' expr block next [ 'else' next block ]
      | 'while' expr block
      | 'loop' next block
-     | 'for' next IDENTIFIER next 'in' expr block 
+     | 'for' next IDENTIFIER next 'in' expr block
      | 'type' next IDENTIFIER next '{' named_args
      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
@@ -38,8 +38,12 @@ func_type_or_var = '(' next func_or_type_args
                  | ε                          (* variable *)
 
 (* Technically not LL(1) but should allow for better performance *)
-func_or_type_args = IDENTIFIER next ':' expr (',' typed_arg )* ')' (* type_instanciation *)
+(* Once we reach ':' we can know for sure wether we're in a type instanciation or function call *)
+(* If we end up merging type_instantiation or function_call this won't be an issue anymore *)
+func_or_type_args = IDENTIFIER next ':' expr (',' type_arg )* ')'  (* type_instantiation *)
                   | args                                           (* function_call *)
+
+type_arg = next IDENTIFIER next ':' expr
 
 
 block = '{' next inner_block
@@ -50,13 +54,10 @@ function_declaration = next IDENTIFIER next '(' typed_args next return_type
 return_type = '->' next IDENTIFIER next
             | ε
 
-typed_args = typed_arg ( ',' typed_arg )* ')'
+func_args = func_arg ( ',' func_arg )* ')'
            | ')'
-typed_arg = next IDENTIFIER next ':' expr
+func_arg = next IDENTIFIER next ':' next IDENTIFIER next
 
-named_args = named_arg ( ',' named_arg )* '}'
-           | '}'
-named_arg = next IDENTIFIER next '=' next expr next
 
 args = expr ( ',' expr )* ')'
      | ')'

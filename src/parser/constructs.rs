@@ -14,7 +14,10 @@
 //! is the grammar for a variable assignment.
 
 use nom::Err::Error as NomError;
-use nom::{branch::alt, combinator::opt, multi::many0, sequence::pair, sequence::preceded};
+use nom::{
+    branch::alt, combinator::opt, multi::many0, sequence::pair, sequence::preceded,
+    sequence::terminated,
+};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
@@ -201,13 +204,13 @@ fn unit_for(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     Ok((input, Box::new(Loop::new(LoopKind::For(var, expr), block))))
 }
 
-/// function_declaration = next IDENTIFIER next '(' typed_args next return_type
+/// function_declaration = next IDENTIFIER next '(' func_args next return_type
 fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
     let input = next(input);
     let (input, id) = Token::identifier(input)?;
     let input = next(input);
     let (input, _) = Token::left_parenthesis(input)?;
-    let (input, args) = typed_args(input)?;
+    let (input, args) = func_args(input)?;
     let input = next(input);
     let (input, return_type) = return_type(input)?;
 
@@ -257,26 +260,38 @@ fn inner_block(input: &str) -> ParseResult<&str, Block> {
     Ok((input, block))
 }
 
-/// func_type_or_var = '(' args                (* function_call *)
-///                  | '{' named_args          (* type instanciation *)
-///                  | '=' expr                (* variable assigment *)
-///                  | ε                       (* variable *)
+/// func_type_or_var = '(' next func_or_type_args
+///                  | '=' expr                   (* variable assigment *)
+///                  | ε                          (* variable *)
 fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_parenthesis(input) {
-        let (input, args) = args(input)?;
-        Ok((input, Box::new(FunctionCall::with_args(id, args))))
-    } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
-        let (input, named_args) = named_args(input)?;
-        let mut inst = TypeInstantiation::new(TypeId::new(id));
-        for named_arg in named_args.into_iter() {
-            inst.add_field(named_arg)
-        }
-        Ok((input, Box::new(inst)))
+        func_or_type_args(next(input), id)
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
     } else {
         Ok((input, Box::new(Var::new(id))))
+    }
+}
+
+/// func_or_type_args = IDENTIFIER next ':' expr (',' type_arg )* ')'  (* type_instantiation *)
+///                  | args                                            (* function_call *)
+fn func_or_type_args(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
+    if let Ok((input, first_attr)) =
+        terminated(terminated(Token::identifier, nom_next), Token::colon)(input)
+    {
+        let (input, first_attr_val) = expr(input)?;
+        let (input, attrs) = many0(preceded(Token::comma, type_arg))(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        let mut type_inst = TypeInstantiation::new(TypeId::new(id));
+        type_inst.add_field(VarAssign::new(false, first_attr, first_attr_val));
+        attrs.into_iter().for_each(|attr| type_inst.add_field(attr));
+
+        Ok((input, Box::new(type_inst)))
+    } else {
+        let (input, args) = args(input)?;
+        Ok((input, Box::new(FunctionCall::with_args(id, args))))
     }
 }
 
@@ -298,22 +313,22 @@ fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
     Ok((input, args))
 }
 
-/// typed_args = typed_arg ( ',' typed_arg )* ')'
+/// func_args = func_arg ( ',' func_arg )* ')'
 ///            | ')'
-fn typed_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
+fn func_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
     if let Ok((input, _)) = Token::right_parenthesis(input) {
         return Ok((input, vec![]));
     }
-    let (input, first_arg) = typed_arg(input)?;
-    let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
+    let (input, first_arg) = func_arg(input)?;
+    let (input, mut args) = many0(preceded(Token::comma, func_arg))(input)?;
     let (input, _) = Token::right_parenthesis(input)?;
 
     args.insert(0, first_arg);
     Ok((input, args))
 }
 
-/// typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
-fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
+/// func_arg = next IDENTIFIER next ':' next IDENTIFIER next
+fn func_arg(input: &str) -> ParseResult<&str, DecArg> {
     let input = next(input);
     let (input, id) = Token::identifier(input)?;
     let input = next(input);
@@ -325,26 +340,12 @@ fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
     Ok((input, DecArg::new(id, TypeId::new(ty))))
 }
 
-/// named_args = named_arg ( ',' named_arg )* '}'
-///            | '}'
-fn named_args(input: &str) -> ParseResult<&str, Vec<VarAssign>> {
-    if let Ok((input, _)) = Token::right_curly_bracket(input) {
-        return Ok((input, vec![]));
-    }
-    let (input, first_arg) = named_arg(input)?;
-    let (input, mut args) = many0(preceded(Token::comma, named_arg))(input)?;
-    let (input, _) = Token::right_curly_bracket(input)?;
-
-    args.insert(0, first_arg);
-    Ok((input, args))
-}
-
-/// named_arg = next IDENTIFIER next '=' next expr next
-fn named_arg(input: &str) -> ParseResult<&str, VarAssign> {
+/// type_arg = next IDENTIFIER next ':' expr
+fn type_arg(input: &str) -> ParseResult<&str, VarAssign> {
     let input = next(input);
     let (input, id) = Token::identifier(input)?;
     let input = next(input);
-    let (input, _) = Token::equal(input)?;
+    let (input, _) = Token::colon(input)?;
     let input = next(input);
     let (input, value) = expr(input)?;
     let input = next(input);
@@ -369,6 +370,10 @@ pub fn next(input: &str) -> &str {
     } else {
         input
     }
+}
+
+fn nom_next(input: &str) -> ParseResult<&str, ()> {
+    Ok((next(input), ()))
 }
 
 /// TEMPORARY, Rust doesn't know how to cast from a struct to a dyn when with other returns
@@ -968,8 +973,8 @@ impl Construct {
     /// }
     /// ```
     ///
-    /// `<typed_arg_list> := [ (<identifier> : <type>)* ]
-    /// `<func> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>`
+    /// `<func_arg_list> := [ (<identifier> : <type>)* ]
+    /// `<func> <identifier> ( <func_arg_list> ) [ -> <type> ] <block>`
     pub(crate) fn function_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
         let (input, _) = Token::func_tok(input)?;
 
@@ -1022,7 +1027,7 @@ impl Construct {
     /// }
     /// ```
     ///
-    /// `<mock> <identifier> ( <typed_arg_list> ) [ -> <type> ] <block>
+    /// `<mock> <identifier> ( <func_arg_list> ) [ -> <type> ] <block>
     pub(crate) fn mock_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
         let (input, _) = Token::mock_tok(input)?;
 
@@ -1037,7 +1042,7 @@ impl Construct {
     /// External functions cannot have an associated block. The function's code resides
     /// in a native program, for example a shared C library or a Rust crate.
     ///
-    /// `<ext> <func> <identifier> ( <typed_arg_list> ) [ -> <type> ] ;`
+    /// `<ext> <func> <identifier> ( <func_arg_list> ) [ -> <type> ] ;`
     pub(crate) fn ext_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
         let (input, _) = Token::ext_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
@@ -1199,7 +1204,7 @@ impl Construct {
 
     /// Parse a user-defined custom type
     ///
-    /// `<type> <TypeName> ( <typed_arg_list> ) ;`
+    /// `<type> <TypeName> ( <func_arg_list> ) ;`
     pub(crate) fn type_declaration(input: &str) -> ParseResult<&str, TypeDec> {
         let (input, _) = Token::_type_tok(input)?;
         let (input, _) = Token::maybe_consume_extra(input)?;
