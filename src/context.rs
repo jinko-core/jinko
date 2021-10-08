@@ -18,8 +18,7 @@ use std::rc::Rc;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
 use crate::typechecker::TypeCtx;
-use crate::ObjectInstance;
-use crate::Builtins;
+use crate::{ObjectInstance, Builtins};
 
 /// Type the context uses for keys
 type CtxKey = String;
@@ -302,6 +301,21 @@ impl Context {
 
     pub fn has_errors(&self) -> bool {
         self.error_handler.has_errors()
+    }
+
+    pub fn is_builtin(&self, name: &str) -> bool {
+        self.builtins.contains(name)
+    }
+
+    pub fn call_builtin(
+        &mut self,
+        builtin: &str,
+        args: Vec<Box<dyn Instruction>>,
+    ) -> Result<Option<ObjectInstance>, Error> {
+        match self.builtins.get(builtin) {
+            Some(f) => Ok(f(self, args)),
+            None => Err(Error::new(ErrKind::Context)),
+        }
     }
 }
 
