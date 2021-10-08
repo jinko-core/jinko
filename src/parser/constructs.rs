@@ -14,7 +14,7 @@
 //! is the grammar for a variable assignment.
 
 use nom::Err::Error as NomError;
-use nom::{branch::alt, combinator::opt, multi::many0, sequence::preceded};
+use nom::{branch::alt, combinator::opt, multi::many0, sequence::pair, sequence::preceded};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
@@ -134,9 +134,17 @@ fn method_or_field(
 ///      (* identifier *)
 ///      | IDENTIFIER next func_type_or_var
 fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    dbg!(input);
     if let Ok((input, _)) = Token::if_tok(input) {
         unit_if(input)
-    // function declarations
+    } else if let Ok((input, _)) = Token::while_tok(input) {
+        unit_while(input)
+    } else if let Ok((input, _)) = Token::loop_tok(input) {
+        unit_loop(input)
+    } else if let Ok((input, _)) = Token::for_tok(input) {
+        unit_for(input)
+
+        // function declarations
     } else if let Ok((input, kind)) =
         alt((Token::func_tok, Token::test_tok, Token::mock_tok))(input)
     {
@@ -168,6 +176,29 @@ fn unit_if(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     } else {
         Ok((input, Box::new(IfElse::new(cond, success, None))))
     }
+}
+
+fn unit_while(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, (cond, block)) = pair(expr, block)(input)?;
+    Ok((input, Box::new(Loop::new(LoopKind::While(cond), block))))
+}
+
+fn unit_loop(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, block) = block(input)?;
+    Ok((input, Box::new(Loop::new(LoopKind::Loop, block))))
+}
+
+fn unit_for(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, id) = Token::identifier(input)?;
+    let input = next(input);
+    let (input, _) = Token::in_tok(input)?;
+    dbg!(input);
+    let (input, expr) = expr(input)?; // PROBLEM, VARIABLE is parsed as type inst because of {
+    let (input, block) = block(input)?;
+    let var = Var::new(id);
+    Ok((input, Box::new(Loop::new(LoopKind::For(var, expr), block))))
 }
 
 /// function_declaration = next IDENTIFIER next '(' typed_args next return_type
