@@ -91,6 +91,7 @@ impl TypeCheck for JkInst {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jinko;
     use crate::parser::{Construct, Token};
 
     #[test]
@@ -121,5 +122,12 @@ mod tests {
             inst.is_ok(),
             "ir(func) is a valid use of the ir ctx directive"
         )
+    }
+
+    #[test]
+    fn tc_valid_jk_inst() {
+        jinko! {
+            @dump();
+        };
     }
 }
