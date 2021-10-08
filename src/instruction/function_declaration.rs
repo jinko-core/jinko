@@ -207,14 +207,19 @@ impl TypeCheck for FunctionDec {
             })
             .collect();
 
+        // FIXME: Remove clone?
+        if let Err(e) = ctx.declare_function(self.name.clone(), args_ty.clone(), return_ty.clone())
+        {
+            ctx.error(e);
+        }
+
+        ctx.scope_enter();
+
         args_ty.iter().for_each(|(name, ty)| {
             if let Err(e) = ctx.declare_var(name.clone(), ty.clone()) {
                 ctx.error(e);
             }
         });
-        if let Err(e) = ctx.declare_function(self.name.clone(), args_ty, return_ty.clone()) {
-            ctx.error(e);
-        }
 
         // If the function has no block, trust the declaration
         if let Some(b) = &self.block {
@@ -227,9 +232,15 @@ impl TypeCheck for FunctionDec {
                     return_ty,
                     block_ty
                 )));
+
+                ctx.scope_exit();
+
                 return CheckedType::Unknown;
             }
         }
+
+        ctx.scope_exit();
+
         CheckedType::Void
     }
 }
