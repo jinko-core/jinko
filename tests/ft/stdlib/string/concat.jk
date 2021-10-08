@@ -1,0 +1,7 @@
+file = "jinko".concat(" .jk");
+
+@dump();
+
+l = file.len();
+
+@dump();

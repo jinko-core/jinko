@@ -1,8 +1,10 @@
 //! This module contains all builtin functions declared in the jinko interpreter
 
+use std::collections::HashMap;
+use std::io::{self, Write};
+
 use crate::instance::{FromObjectInstance, ToObjectInstance};
 use crate::{Context, Instruction, JkInt, JkString, ObjectInstance};
-use std::collections::HashMap;
 
 type Args = Vec<Box<dyn Instruction>>;
 type BuiltinFn = fn(&mut Context, Args) -> Option<ObjectInstance>;
@@ -29,6 +31,22 @@ fn string_concat(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     Some(JkString::from(format!("{}{}", lhs, rhs)).to_instance())
 }
 
+fn string_display(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let s = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    io::stdout().lock().write_all(s.as_bytes()).unwrap();
+
+    None
+}
+
+fn string_display_err(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let s = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    io::stderr().lock().write_all(s.as_bytes()).unwrap();
+
+    None
+}
+
 impl Builtins {
     fn add(&mut self, name: &'static str, builtin_fn: BuiltinFn) {
         self.functions.insert(String::from(name), builtin_fn);
@@ -42,6 +60,8 @@ impl Builtins {
 
         builtins.add("__builtin_string_len", string_len);
         builtins.add("__builtin_string_concat", string_concat);
+        builtins.add("__builtin_string_display", string_display);
+        builtins.add("__builtin_string_display_err", string_display_err);
 
         builtins
     }
