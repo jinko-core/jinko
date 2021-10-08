@@ -30,13 +30,17 @@ unit = 'if' expr block next [ 'else' next block ]
      | DOUBLE
      | IDENTIFIER next func_type_or_var
 
-method_or_field = '(' args                 (* method call *)
-                | ε                        (* field access *)
+method_or_field = '(' args                    (* method call *)
+                | ε                           (* field access *)
 
-func_type_or_var = '(' args                (* function_call *)
-                 | '{' named_args          (* type instanciation *)
-                 | '=' expr                (* variable assigment *)
-                 | ε                       (* variable *)
+func_type_or_var = '(' next func_or_type_args
+                 | '=' expr                   (* variable assigment *)
+                 | ε                          (* variable *)
+
+(* Technically not LL(1) but should allow for better performance *)
+func_or_type_args = IDENTIFIER next ':' expr (',' typed_arg )* ')' (* type_instanciation *)
+                  | args                                           (* function_call *)
+
 
 block = '{' next inner_block
 inner_block = expr ( ';' expr )* '}'
@@ -48,7 +52,7 @@ return_type = '->' next IDENTIFIER next
 
 typed_args = typed_arg ( ',' typed_arg )* ')'
            | ')'
-typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
+typed_arg = next IDENTIFIER next ':' expr
 
 named_args = named_arg ( ',' named_arg )* '}'
            | '}'
