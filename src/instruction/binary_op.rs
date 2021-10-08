@@ -96,26 +96,14 @@ impl Instruction for BinaryOp {
         match l_value.ty() {
             CheckedType::Resolved(ty) => match ty.id() {
                 "int" => {
-                    let res = JkInt::from_instance(&l_value)
-                        .do_op(&JkInt::from_instance(&r_value), self.op);
-                    return_value = match res {
-                        Ok(r) => r,
-                        Err(e) => {
-                            ctx.error(e);
-                            return None;
-                        }
-                    };
+                    return_value = JkInt::from_instance(&l_value)
+                        .do_op(&JkInt::from_instance(&r_value), self.op)
+                        .unwrap();
                 }
                 "float" => {
-                    let res = JkFloat::from_instance(&l_value)
-                        .do_op(&JkFloat::from_instance(&r_value), self.op);
-                    return_value = match res {
-                        Ok(r) => r,
-                        Err(e) => {
-                            ctx.error(e);
-                            return None;
-                        }
-                    };
+                    return_value = JkFloat::from_instance(&l_value)
+                        .do_op(&JkFloat::from_instance(&r_value), self.op)
+                        .unwrap();
                 }
                 _ => unreachable!(
                     "attempting binary operation with void type or unknown type AFTER typechecking"
