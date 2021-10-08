@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use crate::instruction::{FunctionDec, Var};
+use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::typechecker::TypeCtx;
 use crate::{
     typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
@@ -116,6 +116,28 @@ impl FunctionCall {
 
         ctx.scope_exit();
     }
+
+    fn execute_external_function(
+        &self,
+        ctx: &mut Context,
+        builtin_name: &str,
+    ) -> Option<ObjectInstance> {
+        if ctx.is_builtin(builtin_name) {
+            match ctx.call_builtin(builtin_name, self.args.clone()) {
+                Ok(value) => value,
+                Err(e) => {
+                    ctx.error(e);
+                    None
+                }
+            }
+        } else {
+            ctx.error(Error::new(ErrKind::Context).with_msg(format!(
+                "error executing external function `{}`",
+                builtin_name
+            )));
+            None
+        }
+    }
 }
 
 impl Instruction for FunctionCall {
@@ -149,6 +171,10 @@ impl Instruction for FunctionCall {
                 return None;
             }
         };
+
+        if function.fn_kind() == FunctionKind::Ext {
+            return self.execute_external_function(ctx, function.name());
+        }
 
         ctx.scope_enter();
 
