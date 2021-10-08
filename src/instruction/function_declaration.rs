@@ -249,7 +249,7 @@ impl std::fmt::Debug for FunctionDec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{jinko, instruction::TypeId, parser::Construct};
+    use crate::{instruction::TypeId, jinko, parser::Construct};
 
     #[test]
     fn simple_no_arg() {
