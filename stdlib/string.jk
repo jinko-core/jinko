@@ -1,0 +1,12 @@
+ext func __builtin_string_len(s: string) -> int;
+ext func __builtin_string_concat(a: string, b: string) -> string;
+
+/// Get the length of a given string
+func len(s: string) -> int {
+    s.__builtin_string_len()
+}
+
+/// Concatenate two strings together, returning a new one
+func concat(lhs: string, rhs: string) -> string {
+    lhs.__builtin_string_concat(rhs)
+}
