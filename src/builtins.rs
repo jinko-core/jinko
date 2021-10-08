@@ -74,3 +74,9 @@ impl Builtins {
         self.functions.get(builtin)
     }
 }
+
+impl Default for Builtins {
+    fn default() -> Self {
+        Self::new()
+    }
+}
