@@ -105,10 +105,10 @@ impl FunctionCall {
         }
     }
 
-    fn type_args(&self, mut args: Vec<(String, CheckedType)>, ctx: &mut TypeCtx) {
+    fn type_args(&self, args: Vec<(String, CheckedType)>, ctx: &mut TypeCtx) {
         ctx.scope_enter();
 
-        args.drain(..).for_each(|(arg_name, arg_ty)| {
+        args.into_iter().for_each(|(arg_name, arg_ty)| {
             if let Err(e) = ctx.declare_var(arg_name, arg_ty) {
                 ctx.error(e)
             }
@@ -210,7 +210,7 @@ impl TypeCheck for FunctionCall {
             args.push((expected_name.clone(), expected_ty.clone()));
         }
 
-        errors.drain(..).for_each(|err| ctx.error(err));
+        errors.into_iter().for_each(|err| ctx.error(err));
         self.type_args(args, ctx);
 
         return_type
