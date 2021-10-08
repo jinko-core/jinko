@@ -351,6 +351,7 @@ impl<V: Instruction, F: Instruction, T: Instruction> Display for Scope<V, Rc<F>,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jinko;
 
     #[test]
     fn t_redefinition_of_function() {
@@ -398,5 +399,14 @@ mod tests {
         assert!(output.contains("type"));
         assert!(output.contains("func"));
         assert!(output.contains("a_var_named_a"));
+    }
+
+    #[test]
+    fn t_call_builtin() {
+        jinko! {
+            ext func __builtin_string_len(s: string) -> int;
+
+            "hey".__builtin_string_len();
+        };
     }
 }
