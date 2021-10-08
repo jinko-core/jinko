@@ -19,7 +19,7 @@ or its usage!
 
 ## Community
 
-Feel free to come and chat about jinko on [matrix](https://matrix.to/#/+jinko:matrix.org)!
+Feel free to come and chat about jinko on [matrix](https://matrix.to/#/#jinko-lang:matrix.org)!
 
 ## Programming in jinko
 
