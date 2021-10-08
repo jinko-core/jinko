@@ -251,6 +251,7 @@ impl<T> From<T> for JkConstant<T> {
 
 #[cfg(test)]
 mod tests {
+    use crate::jinko;
     use crate::{JkBool, JkFloat, JkInt};
 
     use super::*;
@@ -301,5 +302,16 @@ mod tests {
             s.resolve_type(&mut ctx),
             CheckedType::Resolved(TypeId::from("float"))
         );
+    }
+
+    #[test]
+    fn tc_primitives_available() {
+        jinko! {
+            b = true;
+            i = 15;
+            f = 4.5;
+            c = 'c';
+            s = "jinko";
+        };
     }
 }
