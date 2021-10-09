@@ -1291,643 +1291,738 @@ impl Construct {
 mod tests {
     use super::*;
     use crate::instruction::JkInstKind;
+    use crate::{JkBool, JkChar, JkFloat, JkInt, JkString};
 
-    fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
-        let (input, fn_id) = Token::identifier(input)?;
-        let (input, _) = Token::maybe_consume_extra(input).unwrap();
-        Construct::function_call(input, &fn_id)
+    #[test]
+    fn simple_int_sum() {
+        let (input, expr) = expr(" 401 + 809 ").unwrap();
+        let operation: &BinaryOp = expr.downcast_ref().unwrap();
+        let lhs: &JkInt = operation.lhs().downcast_ref().unwrap();
+        let rhs: &JkInt = operation.rhs().downcast_ref().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(operation.operator(), Operator::Add);
+        assert_eq!(lhs.print(), "401");
+        assert_eq!(rhs.print(), "809");
     }
 
     #[test]
-    fn t_var_assign_valid() {
-        let (input, id) = Token::identifier("x = 12;").unwrap();
-        let (input, _) = Token::maybe_consume_extra(input).unwrap();
-        assert_eq!(
-            Construct::var_assignment(input, &id).unwrap().1.mutable(),
-            false
-        );
-        let (input, id) = Token::identifier("x = 12;").unwrap();
-        let (input, _) = Token::maybe_consume_extra(input).unwrap();
-        assert_eq!(
-            Construct::var_assignment(input, &id).unwrap().1.symbol(),
-            "x"
-        );
+    fn simple_float_mul() {
+        let (input, expr) = expr("3.14 * 9.999").unwrap();
+        let operation: &BinaryOp = expr.downcast_ref().unwrap();
+        let lhs: &JkFloat = operation.lhs().downcast_ref().unwrap();
+        let rhs: &JkFloat = operation.rhs().downcast_ref().unwrap();
 
-        assert_eq!(
-            Construct::mut_var_assignment("mut x_99 = 129;")
-                .unwrap()
-                .1
-                .mutable(),
-            true
-        );
-        assert_eq!(
-            Construct::mut_var_assignment("mut x_99 = 129;")
-                .unwrap()
-                .1
-                .symbol(),
-            "x_99"
-        );
-
-        let (input, id) = Token::identifier("mut_x_99 = 129;").unwrap();
-        let (input, _) = Token::maybe_consume_extra(input).unwrap();
-        assert_eq!(
-            Construct::var_assignment(input, &id).unwrap().1.mutable(),
-            false
-        );
-        let (input, id) = Token::identifier("mut_x_99 = 129;").unwrap();
-        let (input, _) = Token::maybe_consume_extra(input).unwrap();
-        assert_eq!(
-            Construct::var_assignment(input, &id).unwrap().1.symbol(),
-            "mut_x_99"
-        );
-
-        assert_eq!(
-            Construct::mut_var_assignment("mut mut_x_99 = 129;")
-                .unwrap()
-                .1
-                .mutable(),
-            true
-        );
-        assert_eq!(
-            Construct::mut_var_assignment("mut mut_x_99 = 129;")
-                .unwrap()
-                .1
-                .symbol(),
-            "mut_x_99"
-        );
-
-        assert_eq!(
-            Construct::mut_var_assignment("mut\nname = 129;")
-                .unwrap()
-                .1
-                .mutable(),
-            true
-        );
-
-        assert!(Construct::mut_var_assignment("mut x=12;").is_ok());
-        assert!(Construct::mut_var_assignment("mut x= 12;").is_ok());
-        assert!(Construct::mut_var_assignment("mut x =12;").is_ok());
+        assert_eq!(input, "");
+        assert_eq!(operation.operator(), Operator::Mul);
+        assert_eq!(lhs.print(), "3.14");
+        assert_eq!(rhs.print(), "9.999");
     }
 
     #[test]
-    fn t_var_assign_invalid() {
-        let (input, id) = Token::identifier("mutable x = 12").unwrap();
-        assert!(Construct::var_assignment(input, &id).is_err());
+    fn chained_sum_sub() {
+        let (input, expr) = expr("239 + 809 - 1004").unwrap();
+        let sub: &BinaryOp = expr.downcast_ref().unwrap();
+        let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
+
+        let first: &JkInt = add.lhs().downcast_ref().unwrap();
+        let second: &JkInt = add.rhs().downcast_ref().unwrap();
+        let third: &JkInt = sub.rhs().downcast_ref().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(sub.operator(), Operator::Sub);
+        assert_eq!(add.operator(), Operator::Add);
+        assert_eq!(first.print(), "239");
+        assert_eq!(second.print(), "809");
+        assert_eq!(third.print(), "1004");
     }
 
     #[test]
-    fn t_function_call_no_args_valid() {
-        assert_eq!(function_call("fn()").unwrap().1.name(), "fn");
-        assert_eq!(function_call("fn()").unwrap().1.args().len(), 0);
+    fn math_precedence() {
+        let (input, expr) = expr("5.9 + 128 / 809.1 - 1004").unwrap();
+        let sub: &BinaryOp = expr.downcast_ref().unwrap();
+        let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
+        let div: &BinaryOp = add.rhs().downcast_ref().unwrap();
 
-        assert_eq!(function_call("fn(    )").unwrap().1.name(), "fn");
-        assert_eq!(function_call("fn(    )").unwrap().1.args().len(), 0);
+        let first: &JkFloat = add.lhs().downcast_ref().unwrap();
+        let second: &JkInt = div.lhs().downcast_ref().unwrap();
+        let third: &JkFloat = div.rhs().downcast_ref().unwrap();
+        let fourth: &JkInt = sub.rhs().downcast_ref().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(sub.operator(), Operator::Sub);
+        assert_eq!(add.operator(), Operator::Add);
+        assert_eq!(div.operator(), Operator::Div);
+        assert_eq!(first.print(), "5.9");
+        assert_eq!(second.print(), "128");
+        assert_eq!(third.print(), "809.1");
+        assert_eq!(fourth.print(), "1004");
     }
 
     #[test]
-    fn t_function_call_valid() {
-        assert_eq!(function_call("fn(2)").unwrap().1.name(), "fn");
-        assert_eq!(function_call("fn(2)").unwrap().1.args().len(), 1);
+    fn tricky_math_precedence() {
+        let (input, expr) = expr("5.9 + 128 / 809.1 - 1 * 1.1").unwrap();
+        let sub: &BinaryOp = expr.downcast_ref().unwrap();
+        let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
+        let mul: &BinaryOp = sub.rhs().downcast_ref().unwrap();
+        let div: &BinaryOp = add.rhs().downcast_ref().unwrap();
 
-        assert_eq!(function_call("fn(1, 2, 3)").unwrap().1.name(), "fn");
-        assert_eq!(function_call("fn(a, hey(), 3.12)").unwrap().1.name(), "fn");
-        assert_eq!(function_call("fn(1, 2, 3)").unwrap().1.args().len(), 3);
+        let first: &JkFloat = add.lhs().downcast_ref().unwrap();
+        let second: &JkInt = div.lhs().downcast_ref().unwrap();
+        let third: &JkFloat = div.rhs().downcast_ref().unwrap();
+        let fourth: &JkInt = mul.lhs().downcast_ref().unwrap();
+        let fifth: &JkFloat = mul.rhs().downcast_ref().unwrap();
 
-        assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.name(), "fn");
-        assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.args().len(), 3);
-        assert_eq!(function_call("fn     ()").unwrap().1.name(), "fn");
+        assert_eq!(input, "");
+        assert_eq!(sub.operator(), Operator::Sub);
+        assert_eq!(add.operator(), Operator::Add);
+        assert_eq!(mul.operator(), Operator::Mul);
+        assert_eq!(div.operator(), Operator::Div);
+        assert_eq!(first.print(), "5.9");
+        assert_eq!(second.print(), "128");
+        assert_eq!(third.print(), "809.1");
+        assert_eq!(fourth.print(), "1");
+        assert_eq!(fifth.print(), "1.1");
     }
 
-    #[test]
-    fn t_function_call_invalid() {
-        assert!(function_call("fn(").is_err());
-        assert!(function_call("fn))").is_err());
-        assert!(function_call("fn((").is_err());
-        assert!(function_call("fn((").is_err());
-        assert!(function_call("fn((").is_err());
-    }
+    /*
 
-    #[test]
-    fn t_function_call_multiarg_invalid() {
-        assert!(function_call("fn(1, 2, 3, 4,)").is_err());
-        assert!(function_call("fn(1, 2, 3, 4,   )").is_err());
-    }
+        fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
+            let (input, fn_id) = Token::identifier(input)?;
+            let (input, _) = Token::maybe_consume_extra(input).unwrap();
+            Construct::function_call(input, &fn_id)
+        }
 
-    #[test]
-    fn t_block_empty() {
-        assert_eq!(Construct::block("{}").unwrap().1.instructions().len(), 0);
-    }
-
-    #[test]
-    fn t_block_valid_oneline() {
-        assert_eq!(
-            Construct::block("{ 12a; }").unwrap().1.instructions().len(),
-            1
-        );
-        assert_eq!(
-            Construct::block("{ 12a; 14a; }")
-                .unwrap()
-                .1
-                .instructions()
-                .len(),
-            2
-        );
-        assert_eq!(
-            Construct::block("{ 12a; 14a }")
-                .unwrap()
-                .1
-                .instructions()
-                .len(),
-            1
-        );
-
-        assert!(Construct::block("{ 12a; 14a }").unwrap().1.last().is_some());
-    }
-
-    #[test]
-    fn t_id_type_valid() {
-        assert_eq!(
-            Construct::identifier_type("name: some_type")
-                .unwrap()
-                .1
-                .name(),
-            "name"
-        );
-        assert_eq!(
-            Construct::identifier_type("name: some_type")
-                .unwrap()
-                .1
-                .get_type()
-                .id(),
-            "some_type"
-        );
-
-        assert_eq!(
-            Construct::identifier_type("name     :some_type")
-                .unwrap()
-                .1
-                .name(),
-            "name"
-        );
-        assert_eq!(
-            Construct::identifier_type("name     :some_type")
-                .unwrap()
-                .1
-                .get_type()
-                .id(),
-            "some_type"
-        );
-    }
-
-    #[test]
-    fn t_args_dec_empty() {
-        assert_eq!(Construct::args_dec("()").unwrap().1.len(), 0);
-    }
-
-    #[test]
-    fn t_args_dec_one_arg() {
-        assert_eq!(Construct::args_dec("(name :ty)").unwrap().1.len(), 1);
-    }
-
-    #[test]
-    fn t_args_dec_valid() {
-        assert_eq!(
-            Construct::args_dec("(name :ty, name1      : type1)")
-                .unwrap()
-                .1
-                .len(),
-            2
-        );
-    }
-
-    #[test]
-    fn t_return_type_void() {
-        assert_eq!(Construct::return_type(""), Ok(("", None)));
-        assert_eq!(Construct::return_type("    "), Ok(("", None)));
-        assert_eq!(
-            Construct::return_type("        { 12 }"),
-            Ok(("{ 12 }", None))
-        );
-    }
-
-    #[test]
-    fn t_block_invalid_oneline() {
-        assert!(Construct::block("{ 12a;").is_err());
-        assert!(Construct::block("{ 12a").is_err());
-        assert!(Construct::block("{ 12a; 13a").is_err());
-        assert!(Construct::block("12a; 13a }").is_err());
-    }
-
-    #[test]
-    fn t_block_valid_multiline() {
-        let input = r#"{
-                12a;
-                12a;
-                13a;
-            }"#;
-
-        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 3);
-
-        let input = r#"{
-                12a;
-                12a;
-                13a;
-                14a
-            }"#;
-
-        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 3);
-
-        let input = r#"{
-                true;
+        #[test]
+        fn t_var_assign_valid() {
+            let (input, id) = Token::identifier("x = 12;").unwrap();
+            let (input, _) = Token::maybe_consume_extra(input).unwrap();
+            assert_eq!(
+                Construct::var_assignment(input, &id).unwrap().1.mutable(),
                 false
-            }"#;
-
-        assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 1);
-    }
-
-    #[test]
-    fn t_return_type_non_void() {
-        assert_eq!(
-            Construct::return_type("-> int"),
-            Ok(("", Some(TypeId::from("int"))))
-        );
-        assert_eq!(
-            Construct::return_type("   ->    int   {"),
-            Ok(("{", Some(TypeId::from("int"))))
-        );
-    }
-
-    #[test]
-    fn t_function_declaration_valid_simple() {
-        let func = Construct::function_declaration("func something() {}")
-            .unwrap()
-            .1;
-
-        assert_eq!(func.name(), "something");
-        assert_eq!(func.ty(), None);
-        assert_eq!(func.args().len(), 0);
-        assert_eq!(func.fn_kind(), FunctionKind::Func);
-    }
-
-    #[test]
-    fn t_function_declaration_valid_space() {
-        let func = Construct::function_declaration("func something        \t() {}")
-            .unwrap()
-            .1;
-
-        assert_eq!(func.name(), "something");
-        assert_eq!(func.ty(), None);
-        assert_eq!(func.args().len(), 0);
-        assert_eq!(func.fn_kind(), FunctionKind::Func);
-    }
-
-    #[test]
-    fn t_function_declaration_valid() {
-        let func = Construct::function_declaration("func add(lhs: ty, rhs: ty) -> ty {}")
-            .unwrap()
-            .1;
-
-        assert_eq!(func.name(), "add");
-        assert_eq!(func.ty(), Some(&TypeId::from("ty")));
-        assert_eq!(func.args().len(), 2);
-        assert_eq!(func.fn_kind(), FunctionKind::Func);
-    }
-
-    #[test]
-    fn t_test_valid() {
-        let test = Construct::test_declaration("test add() {}").unwrap().1;
-
-        assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), None);
-        assert_eq!(test.fn_kind(), FunctionKind::Test);
-    }
-
-    #[test]
-    fn t_test_invalid() {
-        assert!(Construct::test_declaration("test add(a: int) -> int {}").is_err());
-    }
-
-    #[test]
-    fn t_mock_valid() {
-        let test = Construct::mock_declaration("mock add(lhs: ty, rhs: ty) {}")
-            .unwrap()
-            .1;
-
-        assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), None);
-        assert_eq!(test.fn_kind(), FunctionKind::Mock);
-    }
-
-    #[test]
-    fn t_ext_valid() {
-        let test = Construct::ext_declaration("ext func add(lhs: ty, rhs: ty) -> ty;")
-            .unwrap()
-            .1;
-
-        assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), Some(&TypeId::from("ty")));
-        assert_eq!(test.fn_kind(), FunctionKind::Ext);
-    }
-
-    #[test]
-    fn t_ext_valid_void() {
-        let test = Construct::ext_declaration("ext func add(lhs: ty, rhs: ty);")
-            .unwrap()
-            .1;
-
-        assert_eq!(test.name(), "add");
-        assert_eq!(test.ty(), None);
-        assert_eq!(test.fn_kind(), FunctionKind::Ext);
-    }
-
-    #[test]
-    fn t_ext_invalid() {
-        assert!(Construct::ext_declaration("ext func add(a: int) -> int {}").is_err());
-    }
-
-    #[test]
-    fn t_if_else_just_if() {
-        let ie = Construct::if_else("if condition {}");
-
-        assert!(&ie.is_ok());
-    }
-
-    #[test]
-    fn t_if_else() {
-        assert!(Construct::if_else("if condition {} else {}").is_ok());
-    }
-
-    #[test]
-    fn t_loop_valid() {
-        assert!(Construct::loop_block("loop {}").is_ok());
-    }
-
-    #[test]
-    fn t_loop_invalid() {
-        assert!(Construct::loop_block("loo {}").is_err());
-
-        assert!(Construct::loop_block("loop").is_err());
-    }
-
-    #[test]
-    fn t_while_valid() {
-        assert!(Construct::while_block("while x_99 {}").is_ok());
-    }
-
-    #[test]
-    fn t_while_invalid() {
-        assert!(Construct::while_block("while {}").is_err());
-
-        assert!(Construct::while_block("while").is_err());
-    }
-
-    #[test]
-    fn t_for_valid() {
-        assert!(Construct::for_block("for x_99 in x_99 {}").is_ok());
-    }
-
-    #[test]
-    fn t_for_invalid() {
-        assert!(Construct::for_block("for {}").is_err());
-
-        assert!(Construct::for_block("for x99 in {}").is_err());
-
-        assert!(Construct::for_block("for x99 in { { { inner_block() } } }").is_err());
-    }
-
-    #[test]
-    fn t_jinko_inst_valid() {
-        let (_, dump_inst) = Construct::jinko_inst("@dump()").unwrap();
-        assert_eq!(dump_inst.jk_inst_kind(), &JkInstKind::Dump);
-
-        let (_, quit_inst) = Construct::jinko_inst("@quit(something, something_else)").unwrap();
-        assert_eq!(quit_inst.jk_inst_kind(), &JkInstKind::Quit);
-    }
-
-    #[test]
-    fn t_binary_op_valid() {
-        assert!(Construct::binary_op("a *   12 ").is_ok());
-        assert!(Construct::binary_op("some() + 12.1").is_ok());
-    }
-
-    #[test]
-    fn t_binary_op_invalid() {
-        assert!(Construct::binary_op("a ? 12").is_err());
-    }
-
-    #[test]
-    fn t_type_declaration_simple() {
-        assert!(Construct::type_declaration("type Int(v: int);").is_ok());
-        assert!(Construct::type_declaration("type Ints(a: int, b: int);").is_ok());
-        assert!(Construct::type_declaration("type Compound(i: int, s: str);").is_ok());
-        assert!(Construct::type_declaration(
-            "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
-        )
-        .is_ok());
-    }
-
-    #[test]
-    fn t_type_declaration_empty() {
-        assert!(Construct::type_declaration("type Empty();").is_err());
-    }
-
-    #[test]
-    fn t_type_declaration_invalid() {
-        assert!(Construct::type_declaration("type ExtraComma(a: int, b: int,);").is_err());
-    }
-
-    #[test]
-    fn t_type_instantiation_valid() {
-        assert!(Construct::type_instantiation("Custom { a = 1 }").is_ok());
-    }
-
-    #[test]
-    fn t_type_instantiation_valid_multi() {
-        assert!(Construct::type_instantiation("Custom { a = 1, b= 2, c = { 's' } }").is_ok());
-    }
-
-    #[test]
-    fn t_type_instantiation_invalid() {
-        assert!(Construct::type_instantiation("Custom { ").is_err());
-    }
-
-    #[test]
-    fn t_type_instantiation_no_name() {
-        assert!(Construct::type_instantiation("{ 1 }").is_err());
-    }
-
-    #[test]
-    fn t_type_instantiation_no_named_arg() {
-        assert!(Construct::type_instantiation("CustomType { 1 }").is_err());
-    }
-
-    #[test]
-    fn t_func_dec_binop() {
-        assert!(Construct::function_declaration("func a(a: int, b:int) -> int { a + b }").is_ok());
-    }
-
-    #[test]
-    fn t_func_dec_return_arg() {
-        assert!(Construct::function_declaration("func a(a: int, b:int) -> int { a }").is_ok());
-    }
-
-    #[test]
-    fn t_func_dec_return_arg_plus_stmt() {
-        assert!(
-            Construct::function_declaration("func a(a: int, b:int) -> int { something(); a }")
-                .is_ok()
-        );
-    }
-
-    #[test]
-    fn t_func_dec_return_binop_plus_stmt() {
-        assert!(Construct::function_declaration(
-            "func a(a: int, b:int) -> int { something(); a + b }"
-        )
-        .is_ok());
-    }
-
-    #[test]
-    fn t_func_dec_return_binop_as_var() {
-        assert!(Construct::function_declaration(
-            "func a(a: int, b:int) -> int { res = a + b; res }"
-        )
-        .is_ok());
-    }
-
-    #[test]
-    fn t_func_call_with_true_arg_is_func_call() {
-        let res = Construct::instruction("h(true)").unwrap().1;
-        res.downcast_ref::<FunctionCall>().unwrap();
-
-        // There might be a bug that a function call with just a boolean argument gets
-        // parsed as a variable. This test aims at correcting that regression. If it
-        // fails, then it means the function call did not get parsed as a function call
-    }
-
-    #[test]
-    fn t_named_argument_valid() {
-        assert!(Construct::named_arg("a = b").is_ok());
-        assert!(Construct::named_arg("a = 2").is_ok());
-        assert!(Construct::named_arg("a = { 2 }").is_ok());
-        assert!(Construct::named_arg("a = call()").is_ok());
-    }
-
-    #[test]
-    fn t_named_argument_invalid() {
-        assert!(Construct::named_arg("a =").is_err(), "No second member");
-        assert!(Construct::named_arg("= 2").is_err(), "No first member");
-        assert!(
-            Construct::named_arg("a { 2 }").is_err(),
-            "Missing equal sign"
-        );
-    }
-
-    #[test]
-    fn t_incl_valid() {
-        assert!(Construct::incl("incl simple").is_ok());
-    }
-
-    #[test]
-    fn t_incl_valid_plus_rename() {
-        assert!(Construct::incl("incl a as b").is_ok());
-    }
-
-    #[test]
-    fn t_incl_invalid() {
-        assert!(Construct::incl("incl").is_err());
-    }
-
-    #[test]
-    fn t_incl_plus_rename_invalid() {
-        assert!(Construct::incl("incl a as").is_err());
-    }
-
-    #[test]
-    fn t_method_call_simple() {
-        assert!(
-            Construct::method_call_or_field_access("a.b()").is_ok(),
-            "Valid to have simple identifiers"
-        );
-        assert!(
-            Construct::method_call_or_field_access("135.method()").is_ok(),
-            "Valid to have constant as caller"
-        );
-        assert!(
-            Construct::method_call_or_field_access("{ hey }.method()").is_ok(),
-            "Valid to have block as caller"
-        );
-        assert!(
-            Construct::method_call_or_field_access("func_call().method()").is_ok(),
-            "Valid to have call as caller"
-        );
-        assert!(
-            Construct::instruction("    \ta.b()").is_ok(),
-            "Valid to have simple identifiers"
-        );
-    }
-
-    #[test]
-    fn t_method_call_invalid() {
-        let (input, _) =
-            Construct::method_call_or_field_access("a.b(").expect("Not parsed as field");
-        assert_eq!(input, "(", "Missing parentheses");
-        assert!(
-            Construct::method_call_or_field_access("a.()").is_err(),
-            "Missing method name"
-        );
-        assert!(Construct::instance(".method()").is_err(), "Missing caller");
-    }
-
-    #[test]
-    fn t_sy_eager_consume() {
-        // https://github.com/CohenArthur/jinko/issues/172
-
-        assert_eq!(Construct::instruction("1 2").unwrap().0, " 2");
-        assert_eq!(Construct::instruction("a b").unwrap().0, " b");
-    }
-
-    #[test]
-    fn t_field_access_valid() {
-        assert!(Construct::method_call_or_field_access("s.a").is_ok());
-        assert!(Construct::method_call_or_field_access("longer_identifier.a").is_ok());
-        assert!(Construct::method_call_or_field_access("longer_identifier.with_numbers32").is_ok());
-    }
-
-    #[test]
-    fn t_field_access_from_type_instantiation() {
-        assert!(Construct::method_call_or_field_access("CustomType { k = a, v = b }.c").is_ok());
-    }
-
-    #[test]
-    fn t_field_access_with_constant_field() {
-        assert!(Construct::method_call_or_field_access("s.1").is_err());
-        assert!(Construct::method_call_or_field_access("a.\"string\"").is_err());
-    }
-
-    // TODO Remove if design change accepted
-    /*#[test]
-    fn t_field_access_invalid_with_constant_instance() {
-        assert!(Construct::method_call_or_field_access("1.a").is_err());
-        assert!(Construct::method_call_or_field_access("\"string\".a").is_err());
-    }
+            );
+            let (input, id) = Token::identifier("x = 12;").unwrap();
+            let (input, _) = Token::maybe_consume_extra(input).unwrap();
+            assert_eq!(
+                Construct::var_assignment(input, &id).unwrap().1.symbol(),
+                "x"
+            );
+
+            assert_eq!(
+                Construct::mut_var_assignment("mut x_99 = 129;")
+                    .unwrap()
+                    .1
+                    .mutable(),
+                true
+            );
+            assert_eq!(
+                Construct::mut_var_assignment("mut x_99 = 129;")
+                    .unwrap()
+                    .1
+                    .symbol(),
+                "x_99"
+            );
+
+            let (input, id) = Token::identifier("mut_x_99 = 129;").unwrap();
+            let (input, _) = Token::maybe_consume_extra(input).unwrap();
+            assert_eq!(
+                Construct::var_assignment(input, &id).unwrap().1.mutable(),
+                false
+            );
+            let (input, id) = Token::identifier("mut_x_99 = 129;").unwrap();
+            let (input, _) = Token::maybe_consume_extra(input).unwrap();
+            assert_eq!(
+                Construct::var_assignment(input, &id).unwrap().1.symbol(),
+                "mut_x_99"
+            );
+
+            assert_eq!(
+                Construct::mut_var_assignment("mut mut_x_99 = 129;")
+                    .unwrap()
+                    .1
+                    .mutable(),
+                true
+            );
+            assert_eq!(
+                Construct::mut_var_assignment("mut mut_x_99 = 129;")
+                    .unwrap()
+                    .1
+                    .symbol(),
+                "mut_x_99"
+            );
+
+            assert_eq!(
+                Construct::mut_var_assignment("mut\nname = 129;")
+                    .unwrap()
+                    .1
+                    .mutable(),
+                true
+            );
+
+            assert!(Construct::mut_var_assignment("mut x=12;").is_ok());
+            assert!(Construct::mut_var_assignment("mut x= 12;").is_ok());
+            assert!(Construct::mut_var_assignment("mut x =12;").is_ok());
+        }
+
+        #[test]
+        fn t_var_assign_invalid() {
+            let (input, id) = Token::identifier("mutable x = 12").unwrap();
+            assert!(Construct::var_assignment(input, &id).is_err());
+        }
+
+        #[test]
+        fn t_function_call_no_args_valid() {
+            assert_eq!(function_call("fn()").unwrap().1.name(), "fn");
+            assert_eq!(function_call("fn()").unwrap().1.args().len(), 0);
+
+            assert_eq!(function_call("fn(    )").unwrap().1.name(), "fn");
+            assert_eq!(function_call("fn(    )").unwrap().1.args().len(), 0);
+        }
+
+        #[test]
+        fn t_function_call_valid() {
+            assert_eq!(function_call("fn(2)").unwrap().1.name(), "fn");
+            assert_eq!(function_call("fn(2)").unwrap().1.args().len(), 1);
+
+            assert_eq!(function_call("fn(1, 2, 3)").unwrap().1.name(), "fn");
+            assert_eq!(function_call("fn(a, hey(), 3.12)").unwrap().1.name(), "fn");
+            assert_eq!(function_call("fn(1, 2, 3)").unwrap().1.args().len(), 3);
+
+            assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.name(), "fn");
+            assert_eq!(function_call("fn(1   , 2,3)").unwrap().1.args().len(), 3);
+            assert_eq!(function_call("fn     ()").unwrap().1.name(), "fn");
+        }
+
+        #[test]
+        fn t_function_call_invalid() {
+            assert!(function_call("fn(").is_err());
+            assert!(function_call("fn))").is_err());
+            assert!(function_call("fn((").is_err());
+            assert!(function_call("fn((").is_err());
+            assert!(function_call("fn((").is_err());
+        }
+
+        #[test]
+        fn t_function_call_multiarg_invalid() {
+            assert!(function_call("fn(1, 2, 3, 4,)").is_err());
+            assert!(function_call("fn(1, 2, 3, 4,   )").is_err());
+        }
+
+        #[test]
+        fn t_block_empty() {
+            assert_eq!(Construct::block("{}").unwrap().1.instructions().len(), 0);
+        }
+
+        #[test]
+        fn t_block_valid_oneline() {
+            assert_eq!(
+                Construct::block("{ 12a; }").unwrap().1.instructions().len(),
+                1
+            );
+            assert_eq!(
+                Construct::block("{ 12a; 14a; }")
+                    .unwrap()
+                    .1
+                    .instructions()
+                    .len(),
+                2
+            );
+            assert_eq!(
+                Construct::block("{ 12a; 14a }")
+                    .unwrap()
+                    .1
+                    .instructions()
+                    .len(),
+                1
+            );
+
+            assert!(Construct::block("{ 12a; 14a }").unwrap().1.last().is_some());
+        }
+
+        #[test]
+        fn t_id_type_valid() {
+            assert_eq!(
+                Construct::identifier_type("name: some_type")
+                    .unwrap()
+                    .1
+                    .name(),
+                "name"
+            );
+            assert_eq!(
+                Construct::identifier_type("name: some_type")
+                    .unwrap()
+                    .1
+                    .get_type()
+                    .id(),
+                "some_type"
+            );
+
+            assert_eq!(
+                Construct::identifier_type("name     :some_type")
+                    .unwrap()
+                    .1
+                    .name(),
+                "name"
+            );
+            assert_eq!(
+                Construct::identifier_type("name     :some_type")
+                    .unwrap()
+                    .1
+                    .get_type()
+                    .id(),
+                "some_type"
+            );
+        }
+
+        #[test]
+        fn t_args_dec_empty() {
+            assert_eq!(Construct::args_dec("()").unwrap().1.len(), 0);
+        }
+
+        #[test]
+        fn t_args_dec_one_arg() {
+            assert_eq!(Construct::args_dec("(name :ty)").unwrap().1.len(), 1);
+        }
+
+        #[test]
+        fn t_args_dec_valid() {
+            assert_eq!(
+                Construct::args_dec("(name :ty, name1      : type1)")
+                    .unwrap()
+                    .1
+                    .len(),
+                2
+            );
+        }
+
+        #[test]
+        fn t_return_type_void() {
+            assert_eq!(Construct::return_type(""), Ok(("", None)));
+            assert_eq!(Construct::return_type("    "), Ok(("", None)));
+            assert_eq!(
+                Construct::return_type("        { 12 }"),
+                Ok(("{ 12 }", None))
+            );
+        }
+
+        #[test]
+        fn t_block_invalid_oneline() {
+            assert!(Construct::block("{ 12a;").is_err());
+            assert!(Construct::block("{ 12a").is_err());
+            assert!(Construct::block("{ 12a; 13a").is_err());
+            assert!(Construct::block("12a; 13a }").is_err());
+        }
+
+        #[test]
+        fn t_block_valid_multiline() {
+            let input = r#"{
+                    12a;
+                    12a;
+                    13a;
+                }"#;
+
+            assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 3);
+
+            let input = r#"{
+                    12a;
+                    12a;
+                    13a;
+                    14a
+                }"#;
+
+            assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 3);
+
+            let input = r#"{
+                    true;
+                    false
+                }"#;
+
+            assert_eq!(Construct::block(input).unwrap().1.instructions().len(), 1);
+        }
+
+        #[test]
+        fn t_return_type_non_void() {
+            assert_eq!(
+                Construct::return_type("-> int"),
+                Ok(("", Some(TypeId::from("int"))))
+            );
+            assert_eq!(
+                Construct::return_type("   ->    int   {"),
+                Ok(("{", Some(TypeId::from("int"))))
+            );
+        }
+
+        #[test]
+        fn t_function_declaration_valid_simple() {
+            let func = Construct::function_declaration("func something() {}")
+                .unwrap()
+                .1;
+
+            assert_eq!(func.name(), "something");
+            assert_eq!(func.ty(), None);
+            assert_eq!(func.args().len(), 0);
+            assert_eq!(func.fn_kind(), FunctionKind::Func);
+        }
+
+        #[test]
+        fn t_function_declaration_valid_space() {
+            let func = Construct::function_declaration("func something        \t() {}")
+                .unwrap()
+                .1;
+
+            assert_eq!(func.name(), "something");
+            assert_eq!(func.ty(), None);
+            assert_eq!(func.args().len(), 0);
+            assert_eq!(func.fn_kind(), FunctionKind::Func);
+        }
+
+        #[test]
+        fn t_function_declaration_valid() {
+            let func = Construct::function_declaration("func add(lhs: ty, rhs: ty) -> ty {}")
+                .unwrap()
+                .1;
+
+            assert_eq!(func.name(), "add");
+            assert_eq!(func.ty(), Some(&TypeId::from("ty")));
+            assert_eq!(func.args().len(), 2);
+            assert_eq!(func.fn_kind(), FunctionKind::Func);
+        }
+
+        #[test]
+        fn t_test_valid() {
+            let test = Construct::test_declaration("test add() {}").unwrap().1;
+
+            assert_eq!(test.name(), "add");
+            assert_eq!(test.ty(), None);
+            assert_eq!(test.fn_kind(), FunctionKind::Test);
+        }
+
+        #[test]
+        fn t_test_invalid() {
+            assert!(Construct::test_declaration("test add(a: int) -> int {}").is_err());
+        }
+
+        #[test]
+        fn t_mock_valid() {
+            let test = Construct::mock_declaration("mock add(lhs: ty, rhs: ty) {}")
+                .unwrap()
+                .1;
+
+            assert_eq!(test.name(), "add");
+            assert_eq!(test.ty(), None);
+            assert_eq!(test.fn_kind(), FunctionKind::Mock);
+        }
+
+        #[test]
+        fn t_ext_valid() {
+            let test = Construct::ext_declaration("ext func add(lhs: ty, rhs: ty) -> ty;")
+                .unwrap()
+                .1;
+
+            assert_eq!(test.name(), "add");
+            assert_eq!(test.ty(), Some(&TypeId::from("ty")));
+            assert_eq!(test.fn_kind(), FunctionKind::Ext);
+        }
+
+        #[test]
+        fn t_ext_valid_void() {
+            let test = Construct::ext_declaration("ext func add(lhs: ty, rhs: ty);")
+                .unwrap()
+                .1;
+
+            assert_eq!(test.name(), "add");
+            assert_eq!(test.ty(), None);
+            assert_eq!(test.fn_kind(), FunctionKind::Ext);
+        }
+
+        #[test]
+        fn t_ext_invalid() {
+            assert!(Construct::ext_declaration("ext func add(a: int) -> int {}").is_err());
+        }
+
+        #[test]
+        fn t_if_else_just_if() {
+            let ie = Construct::if_else("if condition {}");
+
+            assert!(&ie.is_ok());
+        }
+
+        #[test]
+        fn t_if_else() {
+            assert!(Construct::if_else("if condition {} else {}").is_ok());
+        }
+
+        #[test]
+        fn t_loop_valid() {
+            assert!(Construct::loop_block("loop {}").is_ok());
+        }
+
+        #[test]
+        fn t_loop_invalid() {
+            assert!(Construct::loop_block("loo {}").is_err());
+
+            assert!(Construct::loop_block("loop").is_err());
+        }
+
+        #[test]
+        fn t_while_valid() {
+            assert!(Construct::while_block("while x_99 {}").is_ok());
+        }
+
+        #[test]
+        fn t_while_invalid() {
+            assert!(Construct::while_block("while {}").is_err());
+
+            assert!(Construct::while_block("while").is_err());
+        }
+
+        #[test]
+        fn t_for_valid() {
+            assert!(Construct::for_block("for x_99 in x_99 {}").is_ok());
+        }
+
+        #[test]
+        fn t_for_invalid() {
+            assert!(Construct::for_block("for {}").is_err());
+
+            assert!(Construct::for_block("for x99 in {}").is_err());
+
+            assert!(Construct::for_block("for x99 in { { { inner_block() } } }").is_err());
+        }
+
+        #[test]
+        fn t_jinko_inst_valid() {
+            let (_, dump_inst) = Construct::jinko_inst("@dump()").unwrap();
+            assert_eq!(dump_inst.jk_inst_kind(), &JkInstKind::Dump);
+
+            let (_, quit_inst) = Construct::jinko_inst("@quit(something, something_else)").unwrap();
+            assert_eq!(quit_inst.jk_inst_kind(), &JkInstKind::Quit);
+        }
+
+        #[test]
+        fn t_binary_op_valid() {
+            assert!(Construct::binary_op("a *   12 ").is_ok());
+            assert!(Construct::binary_op("some() + 12.1").is_ok());
+        }
+
+        #[test]
+        fn t_binary_op_invalid() {
+            assert!(Construct::binary_op("a ? 12").is_err());
+        }
+
+        #[test]
+        fn t_type_declaration_simple() {
+            assert!(Construct::type_declaration("type Int(v: int);").is_ok());
+            assert!(Construct::type_declaration("type Ints(a: int, b: int);").is_ok());
+            assert!(Construct::type_declaration("type Compound(i: int, s: str);").is_ok());
+            assert!(Construct::type_declaration(
+                "type Custom(v: int, a: SomeType, b: Another, c: lower_case);",
+            )
+            .is_ok());
+        }
+
+        #[test]
+        fn t_type_declaration_empty() {
+            assert!(Construct::type_declaration("type Empty();").is_err());
+        }
+
+        #[test]
+        fn t_type_declaration_invalid() {
+            assert!(Construct::type_declaration("type ExtraComma(a: int, b: int,);").is_err());
+        }
+
+        #[test]
+        fn t_type_instantiation_valid() {
+            assert!(Construct::type_instantiation("Custom { a = 1 }").is_ok());
+        }
+
+        #[test]
+        fn t_type_instantiation_valid_multi() {
+            assert!(Construct::type_instantiation("Custom { a = 1, b= 2, c = { 's' } }").is_ok());
+        }
+
+        #[test]
+        fn t_type_instantiation_invalid() {
+            assert!(Construct::type_instantiation("Custom { ").is_err());
+        }
+
+        #[test]
+        fn t_type_instantiation_no_name() {
+            assert!(Construct::type_instantiation("{ 1 }").is_err());
+        }
+
+        #[test]
+        fn t_type_instantiation_no_named_arg() {
+            assert!(Construct::type_instantiation("CustomType { 1 }").is_err());
+        }
+
+        #[test]
+        fn t_func_dec_binop() {
+            assert!(Construct::function_declaration("func a(a: int, b:int) -> int { a + b }").is_ok());
+        }
+
+        #[test]
+        fn t_func_dec_return_arg() {
+            assert!(Construct::function_declaration("func a(a: int, b:int) -> int { a }").is_ok());
+        }
+
+        #[test]
+        fn t_func_dec_return_arg_plus_stmt() {
+            assert!(
+                Construct::function_declaration("func a(a: int, b:int) -> int { something(); a }")
+                    .is_ok()
+            );
+        }
+
+        #[test]
+        fn t_func_dec_return_binop_plus_stmt() {
+            assert!(Construct::function_declaration(
+                "func a(a: int, b:int) -> int { something(); a + b }"
+            )
+            .is_ok());
+        }
+
+        #[test]
+        fn t_func_dec_return_binop_as_var() {
+            assert!(Construct::function_declaration(
+                "func a(a: int, b:int) -> int { res = a + b; res }"
+            )
+            .is_ok());
+        }
+
+        #[test]
+        fn t_func_call_with_true_arg_is_func_call() {
+            let res = Construct::instruction("h(true)").unwrap().1;
+            res.downcast_ref::<FunctionCall>().unwrap();
+
+            // There might be a bug that a function call with just a boolean argument gets
+            // parsed as a variable. This test aims at correcting that regression. If it
+            // fails, then it means the function call did not get parsed as a function call
+        }
+
+        #[test]
+        fn t_named_argument_valid() {
+            assert!(Construct::named_arg("a = b").is_ok());
+            assert!(Construct::named_arg("a = 2").is_ok());
+            assert!(Construct::named_arg("a = { 2 }").is_ok());
+            assert!(Construct::named_arg("a = call()").is_ok());
+        }
+
+        #[test]
+        fn t_named_argument_invalid() {
+            assert!(Construct::named_arg("a =").is_err(), "No second member");
+            assert!(Construct::named_arg("= 2").is_err(), "No first member");
+            assert!(
+                Construct::named_arg("a { 2 }").is_err(),
+                "Missing equal sign"
+            );
+        }
+
+        #[test]
+        fn t_incl_valid() {
+            assert!(Construct::incl("incl simple").is_ok());
+        }
+
+        #[test]
+        fn t_incl_valid_plus_rename() {
+            assert!(Construct::incl("incl a as b").is_ok());
+        }
+
+        #[test]
+        fn t_incl_invalid() {
+            assert!(Construct::incl("incl").is_err());
+        }
+
+        #[test]
+        fn t_incl_plus_rename_invalid() {
+            assert!(Construct::incl("incl a as").is_err());
+        }
+
+        #[test]
+        fn t_method_call_simple() {
+            assert!(
+                Construct::method_call_or_field_access("a.b()").is_ok(),
+                "Valid to have simple identifiers"
+            );
+            assert!(
+                Construct::method_call_or_field_access("135.method()").is_ok(),
+                "Valid to have constant as caller"
+            );
+            assert!(
+                Construct::method_call_or_field_access("{ hey }.method()").is_ok(),
+                "Valid to have block as caller"
+            );
+            assert!(
+                Construct::method_call_or_field_access("func_call().method()").is_ok(),
+                "Valid to have call as caller"
+            );
+            assert!(
+                Construct::instruction("    \ta.b()").is_ok(),
+                "Valid to have simple identifiers"
+            );
+        }
+
+        #[test]
+        fn t_method_call_invalid() {
+            let (input, _) =
+                Construct::method_call_or_field_access("a.b(").expect("Not parsed as field");
+            assert_eq!(input, "(", "Missing parentheses");
+            assert!(
+                Construct::method_call_or_field_access("a.()").is_err(),
+                "Missing method name"
+            );
+            assert!(Construct::instance(".method()").is_err(), "Missing caller");
+        }
+
+        #[test]
+        fn t_sy_eager_consume() {
+            // https://github.com/CohenArthur/jinko/issues/172
+
+            assert_eq!(Construct::instruction("1 2").unwrap().0, " 2");
+            assert_eq!(Construct::instruction("a b").unwrap().0, " b");
+        }
+
+        #[test]
+        fn t_field_access_valid() {
+            assert!(Construct::method_call_or_field_access("s.a").is_ok());
+            assert!(Construct::method_call_or_field_access("longer_identifier.a").is_ok());
+            assert!(Construct::method_call_or_field_access("longer_identifier.with_numbers32").is_ok());
+        }
+
+        #[test]
+        fn t_field_access_from_type_instantiation() {
+            assert!(Construct::method_call_or_field_access("CustomType { k = a, v = b }.c").is_ok());
+        }
+
+        #[test]
+        fn t_field_access_with_constant_field() {
+            assert!(Construct::method_call_or_field_access("s.1").is_err());
+            assert!(Construct::method_call_or_field_access("a.\"string\"").is_err());
+        }
+
+        // TODO Remove if design change accepted
+        /*#[test]
+        fn t_field_access_invalid_with_constant_instance() {
+            assert!(Construct::method_call_or_field_access("1.a").is_err());
+            assert!(Construct::method_call_or_field_access("\"string\".a").is_err());
+        }
+        */
+
+        #[test]
+        fn t_field_access_with_spaces() {
+            assert!(Construct::method_call_or_field_access("sdot. space").is_err());
+            assert!(Construct::method_call_or_field_access("s .dotspace").is_err());
+        }
+
+        // In the following tests about comments, we always need an extra call to `instruction`
+        // in order to get ride of the newline after the comment
+
+        #[test]
+        fn t_multi_comment_multi_line() {
+            let input = r#"/**
+    * This function does nothing
     */
-
-    #[test]
-    fn t_field_access_with_spaces() {
-        assert!(Construct::method_call_or_field_access("sdot. space").is_err());
-        assert!(Construct::method_call_or_field_access("s .dotspace").is_err());
-    }
-
-    // In the following tests about comments, we always need an extra call to `instruction`
-    // in order to get ride of the newline after the comment
-
-    #[test]
-    fn t_multi_comment_multi_line() {
-        let input = r#"/**
-* This function does nothing
-*/
-func void() { }"#;
+    func void() { }"#;
 
         let (input, _) = Construct::instruction(input).unwrap();
 
@@ -1936,8 +2031,8 @@ func void() { }"#;
 
     #[test]
     fn t_sing_comment_multi_line() {
-        let input = r#"// Comment
-func void() { }"#;
+        let input = r#" // Comment
+    func void() { }"#;
 
         let (input, _) = Construct::instruction(input).unwrap();
 
@@ -1957,12 +2052,10 @@ func void() { }"##;
     #[test]
     fn t_multiple_different_comments() {
         let input = r##"# Comment
-# Another one
-
-/**
- * Some documentation
- */
-func void() { }"##;
+# Another one /**
+               * Some documentation
+               */
+    func void() { }"##;
 
         let (input, _) = Construct::instruction(input).unwrap();
         let (input, _) = Construct::instruction(input).unwrap();
@@ -1976,12 +2069,10 @@ func void() { }"##;
     #[test]
     fn t_multiple_different_comments_close() {
         let input = r##"# Comment
-# Another one
-
-/**
- * Some documentation
- *//* Some more */
-func void() { }"##;
+# Another one /**
+               * Some documentation
+               *//* Some more */
+    func void() { }"##;
         println!("{}", input);
 
         let (input, _) = Construct::instruction(input).unwrap();
@@ -2054,4 +2145,5 @@ func void() { }"##;
         // This should fail, ``5;`` is dead code because of the ``return``
         assert!(&ie.is_err());
     }
+    */
 }
