@@ -109,24 +109,23 @@ fn method_or_field(
 }
 
 /// unit = 'if' expr block next [ 'else' next block ]
-///      (* loop *)
 ///      | 'while' expr block
 ///      | 'loop' next block
 ///      | 'for' next IDENTIFIER next 'in' expr block
 ///
-///      | 'type' next IDENTIFIER next '{' named_args
-///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
-///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
-///      | '@' next IDENTIFIER next '(' args
-///      (* func declarations *)
 ///      | 'func' function_declaration block
 ///      | 'test' function_declaration block
 ///      | 'mock' function_declaration block
 ///
-///      | 'extern' 'func' function_declaration ';'
-///      | 'return' expr
-///      | '{' next inner_block
-///      (* constants *)
+///      | 'type' next IDENTIFIER next '{' named_args                           // TODO
+///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]                 // TODO
+///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *) // TODO
+///      | '@' next IDENTIFIER next '(' args                                    // TODO
+///
+///      | 'extern' 'func' function_declaration ';'                             // TODO
+///      | 'return' expr                                                        // TODO
+///      | '{' next inner_block         
+///
 ///      | 'true'
 ///      | 'false'
 ///      | "'" CHAR "'"
@@ -134,10 +133,8 @@ fn method_or_field(
 ///      | INT
 ///      | DOUBLE
 ///
-///      (* identifier *)
 ///      | IDENTIFIER next func_type_or_var
 fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-    dbg!(input);
     if let Ok((input, _)) = Token::if_tok(input) {
         unit_if(input)
     } else if let Ok((input, _)) = Token::while_tok(input) {
@@ -146,19 +143,12 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         unit_loop(input)
     } else if let Ok((input, _)) = Token::for_tok(input) {
         unit_for(input)
-
-        // function declarations
     } else if let Ok((input, kind)) =
         alt((Token::func_tok, Token::test_tok, Token::mock_tok))(input)
     {
-        let (input, mut function) = func_declaration(input)?;
-        let (input, body) = block(input)?;
-        function.set_block(body);
-        function.set_kind(FunctionKind::from(kind));
-        Ok((input, Box::new(function)))
+        unit_func(input, kind)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
-        let input = next(input);
-        box_inner_block(input)
+        unit_box(input)
     } else if let Ok(res) = Construct::constant(input) {
         Ok(res)
     } else {
@@ -197,11 +187,23 @@ fn unit_for(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, id) = Token::identifier(input)?;
     let input = next(input);
     let (input, _) = Token::in_tok(input)?;
-    dbg!(input);
-    let (input, expr) = expr(input)?; // PROBLEM, VARIABLE is parsed as type inst because of {
+    let (input, expr) = expr(input)?;
     let (input, block) = block(input)?;
     let var = Var::new(id);
     Ok((input, Box::new(Loop::new(LoopKind::For(var, expr), block))))
+}
+
+fn unit_func<'a>(input: &'a str, kind: &str) -> ParseResult<&'a str, Box<dyn Instruction>> {
+    let (input, mut function) = func_declaration(input)?;
+    let (input, body) = block(input)?;
+    function.set_block(body);
+    function.set_kind(FunctionKind::from(kind));
+    Ok((input, Box::new(function)))
+}
+
+fn unit_box(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, block) = inner_block(next(input))?;
+    Ok((input, Box::new(block)))
 }
 
 /// function_declaration = next IDENTIFIER next '(' func_args next return_type
@@ -314,7 +316,7 @@ fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
 }
 
 /// func_args = func_arg ( ',' func_arg )* ')'
-///            | ')'
+///           | ')'
 fn func_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
     if let Ok((input, _)) = Token::right_parenthesis(input) {
         return Ok((input, vec![]));
@@ -374,12 +376,6 @@ pub fn next(input: &str) -> &str {
 
 fn nom_next(input: &str) -> ParseResult<&str, ()> {
     Ok((next(input), ()))
-}
-
-/// TEMPORARY, Rust doesn't know how to cast from a struct to a dyn when with other returns
-fn box_inner_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-    let (input, block) = inner_block(input)?;
-    Ok((input, Box::new(block)))
 }
 
 pub struct Construct;
