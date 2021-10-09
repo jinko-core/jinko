@@ -80,3 +80,20 @@ impl Default for Builtins {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::jinko;
+
+    #[test]
+    fn t_all_builtins_are_valid() {
+        jinko! {
+            incl stdlib;
+
+            __builtin_string_len("jk");
+            __builtin_string_concat("file", ".jk");
+            __builtin_string_display("to display");
+            __builtin_string_display_err("to display on err"):
+        };
+    }
+}
