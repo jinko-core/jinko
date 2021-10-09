@@ -81,9 +81,6 @@ impl Instruction for JkInst {
 
 impl TypeCheck for JkInst {
     fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
-        // FIXME: Is that true?
-        // JinkInsts cannot return anything. They simply act directly from the context,
-        // on the context.
         CheckedType::Void
     }
 }
