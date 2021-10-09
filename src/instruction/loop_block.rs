@@ -152,7 +152,7 @@ mod tests {
     #[test]
     fn tc_valid_loop_blocks() {
         jinko! {
-            // Don't ignore once for loop behavior is implemented
+            // FIXME: Don't ignore once for loop behavior is implemented
             // l0 = for value in range { value }
 
             mut i = 0;
