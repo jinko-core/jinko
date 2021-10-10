@@ -44,6 +44,12 @@ Launch the REPL using `jinko` or run a file using `jinko <file>`!
 
 Feel free to submit any observations, bug reports or questions as an [issue](https://github.com/cohenarthur/jinko/issues)
 
+## Testing
+
+To test jinko, simply run `cargo test && ./tests/func_tests.sh`. Note that in
+order to run functional tests, you need to have [ft installed](https://github.com/CohenArthur/ft#installation)
+```
+
 ## Contributing
 
 Checkout [CONTRIBUTING.md](CONTRIBUTING.md)!
