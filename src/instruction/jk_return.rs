@@ -53,9 +53,11 @@ impl Instruction for Return {
 }
 
 impl TypeCheck for Return {
-    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
-        /* FIXME: self.value.resolve_type(ctx) */
-        CheckedType::Void
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        match &self.value {
+            None => CheckedType::Void,
+            Some(v) => v.resolve_type(ctx),
+        }
     }
 }
 

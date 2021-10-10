@@ -120,9 +120,10 @@ impl TypeCheck for VarAssign {
                 checked_ty.clone()
             }
             None => {
-                // FIXME: Add once trait bound
-                let instance_ty = CheckedType::Void; /* self.value.resolve_type(ctx); */
-                ctx.declare_var(self.symbol.clone(), instance_ty);
+                let instance_ty = self.value.resolve_type(ctx);
+                if let Err(e) = ctx.declare_var(self.symbol.clone(), instance_ty) {
+                    ctx.error(e);
+                }
 
                 // We can return here since it's a new variable. This avoids checking
                 // the type later on
@@ -130,8 +131,8 @@ impl TypeCheck for VarAssign {
             }
         };
 
-        // FIXME: We resolve value twice...
-        let value_ty = CheckedType::Void; /* self.value.resolve_type(ctx); */
+        // FIXME: We resolve the value twice
+        let value_ty = self.value.resolve_type(ctx);
         if value_ty == CheckedType::Void {
             ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
                 "trying to assign statement `{}` to variable `{}`",
@@ -156,6 +157,7 @@ impl TypeCheck for VarAssign {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jinko_fail;
     use crate::parser::{Construct, Token};
     use crate::value::{JkInt, JkString};
     use crate::ToObjectInstance;
@@ -214,18 +216,11 @@ mod tests {
         assert!(i.error_handler.has_errors());
     }
 
-    // Don't ignore once TypeCheck is a bound on Instruction
     #[test]
-    #[ignore]
     fn create_mutable_twice() {
-        let mut i = Context::new();
-        let va_init = Construct::mut_var_assignment("mut a = 13").unwrap().1;
-        let va_0 = Construct::mut_var_assignment("mut a = 15").unwrap().1;
-
-        va_init.execute(&mut i);
-        if va_0.execute(&mut i).is_some() {
-            unreachable!("Can't create variables twice");
-        }
-        assert!(i.error_handler.has_errors());
+        jinko_fail! {
+            mut a0 = 15;
+            mut a0 = 14;
+        };
     }
 }

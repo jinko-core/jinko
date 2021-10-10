@@ -17,6 +17,7 @@ use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
+use crate::typechecker::TypeCtx;
 use crate::ObjectInstance;
 
 /// Type the context uses for keys
@@ -251,14 +252,39 @@ impl Context {
         self.included.contains(source)
     }
 
+    pub fn remove_included(&mut self, source: &Path) {
+        self.included.remove(source);
+    }
+
+    fn type_check(&mut self, entry_point: &Block) -> Result<(), Error> {
+        let mut ctx = TypeCtx::new(self);
+
+        entry_point.instructions().iter().for_each(|inst| {
+            inst.resolve_type(&mut ctx);
+        });
+        entry_point.last().map(|l| l.resolve_type(&mut ctx));
+
+        match self.error_handler.has_errors() {
+            true => {
+                self.emit_errors();
+                Err(Error::new(ErrKind::TypeChecker))
+            }
+            false => Ok(()),
+        }
+    }
+
     pub fn execute(&mut self) -> Result<Option<ObjectInstance>, Error> {
         // The entry point always has a block
         let ep = self.entry_point.block().unwrap().clone();
 
         self.scope_enter();
+
+        self.type_check(&ep)?;
+
         ep.instructions().iter().for_each(|inst| {
             inst.execute(self);
         });
+
         let res = ep.last().map(|last| last.execute(self));
 
         self.emit_errors();
@@ -267,6 +293,10 @@ impl Context {
             true => Err(Error::new(ErrKind::Context)),
             false => Ok(res.flatten()),
         }
+    }
+
+    pub fn has_errors(&self) -> bool {
+        self.error_handler.has_errors()
     }
 }
 

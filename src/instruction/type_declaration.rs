@@ -79,11 +79,13 @@ impl TypeCheck for TypeDec {
                 )
             })
             .collect();
-        ctx.declare_custom_type(
+        if let Err(e) = ctx.declare_custom_type(
             self.name.clone(),
             CheckedType::Resolved(TypeId::from(self.name())),
             fields_ty,
-        );
+        ) {
+            ctx.error(e);
+        }
 
         CheckedType::Void
     }
@@ -113,5 +115,47 @@ impl From<String> for TypeDec {
 impl std::fmt::Display for TypeDec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{jinko, jinko_fail};
+
+    #[test]
+    fn tc_valid_easy() {
+        jinko! {
+            type Complex(real: int, imaginary: int);
+            c = Complex { real = 15, imaginary = 14 };
+        };
+    }
+
+    #[test]
+    fn tc_valid_hard() {
+        jinko! {
+            type Point(x: int, y: int);
+            type Vector2(v0: Point, v1: Point);
+
+            func zero() -> Point {
+                Point { x = 0, y = 0 }
+            }
+
+            v = Vector2 { v0 = zero(), v1 = zero() };
+        };
+    }
+
+    #[test]
+    fn tc_invalid_hard() {
+        jinko_fail! {
+            type Point(x: int, y: int);
+            type NotPoint(x: int, y: int);
+            type Vector2(v0: Point, v1: Point);
+
+            func zero() -> NotPoint {
+                NotPoint { x = 0, y = 0 }
+            }
+
+            v = Vector2 { v0 = 15, v1 = zero() };
+        };
     }
 }

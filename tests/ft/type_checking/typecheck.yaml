@@ -1,0 +1,74 @@
+tests:
+  # Valid
+  - name: "Function typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/func.jk"
+    exit_code: 0
+  - name: "Function argument mapping typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/function_type_mapping.jk"
+    exit_code: 0
+  - name: "Variable typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/variables.jk"
+    exit_code: 0
+  - name: "IfElse typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/if_else.jk"
+    exit_code: 0
+  - name: "BinaryOp typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/binary_op.jk"
+    exit_code: 0
+  - name: "Block typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/block.jk"
+    exit_code: 0
+  - name: "Function with complex types typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/function_complex_type.jk"
+    exit_code: 0
+  - name: "Field accesses typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/field_access.jk"
+    exit_code: 0
+
+  # Invalid
+  - name: "Invalid Function typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/func.jk"
+    exit_code: 1
+  - name: "Invalid Variable typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/variables.jk"
+    exit_code: 1
+  - name: "Invalid IfElse typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/if_else.jk"
+    exit_code: 1
+  - name: "Invalid Block typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/block.jk"
+    exit_code: 1
+  - name: "Invalid BinaryOp typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/binary_op.jk"
+    exit_code: 1
+  - name: "Invalid Field accesses typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/field_access.jk"
+    exit_code: 1

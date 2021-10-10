@@ -112,9 +112,8 @@ impl Instruction for Loop {
 }
 
 impl TypeCheck for Loop {
-    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
-        // TODO: Fix this once TypeChecker is a trait bound on Instruction
-        CheckedType::Void // FIXME: self.block.resolve_type(ctx)
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        self.block.resolve_type(ctx)
     }
 }
 
@@ -122,6 +121,7 @@ impl TypeCheck for Loop {
 mod tests {
     use super::*;
     use crate::instruction::FunctionCall;
+    use crate::jinko;
 
     #[test]
     fn pretty_print_loop() {
@@ -147,5 +147,18 @@ mod tests {
         let l = Loop::new(LoopKind::While(r), b);
 
         assert_eq!(l.print().as_str(), "while {\n} {\n}\n")
+    }
+
+    #[test]
+    fn tc_valid_loop_blocks() {
+        jinko! {
+            // FIXME: Don't ignore once for loop behavior is implemented
+            // l0 = for value in range { value }
+
+            mut i = 0;
+            while i < 15 { i = i + 1 }
+
+            l2 = loop { i = i + 1 }
+        };
     }
 }

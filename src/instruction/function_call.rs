@@ -95,7 +95,7 @@ impl FunctionCall {
                 }
             };
 
-            instance.set_ty(Some(ty));
+            instance.set_ty(CheckedType::Resolved(ty.into()));
 
             new_var.set_instance(instance);
 
@@ -105,11 +105,14 @@ impl FunctionCall {
         }
     }
 
-    fn type_args(&self, mut args: Vec<(String, CheckedType)>, ctx: &mut TypeCtx) {
+    fn type_args(&self, args: Vec<(String, CheckedType)>, ctx: &mut TypeCtx) {
         ctx.scope_enter();
 
-        args.drain(..)
-            .for_each(|(arg_name, arg_ty)| ctx.declare_var(arg_name, arg_ty));
+        args.into_iter().for_each(|(arg_name, arg_ty)| {
+            if let Err(e) = ctx.declare_var(arg_name, arg_ty) {
+                ctx.error(e)
+            }
+        });
 
         ctx.scope_exit();
     }
@@ -163,6 +166,7 @@ impl Instruction for FunctionCall {
 
 impl TypeCheck for FunctionCall {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: This function is very large and should be refactored
         let (args_type, return_type) = match ctx.get_function(self.name()) {
             Some(checked_type) => checked_type,
             // FIXME: This does not account for functions declared later in the code
@@ -174,6 +178,9 @@ impl TypeCheck for FunctionCall {
                 return CheckedType::Unknown;
             }
         };
+
+        let args_type = args_type.clone();
+        let return_type = return_type.clone();
 
         let mut errors = vec![];
         let mut args = vec![];
@@ -188,12 +195,14 @@ impl TypeCheck for FunctionCall {
             )));
         }
 
-        for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(self.args.iter().map(
-            |_given_arg| CheckedType::Void, /* given_arg.resolve_type() */
-        )) {
+        for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(
+            self.args
+                .iter()
+                .map(|given_arg| given_arg.clone().resolve_type(ctx)),
+        ) {
             if expected_ty != &given_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "invalid type used for function argument: expected `{}`, got `{}`:",
+                    "invalid type used for function argument: expected `{}`, got `{}`",
                     expected_ty, given_ty
                 )));
             }
@@ -201,9 +210,7 @@ impl TypeCheck for FunctionCall {
             args.push((expected_name.clone(), expected_ty.clone()));
         }
 
-        let return_type = return_type.to_owned();
-
-        errors.drain(..).for_each(|err| ctx.error(err));
+        errors.into_iter().for_each(|err| ctx.error(err));
         self.type_args(args, ctx);
 
         return_type
@@ -214,6 +221,7 @@ impl TypeCheck for FunctionCall {
 mod tests {
     use super::*;
     use crate::instruction::TypeId;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn t_pretty_print_empty() {
@@ -319,5 +327,39 @@ mod tests {
             func_call.execute(&mut i).unwrap(),
             JkInt::from(1).to_instance()
         );
+    }
+
+    #[test]
+    fn tc_invalid_type_for_arg() {
+        jinko_fail! {
+            func take_char(a: char) {}
+            take_char("hey");
+            take_char(15);
+            take_char(true);
+            take_char(4.5);
+        };
+    }
+
+    #[test]
+    fn tc_invalid_type_for_arg_complex() {
+        jinko_fail! {
+            type ComplexType(inner: char);
+            type SameButDiff(inner: char);
+            func take_char(a: ComplexType) {}
+            take_char("hey");
+            take_char(15);
+            take_char(true);
+            take_char(4.5);
+            take_char(SameButDiff { inner = 'a' })
+        };
+    }
+
+    #[test]
+    fn tc_valid_type_for_arg_complex() {
+        jinko! {
+            type ComplexType(inner: char);
+            func take_char(a: ComplexType) {}
+            take_char(ComplexType { inner = 'a' })
+        };
     }
 }

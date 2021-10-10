@@ -81,17 +81,11 @@ impl Instruction for IfElse {
 
 impl TypeCheck for IfElse {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        // TODO: Fix this once typechecking is implemented for Instructions
-        let if_ty = CheckedType::Void; // FIXME: self.if_body.resolve_type(ctx);
-
-        let else_ty = self.else_body.as_ref().map(|_else_body| CheckedType::Void);
-
-        // FIXME: Use this instead
-        // let else_ty = if let Some(_else_body) = &self.else_body {
-        //     Some(CheckedType::Void) // FIXME: Some(else_body.resolve_type(ctx))
-        // } else {
-        //     None
-        // };
+        let if_ty = self.if_body.resolve_type(ctx);
+        let else_ty = self
+            .else_body
+            .as_ref()
+            .map(|else_body| else_body.resolve_type(ctx));
 
         match (if_ty, else_ty) {
             (CheckedType::Void, None) => CheckedType::Void,
@@ -120,6 +114,7 @@ impl TypeCheck for IfElse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn t_if_print() {
@@ -190,5 +185,51 @@ mod tests {
             if_else.execute(&mut ctx).unwrap(),
             JkInt::from(69).to_instance()
         );
+    }
+
+    #[test]
+    fn tc_if_else_simple() {
+        jinko! {
+            if true {
+                15
+            } else {
+                14
+            }
+        };
+    }
+
+    #[test]
+    fn tc_if_else_in_func() {
+        jinko! {
+            func bool_to_int(b: bool) -> int {
+                if b {
+                    1
+                } else {
+                    0
+                }
+            }
+        };
+    }
+
+    #[test]
+    fn tc_if_else_not_bool_in_cond() {
+        jinko_fail! {
+            if 4.5 {
+                15
+            } else {
+                14
+            }
+        };
+    }
+
+    #[test]
+    fn tc_if_else_mismatched_types() {
+        jinko_fail! {
+            if true {
+                1
+            } else {
+                4.5
+            }
+        };
     }
 }

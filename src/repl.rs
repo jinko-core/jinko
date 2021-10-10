@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use linefeed::{DefaultTerminal, Interface, ReadResult};
 
 use crate::args::Args;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 use crate::{
     parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
     ObjectInstance,
@@ -23,7 +24,7 @@ impl std::fmt::Display for ObjectInstance {
             f,
             "{}",
             match self.ty() {
-                Some(ty) => match ty.name() {
+                CheckedType::Resolved(ty) => match ty.id() {
                     "int" => JkConstant::<i64>::from_instance(self).print(),
                     "float" => JkConstant::<f64>::from_instance(self).print(),
                     "char" => JkConstant::<char>::from_instance(self).print(),
@@ -31,7 +32,7 @@ impl std::fmt::Display for ObjectInstance {
                     "bool" => JkConstant::<bool>::from_instance(self).print(),
                     _ => self.as_string(),
                 },
-                None => format!(""),
+                _ => format!(""),
             }
         )
     }
@@ -76,14 +77,14 @@ impl<'args> Repl<'args> {
         ctx.set_path(Some(PathBuf::from("repl")));
 
         let ep = ctx.entry_point.block().unwrap().clone();
+        let mut ty_ctx = TypeCtx::new(ctx);
+
+        ep.resolve_type(&mut ty_ctx);
+
         ep.instructions().iter().for_each(|inst| {
-            // TODO: Add this once TypeChecker is complete
-            // inst.resolve_type(ctx);
             inst.execute(ctx);
         });
         if let Some(last) = ep.last() {
-            // TODO: Add this once TypeChecker is complete
-            // last.resolve_type(ctx);
             last.execute(ctx);
         }
 
@@ -115,8 +116,8 @@ impl<'args> Repl<'args> {
                 None => continue,
             };
 
-            // TODO: Add this once TypeChecker is complete
-            // if let CheckedType::Unknown = inst.resolve_type(&mut ctx) {
+            // FIXME: Add typechecking to REPL
+            // if let CheckedType::Unknown = inst.resolve_type(&mut ty_ctx) {
             //     ctx.emit_errors();
             //     ctx.clear_errors();
             //     continue;

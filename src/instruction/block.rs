@@ -120,10 +120,14 @@ impl Instruction for Block {
 }
 
 impl TypeCheck for Block {
-    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        self.instructions.iter().for_each(|inst| {
+            inst.resolve_type(ctx);
+        });
+
         match &self.last {
             None => CheckedType::Void,
-            Some(_last) => CheckedType::Unknown, // FIXME: last.resolve_type(ctx),
+            Some(last) => last.resolve_type(ctx),
         }
     }
 }
@@ -135,6 +139,7 @@ mod tests {
     use crate::instruction::Var;
     use crate::value::JkInt;
     use crate::TypeCheck;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn empty() {
@@ -229,5 +234,23 @@ mod tests {
         let mut ctx = TypeCtx::new(&mut ctx);
 
         assert_eq!(b.resolve_type(&mut ctx), CheckedType::Void)
+    }
+
+    #[test]
+    fn tc_block_valid() {
+        jinko! {
+            func takes_int(i: int) {}
+            takes_int({ 15 });
+            takes_int({ { { 14 } } });
+        };
+    }
+
+    #[test]
+    fn tc_block_invalid() {
+        jinko_fail! {
+            func takes_int(i: int) {}
+            takes_int({ 0.4 });
+            takes_int({ { { true } } });
+        };
     }
 }

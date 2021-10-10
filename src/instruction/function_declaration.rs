@@ -196,7 +196,7 @@ impl TypeCheck for FunctionDec {
             None => CheckedType::Void,
         };
 
-        let args_ty = self
+        let args_ty: Vec<(String, CheckedType)> = self
             .args
             .iter()
             .map(|dec_arg| {
@@ -207,7 +207,19 @@ impl TypeCheck for FunctionDec {
             })
             .collect();
 
-        ctx.declare_function(self.name.clone(), args_ty, return_ty.clone());
+        // FIXME: Remove clone?
+        if let Err(e) = ctx.declare_function(self.name.clone(), args_ty.clone(), return_ty.clone())
+        {
+            ctx.error(e);
+        }
+
+        ctx.scope_enter();
+
+        args_ty.iter().for_each(|(name, ty)| {
+            if let Err(e) = ctx.declare_var(name.clone(), ty.clone()) {
+                ctx.error(e);
+            }
+        });
 
         // If the function has no block, trust the declaration
         if let Some(b) = &self.block {
@@ -220,9 +232,15 @@ impl TypeCheck for FunctionDec {
                     return_ty,
                     block_ty
                 )));
+
+                ctx.scope_exit();
+
                 return CheckedType::Unknown;
             }
         }
+
+        ctx.scope_exit();
+
         CheckedType::Void
     }
 }
@@ -242,7 +260,7 @@ impl std::fmt::Debug for FunctionDec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{instruction::TypeId, parser::Construct};
+    use crate::{instruction::TypeId, jinko, parser::Construct};
 
     #[test]
     fn simple_no_arg() {
@@ -278,10 +296,7 @@ mod tests {
         assert!(!ctx.error_handler.has_errors());
     }
 
-    // FIXME: Don't ignore once TypeCheck is a bound on Instruction
-
     #[test]
-    #[ignore]
     fn tc_valid() {
         let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")));
         function.set_kind(FunctionKind::Func);
@@ -297,7 +312,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn tc_invalid() {
         let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("string")));
         function.set_kind(FunctionKind::Func);
@@ -310,5 +324,13 @@ mod tests {
 
         assert_eq!(function.resolve_type(&mut ty_ctx), CheckedType::Unknown);
         assert!(ctx.error_handler.has_errors());
+    }
+
+    #[test]
+    fn tc_function_dec_same_args() {
+        jinko! {
+            func takes_int_i(i: int) {}
+            func return_int_i(i: int) -> int { i }
+        };
     }
 }
