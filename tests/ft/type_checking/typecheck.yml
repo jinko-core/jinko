@@ -40,6 +40,16 @@ tests:
     args:
       - "tests/ft/type_checking/valid/field_access.jk"
     exit_code: 0
+  - name: "Return typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/return.jk"
+    exit_code: 0
+  - name: "Return in if_else block typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/valid/return_in_if_else.jk"
+    exit_code: 0
 
   # Invalid
   - name: "Invalid Function typechecking"
@@ -71,4 +81,9 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/type_checking/invalid/field_access.jk"
+    exit_code: 1
+  - name: "Non matching return type in if_else block typechecking"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/return_in_if_else.jk"
     exit_code: 1
