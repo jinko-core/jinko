@@ -381,7 +381,8 @@ mod tests {
 
     #[test]
     fn t_print_scopemap() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
+        ctx.execute().unwrap();
 
         let output = format!("{}", ctx.scope_map);
 
