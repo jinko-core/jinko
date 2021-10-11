@@ -20,5 +20,3 @@ func some(value: int) -> Maybe_int {
 func unpack(m: Maybe_int) -> int {
     m.inner
 }
-
-@dump()
