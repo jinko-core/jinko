@@ -249,12 +249,11 @@ impl TypeCheck for Incl {
 
 #[cfg(test)]
 mod tests {
-    use crate::jinko;
+    use super::*;
 
     #[test]
     fn tc_typecheck_stdlib() {
-        jinko! {
-            incl stdlib
-        };
+        let mut ctx = Context::new();
+        ctx.execute().unwrap();
     }
 }

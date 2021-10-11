@@ -88,8 +88,6 @@ mod tests {
     #[test]
     fn t_all_builtins_are_valid() {
         jinko! {
-            incl stdlib;
-
             __builtin_string_len("jk");
             __builtin_string_concat("file", ".jk");
             __builtin_string_display("to display");

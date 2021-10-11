@@ -409,8 +409,6 @@ mod tests {
     #[test]
     fn t_call_builtin() {
         jinko! {
-            ext func __builtin_string_len(s: string) -> int;
-
             "hey".__builtin_string_len();
         };
     }
