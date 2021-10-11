@@ -80,7 +80,8 @@ impl Context {
         // Include the standard library
         let stdlib_incl =
             crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
-        stdlib_incl.execute(&mut ctx);
+        // FIXME: Remove unwrap
+        ctx.entry_point.add_instruction(Box::new(stdlib_incl)).unwrap();
 
         ctx
     }
