@@ -18,7 +18,8 @@ use std::rc::Rc;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
 use crate::typechecker::TypeCtx;
-use crate::{ObjectInstance, Builtins};
+use crate::Builtins;
+use crate::ObjectInstance;
 
 /// Type the context uses for keys
 type CtxKey = String;
@@ -81,7 +82,9 @@ impl Context {
         let stdlib_incl =
             crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
         // FIXME: Remove unwrap
-        ctx.entry_point.add_instruction(Box::new(stdlib_incl)).unwrap();
+        ctx.entry_point
+            .add_instruction(Box::new(stdlib_incl))
+            .unwrap();
 
         ctx
     }
