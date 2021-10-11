@@ -388,4 +388,13 @@ mod tests {
             take_char(ComplexType { inner = 'a' })
         };
     }
+
+    #[test]
+    fn t_call_invalid_builtin() {
+        jinko_fail! {
+            ext func not_a_builtin();
+
+            not_a_builtin();
+        };
+    }
 }
