@@ -48,7 +48,6 @@ Feel free to submit any observations, bug reports or questions as an [issue](htt
 
 To test jinko, simply run `cargo test && ./tests/func_tests.sh`. Note that in
 order to run functional tests, you need to have [ft installed](https://github.com/CohenArthur/ft#installation)
-```
 
 ## Contributing
 
