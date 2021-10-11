@@ -1,7 +1,7 @@
 ext func __builtin_string_len(s: string) -> int;
 ext func __builtin_string_concat(a: string, b: string) -> string;
-ext func __builtin_string_display(s: string) -> string;
-ext func __builtin_string_display_err(s: string) -> string;
+ext func __builtin_string_display(s: string);
+ext func __builtin_string_display_err(s: string);
 
 /// Get the length of a given string
 func len(s: string) -> int {
