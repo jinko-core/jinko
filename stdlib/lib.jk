@@ -1,5 +1,6 @@
 incl pair
 incl string
 incl maybe
+incl range
 incl ffi
 incl shell
