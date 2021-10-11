@@ -9,3 +9,7 @@ tests:
     args:
       - "tests/ft/stdlib/string/concat.jk"
     stdout: "jinko.jk"
+  - name: "Test Maybe is a valid type"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/maybe.jk"
