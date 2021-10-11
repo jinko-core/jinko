@@ -30,7 +30,7 @@ impl Parser {
 
         let (_, instructions) = Construct::many_instructions(input)?;
 
-        entry_block.set_instructions(instructions);
+        entry_block.add_instructions(instructions);
 
         // We must create the block "manually", by checking if the last parsed operation
         // is an expression or not. If it is an expression, then use it as the return

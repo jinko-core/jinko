@@ -16,6 +16,7 @@ use crate::{
 pub struct Incl {
     path: String,
     alias: Option<String>,
+    base: Option<PathBuf>,
 }
 
 /// Default file that gets included when including a directory in jinko source code
@@ -23,7 +24,11 @@ const DEFAULT_INCL: &str = "/lib.jk";
 
 impl Incl {
     pub fn new(path: String, alias: Option<String>) -> Incl {
-        Incl { path, alias }
+        Incl {
+            path,
+            alias,
+            base: None,
+        }
     }
 
     fn format_candidates(&self, base: &Path) -> (PathBuf, PathBuf) {
@@ -156,15 +161,23 @@ impl Incl {
     }
 
     fn get_base(&self, ctx: &mut Context) -> PathBuf {
-        match ctx.path() {
-            // Get the parent directory of the context's source file. We can unwrap
-            // since there's always a base
-            Some(path) => path.parent().unwrap().to_owned(),
-            // The ctx doesn't have an associated source file. Therefore, we
-            // load from where the context was started. This is the case if we're
-            // in dynamic mode for example
-            None => PathBuf::new(),
+        // If the incl block contains a given base, return this instead
+        match &self.base {
+            Some(b) => b.clone(), // FIXME: Remove clone
+            None => match ctx.path() {
+                // Get the parent directory of the context's source file. We can unwrap
+                // since there's always a base
+                Some(path) => path.parent().unwrap().to_owned(),
+                // The ctx doesn't have an associated source file. Therefore, we
+                // load from where the context was started. This is the case if we're
+                // in dynamic mode for example
+                None => PathBuf::new(),
+            },
         }
+    }
+
+    pub fn set_base(&mut self, path: PathBuf) {
+        self.base = Some(path);
     }
 }
 
@@ -249,12 +262,11 @@ impl TypeCheck for Incl {
 
 #[cfg(test)]
 mod tests {
-    use crate::jinko;
+    use super::*;
 
     #[test]
     fn tc_typecheck_stdlib() {
-        jinko! {
-            incl stdlib
-        };
+        let mut ctx = Context::new();
+        ctx.execute().unwrap();
     }
 }

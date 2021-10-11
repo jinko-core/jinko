@@ -18,6 +18,7 @@ use std::rc::Rc;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
 use crate::typechecker::TypeCtx;
+use crate::Builtins;
 use crate::ObjectInstance;
 
 /// Type the context uses for keys
@@ -43,6 +44,9 @@ pub struct Context {
 
     /// Contains the scopes of the context, in which are variables and functions
     scope_map: ScopeMap<Var, Rc<FunctionDec>, Rc<TypeDec>>,
+
+    /// Contains the functions shipping with the interpreter
+    builtins: Builtins,
 
     /// Tests registered in the context
     tests: HashMap<CtxKey, FunctionDec>,
@@ -75,9 +79,13 @@ impl Context {
         let mut ctx = Context::empty();
 
         // Include the standard library
-        let stdlib_incl =
+        let mut stdlib_incl =
             crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
-        stdlib_incl.execute(&mut ctx);
+        stdlib_incl.set_base(PathBuf::new());
+        // FIXME: Remove unwrap
+        ctx.entry_point
+            .add_instruction(Box::new(stdlib_incl))
+            .unwrap();
 
         ctx
     }
@@ -89,6 +97,7 @@ impl Context {
             entry_point: Self::new_entry(),
             path: None,
             scope_map: ScopeMap::new(),
+            builtins: Builtins::new(),
             tests: HashMap::new(),
             included: HashSet::new(),
             error_handler: ErrorHandler::default(),
@@ -298,6 +307,21 @@ impl Context {
     pub fn has_errors(&self) -> bool {
         self.error_handler.has_errors()
     }
+
+    pub fn is_builtin(&self, name: &str) -> bool {
+        self.builtins.contains(name)
+    }
+
+    pub fn call_builtin(
+        &mut self,
+        builtin: &str,
+        args: Vec<Box<dyn Instruction>>,
+    ) -> Result<Option<ObjectInstance>, Error> {
+        match self.builtins.get(builtin) {
+            Some(f) => Ok(f(self, args)),
+            None => Err(Error::new(ErrKind::Context)),
+        }
+    }
 }
 
 /// Printer for the context's usage of the ScopeMap
@@ -332,6 +356,7 @@ impl<V: Instruction, F: Instruction, T: Instruction> Display for Scope<V, Rc<F>,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jinko;
 
     #[test]
     fn t_redefinition_of_function() {
@@ -357,7 +382,8 @@ mod tests {
 
     #[test]
     fn t_print_scopemap() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
+        ctx.execute().unwrap();
 
         let output = format!("{}", ctx.scope_map);
 
@@ -379,5 +405,12 @@ mod tests {
         assert!(output.contains("type"));
         assert!(output.contains("func"));
         assert!(output.contains("a_var_named_a"));
+    }
+
+    #[test]
+    fn t_call_builtin() {
+        jinko! {
+            "hey".__builtin_string_len();
+        };
     }
 }

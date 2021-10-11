@@ -50,6 +50,11 @@ impl Block {
         self.instructions = instructions;
     }
 
+    /// Adds a set of instructions to the instructions contained in the block
+    pub fn add_instructions(&mut self, instructions: Vec<Box<dyn Instruction>>) {
+        self.instructions.extend(instructions)
+    }
+
     /// Add an instruction at the end of the block's instructions
     pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) {
         self.instructions.push(instruction)

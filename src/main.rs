@@ -1,5 +1,6 @@
 #[warn(missing_docs)]
 mod args;
+mod builtins;
 mod context;
 mod error;
 mod indent;
@@ -16,6 +17,7 @@ use parser::Parser;
 use repl::Repl;
 use std::{fs, path::Path};
 
+pub use builtins::Builtins;
 pub use context::{Context, Scope, ScopeMap};
 pub use error::{ErrKind, Error};
 pub use indent::Indent;
