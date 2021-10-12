@@ -1655,6 +1655,24 @@ func void() { }"##;
         assert!(expr.downcast_ref::<Block>().is_some());
     }
 
+    #[test]
+    fn var_assignment() {
+        let (input, expr) = expr("var = 'a'").unwrap();
+        let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(assign.symbol(), "var");
+    }
+
+    #[test]
+    fn var_assigment_tricky() {
+        let (input, expr) = expr("n1=b.call() + 1").unwrap();
+        let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(assign.symbol(), "n1");
+    }
+
     /*
 
         fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
