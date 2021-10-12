@@ -3,10 +3,9 @@ expr = term ( '+' term | '-' term )*
 term = factor next ( '*' factor next | '/' factor next )*
 
 factor = next unit factor_rest
+
 factor_rest = '.' IDENTIFIER next method_or_field factor_rest
             | ε
-method_or_field = '(' args
-                | ε
 
 unit = 'if' expr block next [ 'else' next block ]
      | 'while' expr block
@@ -15,7 +14,7 @@ unit = 'if' expr block next [ 'else' next block ]
      | 'type' next IDENTIFIER next '{' named_args
      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
-     | '@' next IDENTIFIER next '(' args
+     | '@' next IDENTIFIER next '(' next args
      | 'func' function_declaration block
      | 'test' function_declaration block
      | 'mock' function_declaration block
@@ -30,7 +29,7 @@ unit = 'if' expr block next [ 'else' next block ]
      | DOUBLE
      | IDENTIFIER next func_type_or_var
 
-method_or_field = '(' args                    (* method call *)
+method_or_field = '(' next args               (* method call *)
                 | ε                           (* field access *)
 
 func_type_or_var = '(' next func_or_type_args

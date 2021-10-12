@@ -91,7 +91,7 @@ fn factor_rest(input: &str, expr: Box<dyn Instruction>) -> ParseResult<&str, Box
     }
 }
 
-/// method_or_field = '(' args
+/// method_or_field = '(' next args
 ///                 | ε
 fn method_or_field(
     input: &str,
@@ -100,6 +100,7 @@ fn method_or_field(
 ) -> ParseResult<&str, Box<dyn Instruction>> {
     match Token::left_parenthesis(input) {
         Ok((input, _)) => {
+            let input = next(input);
             let (input, args) = args(input)?;
             let method_call = MethodCall::new(expr, FunctionCall::with_args(id, args));
             Ok((input, Box::new(method_call)))
@@ -1386,7 +1387,7 @@ mod tests {
     }
 
     #[test]
-    fn t_multi_comment_multi_line() {
+    fn multi_comment_multi_line() {
         let input = r#"/**
     * This function does nothing
     */
@@ -1399,7 +1400,7 @@ mod tests {
     }
 
     #[test]
-    fn t_sing_comment_multi_line() {
+    fn sing_comment_multi_line() {
         let input = r#" // Comment
     func void() { }"#;
 
@@ -1410,7 +1411,7 @@ mod tests {
     }
 
     #[test]
-    fn t_hashtag_comment_multi_line() {
+    fn hashtag_comment_multi_line() {
         let input = r##"# Comment
 func void() { }"##;
 
@@ -1422,7 +1423,7 @@ func void() { }"##;
     }
 
     #[test]
-    fn t_multiple_different_comments() {
+    fn multiple_different_comments() {
         let input = r##"# Comment
 # Another one 
             /**
@@ -1437,7 +1438,7 @@ func void() { }"##;
     }
 
     #[test]
-    fn t_multiple_different_comments_close() {
+    fn multiple_different_comments_close() {
         let input = r##"# Comment
 # Another one 
             /**
@@ -1448,6 +1449,38 @@ func void() { }"##;
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn method_call_no_arg() {
+        let (input, expr) = expr("a.call( )").unwrap();
+
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn method_call_one_arg() {
+        let (input, expr) = expr("a.call(\"hello\")").unwrap();
+
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn method_call_many_args() {
+        let (input, expr) = expr("a.call(\"hello\", 1   , variable)").unwrap();
+
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn method_call_many() {
+        let (input, expr) = expr("a.call(\"hello\").sub().subsub(1, 20)").unwrap();
+
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
         assert_eq!(input, "");
     }
 
