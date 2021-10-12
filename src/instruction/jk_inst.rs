@@ -22,7 +22,7 @@ pub struct JkInst {
 
 impl JkInst {
     /// Construct a `JkInst` from a `FunctionCall`
-    pub fn from_function_call(fc: FunctionCall) -> Result<Self, Error> {
+    pub fn from_function_call(fc: &FunctionCall) -> Result<Self, Error> {
         let func_name = fc.name();
 
         let kind = match func_name {
@@ -81,31 +81,28 @@ impl Instruction for JkInst {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::{Construct, Token};
+    use crate::parser::constructs;
 
     #[test]
     fn t_invalid_jkinst() {
-        let (input, id) = Token::identifier("tamer()").unwrap();
-        let (_, fc) = Construct::function_call(input, &id).unwrap();
-        let inst = JkInst::from_function_call(fc);
+        let expr = constructs::expr("tamer()").unwrap().1;
+        let inst = JkInst::from_function_call(expr.downcast_ref().unwrap());
 
         assert!(inst.is_err(), "tamer is not a valid ctx directive")
     }
 
     #[test]
     fn t_valid_inst_no_args() {
-        let (input, id) = Token::identifier("dump()").unwrap();
-        let (_, fc) = Construct::function_call(input, &id).unwrap();
-        let inst = JkInst::from_function_call(fc);
+        let expr = constructs::expr("dump()").unwrap().1;
+        let inst = JkInst::from_function_call(expr.downcast_ref().unwrap());
 
         assert!(inst.is_ok(), "dump is a valid ctx directive")
     }
 
     #[test]
     fn t_valid_inst_with_args() {
-        let (input, id) = Token::identifier("ir(fn)").unwrap();
-        let (_, fc) = Construct::function_call(input, &id).unwrap();
-        let inst = JkInst::from_function_call(fc);
+        let expr = constructs::expr("ir(fn)").unwrap().1;
+        let inst = JkInst::from_function_call(expr.downcast_ref().unwrap());
 
         assert!(
             inst.is_ok(),

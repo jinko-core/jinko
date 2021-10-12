@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{parser::Construct, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
+use crate::{parser::constructs, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance};
 
 /// An `Incl` is constituted of a path, an optional alias and contains a context.
 /// The ctx is built from parsing the source file in the path.
@@ -91,7 +91,7 @@ impl Incl {
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty ctx
-        let (remaining_input, instructions) = match Construct::many_instructions(input.as_str()) {
+        let (remaining_input, instructions) = match constructs::exprs(input.as_str()) {
             Ok(tuple) => tuple,
             Err(e) => {
                 ctx.error(Error::from(e));
