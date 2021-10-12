@@ -13,3 +13,8 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/stdlib/maybe.jk"
+  - name: "Test FFI module"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/ffi.jk"
+    stdout: "jinko called"
