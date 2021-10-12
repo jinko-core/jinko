@@ -120,10 +120,10 @@ impl FunctionCall {
     fn execute_external_function(
         &self,
         ctx: &mut Context,
-        builtin_name: &str,
+        dec: &FunctionDec,
     ) -> Option<ObjectInstance> {
-        if ctx.is_builtin(builtin_name) {
-            match ctx.call_builtin(builtin_name, self.args.clone()) {
+        if ctx.is_builtin(dec.name()) {
+            match ctx.call_builtin(dec.name(), self.args.clone()) {
                 Ok(value) => value,
                 Err(e) => {
                     ctx.error(e);
@@ -131,11 +131,7 @@ impl FunctionCall {
                 }
             }
         } else {
-            ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                "error executing external function `{}`",
-                builtin_name
-            )));
-            None
+            crate::ffi::execute(dec, self, ctx)
         }
     }
 }
@@ -173,7 +169,7 @@ impl Instruction for FunctionCall {
         };
 
         if function.fn_kind() == FunctionKind::Ext {
-            return self.execute_external_function(ctx, function.name());
+            return self.execute_external_function(ctx, &function);
         }
 
         ctx.scope_enter();
@@ -182,7 +178,7 @@ impl Instruction for FunctionCall {
 
         self.map_args(&function, ctx);
 
-        let ret_val = function.run(self, ctx);
+        let ret_val = function.run(ctx);
 
         ctx.scope_exit();
 

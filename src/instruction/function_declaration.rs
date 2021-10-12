@@ -107,13 +107,8 @@ impl FunctionDec {
 
     /// Run through the function as if it was called. This is useful for setting
     /// an entry point into the interpreter and executing it
-    pub fn run(&self, call: &FunctionCall, ctx: &mut Context) -> Option<ObjectInstance> {
-        let block = match self.block() {
-            Some(b) => b,
-            None => return crate::ffi::execute(self, call, ctx),
-        };
-
-        block.execute(ctx)
+    pub fn run(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        self.block().unwrap().execute(ctx)
     }
 }
 
