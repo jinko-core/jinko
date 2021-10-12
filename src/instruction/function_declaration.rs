@@ -1,7 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::instruction::{Block, DecArg, FunctionCall, InstrKind, Instruction, TypeId};
+use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
