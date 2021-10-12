@@ -3,6 +3,7 @@ mod args;
 mod builtins;
 mod context;
 mod error;
+mod ffi;
 mod indent;
 mod instance;
 mod instruction;
@@ -25,6 +26,7 @@ pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use typechecker::{CheckedType, TypeCheck, TypeCtx};
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
+pub use ffi::JkFfi;
 
 // FIXME: Add documentation
 pub type InteractResult = Result<(Option<ObjectInstance>, Context), Error>;

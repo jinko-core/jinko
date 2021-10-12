@@ -103,6 +103,7 @@ impl Context {
             builtins: Builtins::new(),
             tests: HashMap::new(),
             included: HashSet::new(),
+            external_libs: Vec::new(),
             error_handler: ErrorHandler::default(),
         };
 
