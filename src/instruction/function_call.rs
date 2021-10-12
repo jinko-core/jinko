@@ -219,6 +219,7 @@ impl TypeCheck for FunctionCall {
 mod tests {
     use super::*;
     use crate::instruction::TypeId;
+    use crate::parser::constructs;
 
     #[test]
     fn t_pretty_print_empty() {
@@ -268,15 +269,14 @@ mod tests {
 
     #[test]
     fn t_func_call_arg_return() {
-        use crate::parser::Construct;
         use crate::value::JkInt;
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = Construct::instruction("func __second(f: int, s: int) -> int { s }")
+        let func_dec = constructs::expr("func __second(f: int, s: int) -> int { s }")
             .unwrap()
             .1;
-        let func_call = Construct::instruction("__second(1, 2)").unwrap().1;
+        let func_call = constructs::expr("__second(1, 2)").unwrap().1;
 
         func_dec.execute(&mut i);
 
@@ -288,15 +288,14 @@ mod tests {
 
     #[test]
     fn t_func_call_arg_return_binop() {
-        use crate::parser::Construct;
         use crate::value::JkInt;
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = Construct::instruction("func add(a: int, b: int) -> int { a + b }")
+        let func_dec = constructs::expr("func add(a: int, b: int) -> int { a + b }")
             .unwrap()
             .1;
-        let func_call = Construct::instruction("add(1, 2)").unwrap().1;
+        let func_call = constructs::expr("add(1, 2)").unwrap().1;
 
         func_dec.execute(&mut i);
 
@@ -308,15 +307,14 @@ mod tests {
 
     #[test]
     fn t_func_call_variable_return() {
-        use crate::parser::Construct;
         use crate::value::JkInt;
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = Construct::instruction("func one() -> int { one = 1; one }")
+        let func_dec = constructs::expr("func one() -> int { one = 1; one }")
             .unwrap()
             .1;
-        let func_call = Construct::instruction("one()").unwrap().1;
+        let func_call = constructs::expr("one()").unwrap().1;
 
         func_dec.execute(&mut i);
 

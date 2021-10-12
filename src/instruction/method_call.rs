@@ -46,7 +46,7 @@ impl Instruction for MethodCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::Construct;
+    use crate::parser::constructs;
     use crate::*;
 
     #[test]
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn t_execute() {
         let mut ctx = Context::new();
-        let func_dec = Construct::instruction("func __first(a: int, b: int) -> int { a }")
+        let func_dec = constructs::expr("func __first(a: int, b: int) -> int { a }")
             .unwrap()
             .1;
         func_dec.execute(&mut ctx);
