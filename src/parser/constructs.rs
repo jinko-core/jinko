@@ -1484,6 +1484,30 @@ func void() { }"##;
         assert_eq!(input, "");
     }
 
+    #[test]
+    fn field_access_single() {
+        let (input, expr) = expr("a.attribute").unwrap();
+
+        assert!(expr.downcast_ref::<FieldAccess>().is_some());
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn field_access_many() {
+        let (input, expr) = expr("a.attr.sub_attr.subsub").unwrap();
+
+        assert!(expr.downcast_ref::<FieldAccess>().is_some());
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn field_access_many_newline() {
+        let (input, expr) = expr("a\n.attr\n.sub_attr\n.subsub").unwrap();
+
+        assert!(expr.downcast_ref::<FieldAccess>().is_some());
+        assert_eq!(input, "");
+    }
+
     /*
 
         fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
