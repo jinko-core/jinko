@@ -110,7 +110,7 @@ impl FunctionDec {
     pub fn run(&self, call: &FunctionCall, ctx: &mut Context) -> Option<ObjectInstance> {
         let block = match self.block() {
             Some(b) => b,
-            None => return crate::ffi::JkFfi::execute(call, ctx),
+            None => return crate::ffi::execute(self, call, ctx),
         };
 
         block.execute(ctx)

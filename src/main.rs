@@ -21,7 +21,6 @@ use std::{fs, path::Path};
 pub use builtins::Builtins;
 pub use context::{Context, Scope, ScopeMap};
 pub use error::{ErrKind, Error};
-pub use ffi::JkFfi;
 pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};

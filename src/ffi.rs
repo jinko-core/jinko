@@ -1,41 +1,54 @@
-//! The FFI module allows the jinko ctx to call into native code.
+//! The FFI module allows the jinko context to call into native code.
 //! Primitive types are converted to their C counterparts.
 //! FIXME
 
-use crate::instruction::FunctionCall;
-use crate::{Context, ErrKind, Error, ObjectInstance};
+use crate::instruction::{FunctionCall, FunctionDec};
+use crate::{Context, ErrKind, Error, JkInt, ObjectInstance, ToObjectInstance};
 
-pub struct JkFfi;
+pub fn execute(
+    dec: &FunctionDec,
+    call: &FunctionCall,
+    ctx: &mut Context,
+) -> Option<ObjectInstance> {
+    ctx.debug("EXT CALL", call.name());
 
-impl JkFfi {
-    pub fn execute(call: &FunctionCall, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug("EXT CALL", call.name());
-
-        for lib in ctx.libs().iter() {
-            let sym = call.name().as_bytes();
-            unsafe {
-                if lib.get::<libloading::Symbol<()>>(&sym).is_ok() {
-                    match call.args().len() {
-                        0 => {
-                            if let Ok(f) =
-                                lib.get::<libloading::Symbol<fn() -> ObjectInstance>>(&sym)
-                            {
-                                return Some(f());
+    for lib in ctx.libs().iter() {
+        let sym = call.name().as_bytes();
+        unsafe {
+            if lib.get::<libloading::Symbol<()>>(&sym).is_ok() {
+                match call.args().len() {
+                    0 => {
+                        match dec.ty() {
+                            None => {
+                                if let Ok(f) = lib.get::<libloading::Symbol<fn()>>(&sym) {
+                                    f();
+                                    return None;
+                                }
                             }
-                        }
-                        _ => {}
+                            Some(ty) => match ty.id() {
+                                "int" => {
+                                    if let Ok(f) = lib.get::<libloading::Symbol<fn() -> i64>>(&sym)
+                                    {
+                                        let res = f();
+                                        return Some(JkInt::from(res).to_instance());
+                                    }
+                                }
+                                _ => unreachable!(),
+                            },
+                        };
                     }
+                    _ => unreachable!(),
                 }
             }
         }
-
-        ctx.error(
-            Error::new(ErrKind::ExternFunc)
-                .with_msg(format!("cannot call external function {}", call.name())),
-        );
-
-        None
     }
+
+    ctx.error(
+        Error::new(ErrKind::ExternFunc)
+            .with_msg(format!("cannot call external function {}", call.name())),
+    );
+
+    None
 }
 
 #[cfg(test)]
@@ -63,15 +76,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn t_no_arg() {
         let mut i = init_ctx();
 
+        let dec = Construct::instruction("ext func no_arg() -> int;")
+            .unwrap()
+            .1;
+        let dec = dec.downcast_ref::<FunctionDec>().unwrap();
         let call = Construct::instruction("no_arg()").unwrap().1;
         let call = call.downcast_ref::<FunctionCall>().unwrap();
 
         assert_eq!(
-            JkFfi::execute(&call, &mut i),
+            execute(&dec, &call, &mut i),
             Some(JkInt::from(15).to_instance())
         );
     }
@@ -81,11 +97,15 @@ mod tests {
     fn t_one_arg() {
         let mut i = init_ctx();
 
+        let dec = Construct::instruction("ext func no_arg() -> int;")
+            .unwrap()
+            .1;
+        let dec = dec.downcast_ref::<FunctionDec>().unwrap();
         let call = Construct::instruction("add(12, 15)").unwrap().1;
         let call = call.downcast_ref::<FunctionCall>().unwrap();
 
         assert_eq!(
-            JkFfi::execute(&call, &mut i),
+            execute(&dec, &call, &mut i),
             Some(JkInt::from(27).to_instance())
         );
     }
