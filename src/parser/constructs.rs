@@ -1624,6 +1624,37 @@ func void() { }"##;
         assert_eq!(func.fn_kind(), FunctionKind::Mock);
     }
 
+    #[test]
+    fn block_empty() {
+        let (input, expr) = expr("{ }").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<Block>().is_some());
+    }
+
+    #[test]
+    fn block_one_inst() {
+        let (input, expr) = expr("{ var }").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<Block>().is_some());
+    }
+
+    #[test]
+    fn block_many_inst() {
+        let (input, expr) = expr(
+            "{
+            var = 1 + 1;
+            var = var - 2;
+            var
+                                 }",
+        )
+        .unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<Block>().is_some());
+    }
+
     /*
 
         fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
