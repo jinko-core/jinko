@@ -1524,6 +1524,30 @@ func void() { }"##;
         assert_eq!(input, "");
     }
 
+    #[test]
+    fn while_loop() {
+        let (input, expr) = expr("while true { var + 10 }").unwrap();
+
+        assert!(expr.downcast_ref::<Loop>().is_some());
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn for_loop() {
+        let (input, expr) = expr("for entry in collection { entry.print() }").unwrap();
+
+        assert!(expr.downcast_ref::<Loop>().is_some());
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn loop_basic() {
+        let (input, expr) = expr("loop { variable.get() + 10 }").unwrap();
+
+        assert!(expr.downcast_ref::<Loop>().is_some());
+        assert_eq!(input, "");
+    }
+
     /*
 
         fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
