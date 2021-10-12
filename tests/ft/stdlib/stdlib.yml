@@ -13,3 +13,11 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/stdlib/maybe.jk"
+  - name: "Test Range starts correctly"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/range/start.jk"
+  - name: "Test Range advances correctly"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/range/advance.jk"

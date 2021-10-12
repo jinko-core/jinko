@@ -8,10 +8,13 @@ func advance(r: Range_int) -> Range_int {
     Range_int { start = r.start, end = r.end, current = r.current + 1 }
 }
 
-func current(r: Range_int) -> Maybe_int {
-    if r.current > r.end {
-        nothing()
-    } else {
-        some(r.current)
-    }
-}
+// func current(r: Range_int) -> Maybe_int {
+//     // if r.current > r.end {
+//     //     nothing()
+//     // } else {
+//     //     some(r.current)
+//     // }
+//     // FIXME: The interpreter does not understand comparison operators yet
+// 
+//     some(r.current)
+// }
