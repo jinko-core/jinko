@@ -1590,6 +1590,18 @@ mod tests {
     }
 
     #[test]
+    fn block_missing_closing() {
+        assert!(expr(
+            "{
+            var = 1 + 1;
+            var = var - 2;
+            var
+            "
+        )
+        .is_err())
+    }
+
+    #[test]
     fn var_assignment() {
         let (input, expr) = expr("var = 'a'").unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
@@ -1605,6 +1617,46 @@ mod tests {
 
         assert_eq!(input, "");
         assert_eq!(assign.symbol(), "n1");
+    }
+
+    #[test]
+    fn function_call_no_arg() {
+        let (input, expr) = expr("call ( )").unwrap();
+        let func = expr.downcast_ref::<FunctionCall>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(func.name(), "call");
+        assert!(func.args().is_empty());
+    }
+
+    #[test]
+    fn function_call_one() {
+        let (input, expr) = expr("id ( 10 )").unwrap();
+        let func = expr.downcast_ref::<FunctionCall>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(func.name(), "id");
+        assert_eq!(func.args().len(), 1);
+    }
+
+    #[test]
+    fn function_call_many() {
+        let (input, expr) = expr("concat( 'h','e', 'l' , 'l', 'o')").unwrap();
+        let func = expr.downcast_ref::<FunctionCall>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(func.name(), "concat");
+        assert_eq!(func.args().len(), 5);
+    }
+
+    #[test]
+    fn function_call_missing_paren() {
+        assert!(expr("concat( 'h','e', 'l' , 'l', 'o'").is_err());
+    }
+
+    #[test]
+    fn function_call_double_paren() {
+        assert!(expr("fn((").is_err());
     }
 
     #[test]
