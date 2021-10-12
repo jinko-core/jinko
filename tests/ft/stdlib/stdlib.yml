@@ -17,4 +17,4 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/stdlib/ffi.jk"
-    stdout: "jinko called"
+    stdout: "jinko called\n"
