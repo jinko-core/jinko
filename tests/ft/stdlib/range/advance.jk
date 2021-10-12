@@ -1,0 +1,5 @@
+r = range(0, 10);
+
+new_r = r.advance();
+
+new_r.current() // should return 1

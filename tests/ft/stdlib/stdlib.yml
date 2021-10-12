@@ -23,3 +23,11 @@ tests:
     args:
       - "tests/ft/stdlib/shell.jk"
     stdout: "from shell\nfrom cmd builder\n"
+  - name: "Test Range starts correctly"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/range/start.jk"
+  - name: "Test Range advances correctly"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/range/advance.jk"
