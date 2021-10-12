@@ -1,5 +1,6 @@
 ext func no_arg() -> int;
 ext func square(a: int) -> int;
 ext func add(lhs: int, rhs: int) -> int;
+ext func print_something();
 
 no_arg()

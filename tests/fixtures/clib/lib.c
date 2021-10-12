@@ -7,6 +7,8 @@
 // or Symbol<i32> for a value, but we cannot change the type dynamically (at least not
 // simply, and not without reflection).
 
+#include <stdio.h>
+
 int square(int a) {
     return a * a;
 }
@@ -17,4 +19,8 @@ int no_arg() {
 
 int add(int lhs, int rhs) {
     return lhs + rhs;
+}
+
+void print_something() {
+    printf("jinko called\n");
 }
