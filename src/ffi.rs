@@ -41,31 +41,18 @@ impl JkFfi {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jinko;
     use crate::parser::Construct;
     use crate::{JkInt, ToObjectInstance};
 
-    fn declare_ext_funcs(i: &mut Context) {
-        let dec0 = Construct::instruction("ext func no_arg() -> int;")
-            .unwrap()
-            .1;
-        let dec1 = Construct::instruction("ext func square(v: int) -> int;")
-            .unwrap()
-            .1;
-        let dec2 = Construct::instruction("ext func add(lhs: int, rhs: int) -> int;")
-            .unwrap()
-            .1;
-
-        dec0.execute(i).unwrap();
-        dec1.execute(i).unwrap();
-        dec2.execute(i).unwrap();
-    }
-
     fn init_ctx() -> Context {
-        let mut i = Context::new();
+        let mut i = jinko! {
+            ext func no_arg() -> int;
+            ext func square(v: int) -> int;
+            ext func add(lhs: int, rhs: int) -> int;
+        };
 
         i.add_lib(unsafe { libloading::Library::new("./tests/fixtures/clib/lib.so").unwrap() });
-
-        declare_ext_funcs(&mut i);
 
         i
     }
