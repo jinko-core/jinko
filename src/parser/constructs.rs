@@ -1393,7 +1393,7 @@ mod tests {
     func void() { }"#;
 
         let (input, expr) = expr(input).unwrap();
-        expr.downcast_ref::<FunctionCall>().unwrap();
+        expr.downcast_ref::<FunctionDec>().unwrap();
 
         assert_eq!(input, "");
     }
@@ -1404,7 +1404,7 @@ mod tests {
     func void() { }"#;
 
         let (input, expr) = expr(input).unwrap();
-        expr.downcast_ref::<FunctionCall>().unwrap();
+        expr.downcast_ref::<FunctionDec>().unwrap();
 
         assert_eq!(input, "");
     }
@@ -1415,7 +1415,8 @@ mod tests {
 func void() { }"##;
 
         let (input, expr) = expr(input).unwrap();
-        expr.downcast_ref::<FunctionCall>().unwrap();
+        dbg!(input);
+        expr.downcast_ref::<FunctionDec>().unwrap();
 
         assert_eq!(input, "");
     }
@@ -1423,13 +1424,14 @@ func void() { }"##;
     #[test]
     fn t_multiple_different_comments() {
         let input = r##"# Comment
-# Another one /**
+# Another one 
+            /**
                * Some documentation
                */
     func void() { }"##;
 
         let (input, expr) = expr(input).unwrap();
-        expr.downcast_ref::<FunctionCall>().unwrap();
+        expr.downcast_ref::<FunctionDec>().unwrap();
 
         assert_eq!(input, "");
     }
@@ -1444,7 +1446,7 @@ func void() { }"##;
     func void() { }"##;
 
         let (input, expr) = expr(input).unwrap();
-        expr.downcast_ref::<FunctionCall>().unwrap();
+        expr.downcast_ref::<FunctionDec>().unwrap();
 
         assert_eq!(input, "");
     }
