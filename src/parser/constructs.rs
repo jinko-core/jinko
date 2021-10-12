@@ -117,12 +117,12 @@ fn method_or_field(
 ///
 ///      | 'type' next IDENTIFIER next '{' named_args
 ///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
-///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *) // TODO
+///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
 ///      | '@' next IDENTIFIER next '(' args                                    // TODO
 ///
 ///      | 'extern' 'func' function_declaration ';'                             // TODO
 ///      | 'return' expr                                                        // TODO
-///      | '{' next inner_block         
+///      | '{' next inner_block
 ///
 ///      | 'true'
 ///      | 'false'
@@ -149,6 +149,8 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         unit_incl(input)
     } else if let Ok((input, _)) = Token::_type_tok(input) {
         unit_type_decl(input)
+    } else if let Ok((input, _)) = Token::mut_tok(input) {
+        unit_mut_var(input)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
         unit_block(input)
     } else if let Ok(res) = constant(input) {
@@ -224,6 +226,15 @@ fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     // arg order does not matter
     args.push(first_arg);
     Ok((input, Box::new(TypeDec::new(name, args))))
+}
+
+/// next IDENTIFIER next '=' expr
+fn unit_mut_var(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, symbol) = delimited(nom_next, Token::identifier, nom_next)(input)?;
+    let (input, _) = Token::equal(input)?;
+    let (input, value) = expr(input)?;
+
+    Ok((input, Box::new(VarAssign::new(true, symbol, value))))
 }
 
 fn unit_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
