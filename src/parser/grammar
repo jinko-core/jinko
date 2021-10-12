@@ -49,7 +49,7 @@ block = '{' next inner_block
 inner_block = expr ( ';' expr )* '}'
             | '}'
 
-function_declaration = next IDENTIFIER next '(' typed_args next return_type
+function_declaration = next IDENTIFIER next '(' next func_args next return_type
 return_type = '->' next IDENTIFIER next
             | ε
 

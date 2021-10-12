@@ -207,12 +207,13 @@ fn unit_box(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     Ok((input, Box::new(block)))
 }
 
-/// function_declaration = next IDENTIFIER next '(' func_args next return_type
+/// function_declaration = next IDENTIFIER next '(' next func_args next return_type
 fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
     let input = next(input);
     let (input, id) = Token::identifier(input)?;
     let input = next(input);
     let (input, _) = Token::left_parenthesis(input)?;
+    let input = next(input);
     let (input, args) = func_args(input)?;
     let input = next(input);
     let (input, return_type) = return_type(input)?;
@@ -1546,6 +1547,81 @@ func void() { }"##;
 
         assert!(expr.downcast_ref::<Loop>().is_some());
         assert_eq!(input, "");
+    }
+
+    #[test]
+    fn funcion_dec_no_arg() {
+        let (input, expr) = expr("func a ( ) { 1 }").unwrap();
+        let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+        assert!(func.args().is_empty());
+    }
+
+    #[test]
+    fn funcion_dec_one_arg() {
+        let (input, expr) = expr("func id ( arg: int ) { arg }").unwrap();
+        let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+        assert!(func.args().len() == 1);
+        assert!(func.args()[0].name() == "arg");
+        assert!(func.args()[0].get_type().id() == "int");
+    }
+
+    #[test]
+    fn funcion_dec_many_args() {
+        let (input, expr) = expr(
+            "func concat ( arg1: char , arg2: int,arg3:float, arg4: string) { arg1 + arg2 + arg3 }",
+        )
+        .unwrap();
+        let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+        assert!(func.args().len() == 4);
+        assert!(func.args()[0].name() == "arg1");
+        assert!(func.args()[3].name() == "arg4");
+    }
+
+    #[test]
+    fn funcion_dec_many_args_with_return() {
+        let (input, expr) =
+            expr("func concat ( arg1: char , arg2: int,arg3:float, arg4: string) -> string { arg1 + arg2 + arg3 }").unwrap();
+        let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(func.args().len(), 4);
+        assert_eq!(func.ty().unwrap().id(), "string");
+        assert_eq!(func.args()[0].name(), "arg1");
+        assert_eq!(func.args()[3].name(), "arg4");
+    }
+
+    #[test]
+    fn funcion_dec_no_arg_with_return() {
+        let (input, expr) = expr("func a ( ) -> int { 1 }").unwrap();
+        let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(func.ty().unwrap().id(), "int");
+        assert!(func.args().is_empty());
+    }
+
+    #[test]
+    fn test_dec_no_arg() {
+        let (input, expr) = expr("test a ( ) { true }").unwrap();
+        let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(func.fn_kind(), FunctionKind::Test);
+    }
+
+    #[test]
+    fn mock_dec_one_arg() {
+        let (input, expr) = expr("mock id ( arg: int ) { arg }").unwrap();
+        let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(func.fn_kind(), FunctionKind::Mock);
     }
 
     /*
