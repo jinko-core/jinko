@@ -1,7 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId, FunctionCall};
+use crate::instruction::{Block, DecArg, FunctionCall, InstrKind, Instruction, TypeId};
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
@@ -107,11 +107,7 @@ impl FunctionDec {
 
     /// Run through the function as if it was called. This is useful for setting
     /// an entry point into the interpreter and executing it
-    pub fn run(
-        &self,
-        call: &FunctionCall,
-        ctx: &mut Context,
-    ) -> Option<ObjectInstance> {
+    pub fn run(&self, call: &FunctionCall, ctx: &mut Context) -> Option<ObjectInstance> {
         let block = match self.block() {
             Some(b) => b,
             None => return crate::ffi::JkFfi::execute(call, ctx),

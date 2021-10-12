@@ -182,7 +182,7 @@ impl Instruction for FunctionCall {
 
         self.map_args(&function, ctx);
 
-        let ret_val = function.run(&self, interpreter);
+        let ret_val = function.run(&self, ctx);
 
         ctx.scope_exit();
 

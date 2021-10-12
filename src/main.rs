@@ -21,12 +21,12 @@ use std::{fs, path::Path};
 pub use builtins::Builtins;
 pub use context::{Context, Scope, ScopeMap};
 pub use error::{ErrKind, Error};
+pub use ffi::JkFfi;
 pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use typechecker::{CheckedType, TypeCheck, TypeCtx};
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
-pub use ffi::JkFfi;
 
 // FIXME: Add documentation
 pub type InteractResult = Result<(Option<ObjectInstance>, Context), Error>;

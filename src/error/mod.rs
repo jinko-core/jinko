@@ -80,6 +80,7 @@ impl ErrKind {
             ErrKind::Context => "Interpreter",
             ErrKind::TypeChecker => "Typechecker",
             ErrKind::IO => "I/O",
+            ErrKind::ExternFunc => "External Function",
         }
     }
 }
