@@ -11,7 +11,7 @@ unit = 'if' expr block next [ 'else' next block ]
      | 'while' expr block
      | 'loop' next block
      | 'for' next IDENTIFIER next 'in' expr block
-     | 'type' next IDENTIFIER next '{' named_args
+     | 'type' next IDENTIFIER next '(' type_dec_arg (',' type_dec_arg)* ')'
      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
      | '@' next IDENTIFIER next '(' next args

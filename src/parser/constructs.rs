@@ -27,9 +27,6 @@ use crate::instruction::{
 };
 use crate::parser::{ConstantConstruct, ParseResult, Token};
 
-type Instructions = Vec<Box<dyn Instruction>>;
-type MaybeInstruction = Option<Box<dyn Instruction>>;
-
 /// Parse as many instructions as possible
 /// exprs = ( expr_scl )*
 pub fn exprs(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
@@ -118,7 +115,7 @@ fn method_or_field(
 ///      | 'test' function_declaration block
 ///      | 'mock' function_declaration block
 ///
-///      | 'type' next IDENTIFIER next '{' named_args                           // TODO
+///      | 'type' next IDENTIFIER next '{' named_args
 ///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
 ///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *) // TODO
 ///      | '@' next IDENTIFIER next '(' args                                    // TODO
@@ -150,6 +147,8 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         unit_func(input, kind)
     } else if let Ok((input, _)) = Token::incl_tok(input) {
         unit_incl(input)
+    } else if let Ok((input, _)) = Token::_type_tok(input) {
+        unit_type_decl(input)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
         unit_block(input)
     } else if let Ok(res) = constant(input) {
@@ -212,6 +211,19 @@ fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     } else {
         Ok((input, Box::new(Incl::new(path, None))))
     }
+}
+
+/// next IDENTIFIER next '(' type_arg (',' type_arg)* ')'
+fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
+    let (input, _) = Token::left_parenthesis(input)?;
+    let (input, first_arg) = func_arg(input)?;
+    let (input, mut args) = many0(preceded(Token::comma, func_arg))(input)?;
+    let (input, _) = Token::right_parenthesis(input)?;
+
+    // arg order does not matter
+    args.push(first_arg);
+    Ok((input, Box::new(TypeDec::new(name, args))))
 }
 
 fn unit_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
@@ -802,7 +814,6 @@ mod tests {
 func void() { }"##;
 
         let (input, expr) = expr(input).unwrap();
-        dbg!(input);
         expr.downcast_ref::<FunctionDec>().unwrap();
 
         assert_eq!(input, "");
