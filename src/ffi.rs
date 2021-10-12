@@ -76,7 +76,7 @@ mod tests {
     }
 
     #[test]
-    fn t_no_arg() {
+    fn t_void_int() {
         let mut i = init_ctx();
 
         let dec = Construct::instruction("ext func no_arg() -> int;")
@@ -93,20 +93,16 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    fn t_one_arg() {
+    fn t_void_void() {
         let mut i = init_ctx();
 
-        let dec = Construct::instruction("ext func no_arg() -> int;")
+        let dec = Construct::instruction("ext func print_something();")
             .unwrap()
             .1;
         let dec = dec.downcast_ref::<FunctionDec>().unwrap();
-        let call = Construct::instruction("add(12, 15)").unwrap().1;
+        let call = Construct::instruction("print_something()").unwrap().1;
         let call = call.downcast_ref::<FunctionCall>().unwrap();
 
-        assert_eq!(
-            execute(&dec, &call, &mut i),
-            Some(JkInt::from(27).to_instance())
-        );
+        assert_eq!(execute(&dec, &call, &mut i), None);
     }
 }
