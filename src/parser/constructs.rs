@@ -1508,6 +1508,22 @@ func void() { }"##;
         assert_eq!(input, "");
     }
 
+    #[test]
+    fn if_no_else() {
+        let (input, expr) = expr("if 1 + 1 { 10 / 2 }").unwrap();
+
+        assert!(expr.downcast_ref::<IfElse>().is_some());
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn if_else() {
+        let (input, expr) = expr("if 1 + 1 { 10 / 2 } else { var }").unwrap();
+
+        assert!(expr.downcast_ref::<IfElse>().is_some());
+        assert_eq!(input, "");
+    }
+
     /*
 
         fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
