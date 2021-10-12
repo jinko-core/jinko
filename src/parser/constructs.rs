@@ -1385,6 +1385,70 @@ mod tests {
         assert_eq!(fifth.print(), "1.1");
     }
 
+    #[test]
+    fn t_multi_comment_multi_line() {
+        let input = r#"/**
+    * This function does nothing
+    */
+    func void() { }"#;
+
+        let (input, expr) = expr(input).unwrap();
+        expr.downcast_ref::<FunctionCall>().unwrap();
+
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn t_sing_comment_multi_line() {
+        let input = r#" // Comment
+    func void() { }"#;
+
+        let (input, expr) = expr(input).unwrap();
+        expr.downcast_ref::<FunctionCall>().unwrap();
+
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn t_hashtag_comment_multi_line() {
+        let input = r##"# Comment
+func void() { }"##;
+
+        let (input, expr) = expr(input).unwrap();
+        expr.downcast_ref::<FunctionCall>().unwrap();
+
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn t_multiple_different_comments() {
+        let input = r##"# Comment
+# Another one /**
+               * Some documentation
+               */
+    func void() { }"##;
+
+        let (input, expr) = expr(input).unwrap();
+        expr.downcast_ref::<FunctionCall>().unwrap();
+
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn t_multiple_different_comments_close() {
+        let input = r##"# Comment
+# Another one 
+            /**
+               * Some documentation
+               *//* Some more */
+    func void() { }"##;
+
+        let (input, expr) = expr(input).unwrap();
+        expr.downcast_ref::<FunctionCall>().unwrap();
+
+        assert_eq!(input, "");
+    }
+
     /*
 
         fn function_call(input: &str) -> ParseResult<&str, FunctionCall> {
@@ -2017,73 +2081,6 @@ mod tests {
         // In the following tests about comments, we always need an extra call to `instruction`
         // in order to get ride of the newline after the comment
 
-        #[test]
-        fn t_multi_comment_multi_line() {
-            let input = r#"/**
-    * This function does nothing
-    */
-    func void() { }"#;
-
-        let (input, _) = Construct::instruction(input).unwrap();
-
-        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
-    }
-
-    #[test]
-    fn t_sing_comment_multi_line() {
-        let input = r#" // Comment
-    func void() { }"#;
-
-        let (input, _) = Construct::instruction(input).unwrap();
-
-        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
-    }
-
-    #[test]
-    fn t_hashtag_comment_multi_line() {
-        let input = r##"# Comment
-func void() { }"##;
-
-        let (input, _) = Construct::instruction(input).unwrap();
-
-        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
-    }
-
-    #[test]
-    fn t_multiple_different_comments() {
-        let input = r##"# Comment
-# Another one /**
-               * Some documentation
-               */
-    func void() { }"##;
-
-        let (input, _) = Construct::instruction(input).unwrap();
-        let (input, _) = Construct::instruction(input).unwrap();
-        let (input, _) = Construct::instruction(input).unwrap();
-        let (input, _) = Construct::instruction(input).unwrap();
-        let (input, _) = Construct::instruction(input).unwrap();
-
-        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
-    }
-
-    #[test]
-    fn t_multiple_different_comments_close() {
-        let input = r##"# Comment
-# Another one /**
-               * Some documentation
-               *//* Some more */
-    func void() { }"##;
-        println!("{}", input);
-
-        let (input, _) = Construct::instruction(input).unwrap();
-        let (input, _) = Construct::instruction(input).unwrap();
-        let (input, _) = Construct::instruction(input).unwrap();
-        let (input, _) = Construct::instruction(input).unwrap();
-        let (input, _) = Construct::instruction(input).unwrap();
-        let (input, _) = Construct::instruction(input).unwrap();
-
-        assert_eq!(Construct::instruction(input).unwrap().0, "func void() { }");
-    }
 
     #[test]
     fn t_multi_field_access_3() {
