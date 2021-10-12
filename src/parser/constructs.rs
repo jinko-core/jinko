@@ -15,8 +15,8 @@
 
 use nom::Err::Error as NomError;
 use nom::{
-    branch::alt, combinator::opt, multi::many0, sequence::pair, sequence::preceded,
-    sequence::terminated,
+    branch::alt, combinator::opt, multi::many0, sequence::delimited, sequence::pair,
+    sequence::preceded, sequence::terminated,
 };
 
 use crate::error::{ErrKind, Error};
@@ -119,7 +119,7 @@ fn method_or_field(
 ///      | 'mock' function_declaration block
 ///
 ///      | 'type' next IDENTIFIER next '{' named_args                           // TODO
-///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]                 // TODO
+///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
 ///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *) // TODO
 ///      | '@' next IDENTIFIER next '(' args                                    // TODO
 ///
@@ -148,8 +148,10 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         alt((Token::func_tok, Token::test_tok, Token::mock_tok))(input)
     {
         unit_func(input, kind)
+    } else if let Ok((input, _)) = Token::incl_tok(input) {
+        unit_incl(input)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
-        unit_box(input)
+        unit_block(input)
     } else if let Ok(res) = constant(input) {
         Ok(res)
     } else {
@@ -202,7 +204,17 @@ fn unit_func<'a>(input: &'a str, kind: &str) -> ParseResult<&'a str, Box<dyn Ins
     Ok((input, Box::new(function)))
 }
 
-fn unit_box(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, path) = delimited(nom_next, Token::identifier, nom_next)(input)?;
+    if let Ok((input, _)) = Token::az_tok(input) {
+        let (input, alias) = preceded(nom_next, Token::identifier)(input)?;
+        Ok((input, Box::new(Incl::new(path, Some(alias)))))
+    } else {
+        Ok((input, Box::new(Incl::new(path, None))))
+    }
+}
+
+fn unit_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, block) = inner_block(next(input))?;
     Ok((input, Box::new(block)))
 }
@@ -364,15 +376,9 @@ fn type_arg(input: &str) -> ParseResult<&str, VarAssign> {
 ///       | '#'  [^\n]   '\n'
 pub fn next(input: &str) -> &str {
     let input = input.trim_start();
-    let mut comments = alt((
-        Token::consume_shebang_comment,
-        Token::consume_single_comment,
-        Token::consume_multi_comment,
-    ));
-    if let Ok((input, _)) = comments(input) {
-        next(input)
-    } else {
-        input
+    match Token::consume_comment(input) {
+        Ok((input, _)) => next(input),
+        _ => input,
     }
 }
 

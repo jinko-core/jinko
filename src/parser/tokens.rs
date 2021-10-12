@@ -399,7 +399,7 @@ impl Token {
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
-    fn consume_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_comment(input: &str) -> ParseResult<&str, &str> {
         alt((
             Token::consume_shebang_comment,
             Token::consume_single_comment,
