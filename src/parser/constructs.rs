@@ -1388,72 +1388,6 @@ mod tests {
     }
 
     #[test]
-    fn multi_comment_multi_line() {
-        let input = r#"/**
-    * This function does nothing
-    */
-    func void() { }"#;
-
-        let (input, expr) = expr(input).unwrap();
-        expr.downcast_ref::<FunctionDec>().unwrap();
-
-        assert_eq!(input, "");
-    }
-
-    #[test]
-    fn sing_comment_multi_line() {
-        let input = r#" // Comment
-    func void() { }"#;
-
-        let (input, expr) = expr(input).unwrap();
-        expr.downcast_ref::<FunctionDec>().unwrap();
-
-        assert_eq!(input, "");
-    }
-
-    #[test]
-    fn hashtag_comment_multi_line() {
-        let input = r##"# Comment
-func void() { }"##;
-
-        let (input, expr) = expr(input).unwrap();
-        dbg!(input);
-        expr.downcast_ref::<FunctionDec>().unwrap();
-
-        assert_eq!(input, "");
-    }
-
-    #[test]
-    fn multiple_different_comments() {
-        let input = r##"# Comment
-# Another one 
-            /**
-               * Some documentation
-               */
-    func void() { }"##;
-
-        let (input, expr) = expr(input).unwrap();
-        expr.downcast_ref::<FunctionDec>().unwrap();
-
-        assert_eq!(input, "");
-    }
-
-    #[test]
-    fn multiple_different_comments_close() {
-        let input = r##"# Comment
-# Another one 
-            /**
-               * Some documentation
-               *//* Some more */
-    func void() { }"##;
-
-        let (input, expr) = expr(input).unwrap();
-        expr.downcast_ref::<FunctionDec>().unwrap();
-
-        assert_eq!(input, "");
-    }
-
-    #[test]
     fn method_call_no_arg() {
         let (input, expr) = expr("a.call( )").unwrap();
 
@@ -1671,6 +1605,72 @@ func void() { }"##;
 
         assert_eq!(input, "");
         assert_eq!(assign.symbol(), "n1");
+    }
+
+    #[test]
+    fn multi_comment_multi_line() {
+        let input = r#"/**
+    * This function does nothing
+    */
+    func void() { }"#;
+
+        let (input, expr) = expr(input).unwrap();
+        expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn sing_comment_multi_line() {
+        let input = r#" // Comment
+    func void() { }"#;
+
+        let (input, expr) = expr(input).unwrap();
+        expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn hashtag_comment_multi_line() {
+        let input = r##"# Comment
+func void() { }"##;
+
+        let (input, expr) = expr(input).unwrap();
+        dbg!(input);
+        expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn multiple_different_comments() {
+        let input = r##"# Comment
+# Another one 
+            /**
+               * Some documentation
+               */
+    func void() { }"##;
+
+        let (input, expr) = expr(input).unwrap();
+        expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn multiple_different_comments_close() {
+        let input = r##"# Comment
+# Another one 
+            /**
+               * Some documentation
+               *//* Some more */
+    func void() { }"##;
+
+        let (input, expr) = expr(input).unwrap();
+        expr.downcast_ref::<FunctionDec>().unwrap();
+
+        assert_eq!(input, "");
     }
 
     /*
