@@ -15,20 +15,19 @@ pub fn execute(
     for lib in ctx.libs().iter() {
         let sym = call.name().as_bytes();
         unsafe {
-            if lib.get::<libloading::Symbol<()>>(&sym).is_ok() {
+            if lib.get::<libloading::Symbol<()>>(sym).is_ok() {
                 match call.args().len() {
                     0 => {
                         match dec.ty() {
                             None => {
-                                if let Ok(f) = lib.get::<libloading::Symbol<fn()>>(&sym) {
+                                if let Ok(f) = lib.get::<libloading::Symbol<fn()>>(sym) {
                                     f();
                                     return None;
                                 }
                             }
                             Some(ty) => match ty.id() {
                                 "int" => {
-                                    if let Ok(f) = lib.get::<libloading::Symbol<fn() -> i64>>(&sym)
-                                    {
+                                    if let Ok(f) = lib.get::<libloading::Symbol<fn() -> i64>>(sym) {
                                         let res = f();
                                         return Some(JkInt::from(res).to_instance());
                                     }
