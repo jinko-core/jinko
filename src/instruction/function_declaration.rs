@@ -245,7 +245,7 @@ impl From<&str> for FunctionKind {
             "func" => FunctionKind::Func,
             "test" => FunctionKind::Test,
             "mock" => FunctionKind::Mock,
-            "extern" => FunctionKind::Ext,
+            "ext" => FunctionKind::Ext,
             _ => FunctionKind::Unknown,
         }
     }
