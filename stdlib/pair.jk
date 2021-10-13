@@ -11,8 +11,8 @@ type Pair_int(f: int, s: int)
  */
 func pair_int(first: int, second: int) -> Pair_int {
     Pair_int (
-        f : first,
-        s : second
+        f: first,
+        s: second
     )
 }
 
