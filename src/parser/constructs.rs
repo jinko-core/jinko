@@ -168,8 +168,8 @@ fn unit_if(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let input = next(input);
     if let Ok((input, _)) = Token::else_tok(input) {
         let input = next(input);
-        let (input, failure) = block(input)?;
-        Ok((input, Box::new(IfElse::new(cond, success, Some(failure)))))
+        let (input, else_body) = block(input)?;
+        Ok((input, Box::new(IfElse::new(cond, success, Some(else_body)))))
     } else {
         Ok((input, Box::new(IfElse::new(cond, success, None))))
     }
