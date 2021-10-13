@@ -3,6 +3,7 @@ mod args;
 mod builtins;
 mod context;
 mod error;
+mod ffi;
 mod indent;
 mod instance;
 mod instruction;
