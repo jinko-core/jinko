@@ -744,6 +744,7 @@ mod tests {
 
         assert_eq!(input, "");
         assert_eq!(assign.symbol(), "var");
+        assert!(!assign.mutable());
     }
 
     #[test]
@@ -753,6 +754,37 @@ mod tests {
 
         assert_eq!(input, "");
         assert_eq!(assign.symbol(), "n1");
+        assert!(!assign.mutable());
+    }
+
+    #[test]
+    fn mut_var_assigment() {
+        let (input, expr) = expr("mut var = b.call() + 1").unwrap();
+        let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(assign.symbol(), "var");
+        assert!(assign.mutable());
+    }
+
+    #[test]
+    fn var_assigment_mut_in_name() {
+        let (input, expr) = expr("mut_var = b.call() + 1").unwrap();
+        let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(assign.symbol(), "mut_var");
+        assert!(!assign.mutable());
+    }
+
+    #[test]
+    fn mut_var_assigment_mut_in_name() {
+        let (input, expr) = expr("mut mut_var = b.call() + 1").unwrap();
+        let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(assign.symbol(), "mut_var");
+        assert!(assign.mutable());
     }
 
     #[test]
