@@ -18,7 +18,7 @@ unit = 'if' expr block next [ 'else' next block ]
      | 'func' function_declaration block
      | 'test' function_declaration block
      | 'mock' function_declaration block
-     | 'extern' 'func' function_declaration ';'
+     | 'ext' 'func' function_declaration ';'
      | 'return' expr
      | '{' next inner_block
      | 'true'
