@@ -11,9 +11,9 @@ pub fn execute(
     ctx: &mut Context,
 ) -> Option<ObjectInstance> {
     ctx.debug("EXT CALL", call.name());
+    let sym = call.name().as_bytes();
 
     for lib in ctx.libs().iter() {
-        let sym = call.name().as_bytes();
         unsafe {
             if lib.get::<libloading::Symbol<()>>(sym).is_ok() {
                 match call.args().len() {
