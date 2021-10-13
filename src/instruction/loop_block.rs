@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn pretty_print_for() {
-        let r = Box::new(FunctionCall::new("iter".to_owned()));
+        let r = Box::new(FunctionCall::new("iter".to_owned(), vec![]));
         let b = Block::new();
         let l = Loop::new(LoopKind::For(Var::new("i".to_owned()), r), b);
 

@@ -20,15 +20,7 @@ pub struct FunctionCall {
 
 impl FunctionCall {
     /// Create a new function call and return it
-    pub fn new(fn_name: String) -> FunctionCall {
-        FunctionCall {
-            fn_name,
-            args: Vec::new(),
-        }
-    }
-    /// Create a new function call and return it
-    /// TODO better name
-    pub fn with_args(fn_name: String, args: Vec<Box<dyn Instruction>>) -> FunctionCall {
+    pub fn new(fn_name: String, args: Vec<Box<dyn Instruction>>) -> FunctionCall {
         FunctionCall { fn_name, args }
     }
 
@@ -223,7 +215,7 @@ mod tests {
 
     #[test]
     fn t_pretty_print_empty() {
-        let function = FunctionCall::new("something".to_owned());
+        let function = FunctionCall::new("something".to_owned(), vec![]);
 
         assert_eq!(function.print(), "something()");
     }
@@ -249,7 +241,7 @@ mod tests {
 
         ctx.add_function(f).unwrap();
 
-        let mut f_call = FunctionCall::new("func0".to_string());
+        let mut f_call = FunctionCall::new("func0".to_string(), vec![]);
 
         assert!(f_call.execute(&mut ctx).is_none());
         assert!(

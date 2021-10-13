@@ -52,7 +52,7 @@ mod tests {
     #[test]
     fn t_print() {
         let var = Box::new(JkInt::from(15));
-        let method = FunctionCall::new("some_int_func".to_owned());
+        let method = FunctionCall::new("some_int_func".to_owned(), vec![]);
         let mc = MethodCall::new(var, method);
 
         assert_eq!(mc.print(), "15.some_int_func()".to_owned())
@@ -68,8 +68,7 @@ mod tests {
 
         let var1 = Box::new(JkInt::from(1));
         let var2 = Box::new(JkInt::from(2));
-        let mut method = FunctionCall::new("__first".to_owned());
-        method.add_arg(var2);
+        let method = FunctionCall::new("__first".to_owned(), vec![var2]);
 
         let mc = MethodCall::new(var1, method);
 

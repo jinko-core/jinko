@@ -27,7 +27,7 @@ macro_rules! jinko {
     ($($t:tt) *) => {
         {
             let mut ctx = Context::new();
-            let (_, insts) = $crate::parser::constructs::exprs(stringify!( $( $t ) * )).unwrap();
+            let (_, insts) = $crate::parser::constructs::many_expr(stringify!( $( $t ) * )).unwrap();
             for inst in insts {
                 inst.execute(&mut ctx);
             }
@@ -45,7 +45,7 @@ impl Parser {
 
         let entry_block = ctx.entry_point.block_mut().unwrap();
 
-        let (_, instructions) = constructs::exprs(input)?;
+        let (_, instructions) = constructs::many_expr(input)?;
 
         entry_block.set_instructions(instructions);
 

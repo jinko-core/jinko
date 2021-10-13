@@ -42,20 +42,20 @@ func_type_or_var = '(' next func_or_type_args
 func_or_type_args = IDENTIFIER next ':' expr (',' type_arg )* ')'  (* type_instantiation *)
                   | args                                           (* function_call *)
 
-type_arg = next IDENTIFIER next ':' expr
+type_inst_arg = next IDENTIFIER next ':' expr
 
 
 block = '{' next inner_block
 inner_block = expr ( ';' expr )* '}'
             | '}'
 
-function_declaration = next IDENTIFIER next '(' next func_args next return_type
+function_declaration = next IDENTIFIER next '(' next typed_arg next return_type
 return_type = '->' next IDENTIFIER next
             | ε
 
-func_args = func_arg ( ',' func_arg )* ')'
+typed_args = typed_arg ( ',' typed_arg )* ')'
            | ')'
-func_arg = next IDENTIFIER next ':' next IDENTIFIER next
+typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
 
 
 args = expr ( ',' expr )* ')'

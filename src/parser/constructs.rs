@@ -28,15 +28,15 @@ use crate::instruction::{
 use crate::parser::{ConstantConstruct, ParseResult, Token};
 
 /// Parse as many instructions as possible
-/// exprs = ( expr_scl )*
-pub fn exprs(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
-    many0(expr_scl)(input)
+/// many_expr = ( expr_semicolon )*
+pub fn many_expr(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
+    many0(expr_semicolon)(input)
 }
 
 /// Parse an instruction and maybe the semicolon that follows.
 ///
-/// expr_scl = expr [ ';' ]
-pub fn expr_scl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+/// expr_semicolon = expr [ ';' ]
+pub fn expr_semicolon(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, expr) = expr(input)?;
     let (input, _) = opt(Token::semicolon)(input)?;
 
@@ -99,7 +99,7 @@ fn method_or_field(
         Ok((input, _)) => {
             let input = next(input);
             let (input, args) = args(input)?;
-            let method_call = MethodCall::new(expr, FunctionCall::with_args(id, args));
+            let method_call = MethodCall::new(expr, FunctionCall::new(id, args));
             Ok((input, Box::new(method_call)))
         }
         _ => Ok((input, Box::new(FieldAccess::new(expr, id)))),
@@ -215,12 +215,12 @@ fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     }
 }
 
-/// next IDENTIFIER next '(' type_arg (',' type_arg)* ')'
+/// next IDENTIFIER next '(' type_inst_arg (',' type_inst_arg)* ')'
 fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
-    let (input, first_arg) = func_arg(input)?;
-    let (input, mut args) = many0(preceded(Token::comma, func_arg))(input)?;
+    let (input, first_arg) = typed_arg(input)?;
+    let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
     let (input, _) = Token::right_parenthesis(input)?;
 
     // arg order does not matter
@@ -242,14 +242,14 @@ fn unit_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     Ok((input, Box::new(block)))
 }
 
-/// function_declaration = next IDENTIFIER next '(' next func_args next return_type
+/// function_declaration = next IDENTIFIER next '(' next typed_args next return_type
 fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
     let input = next(input);
     let (input, id) = Token::identifier(input)?;
     let input = next(input);
     let (input, _) = Token::left_parenthesis(input)?;
     let input = next(input);
-    let (input, args) = func_args(input)?;
+    let (input, args) = typed_args(input)?;
     let input = next(input);
     let (input, return_type) = return_type(input)?;
 
@@ -299,12 +299,12 @@ fn inner_block(input: &str) -> ParseResult<&str, Block> {
     Ok((input, block))
 }
 
-/// func_type_or_var = '(' next func_or_type_args
+/// func_type_or_var = '(' next func_or_type_inst_args
 ///                  | '=' expr                   (* variable assigment *)
 ///                  | ε                          (* variable *)
 fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_parenthesis(input) {
-        func_or_type_args(next(input), id)
+        func_or_type_inst_args(next(input), id)
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
@@ -313,14 +313,14 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
     }
 }
 
-/// func_or_type_args = IDENTIFIER next ':' expr (',' type_arg )* ')'  (* type_instantiation *)
+/// func_or_type_inst_args = IDENTIFIER next ':' expr (',' type_inst_arg )* ')'  (* type_instantiation *)
 ///                  | args                                            (* function_call *)
-fn func_or_type_args(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
+fn func_or_type_inst_args(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
     if let Ok((input, first_attr)) =
         terminated(terminated(Token::identifier, nom_next), Token::colon)(input)
     {
         let (input, first_attr_val) = expr(input)?;
-        let (input, attrs) = many0(preceded(Token::comma, type_arg))(input)?;
+        let (input, attrs) = many0(preceded(Token::comma, type_inst_arg))(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
 
         let mut type_inst = TypeInstantiation::new(TypeId::new(id));
@@ -330,7 +330,7 @@ fn func_or_type_args(input: &str, id: String) -> ParseResult<&str, Box<dyn Instr
         Ok((input, Box::new(type_inst)))
     } else {
         let (input, args) = args(input)?;
-        Ok((input, Box::new(FunctionCall::with_args(id, args))))
+        Ok((input, Box::new(FunctionCall::new(id, args))))
     }
 }
 
@@ -352,22 +352,22 @@ fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
     Ok((input, args))
 }
 
-/// func_args = func_arg ( ',' func_arg )* ')'
+/// typed_args = typed_arg ( ',' typed_arg )* ')'
 ///           | ')'
-fn func_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
+fn typed_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
     if let Ok((input, _)) = Token::right_parenthesis(input) {
         return Ok((input, vec![]));
     }
-    let (input, first_arg) = func_arg(input)?;
-    let (input, mut args) = many0(preceded(Token::comma, func_arg))(input)?;
+    let (input, first_arg) = typed_arg(input)?;
+    let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
     let (input, _) = Token::right_parenthesis(input)?;
 
     args.insert(0, first_arg);
     Ok((input, args))
 }
 
-/// func_arg = next IDENTIFIER next ':' next IDENTIFIER next
-fn func_arg(input: &str) -> ParseResult<&str, DecArg> {
+/// typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
+fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
     let input = next(input);
     let (input, id) = Token::identifier(input)?;
     let input = next(input);
@@ -379,8 +379,8 @@ fn func_arg(input: &str) -> ParseResult<&str, DecArg> {
     Ok((input, DecArg::new(id, TypeId::new(ty))))
 }
 
-/// type_arg = next IDENTIFIER next ':' expr
-fn type_arg(input: &str) -> ParseResult<&str, VarAssign> {
+/// type_inst_arg = next IDENTIFIER next ':' expr
+fn type_inst_arg(input: &str) -> ParseResult<&str, VarAssign> {
     let input = next(input);
     let (input, id) = Token::identifier(input)?;
     let input = next(input);
