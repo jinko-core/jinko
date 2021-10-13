@@ -115,7 +115,7 @@ fn method_or_field(
 ///      | 'test' function_declaration block
 ///      | 'mock' function_declaration block
 ///
-///      | 'type' next IDENTIFIER next '{' named_args
+///      | 'type' next IDENTIFIER next '(' named_args
 ///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
 ///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
 ///      | '@' next IDENTIFIER next '(' args                                    // TODO
@@ -735,6 +735,52 @@ mod tests {
             "
         )
         .is_err())
+    }
+
+    #[test]
+    fn type_dec_one_field() {
+        let (input, expr) = expr("type Num ( val : int )").unwrap();
+        let dec = expr.downcast_ref::<TypeDec>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(dec.name(), "Num");
+        assert_eq!(dec.fields().len(), 1);
+    }
+
+    #[test]
+    fn type_dec_multiple_field() {
+        let (input, expr) = expr("type Point( x : int , y: int )").unwrap();
+        let dec = expr.downcast_ref::<TypeDec>().unwrap();
+
+        assert_eq!(input, "");
+        assert_eq!(dec.name(), "Point");
+        assert_eq!(dec.fields().len(), 2);
+    }
+
+    #[test]
+    fn type_dec_incomplete() {
+        assert!(expr("type Point( x:int , y: )").is_err());
+    }
+
+    #[test]
+    fn include_simple() {
+        let (input, expr) = expr("incl pair").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<Incl>().is_some());
+    }
+
+    #[test]
+    fn include_with_alias() {
+        let (input, expr) = expr("incl numpy as np").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<Incl>().is_some());
+    }
+
+    #[test]
+    fn include_with_alias_missing_path() {
+        assert!(expr("incl as uoh").is_err());
     }
 
     #[test]
