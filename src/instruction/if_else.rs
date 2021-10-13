@@ -16,7 +16,9 @@
 //! ```
 
 use crate::instruction::{Block, InstrKind, Instruction};
-use crate::{Context, ObjectInstance, Rename};
+use crate::typechecker::TypeCtx;
+use crate::{typechecker::CheckedType, Context, ObjectInstance, TypeCheck};
+use crate::{ErrKind, Error};
 
 #[derive(Clone)]
 pub struct IfElse {
@@ -51,7 +53,7 @@ impl Instruction for IfElse {
         let base = format!("if {} {}", self.condition.print(), self.if_body.print());
 
         match &self.else_body {
-            Some(body) => format!(" else {}", body.print()),
+            Some(body) => format!("{} else {}", base, body.print()),
             None => base,
         }
     }
@@ -77,17 +79,157 @@ impl Instruction for IfElse {
     }
 }
 
-impl Rename for IfElse {
-    fn prefix(&mut self, prefix: &str) {
-        self.condition.prefix(prefix);
-        self.if_body.prefix(prefix);
-        match &mut self.else_body {
-            Some(eb) => eb.prefix(prefix),
-            None => {}
+impl TypeCheck for IfElse {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let if_ty = self.if_body.resolve_type(ctx);
+        let else_ty = self
+            .else_body
+            .as_ref()
+            .map(|else_body| else_body.resolve_type(ctx));
+
+        match (if_ty, else_ty) {
+            (CheckedType::Void, None) => CheckedType::Void,
+            (if_ty, Some(else_ty)) => {
+                if if_ty != else_ty {
+                    ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                        "incompatible types for `if` and `else` block: {} and {}",
+                        if_ty, else_ty,
+                    )));
+                    CheckedType::Unknown
+                } else {
+                    if_ty
+                }
+            }
+            (if_ty, None) => {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "`if` block has a return type ({}) but no else block to match it",
+                    if_ty
+                )));
+                CheckedType::Unknown
+            }
         }
     }
 }
 
-// FIXME: Add printing tests for if else
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+    use crate::{jinko, jinko_fail};
+
+    #[test]
+    fn t_if_print() {
+        use crate::value::JkBool;
+
+        let if_block = IfElse::new(Box::new(JkBool::from(true)), Block::new(), None);
+
+        assert_eq!(if_block.print(), "if true {\n}".to_string());
+    }
+
+    #[test]
+    fn t_if_else_print() {
+        use crate::value::JkBool;
+
+        let if_block = IfElse::new(
+            Box::new(JkBool::from(true)),
+            Block::new(),
+            Some(Block::new()),
+        );
+
+        assert_eq!(if_block.print(), "if true {\n} else {\n}".to_string());
+    }
+
+    #[test]
+    fn t_if_kind() {
+        use crate::value::JkBool;
+
+        let if_block = IfElse::new(Box::new(JkBool::from(true)), Block::new(), None);
+
+        assert_eq!(if_block.kind(), InstrKind::Statement);
+    }
+
+    #[test]
+    fn t_if_execute() {
+        use crate::instance::ToObjectInstance;
+        use crate::value::{JkBool, JkInt};
+
+        let mut ctx = Context::new();
+
+        let mut if_block = Block::new();
+        let mut else_block = Block::new();
+        if_block.set_last(Some(Box::new(JkInt::from(42))));
+        else_block.set_last(Some(Box::new(JkInt::from(69))));
+
+        let if_else = IfElse::new(Box::new(JkBool::from(true)), if_block, Some(else_block));
+
+        assert_eq!(
+            if_else.execute(&mut ctx).unwrap(),
+            JkInt::from(42).to_instance()
+        );
+    }
+
+    #[test]
+    fn t_else_execute() {
+        use crate::instance::ToObjectInstance;
+        use crate::value::{JkBool, JkInt};
+
+        let mut ctx = Context::new();
+
+        let mut if_block = Block::new();
+        let mut else_block = Block::new();
+        if_block.set_last(Some(Box::new(JkInt::from(42))));
+        else_block.set_last(Some(Box::new(JkInt::from(69))));
+
+        let if_else = IfElse::new(Box::new(JkBool::from(false)), if_block, Some(else_block));
+
+        assert_eq!(
+            if_else.execute(&mut ctx).unwrap(),
+            JkInt::from(69).to_instance()
+        );
+    }
+
+    #[test]
+    fn tc_if_else_simple() {
+        jinko! {
+            if true {
+                15
+            } else {
+                14
+            }
+        };
+    }
+
+    #[test]
+    fn tc_if_else_in_func() {
+        jinko! {
+            func bool_to_int(b: bool) -> int {
+                if b {
+                    1
+                } else {
+                    0
+                }
+            }
+        };
+    }
+
+    #[test]
+    fn tc_if_else_not_bool_in_cond() {
+        jinko_fail! {
+            if 4.5 {
+                15
+            } else {
+                14
+            }
+        };
+    }
+
+    #[test]
+    fn tc_if_else_mismatched_types() {
+        jinko_fail! {
+            if true {
+                1
+            } else {
+                4.5
+            }
+        };
+    }
+}

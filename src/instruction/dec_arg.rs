@@ -1,7 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
 use crate::instruction::TypeId;
-use crate::Rename;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {
@@ -23,14 +22,6 @@ impl DecArg {
     /// Return a representation of the argument's type
     pub fn get_type(&self) -> &TypeId {
         &self.ty
-    }
-}
-
-impl Rename for DecArg {
-    fn prefix(&mut self, prefix: &str) {
-        // FIXME: We shouldn't prefix function arguments, right?
-        // self.name = format!("{}{}", prefix, self.name);
-        self.ty.prefix(prefix);
     }
 }
 

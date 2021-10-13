@@ -1,7 +1,10 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename};
+use crate::{
+    typechecker::{CheckedType, TypeCtx},
+    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
+};
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -17,22 +20,9 @@ impl FieldAccess {
             field_name,
         }
     }
-}
 
-impl Instruction for FieldAccess {
-    fn kind(&self) -> InstrKind {
-        // A field access can only ever be an expression, since we cannot store statements
-        // in a type
-        InstrKind::Expression(None)
-    }
-
-    fn print(&self) -> String {
-        format!("{}.{}", self.instance.print(), self.field_name)
-    }
-
-    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug("FIELD ACCESS ENTER", &self.print());
-
+    /// Get a reference to the accessed field's instance
+    fn get_field_instance(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         let calling_instance = match self.instance.execute(ctx) {
             None => {
                 ctx.error(Error::new(ErrKind::Context).with_msg(format!(
@@ -51,16 +41,63 @@ impl Instruction for FieldAccess {
             }
         };
 
-        ctx.debug("FIELD ACCESS EXIT", &self.print());
-
         Some(field_instance)
     }
 }
 
-impl Rename for FieldAccess {
-    fn prefix(&mut self, _: &str) {
-        // FIXME: Do we want to do something?
-        // todo!()
+impl Instruction for FieldAccess {
+    fn kind(&self) -> InstrKind {
+        // A field access can only ever be an expression, since we cannot store statements
+        // in a type
+        InstrKind::Expression(None)
+    }
+
+    fn print(&self) -> String {
+        format!("{}.{}", self.instance.print(), self.field_name)
+    }
+
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        ctx.debug("FIELD ACCESS ENTER", &self.print());
+
+        let field_instance = self.get_field_instance(ctx);
+
+        ctx.debug("FIELD ACCESS EXIT", &self.print());
+
+        field_instance
+    }
+}
+
+impl TypeCheck for FieldAccess {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let instance_ty = self.instance.resolve_type(ctx);
+        let instance_ty_name = match &instance_ty {
+            CheckedType::Resolved(ti) => ti.id(),
+            _ => {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "trying to access field `{}` on statement",
+                    self.field_name
+                )));
+                return CheckedType::Unknown;
+            }
+        };
+
+        // We can unwrap here since the type that was resolved from the instance HAS
+        // to exist. If it does not, this is an interpreter error
+        let (_, fields_ty) = ctx.get_custom_type(instance_ty_name).unwrap();
+
+        match fields_ty
+            .iter()
+            .find(|(field_name, _)| *field_name == self.field_name)
+        {
+            Some((_, field_ty)) => field_ty.clone(),
+            None => {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "trying to access field `{}` on instance of type `{}`",
+                    self.field_name, instance_ty
+                )));
+                CheckedType::Unknown
+            }
+        }
     }
 }
 
@@ -70,22 +107,14 @@ mod tests {
     use crate::instance::ToObjectInstance;
     use crate::parser::Construct;
     use crate::JkInt;
+    use crate::{jinko, jinko_fail};
 
     fn setup() -> Context {
-        let mut ctx = Context::new();
-
-        let inst = Construct::instruction("type Point(x: int, y: int); ")
-            .unwrap()
-            .1;
-        inst.execute(&mut ctx);
-
-        let inst = Construct::instruction("func basic() -> Point { Point { x = 15, y = 14 }}")
-            .unwrap()
-            .1;
-        inst.execute(&mut ctx);
-
-        let inst = Construct::instruction("b = basic();").unwrap().1;
-        inst.execute(&mut ctx);
+        let ctx = jinko! {
+            type Point(x: int, y:int);
+            func basic() -> Point { Point { x = 15, y = 14 }}
+            b = basic();
+        };
 
         ctx
     }
@@ -114,7 +143,7 @@ mod tests {
             .1;
         let res = match inst.execute(&mut ctx) {
             Some(i) => i,
-            None => unreachable!("Error when accesing valid field"),
+            None => unreachable!("Error when accessing valid field"),
         };
 
         let exp = JkInt::from(1).to_instance();
@@ -148,9 +177,7 @@ mod tests {
             None => unreachable!("Error when accessing valid multi field"),
         };
 
-        let mut expected = JkInt::from(2).to_instance();
-        // FIXME: Remove once typechecking is implemented
-        expected.set_ty(None);
+        let expected = JkInt::from(2).to_instance();
 
         assert_eq!(res, expected)
     }
@@ -186,5 +213,30 @@ mod tests {
         let inst = Construct::instruction("i.field_on_primitive").unwrap().1;
         assert!(inst.execute(&mut ctx).is_none());
         assert!(ctx.error_handler.has_errors())
+    }
+
+    #[test]
+    fn tc_missing_field() {
+        jinko_fail! {
+            type Point(x: int, y: int);
+            p = Point { x = 14, y = 15 };
+            p.non_existent
+        };
+    }
+
+    #[test]
+    fn tc_field_on_primitive_type() {
+        jinko_fail! {
+            some_int = 14;
+            some_int.field
+        };
+    }
+
+    #[test]
+    fn tc_valid_field_access() {
+        jinko! {
+            type Point(x: int, y: int);
+            func normalize(p: Point) -> int { p.x + p.y }
+        };
     }
 }

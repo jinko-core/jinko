@@ -19,7 +19,7 @@ or its usage!
 
 ## Community
 
-Feel free to come and chat about jinko on [matrix](https://matrix.to/#/+jinko:matrix.org)!
+Feel free to come and chat about jinko on [matrix](https://matrix.to/#/#jinko-lang:matrix.org)!
 
 ## Programming in jinko
 
@@ -44,6 +44,11 @@ Launch the REPL using `jinko` or run a file using `jinko <file>`!
 
 Feel free to submit any observations, bug reports or questions as an [issue](https://github.com/cohenarthur/jinko/issues)
 
+## Testing
+
+To test jinko, simply run `cargo test && ./tests/func_tests.sh`. Note that in
+order to run functional tests, you need to have [ft installed](https://github.com/CohenArthur/ft#installation)
+
 ## Contributing
 
 Checkout [CONTRIBUTING.md](CONTRIBUTING.md)!
@@ -65,6 +70,7 @@ For more information about how jinko is made, checkout its [design](DESIGN.md).
 ## Thanks to
 
 - [Skallwar](https://github.com/skallwar)
+- [SanderJSA](https://github.com/sanderjsa)
 - [jh2k2](https://github.com/jh2k2)
 
 ## License

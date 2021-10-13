@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use crate::instruction::TypeDec;
+use crate::typechecker::CheckedType;
 use crate::{ErrKind, Error, Indent};
 
 pub type Name = String;
@@ -35,7 +35,7 @@ type FieldsMap = HashMap<Name, FieldInstance>;
 /// It's the same as `data.len()`. `data` is the raw byte value of the instance.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectInstance {
-    ty: Option<TypeDec>,
+    ty: CheckedType,
     size: usize,
     data: Vec<u8>,
     fields: Option<FieldsMap>,
@@ -44,7 +44,7 @@ pub struct ObjectInstance {
 impl ObjectInstance {
     /// Create a new, empty instance without a type or a size
     pub fn empty() -> ObjectInstance {
-        ObjectInstance::new(None, 0, vec![], None)
+        ObjectInstance::new(CheckedType::Unknown, 0, vec![], None)
     }
 
     pub fn empty_with_fields() -> ObjectInstance {
@@ -53,7 +53,7 @@ impl ObjectInstance {
 
     /// Create a new instance
     pub fn new(
-        ty: Option<TypeDec>,
+        ty: CheckedType,
         size: usize,
         data: Vec<u8>,
         fields: Option<Vec<(Name, ObjectInstance)>>,
@@ -70,7 +70,7 @@ impl ObjectInstance {
 
     /// Create a new instance from raw bytes instead of a vector
     pub fn from_bytes(
-        ty: Option<TypeDec>,
+        ty: CheckedType,
         size: usize,
         data: &[u8],
         fields: Option<Vec<(Name, ObjectInstance)>>,
@@ -79,12 +79,12 @@ impl ObjectInstance {
     }
 
     /// Get a reference to the type of the instance
-    pub fn ty(&self) -> Option<&TypeDec> {
-        self.ty.as_ref()
+    pub fn ty(&self) -> &CheckedType {
+        &self.ty
     }
 
     /// Set the type of the instance
-    pub fn set_ty(&mut self, ty: Option<TypeDec>) {
+    pub fn set_ty(&mut self, ty: CheckedType) {
         self.ty = ty;
     }
 
@@ -116,10 +116,10 @@ impl ObjectInstance {
 
         // We can unwrap safely here since we already checked if the instance contained fields
         // in `set_field()`
-        self.fields
-            .as_mut()
-            .unwrap()
-            .insert(name.to_string(), FieldInstance(self.size - value.size(), value));
+        self.fields.as_mut().unwrap().insert(
+            name.to_string(),
+            FieldInstance(self.size - value.size(), value),
+        );
 
         Ok(())
     }
@@ -174,8 +174,8 @@ impl ObjectInstance {
         let mut base = String::new();
 
         match &instance.ty {
-            Some(ty) => base = format!("{}{}type: {}\n", base, indent, ty.name()),
-            None => base = format!("{}{}type: `no type`\n", base, indent),
+            CheckedType::Resolved(ty) => base = format!("{}{}type: {}\n", base, indent, ty.id()),
+            _ => base = format!("{}{}type: `no type`\n", base, indent),
         }
 
         base = format!("{}{}size: {}\n", base, indent, instance.size);

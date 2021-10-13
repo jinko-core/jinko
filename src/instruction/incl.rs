@@ -4,7 +4,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    parser::Construct, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename,
+    parser::Construct,
+    typechecker::{CheckedType, TypeCtx},
+    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
 };
 
 /// An `Incl` is constituted of a path, an optional alias and contains a context.
@@ -14,6 +16,7 @@ use crate::{
 pub struct Incl {
     path: String,
     alias: Option<String>,
+    base: Option<PathBuf>,
 }
 
 /// Default file that gets included when including a directory in jinko source code
@@ -21,7 +24,11 @@ const DEFAULT_INCL: &str = "/lib.jk";
 
 impl Incl {
     pub fn new(path: String, alias: Option<String>) -> Incl {
-        Incl { path, alias }
+        Incl {
+            path,
+            alias,
+            base: None,
+        }
     }
 
     fn format_candidates(&self, base: &Path) -> (PathBuf, PathBuf) {
@@ -154,15 +161,23 @@ impl Incl {
     }
 
     fn get_base(&self, ctx: &mut Context) -> PathBuf {
-        match ctx.path() {
-            // Get the parent directory of the context's source file. We can unwrap
-            // since there's always a base
-            Some(path) => path.parent().unwrap().to_owned(),
-            // The ctx doesn't have an associated source file. Therefore, we
-            // load from where the context was started. This is the case if we're
-            // in dynamic mode for example
-            None => PathBuf::new(),
+        // If the incl block contains a given base, return this instead
+        match &self.base {
+            Some(b) => b.clone(), // FIXME: Remove clone
+            None => match ctx.path() {
+                // Get the parent directory of the context's source file. We can unwrap
+                // since there's always a base
+                Some(path) => path.parent().unwrap().to_owned(),
+                // The ctx doesn't have an associated source file. Therefore, we
+                // load from where the context was started. This is the case if we're
+                // in dynamic mode for example
+                None => PathBuf::new(),
+            },
         }
+    }
+
+    pub fn set_base(&mut self, path: PathBuf) {
+        self.base = Some(path);
     }
 }
 
@@ -190,7 +205,7 @@ impl Instruction for Incl {
         ctx.debug("INCL ENTER", self.print().as_str());
 
         let base = self.get_base(ctx);
-        let prefix = self.format_prefix()?;
+        let _prefix = self.format_prefix()?;
 
         ctx.debug("BASE DIR", &format!("{:#?}", base));
 
@@ -202,7 +217,8 @@ impl Instruction for Incl {
         ctx.set_path(Some(new_path));
 
         content.iter_mut().for_each(|instr| {
-            instr.prefix(&prefix);
+            // FIXME: Rework prefixing
+            // instr.prefix(&prefix);
 
             ctx.debug("INCLUDING", instr.print().as_str());
 
@@ -216,13 +232,41 @@ impl Instruction for Incl {
     }
 }
 
-impl Rename for Incl {
-    fn prefix(&mut self, prefix: &str) {
-        let alias = match &self.alias {
-            None => &self.path,
-            Some(alias) => alias,
+impl TypeCheck for Incl {
+    // FIXME: We need to not add the path to the interpreter here
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: This is a lot of code in common with execute()
+        let base = self.get_base(ctx.context);
+
+        let old_path = ctx.context.path().cloned();
+
+        let (new_path, mut content) = match self.load(&base, ctx.context) {
+            None => return CheckedType::Unknown,
+            Some(tuple) => tuple,
         };
 
-        self.alias = Some(format!("{}{}", prefix, alias))
+        // Temporarily change the path of the context
+        ctx.context.set_path(Some(new_path.clone()));
+
+        content.iter_mut().for_each(|instr| {
+            instr.resolve_type(ctx);
+        });
+
+        // Reset the old path before leaving the instruction
+        ctx.context.set_path(old_path);
+        ctx.context.remove_included(&new_path);
+
+        CheckedType::Void
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tc_typecheck_stdlib() {
+        let mut ctx = Context::new();
+        ctx.execute().unwrap();
     }
 }

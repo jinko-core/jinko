@@ -2,9 +2,10 @@
 //! type on execution.
 
 use super::{
-    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Rename, TypeDec, TypeId,
-    VarAssign,
+    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, TypeId, VarAssign,
 };
+use crate::typechecker::TypeCtx;
+use crate::{typechecker::CheckedType, TypeCheck};
 
 use std::rc::Rc;
 
@@ -128,20 +129,48 @@ impl Instruction for TypeInstantiation {
             }
         }
 
-        // FIXME: Disgusting
         instance.set_ty(Some((*type_dec).clone()));
 
         Some(instance)
     }
 }
 
-impl Rename for TypeInstantiation {
-    fn prefix(&mut self, prefix: &str) {
-        self.type_name.prefix(prefix);
-        // FIXME
-        // self.fields
-        //     .iter_mut()
-        //     .for_each(|field| field.prefix(prefix));
+impl TypeCheck for TypeInstantiation {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let (_, fields_ty) = match ctx.get_custom_type(self.type_name.id()) {
+            Some(ty) => ty,
+            None => {
+                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "use of undeclared type `{}`",
+                    // FIXME: Remove this clone, not useful
+                    CheckedType::Resolved(self.type_name.clone())
+                )));
+                return CheckedType::Unknown;
+            }
+        };
+
+        let fields_ty = fields_ty.clone();
+
+        let mut errors = vec![];
+        for ((_, field_ty), value_ty) in fields_ty.iter().zip(
+            self.fields
+                .iter()
+                .map(|var_assign| var_assign.value().resolve_type(ctx)),
+        ) {
+            if field_ty != &value_ty {
+                errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                    "trying to assign value of type `{}` to field of type `{}`",
+                    value_ty, field_ty
+                )));
+            }
+        }
+
+        // Propagate all errors at once in the context
+        for err in errors.drain(..) {
+            ctx.error(err);
+        }
+
+        CheckedType::Resolved(self.type_name.clone())
     }
 }
 
@@ -237,11 +266,6 @@ mod test {
             }
         };
 
-        assert!(
-            instance.ty().unwrap().name() == TYPE_NAME,
-            "Type name should be {}",
-            TYPE_NAME
-        );
         assert_eq!(
             instance.data()[..],
             [

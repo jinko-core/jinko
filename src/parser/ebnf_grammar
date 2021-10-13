@@ -1,0 +1,192 @@
+instruction = extra
+            | method_call_or_field_access
+            | binary_op
+            | type_inst_or_function_call_or_variable
+            | function_declaration
+            | type_declaration
+            | ext_declaration
+            | test_declaration
+            | mock_declaration
+            | incl
+            | if_else
+            | any_loop
+            | jinko_inst
+            | block
+            | mut_var_assignment
+            | constant
+
+method_call_or_field_access = instance '.' identifier method_call
+                            | instance '.' identifier field_access
+
+method_call = function_call
+
+field_access = ( '.' identifier )*
+
+
+type_inst_or_function_call_or_variable = identifier maybe_consume_extra function_call
+                                       | identifier maybe_consume_extra type_instantiation
+                                       | identifier maybe_consume_extra var_assignment
+                                       | identifier (* variable *)
+
+function_call = '(' maybe_consume_extra [ args_list ] ')'
+
+type_instantiation = '{' named_arg_list '}'
+
+var_assignment = '=' maybe_consume_extra instruction
+
+mut_var_assignment = 'mut' maybe_consume_extra identifier maybe_consume_extra var_assignment
+
+
+(* BINARY_OP *)
+
+
+binary_op = ? shunting-yard algorithm ?
+
+
+(* FUNCTION_DECLARATION *)
+
+
+function_declaration = 'func' function_content
+
+function_content = maybe_consume_extra identifier maybe_consume_extra args_dec return_type block
+
+
+(* TYPE_DECLARATION *)
+
+
+type_declaration = 'type' maybe_consume_extra identifier maybe_consume_extra args_dec_non_empty
+
+
+(* EXT_DECLARATION *)
+
+
+ext_declaration = 'ext' maybe_consume_extra 'func' maybe_consume_extra identifier maybe_consume_extra args_dec return_type maybe_consume_extra ';'
+
+
+(* TEST_DECLARATION *)
+
+
+test_declaration = 'test' maybe_consume_extra identifier maybe_consume_extra args_dec return_type_void block
+
+
+(* MOCK_DECLARATION *)
+
+
+mock_declaration = 'mock' function_content
+
+
+(* TYPE_INSTANTIATION *)
+
+
+named_arg_list = ( named_arg ',' )* named_arg
+
+named_arg = maybe_consume_extra identifier maybe_consume_extra '=' maybe_consume_extra instruction maybe_consume_extra
+
+
+(* FUNCTION_CALL *)
+
+
+args_list = arg maybe_consume_extra ( ',' maybe_consume_extra instruction maybe_consume_extra )*
+
+arg = maybe_consume_extra instruction maybe_consume_extra
+
+
+(* INCL *)
+
+
+incl = 'incl' path az_identifier maybe_consume_extra
+
+path = maybe_consume_extra identifier maybe_consume_extra
+
+az_identifier = maybe_consume_extra [ 'as' maybe_consume_extra identifier ] maybe_consume_extra
+
+
+(* IF_ELSE *)
+
+
+if_else = 'if' maybe_consume_extra instruction maybe_consume_extra block [ else_block ]
+
+else_block = maybe_consume_extra 'else' maybe_consume_extra block
+
+
+(* ANY_LOOP *)
+
+
+any_loop = loop_block
+         | for_block
+         | while_block
+
+loop_block = 'loop' maybe_consume_extra block
+
+for_block = 'for' maybe_consume_extra variable maybe_consume_extra 'in' maybe_consume_extra instruction maybe_consume_extra block
+
+while_block = 'while' maybe_consume_extra instruction maybe_consume_extra block
+
+
+
+(* JINKO_INST *)
+
+
+jinko_inst = '@' function_call
+
+
+(* BLOCK *)
+
+
+block = block_instruction
+
+block_instruction = '{' maybe_consume_extra stmts_and_maybe_last maybe_consume_extra [ instruction ] (* error if instruction here *) '}'
+
+stmts_and_maybe_last = ( stmt_semicolon )* ( early_return | instruction )
+
+early_return = maybe_consume_extra 'return' maybe_consume_extra [instruction] maybe_consume_extra [ ';' ]
+
+
+(* CONSTANT *)
+
+
+constant = char_constant
+         | string_constant
+         | int_constant
+         | float_constant
+         | bool_constant
+
+
+(* EXTRA *)
+
+
+extra = extra_whitespace
+      | extra_shebang
+      | extra_single
+      | extra_multi
+
+
+
+(* MISC_DECLARATION *)
+
+
+args_dec = args_dec_empty
+         | args_dec_non_empty
+
+args_dec_empty = '(' maybe_consume_extra ')'
+
+args_dec_non_empty = '(' maybe_consume_extra ( identifier_type_comma )* identifier ')'
+
+return_type = return_type_void
+            | return_type_non_void
+
+return_type_void = maybe_consume_extra [ '->' ] (* error if -> present *)
+
+return_type_non_void = maybe_consume_extra '->' identifier maybe_consume_extra
+
+
+maybe_consume_extra = comment
+                    | whitespace
+
+instance = function_call
+         | type_instantiation
+         | variable
+         | if_else
+         | block
+         | any_loop
+         | jinko_inst

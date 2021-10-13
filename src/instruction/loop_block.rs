@@ -2,7 +2,8 @@
 //! different kinds, `for`, `while` or `loop`.
 
 use crate::instruction::{Block, InstrKind, Instruction, Var};
-use crate::{Context, ErrKind, Error, ObjectInstance, Rename};
+use crate::typechecker::TypeCtx;
+use crate::{typechecker::CheckedType, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
@@ -110,18 +111,9 @@ impl Instruction for Loop {
     }
 }
 
-impl Rename for Loop {
-    fn prefix(&mut self, prefix: &str) {
-        self.block.prefix(prefix);
-
-        match &mut self.kind {
-            LoopKind::While(expr) => expr.prefix(prefix),
-            LoopKind::For(var, range) => {
-                var.prefix(prefix);
-                range.prefix(prefix)
-            }
-            _ => {}
-        }
+impl TypeCheck for Loop {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        self.block.resolve_type(ctx)
     }
 }
 
@@ -129,6 +121,7 @@ impl Rename for Loop {
 mod tests {
     use super::*;
     use crate::instruction::FunctionCall;
+    use crate::jinko;
 
     #[test]
     fn pretty_print_loop() {
@@ -154,5 +147,18 @@ mod tests {
         let l = Loop::new(LoopKind::While(r), b);
 
         assert_eq!(l.print().as_str(), "while {\n} {\n}\n")
+    }
+
+    #[test]
+    fn tc_valid_loop_blocks() {
+        jinko! {
+            // FIXME: Don't ignore once for loop behavior is implemented
+            // l0 = for value in range { value }
+
+            mut i = 0;
+            while i < 15 { i = i + 1 }
+
+            l2 = loop { i = i + 1 }
+        };
     }
 }

@@ -1,3 +1,4 @@
 incl libdir
 
-libdir::a // Return 15
+// FIXME: Should libdir::a once prefixing is implemented
+a // Return 15

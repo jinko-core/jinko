@@ -4,7 +4,8 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::{Context, ErrKind, Error, ObjectInstance, Rename};
+use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// The potential ctx instructions
 #[derive(Clone, Debug, PartialEq)]
@@ -17,7 +18,7 @@ pub enum JkInstKind {
 #[derive(Clone)]
 pub struct JkInst {
     kind: JkInstKind,
-    args: Vec<Box<dyn Instruction>>,
+    _args: Vec<Box<dyn Instruction>>,
 }
 
 impl JkInst {
@@ -38,7 +39,7 @@ impl JkInst {
 
         Ok(Self {
             kind,
-            args: fc.args().clone(),
+            _args: fc.args().clone(),
         })
     }
 
@@ -78,18 +79,22 @@ impl Instruction for JkInst {
     }
 }
 
-impl Rename for JkInst {
-    fn prefix(&mut self, _: &str) {}
+impl TypeCheck for JkInst {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+        CheckedType::Void
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::Construct;
+    use crate::jinko;
+    use crate::parser::{Construct, Token};
 
     #[test]
     fn t_invalid_jkinst() {
-        let (_, fc) = Construct::function_call("tamer()").unwrap();
+        let (input, id) = Token::identifier("tamer()").unwrap();
+        let (_, fc) = Construct::function_call(input, &id).unwrap();
         let inst = JkInst::from_function_call(fc);
 
         assert!(inst.is_err(), "tamer is not a valid ctx directive")
@@ -97,7 +102,8 @@ mod tests {
 
     #[test]
     fn t_valid_inst_no_args() {
-        let (_, fc) = Construct::function_call("dump()").unwrap();
+        let (input, id) = Token::identifier("dump()").unwrap();
+        let (_, fc) = Construct::function_call(input, &id).unwrap();
         let inst = JkInst::from_function_call(fc);
 
         assert!(inst.is_ok(), "dump is a valid ctx directive")
@@ -105,12 +111,20 @@ mod tests {
 
     #[test]
     fn t_valid_inst_with_args() {
-        let (_, fc) = Construct::function_call("ir(fn)").unwrap();
+        let (input, id) = Token::identifier("ir(fn)").unwrap();
+        let (_, fc) = Construct::function_call(input, &id).unwrap();
         let inst = JkInst::from_function_call(fc);
 
         assert!(
             inst.is_ok(),
             "ir(func) is a valid use of the ir ctx directive"
         )
+    }
+
+    #[test]
+    fn tc_valid_jk_inst() {
+        jinko! {
+            @dump();
+        };
     }
 }

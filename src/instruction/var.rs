@@ -4,13 +4,16 @@
 //! or it's not.
 
 use crate::instruction::TypeDec;
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance, Rename};
+use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct Var {
     name: String,
     mutable: bool,
     pub(crate) instance: ObjectInstance,
+    // FIXME: Maybe we can refactor this using the instance's type?
+    ty: CheckedType,
 }
 
 impl Var {
@@ -20,6 +23,7 @@ impl Var {
             name,
             mutable: false,
             instance: ObjectInstance::empty(),
+            ty: CheckedType::Unknown,
         }
     }
 
@@ -42,6 +46,10 @@ impl Var {
     pub fn set_mutable(&mut self, mutable: bool) {
         self.mutable = mutable;
     }
+
+    pub fn set_type(&mut self, ty: TypeDec) {
+        self.instance.set_ty(CheckedType::Resolved(ty.into()))
+    }
 }
 
 impl Instruction for Var {
@@ -50,12 +58,12 @@ impl Instruction for Var {
     }
 
     fn print(&self) -> String {
-        format!(
-            "{} /* : {} = {} */",
-            self.name.clone(),
-            self.instance.ty().unwrap_or(&TypeDec::from("")).name(),
-            self.instance
-        )
+        let mut base = self.name.clone();
+        if let CheckedType::Resolved(ty) = self.instance.ty() {
+            base = format!("{} /* : {} */", base, ty.id());
+        }
+
+        format!("{} = {}", base, self.instance)
     }
 
     fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
@@ -65,7 +73,7 @@ impl Instruction for Var {
 
         match self.execute(ctx) {
             Some(instance) => match instance.ty() {
-                Some(ty) => match ty.name() {
+                CheckedType::Resolved(ty) => match ty.id() {
                     // FIXME:
                     "bool" => Some(JkBool::from_instance(&instance).as_bool(ctx).unwrap()),
                     // We can safely unwrap since we checked the type of the variable
@@ -77,7 +85,7 @@ impl Instruction for Var {
                         None
                     }
                 },
-                None => todo!(
+                _ => todo!(
                     "If the type of the variable hasn't been determined yet,
                     typecheck it and call self.as_bool() again"
                 ),
@@ -112,9 +120,18 @@ impl Instruction for Var {
     }
 }
 
-impl Rename for Var {
-    fn prefix(&mut self, prefix: &str) {
-        self.name = format!("{}{}", prefix, self.name)
+impl TypeCheck for Var {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        match ctx.get_var(self.name()) {
+            Some(var_ty) => var_ty.clone(),
+            None => {
+                ctx.error(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!("use of undeclared variable: `{}`", self.name())),
+                );
+                CheckedType::Unknown
+            }
+        }
     }
 }
 
@@ -129,6 +146,7 @@ mod tests {
     use super::*;
     use crate::value::JkInt;
     use crate::ToObjectInstance;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn keep_instance() {
@@ -141,5 +159,21 @@ mod tests {
         i.add_variable(v.clone()).unwrap();
 
         assert_eq!(v.execute(&mut i).unwrap(), instance);
+    }
+
+    #[test]
+    fn tc_valid() {
+        jinko! {
+            a = 15;
+            a
+        };
+    }
+
+    #[test]
+    fn tc_invalid() {
+        jinko_fail! {
+            // undeclared variable
+            a
+        };
     }
 }

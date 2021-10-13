@@ -1,7 +1,7 @@
 //! A TypeId refers to a type's identifier. For example, the TypeId of `int` is "int".
 //! The TypeId of `type Custom(a: int, b: OtherCustom)` is `Custom`.
 
-use crate::Rename;
+use crate::instruction::TypeDec;
 
 pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"];
 
@@ -24,18 +24,20 @@ impl TypeId {
     }
 }
 
-impl Rename for TypeId {
-    fn prefix(&mut self, prefix: &str) {
-        match PRIMITIVE_TYPES.contains(&self.id.as_str()) {
-            // No need to rename primitive types
-            true => {}
-            false => self.id = format!("{}{}", prefix, self.id),
-        }
-    }
-}
-
 impl From<&str> for TypeId {
     fn from(s: &str) -> Self {
         TypeId::new(s.to_string())
+    }
+}
+
+impl From<&TypeDec> for TypeId {
+    fn from(td: &TypeDec) -> Self {
+        TypeId::from(td.name())
+    }
+}
+
+impl From<TypeDec> for TypeId {
+    fn from(td: TypeDec) -> Self {
+        TypeId::from(&td)
     }
 }

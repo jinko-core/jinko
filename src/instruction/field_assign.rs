@@ -5,7 +5,10 @@
 //! assignment" for fields, as they should be initialized on the type's instantiation.
 
 use super::FieldAccess;
-use crate::{Context, Error, ErrKind, InstrKind, Instruction, ObjectInstance, Rename};
+use crate::{
+    CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
+    TypeCtx,
+};
 
 #[derive(Clone)]
 pub struct FieldAssign {
@@ -20,12 +23,6 @@ impl FieldAssign {
     /// you're trying to assign to it.
     pub fn new(field: FieldAccess, value: Box<dyn Instruction>) -> FieldAssign {
         FieldAssign { field, value }
-    }
-}
-
-impl Rename for FieldAssign {
-    fn prefix(&mut self, _prefix: &str) {
-        /* FIXME: Add logic */
     }
 }
 
@@ -63,6 +60,13 @@ impl Instruction for FieldAssign {
         }
 
         None
+    }
+}
+
+impl TypeCheck for FieldAssign {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME:
+        CheckedType::Void
     }
 }
 

@@ -1,6 +1,7 @@
-use crate::instruction::{InstrKind, Instruction, Operator, TypeDec};
+use crate::instruction::{InstrKind, Instruction, Operator, TypeId};
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 use crate::{
-    Context, Error, FromObjectInstance, JkString, ObjectInstance, Rename, ToObjectInstance, Value,
+    Context, Error, FromObjectInstance, JkString, ObjectInstance, ToObjectInstance, Value,
 };
 
 use std::convert::TryFrom;
@@ -64,7 +65,7 @@ macro_rules! jk_primitive {
 
                 unsafe {
                     ObjectInstance::from_bytes(
-                        Some(TypeDec::from("bool")),
+                        CheckedType::Resolved(TypeId::from("bool")),
                         size_of::<bool>(),
                         &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
                         None,
@@ -106,6 +107,12 @@ macro_rules! jk_primitive {
                 Some(self.to_instance())
             }
         }
+
+        impl TypeCheck for JkConstant<bool> {
+            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
+                CheckedType::Resolved(TypeId::from("bool"))
+            }
+        }
     };
     ($t:ty, $s:expr) => {
         impl ToObjectInstance for JkConstant<$t> {
@@ -114,7 +121,7 @@ macro_rules! jk_primitive {
 
                 unsafe {
                     ObjectInstance::from_bytes(
-                        Some(TypeDec::from($s)),
+                        CheckedType::Resolved(TypeId::from($s)),
                         size_of::<$t>(),
                         &transmute::<$t, [u8; size_of::<$t>()]>(self.0),
                         None,
@@ -152,11 +159,13 @@ macro_rules! jk_primitive {
                 Some(self.to_instance())
             }
         }
-    };
-}
 
-impl<T> Rename for JkConstant<T> {
-    fn prefix(&mut self, _: &str) {}
+        impl TypeCheck for JkConstant<$t> {
+            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
+                CheckedType::Resolved(TypeId::from($s))
+            }
+        }
+    };
 }
 
 jk_primitive!(i64, "int");
@@ -191,7 +200,7 @@ impl Value for JkConstant<f64> {
 impl ToObjectInstance for JkString {
     fn to_instance(&self) -> ObjectInstance {
         ObjectInstance::from_bytes(
-            Some(TypeDec::from("string")),
+            CheckedType::Resolved(TypeId::from("string")),
             self.0.as_bytes().len(),
             self.0.as_bytes(),
             None,
@@ -222,6 +231,12 @@ impl Instruction for JkString {
     }
 }
 
+impl TypeCheck for JkString {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+        CheckedType::Resolved(TypeId::from("string"))
+    }
+}
+
 impl From<&str> for JkConstant<String> {
     fn from(s: &str) -> Self {
         JkConstant(s.to_string())
@@ -231,5 +246,72 @@ impl From<&str> for JkConstant<String> {
 impl<T> From<T> for JkConstant<T> {
     fn from(rust_value: T) -> Self {
         JkConstant(rust_value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::jinko;
+    use crate::{JkBool, JkFloat, JkInt};
+
+    use super::*;
+
+    #[test]
+    fn tc_string_type() {
+        let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new(&mut ctx);
+        let s = JkString::from("that's a jk string");
+
+        assert_eq!(
+            s.resolve_type(&mut ctx),
+            CheckedType::Resolved(TypeId::from("string"))
+        );
+    }
+
+    #[test]
+    fn tc_bool_type() {
+        let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new(&mut ctx);
+        let s = JkBool::from(false);
+
+        assert_eq!(
+            s.resolve_type(&mut ctx),
+            CheckedType::Resolved(TypeId::from("bool"))
+        );
+    }
+
+    #[test]
+    fn tc_i_type() {
+        let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new(&mut ctx);
+        let s = JkInt::from(0);
+
+        assert_eq!(
+            s.resolve_type(&mut ctx),
+            CheckedType::Resolved(TypeId::from("int"))
+        );
+    }
+
+    #[test]
+    fn tc_f_type() {
+        let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new(&mut ctx);
+        let s = JkFloat::from(15.4);
+
+        assert_eq!(
+            s.resolve_type(&mut ctx),
+            CheckedType::Resolved(TypeId::from("float"))
+        );
+    }
+
+    #[test]
+    fn tc_primitives_available() {
+        jinko! {
+            b = true;
+            i = 15;
+            f = 4.5;
+            c = 'c';
+            s = "jinko";
+        };
     }
 }

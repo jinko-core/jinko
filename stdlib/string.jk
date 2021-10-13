@@ -1,0 +1,24 @@
+ext func __builtin_string_len(s: string) -> int;
+ext func __builtin_string_concat(a: string, b: string) -> string;
+ext func __builtin_string_display(s: string);
+ext func __builtin_string_display_err(s: string);
+
+/// Get the length of a given string
+func len(s: string) -> int {
+    s.__builtin_string_len()
+}
+
+/// Concatenate two strings together, returning a new one
+func concat(lhs: string, rhs: string) -> string {
+    lhs.__builtin_string_concat(rhs)
+}
+
+/// Display a string on stdout
+func display(s: string) {
+    s.__builtin_string_display()
+}
+
+/// Display a string on stdout
+func display_err(s: string) {
+    s.__builtin_string_display_err()
+}

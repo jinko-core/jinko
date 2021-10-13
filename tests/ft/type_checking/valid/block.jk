@@ -1,0 +1,10 @@
+func takes_int(i: int) {}
+
+takes_int({ 15 });
+takes_int({{{ 14 }}});
+takes_int({
+    a = 154;
+    mut b = 3;
+    b = 1;
+    a + b
+});

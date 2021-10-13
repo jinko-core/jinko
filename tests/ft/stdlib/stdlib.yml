@@ -1,0 +1,11 @@
+tests:
+  - name: "Test str.len()"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/string/len.jk"
+    exit_code: 3
+  - name: "Test str.concat()"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/string/concat.jk"
+    stdout: "jinko.jk"

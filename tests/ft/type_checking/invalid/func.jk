@@ -1,0 +1,6 @@
+func f_should_return_int() -> int { "a string" }
+func f_should_take_int_return_void(i: int) { }
+func f_should_take_int_return_int(r: int) { false }
+
+f_should_take_int_return_void(true)
+f_should_take_int_return_int(0.15)

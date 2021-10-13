@@ -2,7 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use crate::{Context, ErrKind, Error, ObjectInstance};
+use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
@@ -18,6 +18,7 @@ mod function_declaration;
 mod if_else;
 mod incl;
 mod jk_inst;
+mod jk_return;
 mod loop_block;
 mod method_call;
 mod operator;
@@ -39,10 +40,10 @@ pub use function_declaration::{FunctionDec, FunctionKind};
 pub use if_else::IfElse;
 pub use incl::Incl;
 pub use jk_inst::{JkInst, JkInstKind};
+pub use jk_return::Return;
 pub use loop_block::{Loop, LoopKind};
 pub use method_call::MethodCall;
 pub use operator::Operator;
-pub use rename::Rename;
 pub use type_declaration::TypeDec;
 pub use type_id::{TypeId, PRIMITIVE_TYPES};
 pub use type_instantiation::TypeInstantiation;
@@ -64,7 +65,8 @@ pub enum InstrKind {
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
-pub trait Instruction: InstructionClone + Downcast + Rename {
+pub trait Instruction: InstructionClone + Downcast + TypeCheck {
+    // FIXME: Add Rename here
     /// Execute the instruction, altering the state of the context. Executing
     /// this method may return an object instance
     // FIXME: Should this return a mutable ref instead?? On an instance kept in the context?

@@ -3,7 +3,8 @@
 //! of such an instruction produces no results. But they are useful when it comes to
 //! pretty printing and code formatting.
 
-use crate::{Context, InstrKind, Instruction, ObjectInstance, Rename};
+use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub enum CommentKind {
@@ -74,6 +75,9 @@ impl Instruction for ExtraContent {
     }
 }
 
-impl Rename for ExtraContent {
-    fn prefix(&mut self, _prefix: &str) {}
+impl TypeCheck for ExtraContent {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: This should probably be removed, as well as the ExtraContent struct
+        CheckedType::Void
+    }
 }

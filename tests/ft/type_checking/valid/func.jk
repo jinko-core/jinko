@@ -1,0 +1,3 @@
+func f_return_int() -> int { 1 }
+func f_take_int_return_void(i: int) {}
+func f_take_int_return_int(r: int) -> int { r }

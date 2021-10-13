@@ -2,7 +2,8 @@
 //! they get desugared into a normal function call.
 
 use crate::instruction::FunctionCall;
-use crate::{Context, InstrKind, Instruction, ObjectInstance, Rename};
+use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -43,10 +44,12 @@ impl Instruction for MethodCall {
     }
 }
 
-impl Rename for MethodCall {
-    fn prefix(&mut self, prefix: &str) {
-        self.var.prefix(prefix);
-        self.method.prefix(prefix);
+impl TypeCheck for MethodCall {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let mut call = self.method.clone();
+        call.add_arg_front(self.var.clone());
+
+        call.resolve_type(ctx)
     }
 }
 
@@ -68,18 +71,52 @@ mod tests {
     #[test]
     fn t_execute() {
         let mut ctx = Context::new();
-        let func_dec = Construct::instruction("func first(a: int, b: int) -> int { a }")
+        let func_dec = Construct::instruction("func __first(a: int, b: int) -> int { a }")
             .unwrap()
             .1;
         func_dec.execute(&mut ctx);
 
         let var1 = Box::new(JkInt::from(1));
         let var2 = Box::new(JkInt::from(2));
-        let mut method = FunctionCall::new("first".to_owned());
+        let mut method = FunctionCall::new("__first".to_owned());
         method.add_arg(var2);
 
         let mc = MethodCall::new(var1, method);
 
         assert_eq!(mc.execute(&mut ctx).unwrap(), JkInt::from(1).to_instance());
+    }
+
+    #[test]
+    fn tc_valid_call() {
+        jinko! {
+            func id(x: int) -> int { x }
+            15.id();
+            type IntWrapper(inner: int);
+            i = IntWrapper { inner = 14 };
+            // i.inner.id() FIXME: Fix field access and raise issue
+        };
+    }
+
+    #[test]
+    fn tc_valid_call_multi_arg() {
+        jinko! {
+            func to_int(self: bool, truthy_value: int) -> int {
+                if self {
+                    truthy_value
+                } else {
+                    0
+                }
+            }
+            true.to_int(15);
+            false.to_int(188);
+        };
+    }
+
+    #[test]
+    fn tc_invalid_call_type() {
+        jinko! {
+            func id(x: int) -> int { x }
+            true.id();
+        };
     }
 }

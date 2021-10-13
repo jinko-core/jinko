@@ -1,6 +1,9 @@
-use super::{DecArg, InstrKind, Instruction};
+use super::{DecArg, InstrKind, Instruction, TypeId};
 
-use crate::{Context, ObjectInstance, Rename};
+use crate::{
+    typechecker::{CheckedType, TypeCtx},
+    Context, ObjectInstance, TypeCheck,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
@@ -63,13 +66,28 @@ impl Instruction for TypeDec {
     }
 }
 
-impl Rename for TypeDec {
-    fn prefix(&mut self, prefix: &str) {
-        self.name = format!("{}{}", prefix, self.name);
-        // FIXME: Do we want to prefix field names?
-        // self.fields
-        //     .iter_mut()
-        //     .for_each(|field| field.prefix(prefix));
+impl TypeCheck for TypeDec {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        // TODO: FunctionDecs and TypeDec are very similar. Should we factor them together?
+        let fields_ty = self
+            .fields
+            .iter()
+            .map(|dec_arg| {
+                (
+                    dec_arg.name().to_string(),
+                    CheckedType::Resolved(dec_arg.get_type().clone()),
+                )
+            })
+            .collect();
+        if let Err(e) = ctx.declare_custom_type(
+            self.name.clone(),
+            CheckedType::Resolved(TypeId::from(self.name())),
+            fields_ty,
+        ) {
+            ctx.error(e);
+        }
+
+        CheckedType::Void
     }
 }
 
@@ -97,5 +115,47 @@ impl From<String> for TypeDec {
 impl std::fmt::Display for TypeDec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{jinko, jinko_fail};
+
+    #[test]
+    fn tc_valid_easy() {
+        jinko! {
+            type Complex(real: int, imaginary: int);
+            c = Complex { real = 15, imaginary = 14 };
+        };
+    }
+
+    #[test]
+    fn tc_valid_hard() {
+        jinko! {
+            type Point(x: int, y: int);
+            type Vector2(v0: Point, v1: Point);
+
+            func zero() -> Point {
+                Point { x = 0, y = 0 }
+            }
+
+            v = Vector2 { v0 = zero(), v1 = zero() };
+        };
+    }
+
+    #[test]
+    fn tc_invalid_hard() {
+        jinko_fail! {
+            type Point(x: int, y: int);
+            type NotPoint(x: int, y: int);
+            type Vector2(v0: Point, v1: Point);
+
+            func zero() -> NotPoint {
+                NotPoint { x = 0, y = 0 }
+            }
+
+            v = Vector2 { v0 = 15, v1 = zero() };
+        };
     }
 }

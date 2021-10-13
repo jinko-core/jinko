@@ -1,7 +1,8 @@
 //! The VarAssign struct is used when assigning values to variables.
 
 use crate::instruction::{InstrKind, Var};
-use crate::{Context, ErrKind, Error, Instruction, ObjectInstance, Rename};
+use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, ErrKind, Error, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -37,6 +38,11 @@ impl VarAssign {
     pub fn value(&self) -> &dyn Instruction {
         &*self.value
     }
+
+    /// Set VarAssign mutability
+    pub fn set_mutable(&mut self, is_mutable: bool) {
+        self.mutable = is_mutable;
+    }
 }
 
 impl Instruction for VarAssign {
@@ -60,19 +66,7 @@ impl Instruction for VarAssign {
         let mut var_creation = false;
 
         let mut var = match ctx.get_variable(&self.symbol) {
-            Some(v) => {
-                // If `self` is mutable, then it means that we are creating the variable
-                // for the first time. However, we entered the match arm because the variable
-                // is already present in the context. Error out appropriately.
-                if self.mutable() {
-                    let err_msg =
-                        format!("trying to redefine already defined variable: {}", v.name());
-                    ctx.error(Error::new(ErrKind::Context).with_msg(err_msg));
-                    return None;
-                }
-
-                v.clone()
-            }
+            Some(v) => v.clone(),
             None => {
                 let mut new_v = Var::new(self.symbol().to_string());
                 new_v.set_mutable(self.mutable());
@@ -106,17 +100,65 @@ impl Instruction for VarAssign {
     }
 }
 
-impl Rename for VarAssign {
-    fn prefix(&mut self, prefix: &str) {
-        self.value.prefix(prefix);
-        self.symbol = format!("{}{}", prefix, self.symbol)
+impl TypeCheck for VarAssign {
+    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let var_ty = match ctx.get_var(&self.symbol) {
+            // FIXME: Remove clone?
+            Some(checked_ty) => {
+                // If `self` is mutable, then it means that we are creating the variable
+                // for the first time. However, we entered the match arm because the variable
+                // is already present in the context. Error out appropriately.
+                if self.mutable() {
+                    let err_msg = format!(
+                        "trying to redefine already defined variable: {}",
+                        self.symbol()
+                    );
+                    ctx.error(Error::new(ErrKind::TypeChecker).with_msg(err_msg));
+                    return CheckedType::Unknown;
+                }
+
+                checked_ty.clone()
+            }
+            None => {
+                let instance_ty = self.value.resolve_type(ctx);
+                if let Err(e) = ctx.declare_var(self.symbol.clone(), instance_ty) {
+                    ctx.error(e);
+                }
+
+                // We can return here since it's a new variable. This avoids checking
+                // the type later on
+                return CheckedType::Void;
+            }
+        };
+
+        // FIXME: We resolve the value twice
+        let value_ty = self.value.resolve_type(ctx);
+        if value_ty == CheckedType::Void {
+            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                "trying to assign statement `{}` to variable `{}`",
+                self.value().print(),
+                self.symbol
+            )));
+            return CheckedType::Unknown;
+        }
+
+        if var_ty != value_ty {
+            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                "trying to assign value of types `{}` to variable of type `{}`",
+                value_ty, var_ty
+            )));
+            return CheckedType::Unknown;
+        }
+
+        CheckedType::Void
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::Construct;
+    use crate::jinko_fail;
+    use crate::parser::{Construct, Token};
     use crate::value::{JkInt, JkString};
     use crate::ToObjectInstance;
 
@@ -141,8 +183,10 @@ mod tests {
     #[test]
     fn assign_mutable() {
         let mut i = Context::new();
-        let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
-        let va_0 = Construct::var_assignment("a = 15").unwrap().1;
+        let va_init = Construct::mut_var_assignment("mut a = 13").unwrap().1;
+        let (input, id) = Token::identifier("a = 15").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
+        let va_0 = Construct::var_assignment(input, &id).unwrap().1;
 
         va_init.execute(&mut i);
         va_0.execute(&mut i);
@@ -157,8 +201,12 @@ mod tests {
     #[test]
     fn assign_immutable() {
         let mut i = Context::new();
-        let va_init = Construct::var_assignment("a = 13").unwrap().1;
-        let va_0 = Construct::var_assignment("a = 15").unwrap().1;
+        let (input, id) = Token::identifier("a = 13").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
+        let va_init = Construct::var_assignment(input, &id).unwrap().1;
+        let (input, id) = Token::identifier("a = 1b").unwrap();
+        let (input, _) = Token::maybe_consume_extra(input).unwrap();
+        let va_0 = Construct::var_assignment(input, &id).unwrap().1;
 
         va_init.execute(&mut i);
         if va_0.execute(&mut i).is_some() {
@@ -170,14 +218,9 @@ mod tests {
 
     #[test]
     fn create_mutable_twice() {
-        let mut i = Context::new();
-        let va_init = Construct::var_assignment("mut a = 13").unwrap().1;
-        let va_0 = Construct::var_assignment("mut a = 15").unwrap().1;
-
-        va_init.execute(&mut i);
-        if va_0.execute(&mut i).is_some() {
-            unreachable!("Can't create variables twice");
-        }
-        assert!(i.error_handler.has_errors());
+        jinko_fail! {
+            mut a0 = 15;
+            mut a0 = 14;
+        };
     }
 }
