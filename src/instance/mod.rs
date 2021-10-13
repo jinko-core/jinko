@@ -192,7 +192,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // FIXME: Do not ignore once parser supports type declaration
     fn t_one_deep_access() {
         let mut ctx = setup();
 
@@ -209,7 +208,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // FIXME: Do not ignore once parser supports type declaration
     fn t_two_deep_access() {
         let mut ctx = setup();
 

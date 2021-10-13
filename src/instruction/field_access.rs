@@ -76,7 +76,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // FIXME: Do not ignore once parser supports type declaration
     fn t_valid_field_access() {
         let mut ctx = setup();
 
@@ -92,7 +91,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // FIXME: Do not ignore once parser supports type declaration
     fn t_valid_field_access_from_type_instantiation() {
         let mut ctx = setup();
 
