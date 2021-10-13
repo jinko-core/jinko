@@ -242,7 +242,6 @@ impl TypeCheck for FunctionCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruction::TypeId;
     use crate::{jinko, jinko_fail};
 
     #[test]
@@ -256,35 +255,26 @@ mod tests {
 
     #[test]
     fn t_invalid_args_number() {
-        use super::super::{DecArg, FunctionDec};
-        use crate::instruction::FunctionKind;
         use crate::value::JkInt;
 
-        let mut ctx = Context::new();
-
         // Create a new function with two integers arguments
-        let mut f = FunctionDec::new("func0".to_owned(), None);
-        f.set_kind(FunctionKind::Func);
-
-        f.set_args(vec![
-            DecArg::new("a".to_owned(), TypeId::from("int")),
-            DecArg::new("b".to_owned(), TypeId::from("int")),
-        ]);
-
-        ctx.add_function(f).unwrap();
+        let mut ctx = jinko! {
+            func func0(a: int, b: int);
+        };
 
         let mut f_call = FunctionCall::new("func0".to_string());
+        let mut type_ctx = TypeCtx::new(&mut ctx);
 
-        assert!(f_call.execute(&mut ctx).is_none());
+        assert_eq!(f_call.resolve_type(&mut type_ctx), CheckedType::Unknown);
         assert!(
-            ctx.error_handler.has_errors(),
+            type_ctx.context.error_handler.has_errors(),
             "Given 0 arguments to 2 arguments function"
         );
-        ctx.clear_errors();
+        type_ctx.context.clear_errors();
 
         f_call.add_arg(Box::new(JkInt::from(12)));
 
-        assert!(f_call.execute(&mut ctx).is_none());
+        assert_eq!(f_call.resolve_type(&mut type_ctx), CheckedType::Unknown);
         assert!(
             ctx.error_handler.has_errors(),
             "Given 1 arguments to 2 arguments function"
