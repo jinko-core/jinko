@@ -70,6 +70,7 @@ For more information about how jinko is made, checkout its [design](DESIGN.md).
 ## Thanks to
 
 - [Skallwar](https://github.com/skallwar)
+- [SanderJSA](https://github.com/sanderjsa)
 - [jh2k2](https://github.com/jh2k2)
 
 ## License
