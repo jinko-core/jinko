@@ -134,7 +134,7 @@ impl FunctionCall {
             match crate::ffi::execute(dec, self, ctx) {
                 Ok(value) => value,
                 Err(e) => {
-                    ctx.error(e.into());
+                    ctx.error(e);
                     None
                 }
             }
