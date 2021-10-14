@@ -47,6 +47,18 @@ fn string_display_err(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     None
 }
 
+/// Link with a given library at runtime
+fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let lib_path = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    match unsafe { libloading::Library::new(lib_path) } {
+        Ok(lib) => ctx.add_lib(lib),
+        Err(e) => ctx.error(e.into()),
+    }
+
+    None
+}
+
 impl Builtins {
     fn add(&mut self, name: &'static str, builtin_fn: BuiltinFn) {
         self.functions.insert(String::from(name), builtin_fn);
@@ -62,6 +74,7 @@ impl Builtins {
         builtins.add("__builtin_string_concat", string_concat);
         builtins.add("__builtin_string_display", string_display);
         builtins.add("__builtin_string_display_err", string_display_err);
+        builtins.add("__builtin_ffi_link_with", ffi_link_with);
 
         builtins
     }
@@ -86,12 +99,19 @@ mod tests {
     use crate::jinko;
 
     #[test]
-    fn t_all_builtins_are_valid() {
+    fn t_string_builtins_are_valid() {
         jinko! {
             __builtin_string_len("jk");
             __builtin_string_concat("file", ".jk");
             __builtin_string_display("to display");
-            __builtin_string_display_err("to display on err"):
+            __builtin_string_display_err("to display on err");
+        };
+    }
+
+    #[test]
+    fn t_ffi_builtins_are_valid() {
+        jinko! {
+            __builtin_ffi_link_with("tests/fixtures/clib/lib.so");
         };
     }
 }
