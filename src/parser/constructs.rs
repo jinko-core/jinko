@@ -27,8 +27,17 @@ use crate::parser::{ConstantConstruct, ParseResult, Token};
 
 /// Parse as many instructions as possible
 /// many_expr = ( expr_semicolon )*
-pub fn many_expr(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
-    many0(expr_semicolon)(input)
+pub fn many_expr(mut input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
+    let mut exprs = vec![];
+    loop {
+        input = next(input);
+        if input.is_empty() {
+            return Ok((input, exprs));
+        }
+        let (new_input, expr) = expr_semicolon(input)?;
+        input = new_input;
+        exprs.push(expr);
+    }
 }
 
 /// Parse an instruction and maybe the semicolon that follows.
