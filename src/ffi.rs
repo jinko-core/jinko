@@ -120,7 +120,7 @@ pub fn execute(
 
     ctx.error(
         Error::new(ErrKind::ExternFunc)
-            .with_msg(format!("cannot call external function {}", call.name())),
+            .with_msg(format!("cannot call external function `{}`", call.name())),
     );
 
     None
