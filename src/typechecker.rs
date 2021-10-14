@@ -42,7 +42,7 @@ struct FunctionType {
 
 struct CustomTypeType {
     self_ty: CheckedType,
-    fields_ty: Vec<CheckedType>,
+    fields_ty: Vec<(String, CheckedType)>,
 }
 
 // TODO: Should we factor this into a `Context` trait? All contexts will share some
@@ -112,7 +112,7 @@ impl<'ctx> TypeCtx<'ctx> {
         &mut self,
         name: String,
         self_ty: CheckedType,
-        fields_ty: Vec<CheckedType>,
+        fields_ty: Vec<(String, CheckedType)>,
     ) {
         // We can unwrap since this is an interpreter error if we can't add a new
         // type to the scope map
@@ -137,7 +137,10 @@ impl<'ctx> TypeCtx<'ctx> {
     }
 
     /// Access a previously declared custom type
-    pub fn get_custom_type(&mut self, name: &str) -> Option<(&CheckedType, &Vec<CheckedType>)> {
+    pub fn get_custom_type(
+        &mut self,
+        name: &str,
+    ) -> Option<(&CheckedType, &Vec<(String, CheckedType)>)> {
         self.types
             .get_type(name)
             .map(|custom_type| (&custom_type.self_ty, &custom_type.fields_ty))

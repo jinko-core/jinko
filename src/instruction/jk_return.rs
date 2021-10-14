@@ -10,7 +10,10 @@
 //! ```
 
 use crate::instruction::{InstrKind, Instruction};
-use crate::{Context, ObjectInstance};
+use crate::{
+    typechecker::{CheckedType, TypeCtx},
+    Context, ObjectInstance, TypeCheck,
+};
 
 #[derive(Clone)]
 pub struct Return {
@@ -49,10 +52,17 @@ impl Instruction for Return {
     }
 }
 
+impl TypeCheck for Return {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+        /* FIXME: self.value.resolve_type(ctx) */
+        CheckedType::Void
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::jinko_ex;
+    use crate::jk_execute;
 
     #[test]
     fn t_return_kind() {
@@ -87,7 +97,7 @@ mod tests {
 
     #[test]
     fn t_return_execute_macro() {
-        let res = jinko_ex! {
+        let res = jk_execute! {
             { return }
         };
 
@@ -100,7 +110,7 @@ mod tests {
         use crate::instance::ToObjectInstance;
         use crate::value::JkInt;
 
-        let res = jinko_ex! {
+        let res = jk_execute! {
             {return 42}
         };
 
