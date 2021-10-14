@@ -5,7 +5,12 @@
 use std::path::{Path, PathBuf};
 
 use crate::instruction::{FunctionCall, FunctionDec};
-use crate::{Context, ErrKind, Error, JkInt, ObjectInstance, ToObjectInstance};
+use crate::{
+    Context, ErrKind, Error, FromObjectInstance, JkInt, JkString, ObjectInstance, ToObjectInstance,
+};
+
+use std::ffi::CString;
+use std::os::raw::c_char;
 
 fn find_lib(paths: &[PathBuf], lib_path: &Path) -> Result<libloading::Library, Error> {
     for dir_base in paths.iter() {
@@ -85,45 +90,69 @@ pub fn execute(
     dec: &FunctionDec,
     call: &FunctionCall,
     ctx: &mut Context,
-) -> Option<ObjectInstance> {
+) -> Result<Option<ObjectInstance>, Error> {
     ctx.debug("EXT CALL", call.name());
     let sym = call.name().as_bytes();
+
+    // FIXME: Don't unwrap
+    let args: Vec<ObjectInstance> = call
+        .args()
+        .iter()
+        .map(|arg| arg.execute(ctx).unwrap())
+        .collect();
 
     for lib in ctx.libs().iter() {
         unsafe {
             if lib.get::<libloading::Symbol<()>>(sym).is_ok() {
                 match call.args().len() {
-                    0 => {
-                        match dec.ty() {
+                    0 => match dec.ty() {
+                        None => {
+                            let f = lib.get::<libloading::Symbol<fn()>>(sym)?;
+                            f();
+                            return Ok(None);
+                        }
+                        Some(ty) => match ty.id() {
+                            "int" => {
+                                let f = lib.get::<libloading::Symbol<fn() -> i64>>(sym)?;
+                                let res = f();
+                                return Ok(Some(JkInt::from(res).to_instance()));
+                            }
+                            _ => unreachable!(),
+                        },
+                    },
+                    1 => match dec.args()[0].get_type().id() {
+                        "string" => match dec.ty() {
                             None => {
-                                if let Ok(f) = lib.get::<libloading::Symbol<fn()>>(sym) {
-                                    f();
-                                    return None;
-                                }
+                                let f = lib.get::<libloading::Symbol<fn(*const c_char)>>(sym)?;
+                                let arg = JkString::from_instance(&args[0]).0;
+                                let arg = CString::new(arg.as_str()).unwrap();
+                                let arg = arg.as_ptr();
+                                f(arg);
+                                return Ok(None);
                             }
                             Some(ty) => match ty.id() {
                                 "int" => {
-                                    if let Ok(f) = lib.get::<libloading::Symbol<fn() -> i64>>(sym) {
-                                        let res = f();
-                                        return Some(JkInt::from(res).to_instance());
-                                    }
+                                    let f = lib
+                                        .get::<libloading::Symbol<fn(*const c_char) -> i64>>(sym)?;
+                                    let arg = JkString::from_instance(&args[0]).0;
+                                    let arg = CString::new(arg.as_str()).unwrap();
+                                    let arg = arg.as_ptr();
+                                    let res = f(arg);
+                                    return Ok(Some(JkInt::from(res).to_instance()));
                                 }
                                 _ => unreachable!(),
                             },
-                        };
-                    }
+                        },
+                        _ => unreachable!(),
+                    },
                     _ => unreachable!(),
                 }
             }
         }
     }
 
-    ctx.error(
-        Error::new(ErrKind::ExternFunc)
-            .with_msg(format!("cannot call external function `{}`", call.name())),
-    );
-
-    None
+    Err(Error::new(ErrKind::ExternFunc)
+        .with_msg(format!("cannot call external function `{}`", call.name())))
 }
 
 #[cfg(test)]
@@ -161,7 +190,7 @@ mod tests {
 
         assert_eq!(
             execute(&dec, &call, &mut i),
-            Some(JkInt::from(15).to_instance())
+            Ok(Some(JkInt::from(15).to_instance()))
         );
     }
 
@@ -176,7 +205,7 @@ mod tests {
         let call = Construct::instruction("print_something()").unwrap().1;
         let call = call.downcast_ref::<FunctionCall>().unwrap();
 
-        assert_eq!(execute(&dec, &call, &mut i), None);
+        assert_eq!(execute(&dec, &call, &mut i), Ok(None));
     }
 
     #[test]

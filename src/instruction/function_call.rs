@@ -131,7 +131,13 @@ impl FunctionCall {
                 }
             }
         } else {
-            crate::ffi::execute(dec, self, ctx)
+            match crate::ffi::execute(dec, self, ctx) {
+                Ok(value) => value,
+                Err(e) => {
+                    ctx.error(e.into());
+                    None
+                }
+            }
         }
     }
 }
