@@ -2,3 +2,4 @@ incl pair
 incl string
 incl maybe
 incl ffi
+incl shell
