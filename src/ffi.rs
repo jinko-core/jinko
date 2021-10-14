@@ -2,22 +2,23 @@
 //! Primitive types are converted to their C counterparts.
 //! FIXME
 
-use std::path::{Path, PathBuf};
-
 use crate::instruction::{FunctionCall, FunctionDec};
 use crate::{
     Context, ErrKind, Error, FromObjectInstance, JkInt, JkString, ObjectInstance, ToObjectInstance,
 };
 
+use libloading::{Library, Symbol};
 use std::ffi::CString;
+use std::mem::transmute;
 use std::os::raw::c_char;
+use std::path::{Path, PathBuf};
 
-fn find_lib(paths: &[PathBuf], lib_path: &Path) -> Result<libloading::Library, Error> {
+fn find_lib(paths: &[PathBuf], lib_path: &Path) -> Result<Library, Error> {
     for dir_base in paths.iter() {
         let lib_path = PathBuf::from(dir_base).join(lib_path);
         dbg!(&lib_path);
         if lib_path.exists() {
-            if let Ok(lib) = unsafe { libloading::Library::new(lib_path) } {
+            if let Ok(lib) = unsafe { Library::new(lib_path) } {
                 return Ok(lib);
             }
         }
@@ -26,7 +27,7 @@ fn find_lib(paths: &[PathBuf], lib_path: &Path) -> Result<libloading::Library, E
     Err(Error::new(ErrKind::ExternFunc))
 }
 
-fn lib_from_root(base: &Path, lib_path: &Path) -> Result<libloading::Library, Error> {
+fn lib_from_root(base: &Path, lib_path: &Path) -> Result<Library, Error> {
     // We search through all entries in the `base` directory as well as all the entries
     // in the directories contained in `base`.
     let mut dirs = vec![PathBuf::from(base)];
@@ -44,7 +45,7 @@ fn lib_from_root(base: &Path, lib_path: &Path) -> Result<libloading::Library, Er
 /// If the LD_LIBRARY_PATH variable is set and contains a colon, then assume it
 /// contains a list of colon-separated directories and search through them.
 /// Then, search through /lib/, and then finally through /usr/lib/
-fn lib_from_path(lib_path: PathBuf) -> Result<libloading::Library, Error> {
+fn lib_from_path(lib_path: PathBuf) -> Result<Library, Error> {
     if let Ok(lib) = lib_from_ld_library_path(&lib_path) {
         return Ok(lib);
     }
@@ -61,13 +62,13 @@ fn lib_from_path(lib_path: PathBuf) -> Result<libloading::Library, Error> {
 }
 
 /// Look through the paths specified in the LD_LIBRARY_PATH environment variable (if any)
-fn lib_from_ld_library_path(lib_path: &Path) -> Result<libloading::Library, Error> {
+fn lib_from_ld_library_path(lib_path: &Path) -> Result<Library, Error> {
     let paths = std::env::var("LD_LIBRARY_PATH")?;
 
     for dir in paths.split(':') {
         let path = PathBuf::from(dir).join(&lib_path);
         if path.exists() {
-            return unsafe { Ok(libloading::Library::new(path)?) };
+            return unsafe { Ok(Library::new(path)?) };
         }
     }
 
@@ -76,7 +77,7 @@ fn lib_from_ld_library_path(lib_path: &Path) -> Result<libloading::Library, Erro
 
 pub fn link_with(ctx: &mut Context, lib_path: PathBuf) -> Result<(), Error> {
     let lib = if std::path::Path::new(&lib_path).exists() {
-        unsafe { libloading::Library::new(lib_path)? }
+        unsafe { Library::new(lib_path)? }
     } else {
         lib_from_path(lib_path)?
     };
@@ -102,52 +103,52 @@ pub fn execute(
         .collect();
 
     for lib in ctx.libs().iter() {
-        unsafe {
-            if lib.get::<libloading::Symbol<()>>(sym).is_ok() {
-                match call.args().len() {
-                    0 => match dec.ty() {
-                        None => {
-                            let f = lib.get::<libloading::Symbol<fn()>>(sym)?;
-                            f();
-                            return Ok(None);
+        let func = unsafe { lib.get::<Symbol<fn()>>(sym) };
+        let func = match func {
+            Ok(func) => func,
+            Err(_) => continue,
+        };
+        match call.args().len() {
+            0 => match dec.ty() {
+                None => {
+                    func();
+                    return Ok(None);
+                }
+                Some(ty) => match ty.id() {
+                    "int" => {
+                        let func = unsafe { transmute::<fn(), fn() -> i64>(**func) };
+                        let res = func();
+                        return Ok(Some(JkInt::from(res).to_instance()));
+                    }
+                    _ => unreachable!(),
+                },
+            },
+            1 => match dec.args()[0].get_type().id() {
+                "string" => match dec.ty() {
+                    None => {
+                        let func = unsafe { transmute::<fn(), fn(*const c_char)>(**func) };
+                        let arg = JkString::from_instance(&args[0]).0;
+                        let arg = CString::new(arg.as_str()).unwrap();
+                        let arg = arg.as_ptr();
+                        func(arg);
+                        return Ok(None);
+                    }
+                    Some(ty) => match ty.id() {
+                        "int" => {
+                            let func =
+                                unsafe { transmute::<fn(), fn(*const c_char) -> i64>(**func) };
+                            let arg = JkString::from_instance(&args[0]).0;
+                            let arg = CString::new(arg.as_str()).unwrap();
+                            let arg = arg.as_ptr();
+                            let res = func(arg);
+                            return Ok(Some(JkInt::from(res).to_instance()));
                         }
-                        Some(ty) => match ty.id() {
-                            "int" => {
-                                let f = lib.get::<libloading::Symbol<fn() -> i64>>(sym)?;
-                                let res = f();
-                                return Ok(Some(JkInt::from(res).to_instance()));
-                            }
-                            _ => unreachable!(),
-                        },
-                    },
-                    1 => match dec.args()[0].get_type().id() {
-                        "string" => match dec.ty() {
-                            None => {
-                                let f = lib.get::<libloading::Symbol<fn(*const c_char)>>(sym)?;
-                                let arg = JkString::from_instance(&args[0]).0;
-                                let arg = CString::new(arg.as_str()).unwrap();
-                                let arg = arg.as_ptr();
-                                f(arg);
-                                return Ok(None);
-                            }
-                            Some(ty) => match ty.id() {
-                                "int" => {
-                                    let f = lib
-                                        .get::<libloading::Symbol<fn(*const c_char) -> i64>>(sym)?;
-                                    let arg = JkString::from_instance(&args[0]).0;
-                                    let arg = CString::new(arg.as_str()).unwrap();
-                                    let arg = arg.as_ptr();
-                                    let res = f(arg);
-                                    return Ok(Some(JkInt::from(res).to_instance()));
-                                }
-                                _ => unreachable!(),
-                            },
-                        },
                         _ => unreachable!(),
                     },
-                    _ => unreachable!(),
-                }
-            }
+                },
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
         }
     }
 
