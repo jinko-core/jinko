@@ -169,29 +169,23 @@ pub trait FromObjectInstance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parser::Construct, Context, JkInt};
+    use crate::{parser::constructs, Context, JkInt};
 
     fn setup() -> Context {
         let mut ctx = Context::new();
 
-        let inst = Construct::instruction("type Point(x: int, y: int); ")
+        let inst = constructs::expr("type Point(x: int, y: int); ").unwrap().1;
+        inst.execute(&mut ctx);
+
+        let inst = constructs::expr("type Vec2(f: Point, s: Point); ")
             .unwrap()
             .1;
         inst.execute(&mut ctx);
 
-        let inst = Construct::instruction("type Vec2(f: Point, s: Point); ")
-            .unwrap()
-            .1;
+        let inst = constructs::expr("p = Point ( x : 1, y : 2)").unwrap().1;
         inst.execute(&mut ctx);
 
-        let inst = Construct::instruction("p = Point { x = 1, y = 2}")
-            .unwrap()
-            .1;
-        inst.execute(&mut ctx);
-
-        let inst = Construct::instruction("v = Vec2 { f = p, s = p}")
-            .unwrap()
-            .1;
+        let inst = constructs::expr("v = Vec2 ( f : p, s : p)").unwrap().1;
         inst.execute(&mut ctx);
 
         ctx
@@ -201,10 +195,10 @@ mod tests {
     fn t_one_deep_access() {
         let mut ctx = setup();
 
-        let inst = Construct::instruction("p").unwrap().1;
+        let inst = constructs::expr("p").unwrap().1;
         let p = inst.execute(&mut ctx).unwrap();
 
-        let inst = Construct::instruction("v").unwrap().1;
+        let inst = constructs::expr("v").unwrap().1;
         let v = inst.execute(&mut ctx).unwrap();
         let v_f = v.get_field("f").unwrap();
         let v_s = v.get_field("s").unwrap();
@@ -217,7 +211,7 @@ mod tests {
     fn t_two_deep_access() {
         let mut ctx = setup();
 
-        let inst = Construct::instruction("v").unwrap().1;
+        let inst = constructs::expr("v").unwrap().1;
         let v = inst.execute(&mut ctx).unwrap();
         let v_f = v.get_field("f").unwrap();
         let v_s = v.get_field("s").unwrap();

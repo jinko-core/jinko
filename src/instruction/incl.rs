@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    parser::Construct,
+    parser::constructs,
     typechecker::{CheckedType, TypeCtx},
     Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
 };
@@ -95,7 +95,7 @@ impl Incl {
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty ctx
-        let (remaining_input, instructions) = match Construct::many_instructions(input.as_str()) {
+        let (remaining_input, instructions) = match constructs::many_expr(input.as_str()) {
             Ok(tuple) => tuple,
             Err(e) => {
                 ctx.error(Error::from(e));

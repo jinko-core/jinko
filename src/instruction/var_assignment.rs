@@ -38,11 +38,6 @@ impl VarAssign {
     pub fn value(&self) -> &dyn Instruction {
         &*self.value
     }
-
-    /// Set VarAssign mutability
-    pub fn set_mutable(&mut self, is_mutable: bool) {
-        self.mutable = is_mutable;
-    }
 }
 
 impl Instruction for VarAssign {
@@ -156,7 +151,7 @@ impl TypeCheck for VarAssign {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::{Construct, Token};
+    use crate::parser::constructs;
     use crate::value::{JkInt, JkString};
     use crate::ToObjectInstance;
 
@@ -181,15 +176,13 @@ mod tests {
     #[test]
     fn assign_mutable() {
         let mut i = Context::new();
-        let va_init = Construct::mut_var_assignment("mut a = 13").unwrap().1;
-        let (input, id) = Token::identifier("a = 15").unwrap();
-        let (input, _) = Token::maybe_consume_extra(input).unwrap();
-        let va_0 = Construct::var_assignment(input, &id).unwrap().1;
+        let va_init = constructs::expr("mut a = 13").unwrap().1;
+        let va_0 = constructs::expr("a = 15").unwrap().1;
 
         va_init.execute(&mut i);
         va_0.execute(&mut i);
 
-        let va_get = Construct::variable("a").unwrap().1;
+        let va_get = constructs::expr("a").unwrap().1;
         assert_eq!(
             va_get.execute(&mut i).unwrap(),
             JkInt::from(15).to_instance()
@@ -199,12 +192,8 @@ mod tests {
     #[test]
     fn assign_immutable() {
         let mut i = Context::new();
-        let (input, id) = Token::identifier("a = 13").unwrap();
-        let (input, _) = Token::maybe_consume_extra(input).unwrap();
-        let va_init = Construct::var_assignment(input, &id).unwrap().1;
-        let (input, id) = Token::identifier("a = 1b").unwrap();
-        let (input, _) = Token::maybe_consume_extra(input).unwrap();
-        let va_0 = Construct::var_assignment(input, &id).unwrap().1;
+        let va_init = constructs::expr("a = 13").unwrap().1;
+        let va_0 = constructs::expr("a = 15").unwrap().1;
 
         va_init.execute(&mut i);
         if va_0.execute(&mut i).is_some() {
@@ -219,8 +208,8 @@ mod tests {
     #[ignore]
     fn create_mutable_twice() {
         let mut i = Context::new();
-        let va_init = Construct::mut_var_assignment("mut a = 13").unwrap().1;
-        let va_0 = Construct::mut_var_assignment("mut a = 15").unwrap().1;
+        let va_init = constructs::expr("mut a = 13").unwrap().1;
+        let va_0 = constructs::expr("mut a = 15").unwrap().1;
 
         va_init.execute(&mut i);
         if va_0.execute(&mut i).is_some() {

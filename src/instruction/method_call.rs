@@ -56,13 +56,13 @@ impl TypeCheck for MethodCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::Construct;
+    use crate::parser::constructs;
     use crate::*;
 
     #[test]
     fn t_print() {
         let var = Box::new(JkInt::from(15));
-        let method = FunctionCall::new("some_int_func".to_owned());
+        let method = FunctionCall::new("some_int_func".to_owned(), vec![]);
         let mc = MethodCall::new(var, method);
 
         assert_eq!(mc.print(), "15.some_int_func()".to_owned())
@@ -71,15 +71,14 @@ mod tests {
     #[test]
     fn t_execute() {
         let mut ctx = Context::new();
-        let func_dec = Construct::instruction("func __first(a: int, b: int) -> int { a }")
+        let func_dec = constructs::expr("func __first(a: int, b: int) -> int { a }")
             .unwrap()
             .1;
         func_dec.execute(&mut ctx);
 
         let var1 = Box::new(JkInt::from(1));
         let var2 = Box::new(JkInt::from(2));
-        let mut method = FunctionCall::new("__first".to_owned());
-        method.add_arg(var2);
+        let method = FunctionCall::new("__first".to_owned(), vec![var2]);
 
         let mc = MethodCall::new(var1, method);
 

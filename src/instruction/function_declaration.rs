@@ -239,10 +239,22 @@ impl std::fmt::Debug for FunctionDec {
     }
 }
 
+impl From<&str> for FunctionKind {
+    fn from(function_kind: &str) -> FunctionKind {
+        match function_kind {
+            "func" => FunctionKind::Func,
+            "test" => FunctionKind::Test,
+            "mock" => FunctionKind::Mock,
+            "ext" => FunctionKind::Ext,
+            _ => FunctionKind::Unknown,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{instruction::TypeId, parser::Construct};
+    use crate::{instruction::TypeId, parser::constructs};
 
     #[test]
     fn simple_no_arg() {
@@ -286,7 +298,7 @@ mod tests {
         let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")));
         function.set_kind(FunctionKind::Func);
 
-        let block = Construct::block("{ 15 }").unwrap().1;
+        let block = constructs::block("{ 15 }").unwrap().1;
         function.set_block(block);
 
         let mut ctx = Context::new();
@@ -302,7 +314,7 @@ mod tests {
         let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("string")));
         function.set_kind(FunctionKind::Func);
 
-        let block = Construct::block("{ 15 }").unwrap().1;
+        let block = constructs::block("{ 15 }").unwrap().1;
         function.set_block(block);
 
         let mut ctx = Context::new();

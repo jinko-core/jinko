@@ -1,0 +1,69 @@
+expr = term ( '+' term | '-' term )*
+
+term = factor next ( '*' factor next | '/' factor next )*
+
+factor = next unit factor_rest
+
+factor_rest = '.' IDENTIFIER next method_or_field factor_rest
+            | ε
+
+unit = 'if' expr block next [ 'else' next block ]
+     | 'while' expr block
+     | 'loop' next block
+     | 'for' next IDENTIFIER next 'in' expr block
+     | 'type' next IDENTIFIER next '(' type_dec_arg (',' type_dec_arg)* ')'
+     | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
+     | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
+     | '@' next IDENTIFIER next '(' next args
+     | 'func' function_declaration block
+     | 'test' function_declaration block
+     | 'mock' function_declaration block
+     | 'ext' 'func' function_declaration ';'
+     | 'return' expr
+     | '{' next inner_block
+     | 'true'
+     | 'false'
+     | "'" CHAR "'"
+     | '"' [^"] '"'
+     | INT
+     | DOUBLE
+     | IDENTIFIER next func_type_or_var
+
+method_or_field = '(' next args               (* method call *)
+                | ε                           (* field access *)
+
+func_type_or_var = '(' next func_or_type_args
+                 | '=' expr                   (* variable assigment *)
+                 | ε                          (* variable *)
+
+(* Technically not LL(1) but should allow for better performance *)
+(* Once we reach ':' we can know for sure wether we're in a type instanciation or function call *)
+(* If we end up merging type_instantiation or function_call this won't be an issue anymore *)
+func_or_type_args = IDENTIFIER next ':' expr (',' type_arg )* ')'  (* type_instantiation *)
+                  | args                                           (* function_call *)
+
+type_inst_arg = next IDENTIFIER next ':' expr
+
+
+block = '{' next inner_block
+inner_block = expr ( ';' expr )* '}'
+            | '}'
+
+function_declaration = next IDENTIFIER next '(' next typed_arg next return_type
+return_type = '->' next IDENTIFIER next
+            | ε
+
+typed_args = typed_arg ( ',' typed_arg )* ')'
+           | ')'
+typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
+
+
+args = expr ( ',' expr )* ')'
+     | ')'
+
+next = extra*
+
+extra = WHITESPACE
+      | '/*' [^'*/'] '*/'
+      | '//' [^\n] '\n'
+      | '#'  [^\n] '\n'

@@ -20,16 +20,8 @@ pub struct FunctionCall {
 
 impl FunctionCall {
     /// Create a new function call and return it
-    pub fn new(fn_name: String) -> FunctionCall {
-        FunctionCall {
-            fn_name,
-            args: Vec::new(),
-        }
-    }
-
-    /// Add an argument to the given function call
-    pub fn add_arg(&mut self, arg: Box<dyn Instruction>) {
-        self.args.push(arg)
+    pub fn new(fn_name: String, args: Vec<Box<dyn Instruction>>) -> FunctionCall {
+        FunctionCall { fn_name, args }
     }
 
     /// Add an argument to the beginning of the function call's argument list. This is
@@ -214,10 +206,11 @@ impl TypeCheck for FunctionCall {
 mod tests {
     use super::*;
     use crate::instruction::TypeId;
+    use crate::parser::constructs;
 
     #[test]
     fn t_pretty_print_empty() {
-        let function = FunctionCall::new("something".to_owned());
+        let function = FunctionCall::new("something".to_owned(), vec![]);
 
         assert_eq!(function.print(), "something()");
     }
@@ -243,7 +236,7 @@ mod tests {
 
         ctx.add_function(f).unwrap();
 
-        let mut f_call = FunctionCall::new("func0".to_string());
+        let f_call = FunctionCall::new("func0".to_string(), vec![]);
 
         assert!(f_call.execute(&mut ctx).is_none());
         assert!(
@@ -252,7 +245,7 @@ mod tests {
         );
         ctx.clear_errors();
 
-        f_call.add_arg(Box::new(JkInt::from(12)));
+        let f_call = FunctionCall::new("func0".to_string(), vec![Box::new(JkInt::from(12))]);
 
         assert!(f_call.execute(&mut ctx).is_none());
         assert!(
@@ -263,15 +256,14 @@ mod tests {
 
     #[test]
     fn t_func_call_arg_return() {
-        use crate::parser::Construct;
         use crate::value::JkInt;
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = Construct::instruction("func __second(f: int, s: int) -> int { s }")
+        let func_dec = constructs::expr("func __second(f: int, s: int) -> int { s }")
             .unwrap()
             .1;
-        let func_call = Construct::instruction("__second(1, 2)").unwrap().1;
+        let func_call = constructs::expr("__second(1, 2)").unwrap().1;
 
         func_dec.execute(&mut i);
 
@@ -283,15 +275,14 @@ mod tests {
 
     #[test]
     fn t_func_call_arg_return_binop() {
-        use crate::parser::Construct;
         use crate::value::JkInt;
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = Construct::instruction("func add(a: int, b: int) -> int { a + b }")
+        let func_dec = constructs::expr("func add(a: int, b: int) -> int { a + b }")
             .unwrap()
             .1;
-        let func_call = Construct::instruction("add(1, 2)").unwrap().1;
+        let func_call = constructs::expr("add(1, 2)").unwrap().1;
 
         func_dec.execute(&mut i);
 
@@ -303,15 +294,14 @@ mod tests {
 
     #[test]
     fn t_func_call_variable_return() {
-        use crate::parser::Construct;
         use crate::value::JkInt;
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = Construct::instruction("func one() -> int { one = 1; one }")
+        let func_dec = constructs::expr("func one() -> int { one = 1; one }")
             .unwrap()
             .1;
-        let func_call = Construct::instruction("one()").unwrap().1;
+        let func_call = constructs::expr("one()").unwrap().1;
 
         func_dec.execute(&mut i);
 

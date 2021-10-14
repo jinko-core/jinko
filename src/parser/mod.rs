@@ -4,21 +4,23 @@
 
 use crate::{Context, Error, InstrKind};
 
-mod box_construct;
 mod constant_construct;
-mod constructs;
-mod shunting_yard;
+pub mod constructs;
 mod tokens;
 
-pub use box_construct::BoxConstruct;
 pub use constant_construct::ConstantConstruct;
-pub use constructs::Construct;
-pub use shunting_yard::ShuntingYard;
 pub use tokens::Token;
 
 pub type ParseResult<T, I> = nom::IResult<T, I, Error>;
 
 pub struct Parser;
+
+#[macro_export]
+macro_rules! jinko_ex {
+    ($($t:tt) *) => {
+        $crate::Parser::parse(stringify!( $( $t ) * )).unwrap().execute().unwrap()
+    }
+}
 
 impl Parser {
     /// Parses the entire user input and returns a hashmap corresponding to the user
@@ -28,7 +30,7 @@ impl Parser {
 
         let entry_block = ctx.entry_point.block_mut().unwrap();
 
-        let (_, instructions) = Construct::many_instructions(input)?;
+        let (_, instructions) = constructs::many_expr(input)?;
 
         entry_block.set_instructions(instructions);
 
