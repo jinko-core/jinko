@@ -38,11 +38,6 @@ impl VarAssign {
     pub fn value(&self) -> &dyn Instruction {
         &*self.value
     }
-
-    /// Set VarAssign mutability
-    pub fn set_mutable(&mut self, is_mutable: bool) {
-        self.mutable = is_mutable;
-    }
 }
 
 impl Instruction for VarAssign {

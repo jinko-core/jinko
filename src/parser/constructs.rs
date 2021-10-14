@@ -13,17 +13,15 @@
 //!
 //! is the grammar for a variable assignment.
 
-use nom::Err::Error as NomError;
 use nom::{
     branch::alt, combinator::opt, multi::many0, sequence::delimited, sequence::pair,
     sequence::preceded, sequence::terminated,
 };
 
-use crate::error::{ErrKind, Error};
 use crate::instruction::{
-    BinaryOp, Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind,
-    IfElse, Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, Operator, Return, TypeDec,
-    TypeId, TypeInstantiation, Var, VarAssign,
+    BinaryOp, Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl,
+    Instruction, JkInst, Loop, LoopKind, MethodCall, Operator, Return, TypeDec, TypeId,
+    TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{ConstantConstruct, ParseResult, Token};
 
@@ -430,6 +428,12 @@ mod tests {
     use super::*;
     use crate::instruction::JkInstKind;
     use crate::{JkBool, JkChar, JkFloat, JkInt, JkString};
+
+    #[test]
+    fn consume_whitespace() {
+        assert_eq!(nom_next("   input"), Ok(("input", ())));
+        assert_eq!(nom_next(" \t input"), Ok(("input", ())));
+    }
 
     #[test]
     fn simple_int_sum() {

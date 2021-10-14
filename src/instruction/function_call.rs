@@ -24,11 +24,6 @@ impl FunctionCall {
         FunctionCall { fn_name, args }
     }
 
-    /// Add an argument to the given function call
-    pub fn add_arg(&mut self, arg: Box<dyn Instruction>) {
-        self.args.push(arg)
-    }
-
     /// Add an argument to the beginning of the function call's argument list. This is
     /// only useful for method call desugaring
     pub fn add_arg_front(&mut self, arg: Box<dyn Instruction>) {
@@ -241,7 +236,7 @@ mod tests {
 
         ctx.add_function(f).unwrap();
 
-        let mut f_call = FunctionCall::new("func0".to_string(), vec![]);
+        let f_call = FunctionCall::new("func0".to_string(), vec![]);
 
         assert!(f_call.execute(&mut ctx).is_none());
         assert!(
@@ -250,7 +245,7 @@ mod tests {
         );
         ctx.clear_errors();
 
-        f_call.add_arg(Box::new(JkInt::from(12)));
+        let f_call = FunctionCall::new("func0".to_string(), vec![Box::new(JkInt::from(12))]);
 
         assert!(f_call.execute(&mut ctx).is_none());
         assert!(

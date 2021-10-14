@@ -18,8 +18,6 @@ const RESERVED_KEYWORDS: [&str; 14] = [
     "as", "return",
 ];
 
-const OPERATORS: [char; 6] = ['+', '-', '*', '/', '(', ')'];
-
 pub struct Token;
 
 impl Token {
@@ -359,20 +357,6 @@ impl Token {
         Ok(string)
     }
 
-    fn is_whitespace(c: char) -> bool {
-        c == ' ' || c == '\t' || c == '\n'
-    }
-
-    // FIXME: Documentation
-    pub fn is_operator(c: char) -> bool {
-        OPERATORS.contains(&c)
-    }
-
-    /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
-    pub fn consume_whitespaces(input: &str) -> ParseResult<&str, &str> {
-        take_while1(Token::is_whitespace)(input)
-    }
-
     #[inline(always)]
     pub fn consume_multi_comment(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = Token::comment_multi_start(input)?;
@@ -405,16 +389,6 @@ impl Token {
             Token::consume_single_comment,
             Token::consume_multi_comment,
         ))(input)
-    }
-
-    /// Consumes what is considered as "extra": Whitespaces, comments...
-    pub fn maybe_consume_extra(mut input: &str) -> ParseResult<&str, &str> {
-        while let Ok((new_input, _)) =
-            alt((Token::consume_comment, Token::consume_whitespaces))(input)
-        {
-            input = new_input;
-        }
-        Ok((input, ""))
     }
 }
 
@@ -474,15 +448,6 @@ mod tests {
         assert!(Token::float_constant("ff2").is_err());
 
         assert!(Token::float_constant("12").is_err());
-    }
-
-    #[test]
-    fn t_consume_whitespace() {
-        assert_eq!(Token::consume_whitespaces("   input"), Ok(("input", "   ")));
-        assert_eq!(
-            Token::consume_whitespaces(" \t input"),
-            Ok(("input", " \t "))
-        );
     }
 
     #[test]

@@ -1,11 +1,5 @@
 //! Utilities for developing Jinko more comfortably
 
-mod queue;
-mod stack;
-
-pub use queue::Queue;
-pub use stack::Stack;
-
 // FIXME: The default behavior of the macro should be to execute and check for errors
 #[macro_export]
 macro_rules! jinko {
