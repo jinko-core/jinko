@@ -99,13 +99,19 @@ mod tests {
     use crate::jinko;
 
     #[test]
-    fn t_all_builtins_are_valid() {
+    fn t_string_builtins_are_valid() {
         jinko! {
             __builtin_string_len("jk");
             __builtin_string_concat("file", ".jk");
             __builtin_string_display("to display");
-            __builtin_string_display_err("to display on err"):
-            __builtin_ffi_link_with("tests/fixtures/clib/lib.so"):
+            __builtin_string_display_err("to display on err");
+        };
+    }
+
+    #[test]
+    fn t_ffi_builtins_are_valid() {
+        jinko! {
+            __builtin_ffi_link_with("tests/fixtures/clib/lib.so");
         };
     }
 }
