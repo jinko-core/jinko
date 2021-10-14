@@ -1,0 +1,5 @@
+m_manual = Maybe_int { inner = 14, is_nothing = false };
+m_some = some(15);
+m_nothing = nothing();
+
+a = m_some.unpack();

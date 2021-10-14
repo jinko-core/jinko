@@ -1,0 +1,22 @@
+// type Nothing;
+// type Some_int(inner: int);
+
+// TODO: Implement Maybe<T> once generics are implemented
+// TODO: Implement Maybe<T> as multi-type once they are implemented
+type Maybe_int(inner: int, is_some: bool)
+
+func is_some(m: Maybe_int) -> bool {
+    m.is_some
+}
+
+func nothing() -> Maybe_int {
+    Maybe_int { inner = 0, is_some = false }
+}
+
+func some(value: int) -> Maybe_int {
+    Maybe_int { inner = value, is_some = true }
+}
+
+func unpack(m: Maybe_int) -> int {
+    m.inner
+}
