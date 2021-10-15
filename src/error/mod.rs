@@ -194,4 +194,10 @@ impl std::convert::From<libloading::Error> for Error {
     }
 }
 
+impl std::convert::From<std::env::VarError> for Error {
+    fn from(e: std::env::VarError) -> Self {
+        Error::new(ErrKind::ExternFunc).with_msg(e.to_string())
+    }
+}
+
 impl std::error::Error for Error {}

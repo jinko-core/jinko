@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::io::{self, Write};
 
+use crate::ffi;
 use crate::instance::{FromObjectInstance, ToObjectInstance};
 use crate::{Context, Instruction, JkInt, JkString, ObjectInstance};
 
@@ -51,9 +52,8 @@ fn string_display_err(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
 fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let lib_path = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
 
-    match unsafe { libloading::Library::new(lib_path) } {
-        Ok(lib) => ctx.add_lib(lib),
-        Err(e) => ctx.error(e.into()),
+    if let Err(e) = ffi::link_with(ctx, lib_path.into()) {
+        ctx.error(e);
     }
 
     None
