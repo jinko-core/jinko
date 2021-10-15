@@ -7,6 +7,34 @@ use std::path::{Path, PathBuf};
 use crate::instruction::{FunctionCall, FunctionDec};
 use crate::{Context, ErrKind, Error, JkInt, ObjectInstance, ToObjectInstance};
 
+fn find_lib(paths: &Vec<PathBuf>, lib_path: &Path) -> Result<libloading::Library, Error> {
+    for dir_base in paths.iter() {
+        let lib_path = PathBuf::from(dir_base).join(lib_path);
+        dbg!(&lib_path);
+        if lib_path.exists() {
+            if let Ok(lib) = unsafe { libloading::Library::new(lib_path) } {
+                return Ok(lib);
+            }
+        }
+    }
+
+    Err(Error::new(ErrKind::ExternFunc))
+}
+
+fn lib_from_root(base: &Path, lib_path: &Path) -> Result<libloading::Library, Error> {
+    // We search through all entries in the `base` directory as well as all the entries
+    // in the directories contained in `base`.
+    let mut dirs = vec![PathBuf::from(base)];
+    for entry in base.read_dir()? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            dirs.push(entry.path())
+        }
+    }
+
+    find_lib(&dirs, lib_path)
+}
+
 /// Fetch libraries from the path according to dlopen's (simplified) rules.
 /// If the LD_LIBRARY_PATH variable is set and contains a colon, then assume it
 /// contains a list of colon-separated directories and search through them.
@@ -16,18 +44,12 @@ fn lib_from_path(lib_path: PathBuf) -> Result<libloading::Library, Error> {
         return Ok(lib);
     }
 
-    let root_lib_path = PathBuf::from("/lib").join(&lib_path);
-    dbg!(&root_lib_path);
-    if root_lib_path.exists() {
-        if let Ok(lib) = unsafe { libloading::Library::new(root_lib_path) } {
-            return Ok(lib);
-        }
+    if let Ok(lib) = lib_from_root(&PathBuf::from("/lib"), &lib_path) {
+        return Ok(lib);
     }
 
-    let usr_root_lib_path = PathBuf::from("/usr/lib").join(&lib_path);
-    dbg!(&usr_root_lib_path);
-    if usr_root_lib_path.exists() {
-        return unsafe { Ok(libloading::Library::new(usr_root_lib_path)?) };
+    if let Ok(lib) = lib_from_root(&PathBuf::from("/usr/lib"), &lib_path) {
+        return Ok(lib);
     }
 
     Err(Error::new(ErrKind::ExternFunc))
