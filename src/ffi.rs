@@ -17,6 +17,7 @@ fn lib_from_path(lib_path: PathBuf) -> Result<libloading::Library, Error> {
     }
 
     let root_lib_path = PathBuf::from("/lib").join(&lib_path);
+    dbg!(&root_lib_path);
     if root_lib_path.exists() {
         if let Ok(lib) = unsafe { libloading::Library::new(root_lib_path) } {
             return Ok(lib);
@@ -24,6 +25,7 @@ fn lib_from_path(lib_path: PathBuf) -> Result<libloading::Library, Error> {
     }
 
     let usr_root_lib_path = PathBuf::from("/usr/lib").join(&lib_path);
+    dbg!(&usr_root_lib_path);
     if usr_root_lib_path.exists() {
         return unsafe { Ok(libloading::Library::new(usr_root_lib_path)?) };
     }
@@ -37,7 +39,6 @@ fn lib_from_ld_library_path(lib_path: &Path) -> Result<libloading::Library, Erro
 
     for dir in paths.split(':') {
         let path = PathBuf::from(dir).join(&lib_path);
-        dbg!(&path);
         if path.exists() {
             return unsafe { Ok(libloading::Library::new(path)?) };
         }
@@ -158,7 +159,7 @@ mod tests {
 
     #[test]
     fn load_libs_stress() {
-        let ld_library_path = std::env::var("LD_LIBRARY_PATH").unwrap();
+        let ld_library_path = std::env::var("LD_LIBRARY_PATH").unwrap_or(String::new());
         let pwd = std::env::var("PWD").unwrap();
         std::env::set_var(
             "LD_LIBRARY_PATH",
