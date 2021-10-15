@@ -1,0 +1,7 @@
+shell("echo 'from shell'")
+
+mut c = cmd("echo").with_arg("from");
+c = c.with_arg("cmd");
+c = c.with_arg("builder");
+
+c.execute()

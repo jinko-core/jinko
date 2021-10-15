@@ -1,0 +1,38 @@
+#!jinko
+
+ft_exists_exit_code = shell("ft --version");
+
+ft_exists = if ft_exists_exit_code == 0 {
+    true
+} else {
+    false
+};
+
+if !ft_exists { // ft_exists.not()
+    display_err("\n`ft` not found. Install it using the following command\n\n");
+    display_err("\tcargo install --git https://github.com/cohenarthur/ft\n\n");
+
+    exit(1);
+}
+
+shell("cargo build")
+
+if !args().empty() {
+    display("Test files:\n");
+    for arg in args() {
+        display(arg);
+
+        shell("ft -f {arg}");
+    }
+} else {
+    // Find all files somehow
+    files = shell("find tests -name '*.yml'").output();
+
+    display("Test files:\n{files}\n\n");
+
+    shell("ft -f {files}");
+}
+
+// FIXME: Parse arguments correctly
+// FIXME: Add split method on string
+// FIXME: Add string vector
