@@ -1,4 +1,4 @@
-link_with("/usr/lib/libc.so.6");
+link_with("libc.so.6");
 
 ext func system(s: string) -> int;
 
