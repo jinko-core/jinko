@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use crate::instruction::{FunctionCall, FunctionDec};
 use crate::{Context, ErrKind, Error, JkInt, ObjectInstance, ToObjectInstance};
 
-fn find_lib(paths: &Vec<PathBuf>, lib_path: &Path) -> Result<libloading::Library, Error> {
+fn find_lib(paths: &[PathBuf], lib_path: &Path) -> Result<libloading::Library, Error> {
     for dir_base in paths.iter() {
         let lib_path = PathBuf::from(dir_base).join(lib_path);
         dbg!(&lib_path);
