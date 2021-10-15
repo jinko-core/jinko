@@ -2,8 +2,84 @@
 //! Primitive types are converted to their C counterparts.
 //! FIXME
 
+use std::path::{Path, PathBuf};
+
 use crate::instruction::{FunctionCall, FunctionDec};
 use crate::{Context, ErrKind, Error, JkInt, ObjectInstance, ToObjectInstance};
+
+fn find_lib(paths: &[PathBuf], lib_path: &Path) -> Result<libloading::Library, Error> {
+    for dir_base in paths.iter() {
+        let lib_path = PathBuf::from(dir_base).join(lib_path);
+        dbg!(&lib_path);
+        if lib_path.exists() {
+            if let Ok(lib) = unsafe { libloading::Library::new(lib_path) } {
+                return Ok(lib);
+            }
+        }
+    }
+
+    Err(Error::new(ErrKind::ExternFunc))
+}
+
+fn lib_from_root(base: &Path, lib_path: &Path) -> Result<libloading::Library, Error> {
+    // We search through all entries in the `base` directory as well as all the entries
+    // in the directories contained in `base`.
+    let mut dirs = vec![PathBuf::from(base)];
+    for entry in base.read_dir()? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            dirs.push(entry.path())
+        }
+    }
+
+    find_lib(&dirs, lib_path)
+}
+
+/// Fetch libraries from the path according to dlopen's (simplified) rules.
+/// If the LD_LIBRARY_PATH variable is set and contains a colon, then assume it
+/// contains a list of colon-separated directories and search through them.
+/// Then, search through /lib/, and then finally through /usr/lib/
+fn lib_from_path(lib_path: PathBuf) -> Result<libloading::Library, Error> {
+    if let Ok(lib) = lib_from_ld_library_path(&lib_path) {
+        return Ok(lib);
+    }
+
+    if let Ok(lib) = lib_from_root(&PathBuf::from("/lib"), &lib_path) {
+        return Ok(lib);
+    }
+
+    if let Ok(lib) = lib_from_root(&PathBuf::from("/usr/lib"), &lib_path) {
+        return Ok(lib);
+    }
+
+    Err(Error::new(ErrKind::ExternFunc))
+}
+
+/// Look through the paths specified in the LD_LIBRARY_PATH environment variable (if any)
+fn lib_from_ld_library_path(lib_path: &Path) -> Result<libloading::Library, Error> {
+    let paths = std::env::var("LD_LIBRARY_PATH")?;
+
+    for dir in paths.split(':') {
+        let path = PathBuf::from(dir).join(&lib_path);
+        if path.exists() {
+            return unsafe { Ok(libloading::Library::new(path)?) };
+        }
+    }
+
+    Err(Error::new(ErrKind::ExternFunc))
+}
+
+pub fn link_with(ctx: &mut Context, lib_path: PathBuf) -> Result<(), Error> {
+    let lib = if std::path::Path::new(&lib_path).exists() {
+        unsafe { libloading::Library::new(lib_path)? }
+    } else {
+        lib_from_path(lib_path)?
+    };
+
+    ctx.add_lib(lib);
+
+    Ok(())
+}
 
 pub fn execute(
     dec: &FunctionDec,
@@ -58,15 +134,13 @@ mod tests {
     use crate::{JkInt, ToObjectInstance};
 
     fn init_ctx() -> Context {
-        let mut i = jinko! {
+        jinko! {
+            link_with("./tests/fixtures/clib/lib.so");
+
             ext func no_arg() -> int;
             ext func square(v: int) -> int;
             ext func add(lhs: int, rhs: int) -> int;
-        };
-
-        i.add_lib(unsafe { libloading::Library::new("./tests/fixtures/clib/lib.so").unwrap() });
-
-        i
+        }
     }
 
     #[test]
@@ -103,5 +177,31 @@ mod tests {
         let call = call.downcast_ref::<FunctionCall>().unwrap();
 
         assert_eq!(execute(&dec, &call, &mut i), None);
+    }
+
+    #[test]
+    fn load_libs_stress() {
+        let ld_library_path = std::env::var("LD_LIBRARY_PATH").unwrap_or(String::new());
+        let pwd = std::env::var("PWD").unwrap();
+        std::env::set_var(
+            "LD_LIBRARY_PATH",
+            format!("{}/{}:{}", pwd, "tests/fixtures/clib/", ld_library_path),
+        );
+
+        jinko! {
+            link_with("lib.so");
+        };
+
+        // Load libc, probably from LD_LIBRARY_PATH
+        jinko! {
+            link_with("libc.so.6");
+        };
+
+        std::env::remove_var("LD_LIBRARY_PATH");
+
+        // Load libc without LD_LIBRARY_PATH
+        jinko! {
+            link_with("libc.so.6");
+        };
     }
 }

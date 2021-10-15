@@ -2,7 +2,9 @@
 
 use std::collections::HashMap;
 use std::io::{self, Write};
+use std::path::PathBuf;
 
+use crate::ffi;
 use crate::instance::{FromObjectInstance, ToObjectInstance};
 use crate::{Context, Instruction, JkInt, JkString, ObjectInstance};
 
@@ -51,9 +53,8 @@ fn string_display_err(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
 fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let lib_path = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
 
-    match unsafe { libloading::Library::new(lib_path) } {
-        Ok(lib) => ctx.add_lib(lib),
-        Err(e) => ctx.error(e.into()),
+    if let Err(e) = ffi::link_with(ctx, PathBuf::from(&lib_path)) {
+        ctx.error(e.with_msg(format!("couldn't link with library `{}`", &lib_path)));
     }
 
     None
