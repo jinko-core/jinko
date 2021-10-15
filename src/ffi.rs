@@ -226,12 +226,5 @@ mod tests {
         jinko! {
             link_with("libc.so.6");
         };
-
-        std::env::remove_var("LD_LIBRARY_PATH");
-
-        // Load libc without LD_LIBRARY_PATH
-        jinko! {
-            link_with("libc.so.6");
-        };
     }
 }
