@@ -14,7 +14,7 @@ unit = 'if' expr block next [ 'else' next block ]
      | 'type' next IDENTIFIER next '(' type_dec_arg (',' type_dec_arg)* ')'
      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
-     | '@' next IDENTIFIER next '(' next args
+     | '@' IDENTIFIER next '(' next args
      | 'func' function_declaration block
      | 'test' function_declaration block
      | 'mock' function_declaration block
