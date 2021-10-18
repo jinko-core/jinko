@@ -13,6 +13,7 @@
 //!
 //! is the grammar for a variable assignment.
 
+use nom::Err::Error as NomError;
 use nom::{
     branch::alt, combinator::opt, multi::many0, sequence::delimited, sequence::pair,
     sequence::preceded, sequence::terminated,
@@ -158,6 +159,8 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         unit_type_decl(input)
     } else if let Ok((input, _)) = Token::mut_tok(input) {
         unit_mut_var(input)
+    } else if let Ok((input, _)) = Token::at_sign(input) {
+        unit_jk_inst(input)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
         unit_block(input)
     } else if let Ok(res) = constant(input) {
@@ -242,6 +245,19 @@ fn unit_mut_var(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, value) = expr(input)?;
 
     Ok((input, Box::new(VarAssign::new(true, symbol, value))))
+}
+
+/// IDENTIFIER next '(' next args
+fn unit_jk_inst(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
+    let (input, _) = Token::left_parenthesis(input)?;
+    let (input, args) = args(next(input))?;
+
+    let call = FunctionCall::new(name, args);
+    match JkInst::from_function_call(&call) {
+        Ok(inst) => Ok((input, Box::new(inst))),
+        Err(err) => Err(NomError(err)),
+    }
 }
 
 fn unit_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
@@ -844,6 +860,27 @@ mod tests {
         assert_eq!(input, "");
         assert_eq!(assign.symbol(), "mut_var");
         assert!(assign.mutable());
+    }
+
+    #[test]
+    fn jk_inst_no_arg() {
+        let (input, expr) = expr("@quit ( )").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<JkInst>().is_some());
+    }
+
+    #[test]
+    fn jk_inst_arg() {
+        let (input, expr) = expr("@dump ( thing )").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<JkInst>().is_some());
+    }
+
+    #[test]
+    fn jk_inst_non_existant() {
+        assert!(expr("@crab ( thing )").is_err());
     }
 
     #[test]
