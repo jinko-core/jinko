@@ -160,7 +160,7 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     } else if let Ok((input, _)) = Token::mut_tok(input) {
         unit_mut_var(input)
     } else if let Ok((input, _)) = Token::at_sign(input) {
-        unit_builtin(input)
+        unit_jk_inst(input)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
         unit_block(input)
     } else if let Ok(res) = constant(input) {
@@ -248,7 +248,7 @@ fn unit_mut_var(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 }
 
 /// IDENTIFIER next '(' next args
-fn unit_builtin(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_jk_inst(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
     let (input, args) = args(next(input))?;
@@ -863,7 +863,7 @@ mod tests {
     }
 
     #[test]
-    fn builtin_no_arg() {
+    fn jk_inst_no_arg() {
         let (input, expr) = expr("@quit ( )").unwrap();
 
         assert_eq!(input, "");
@@ -871,7 +871,7 @@ mod tests {
     }
 
     #[test]
-    fn builtin_arg() {
+    fn jk_inst_arg() {
         let (input, expr) = expr("@dump ( thing )").unwrap();
 
         assert_eq!(input, "");
@@ -879,7 +879,7 @@ mod tests {
     }
 
     #[test]
-    fn builtin_non_existant() {
+    fn jk_inst_non_existant() {
         assert!(expr("@crab ( thing )").is_err());
     }
 
