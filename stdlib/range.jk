@@ -5,13 +5,21 @@ func range(start: int, end: int) -> Range_int {
 }
 
 func advance(r: Range_int) -> Range_int {
-    Range_int { start = r.start, end = r.end, current = r.current + 1 }
+    // FIXME: Inline this in the line after once parsing is fixed
+    old_current = r.current;
+    new_current = old_current + 1;
+    new_start = r.start;
+    new_end = r.end;
+    Range_int { start = new_start, end = new_end, current = new_current }
 }
 
 func current(r: Range_int) -> Maybe_int {
-    if r.current > r.end {
-        nothing()
-    } else {
-        some(r.current)
-    }
+    // FIXME: Add this once parsing can handle comparisons
+    // if r.current > r.end {
+    //     nothing()
+    // } else {
+    //  some(r.current)
+    //}
+
+    some(r.current)
 }
