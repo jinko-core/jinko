@@ -126,10 +126,10 @@ fn method_or_field(
 ///      | 'type' next IDENTIFIER next '(' named_args
 ///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
 ///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
-///      | '@' next IDENTIFIER next '(' args                                    // TODO
+///      | '@' next IDENTIFIER next '(' args
 ///
 ///      | 'extern' 'func' function_declaration ';'                             // TODO
-///      | 'return' expr                                                        // TODO
+///      | 'return' expr
 ///      | '{' next inner_block
 ///
 ///      | 'true'
@@ -161,6 +161,8 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         unit_mut_var(input)
     } else if let Ok((input, _)) = Token::at_sign(input) {
         unit_jk_inst(input)
+    } else if let Ok((input, _)) = Token::return_tok(input) {
+        unit_return(input)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
         unit_block(input)
     } else if let Ok(res) = constant(input) {
@@ -258,6 +260,13 @@ fn unit_jk_inst(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         Ok(inst) => Ok((input, Box::new(inst))),
         Err(err) => Err(NomError(err)),
     }
+}
+
+///  [ expr ]                      (* Not LL(1) but this entry is subject to change *)
+fn unit_return(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (input, expr) = opt(expr)(input)?;
+
+    Ok((input, Box::new(Return::new(expr))))
 }
 
 fn unit_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
@@ -881,6 +890,32 @@ mod tests {
     #[test]
     fn jk_inst_non_existant() {
         assert!(expr("@crab ( thing )").is_err());
+    }
+
+    #[test]
+    fn return_nothing() {
+        let (input, expr) = expr("return").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<Return>().is_some());
+    }
+
+    #[test]
+    fn return_sum() {
+        let (input, expr) = expr("return 10 + 9").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<Return>().is_some());
+    }
+
+    /// Mimic previous parsers behaviour
+    #[test]
+    #[ignore]
+    fn return_malformed() {
+        let (input, expr) = expr("return 10 +").unwrap();
+
+        assert_eq!(input, "10 +");
+        assert!(expr.downcast_ref::<Return>().is_none());
     }
 
     #[test]

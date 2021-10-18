@@ -19,7 +19,7 @@ unit = 'if' expr block next [ 'else' next block ]
      | 'test' function_declaration block
      | 'mock' function_declaration block
      | 'ext' 'func' function_declaration ';'
-     | 'return' expr
+     | 'return' [ expr ]                      (* Not LL(1) but this entry is subject to change *)
      | '{' next inner_block
      | 'true'
      | 'false'
