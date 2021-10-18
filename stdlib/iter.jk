@@ -6,5 +6,7 @@ func iter(r: Range_int) -> Iter_int {
 
 func next(iter: Iter_int) -> Maybe_int {
     // FIXME: Turn to iter.inner.current() once parsing is implemented for this
+    // FIXME: This does not advance the inner range because we have no mutability
+    // yet. So the iterators are useless for now
     current(iter.inner)
 }
