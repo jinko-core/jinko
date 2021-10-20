@@ -247,7 +247,7 @@ impl TypeCheck for Incl {
         };
 
         // Temporarily change the path of the context
-        ctx.context.set_path(Some(new_path.clone()));
+        ctx.context.set_path(Some(new_path));
 
         content.iter_mut().for_each(|instr| {
             instr.resolve_type(ctx);
@@ -255,7 +255,6 @@ impl TypeCheck for Incl {
 
         // Reset the old path before leaving the instruction
         ctx.context.set_path(old_path);
-        ctx.context.remove_included(&new_path);
 
         CheckedType::Void
     }
@@ -281,6 +280,14 @@ mod tests {
     fn include_non_existant() {
         jinko_fail! {
             incl does_not_exist_at_all;
+        };
+    }
+
+    #[test]
+    fn include_already_included() {
+        jinko! {
+            incl stdlib;
+            incl stdlib as std;
         };
     }
 }
