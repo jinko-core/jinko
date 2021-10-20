@@ -10,7 +10,6 @@ use crate::{Context, ErrKind, Error, JkInt, ObjectInstance, ToObjectInstance};
 fn find_lib(paths: &[PathBuf], lib_path: &Path) -> Result<libloading::Library, Error> {
     for dir_base in paths.iter() {
         let lib_path = PathBuf::from(dir_base).join(lib_path);
-        dbg!(&lib_path);
         if lib_path.exists() {
             if let Ok(lib) = unsafe { libloading::Library::new(lib_path) } {
                 return Ok(lib);
