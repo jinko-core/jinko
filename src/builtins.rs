@@ -35,16 +35,26 @@ fn string_concat(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
 
 fn string_display(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let s = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+    let add_newline = JkBool::from_instance(&args[1].execute(ctx).unwrap()).0;
 
-    io::stdout().lock().write_all(s.as_bytes()).unwrap();
+    print!("{}", s);
+
+    if add_newline {
+        println!()
+    }
 
     None
 }
 
 fn string_display_err(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let s = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+    let add_newline = JkBool::from_instance(&args[1].execute(ctx).unwrap()).0;
 
-    io::stderr().lock().write_all(s.as_bytes()).unwrap();
+    eprint!("{}", s);
+
+    if add_newline {
+        eprintln!()
+    }
 
     None
 }
