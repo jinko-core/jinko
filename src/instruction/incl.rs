@@ -72,52 +72,31 @@ impl Incl {
         &self,
         base: &Path,
         ctx: &mut Context,
-    ) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
-        let formatted = match self.find_include_path(base) {
-            Ok(f) => f,
-            Err(e) => {
-                ctx.error(e);
-                return None;
-            }
-        };
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), Error> {
+        let formatted = self.find_include_path(base)?;
 
         // If a source has already been included, skip it without returning
         // an error
         if ctx.is_included(&formatted) {
-            return Some((formatted, vec![]));
+            return Ok((formatted, vec![]));
         }
 
         ctx.debug("FINAL PATH", &format!("{:?}", formatted));
 
-        let input = match std::fs::read_to_string(&formatted) {
-            Ok(i) => i,
-            Err(e) => {
-                ctx.error(Error::from(e));
-                return None;
-            }
-        };
+        let input = std::fs::read_to_string(&formatted)?;
 
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty ctx
-        let (remaining_input, instructions) = match Construct::many_instructions(input.as_str()) {
-            Ok(tuple) => tuple,
-            Err(e) => {
-                ctx.error(Error::from(e));
-                return None;
-            }
-        };
+        let (remaining_input, instructions) = Construct::many_instructions(input.as_str())?;
 
         match remaining_input.len() {
             // The remaining input is empty: We parsed the whole file properly
-            0 => Some((formatted, instructions)),
-            _ => {
-                ctx.error(Error::new(ErrKind::Parsing).with_msg(format!(
-                    "error when parsing included file: {:?},\non the following input:\n{}",
-                    formatted, remaining_input
-                )));
-                None
-            }
+            0 => Ok((formatted, instructions)),
+            _ => Err(Error::new(ErrKind::Parsing).with_msg(format!(
+                "error when parsing included file: {:?},\non the following input:\n{}",
+                formatted, remaining_input
+            ))),
         }
     }
 
@@ -126,13 +105,19 @@ impl Incl {
         &self,
         base: &Path,
         ctx: &mut Context,
-    ) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), Error> {
         self.inner_load(base, ctx)
     }
 
     /// Try to load code from jinko's installation path
-    fn _load_jinko_path(&self) -> Option<Vec<Box<dyn Instruction>>> {
-        todo!()
+    fn load_jinko_path(
+        &self,
+        ctx: &mut Context,
+    ) -> Result<(PathBuf, Vec<Box<dyn Instruction>>), Error> {
+        let home = std::env::var("HOME")?;
+
+        let base = PathBuf::from(format!("{}/.jinko/libs/", home));
+        self.inner_load(&base, ctx)
     }
 
     /// Load the source code located at self.path
@@ -140,7 +125,21 @@ impl Incl {
     /// There are two ways to look for a source file: First in the includer's path, and
     /// if not available in jinko's installation directory.
     fn load(&self, base: &Path, ctx: &mut Context) -> Option<(PathBuf, Vec<Box<dyn Instruction>>)> {
-        self.load_relative(base, ctx)
+        // If we can load from the current path, we return early
+        let relative_err = match self.load_relative(base, ctx) {
+            Ok(tuple) => return Some(tuple),
+            Err(e) => e,
+        };
+
+        let jk_path_err = match self.load_jinko_path(ctx) {
+            Ok(tuple) => return Some(tuple),
+            Err(e) => e,
+        };
+
+        ctx.error(relative_err);
+        ctx.error(jk_path_err);
+
+        None
     }
 
     /// Format the correct prefix to include content as. This depends on the presence
@@ -202,6 +201,7 @@ impl Instruction for Incl {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        eprintln!("in exec {}", self.print());
         ctx.debug("INCL ENTER", self.print().as_str());
 
         let base = self.get_base(ctx);
@@ -237,6 +237,7 @@ impl TypeCheck for Incl {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
         // FIXME: This is a lot of code in common with execute()
         let base = self.get_base(ctx.context);
+        eprintln!("in typechecker {}", self.print());
 
         let old_path = ctx.context.path().cloned();
 
@@ -263,10 +264,23 @@ impl TypeCheck for Incl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn tc_typecheck_stdlib() {
         let mut ctx = Context::new();
         ctx.execute().unwrap();
+    }
+
+    #[test]
+    fn include_stdlib() {
+        jinko! {};
+    }
+
+    #[test]
+    fn include_non_existant() {
+        jinko_fail! {
+            incl does_not_exist_at_all;
+        };
     }
 }
