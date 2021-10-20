@@ -1,9 +1,9 @@
 //! The Loop instruction is used for repeating instructions. They can be of three
 //! different kinds, `for`, `while` or `loop`.
 
-use crate::instruction::{Block, InstrKind, Instruction, Var};
-use crate::typechecker::TypeCtx;
-use crate::{typechecker::CheckedType, Context, ErrKind, Error, ObjectInstance, TypeCheck};
+use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
+use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, FromObjectInstance, JkBool, ObjectInstance, TypeCheck};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
@@ -63,7 +63,7 @@ impl Instruction for Loop {
                 }
                 ctx.debug_step("WHILE EXIT");
             }
-            LoopKind::For(_var, _range) => {
+            LoopKind::For(var, range_expression) => {
                 // FIXME:
                 //
                 // In order to have a correct for implementation, jinko needs ranges,
@@ -77,32 +77,133 @@ impl Instruction for Loop {
                 // that that result, as a boolean, returns true. If it does, execute the
                 // body. If it does not, break from the for.
 
-                ctx.error(
-                    Error::new(ErrKind::Context)
-                        .with_msg("for loops are currently unimplemented".to_string()),
-                );
-                return None;
+                // Let's break down the implementation for the following loop
+                // ```
+                // for i in range(0, 10) { /* exec() */ }
+                // ```
 
-                // FIXME: Rework that code
-                // ctx.debug_step("FOR ENTER");
-                // let var_name = var.name().to_owned();
-                // ctx.scope_enter();
+                // We enter a scope to declare our internal variables
+                ctx.scope_enter();
 
-                // ctx.add_variable(var.clone())?;
+                // We create new variables in the scope, with the required iterator's
+                // name from the user. We can create these variables with special names
+                // since we are only using them from the interpreter. Here, we prefix
+                // them with a plus sign to make sure they do not interact with the user.
+                // ```
+                // +inner = range(0, 10);
+                // +iterator = iter(+inner);
+                //
+                // +maybe_value = value(+iterator);
+                // if !+maybe_value.is_some() { break }
+                //
+                // i = +maybe_iter_value.unpack(); // This is our <iter_value>
+                //
+                // // We can now do our first execution, and then repeat part of the
+                // // above process
+                // /* exec() */
+                //
+                // // FIXME: This needs to change
+                // +iterator = next(+iterator);
+                // +maybe_value = current(+iterator);
+                // if !+maybe_value.is_some() { break }
+                //
+                // i = +maybe_iter_value.unpack();
+                // /* exec() */
+                // ```
 
-                // loop {
-                //     range.execute(ctx)?;
+                // Let's create our names
+                let inner_name = String::from("+inner");
+                let iterator_name = String::from("+iterator");
+                let maybe_name = String::from("+maybe_value");
 
-                //     // We can unwrap since we added the variable right before
-                //     if !ctx.get_variable(&var_name).unwrap().as_bool() {
-                //         break;
-                //     }
+                // Now, let's create our variables
+                let mut inner = Var::new(inner_name);
+                let mut iterator = Var::new(iterator_name);
+                let mut maybe = Var::new(maybe_name);
+                let mut iter_value = Var::new(var.name().to_owned());
 
-                //     self.block.execute(ctx)?;
-                // }
+                // We execute the iterable expression
+                // `+inner = range(0, 10)`
+                inner.set_instance(range_expression.execute(ctx).unwrap());
+                ctx.add_variable(inner.clone()).unwrap();
 
-                // ctx.scope_exit();
-                // ctx.debug_step("FOR EXIT");
+                // We construct the iterator from the iterable expression
+                // `+iterator = iter(+inner)`
+                let mut iter_constructor = FunctionCall::new(String::from("iter"));
+                iter_constructor.add_arg(Box::new(inner.clone()));
+                iterator.set_instance(iter_constructor.execute(ctx).unwrap_or_else(|| {
+                    ctx.emit_errors();
+                    ObjectInstance::empty() // FIXME: Invalid
+                }));
+
+                // We fetch the first value from the iterator: `value(+iterator)`
+                // This call will be reused multiple times!
+                let mut iterator_value = FunctionCall::new(String::from("value"));
+                iterator_value.add_arg(Box::new(iterator.clone()));
+
+                // We check if `+maybe_value` contains `Some` or `Nothing`: `is_some(+maybe_value)`
+                // This call will be reused multiple times!
+                let mut maybe_is_some = FunctionCall::new(String::from("is_some"));
+                maybe_is_some.add_arg(Box::new(maybe.clone()));
+                // let maybe_is_some = |ctx| {
+                //     let instance = maybe_is_some.execute(ctx).unwrap();
+                //     JkBool::from_instance(&instance).0.clone()
+                // };
+
+                // We advance the iterator: `next(+iterator)`
+                // This call will be reused multiple times!
+                let mut iterator_next = FunctionCall::new(String::from("next"));
+                iterator_next.add_arg(Box::new(iterator.clone()));
+
+                let mut maybe_unpack = FunctionCall::new(String::from("unpack"));
+                maybe_unpack.add_arg(Box::new(maybe.clone()));
+
+                // Now we can declare our variables in the context
+                ctx.add_variable(iterator.clone()).unwrap();
+                ctx.add_variable(maybe.clone()).unwrap();
+                ctx.add_variable(iter_value.clone()).unwrap();
+
+                maybe.set_instance(iterator_value.execute(ctx).unwrap_or_else(|| {
+                    ctx.emit_errors();
+                    ObjectInstance::empty() // FIXME: Invalid
+                }));
+                ctx.replace_variable(maybe.clone()).unwrap();
+
+                let maybe_is_nothing = {
+                    let instance = maybe_is_some.execute(ctx).unwrap();
+                    !JkBool::from_instance(&instance).0
+                };
+
+                if maybe_is_nothing {
+                    ctx.scope_exit();
+                    return None;
+                }
+
+                iter_value.set_instance(maybe_unpack.execute(ctx).unwrap());
+                ctx.replace_variable(iter_value.clone()).unwrap();
+
+                loop {
+                    self.block.execute(ctx);
+
+                    iterator.set_instance(iterator_next.execute(ctx).unwrap());
+                    ctx.replace_variable(iterator.clone()).unwrap();
+                    maybe.set_instance(iterator_value.execute(ctx).unwrap());
+                    ctx.replace_variable(maybe.clone()).unwrap();
+
+                    let maybe_is_nothing = {
+                        let instance = maybe_is_some.execute(ctx).unwrap();
+                        !JkBool::from_instance(&instance).0
+                    };
+
+                    if maybe_is_nothing {
+                        break;
+                    }
+
+                    iter_value.set_instance(maybe_unpack.execute(ctx).unwrap());
+                    ctx.replace_variable(iter_value.clone()).unwrap();
+                }
+
+                ctx.scope_exit();
             }
         }
 
@@ -122,6 +223,7 @@ mod tests {
     use super::*;
     use crate::instruction::FunctionCall;
     use crate::jinko;
+    use crate::{JkInt, ToObjectInstance};
 
     #[test]
     fn pretty_print_loop() {
@@ -160,5 +262,17 @@ mod tests {
 
             l2 = loop { i = i + 1 }
         };
+    }
+
+    #[test]
+    fn execute_for_loop_correctly() {
+        let ctx = jinko! {
+            x = for i in 0.range(10) {
+                i
+            };
+        };
+
+        let x = ctx.get_variable("x").unwrap();
+        assert_eq!(JkInt::from(9).to_instance(), x.instance());
     }
 }
