@@ -277,6 +277,7 @@ impl Context {
         });
         entry_point.last().map(|l| l.resolve_type(&mut ctx));
 
+        self.included.clear();
         match self.error_handler.has_errors() {
             true => {
                 self.emit_errors();
