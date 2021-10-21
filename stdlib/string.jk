@@ -2,6 +2,8 @@ ext func __builtin_string_len(s: string) -> int;
 ext func __builtin_string_concat(a: string, b: string) -> string;
 ext func __builtin_string_display(s: string);
 ext func __builtin_string_display_err(s: string);
+ext func __builtin_string_is_empty(s: string) -> bool;
+ext func __builtin_string_equals(lhs: string, rhs: string) -> bool;
 
 /// Get the length of a given string
 func len(s: string) -> int {
@@ -21,4 +23,14 @@ func display(s: string) {
 /// Display a string on stdout
 func display_err(s: string) {
     s.__builtin_string_display_err()
+}
+
+// FIXME: Once comparison operators are implemented, return `s.len() == 0`
+func is_empty(s: string) -> bool {
+    s.__builtin_string_is_empty()
+}
+
+// FIXME: This should maybe removed in favor of `==`
+func equals(lhs: string, rhs: string) -> bool {
+    lhs.__builtin_string_equals(rhs)
 }
