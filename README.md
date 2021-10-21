@@ -23,12 +23,12 @@ Feel free to come and chat about jinko on [matrix](https://matrix.to/#/#jinko-la
 
 ## Programming in jinko
 
-The lib standard is currently inexistant. `0.1.0` serves as a staple release, in
+The lib standard is currently inexistent. `0.1.0` serves as a staple release, in
 order to validate the design and the possibilities of the language.
 
 ## Installation
 
-For now, installing jinko requires to use cargo's included package manager:
+For now, installing jinko requires the use of cargo's included package manager:
 
 `cargo install --git https://github.com/cohenarthur/jinko`
 will net you the latest version from git, using the `master` branch. This branch should
