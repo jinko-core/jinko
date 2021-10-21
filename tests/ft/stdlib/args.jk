@@ -1,0 +1,3 @@
+args = Args { };
+
+args.get(0)

@@ -39,3 +39,10 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/stdlib/range/advance.jk"
+  - name: "Test Args fetching"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/args.jk"
+      - "hey there"
+    stdout:
+      "hey there"
