@@ -201,7 +201,6 @@ impl Instruction for Incl {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        eprintln!("in exec {}", self.print());
         ctx.debug("INCL ENTER", self.print().as_str());
 
         let base = self.get_base(ctx);
@@ -237,7 +236,6 @@ impl TypeCheck for Incl {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
         // FIXME: This is a lot of code in common with execute()
         let base = self.get_base(ctx.context);
-        eprintln!("in typechecker {}", self.print());
 
         let old_path = ctx.context.path().cloned();
 
