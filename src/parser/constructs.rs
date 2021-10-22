@@ -128,7 +128,7 @@ fn method_or_field(
 ///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
 ///      | '@' next IDENTIFIER next '(' args
 ///
-///      | 'extern' 'func' function_declaration ';'                             // TODO
+///      | 'extern' 'func' function_declaration ';'
 ///      | 'return' expr
 ///      | '{' next inner_block
 ///
@@ -161,6 +161,8 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         unit_mut_var(input)
     } else if let Ok((input, _)) = Token::at_sign(input) {
         unit_jk_inst(input)
+    } else if let Ok((input, _)) = Token::ext_tok(input) {
+        unit_extern(input)
     } else if let Ok((input, _)) = Token::return_tok(input) {
         unit_return(input)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
@@ -260,6 +262,15 @@ fn unit_jk_inst(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         Ok(inst) => Ok((input, Box::new(inst))),
         Err(err) => Err(NomError(err)),
     }
+}
+
+/// 'func' function_declaration ';'
+fn unit_extern(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, mut dec) = delimited(Token::func_tok, func_declaration, Token::semicolon)(input)?;
+
+    dec.set_kind(FunctionKind::Ext);
+    Ok((input, Box::new(dec)))
 }
 
 ///  [ expr ]                      (* Not LL(1) but this entry is subject to change *)
@@ -890,6 +901,27 @@ mod tests {
     #[test]
     fn jk_inst_non_existant() {
         assert!(expr("@crab ( thing )").is_err());
+    }
+
+    #[test]
+    fn extern_no_args() {
+        let (input, expr) = expr("ext func exit () ;").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<FunctionDec>().is_some());
+    }
+
+    #[test]
+    fn extern_many_args() {
+        let (input, expr) = expr("ext func memcpy(dst: char, src: char, n: int);").unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<FunctionDec>().is_some());
+    }
+
+    #[test]
+    fn extern_missing_semicolon() {
+        assert!(expr("ext func memcpy(dst: char , n: int) ").is_err());
     }
 
     #[test]
