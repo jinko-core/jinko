@@ -18,3 +18,6 @@ linefeed = "0.6"
 downcast-rs = "1.2"
 anyhow = "1.0"
 libloading = "0.7"
+
+[dev-dependencies]
+libc = "0.2"
