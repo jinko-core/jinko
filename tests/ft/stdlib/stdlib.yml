@@ -31,3 +31,8 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/stdlib/range/advance.jk"
+  - name: "Test exit() function"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/exit.jk"
+    exit_code: 42

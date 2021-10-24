@@ -60,6 +60,14 @@ fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     None
 }
 
+/// Exit the interpreter with a given exit code
+fn exit(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let exit_code = JkInt::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    // FIXME: Is this cast valid?
+    std::process::exit(exit_code as i32);
+}
+
 impl Builtins {
     fn add(&mut self, name: &'static str, builtin_fn: BuiltinFn) {
         self.functions.insert(String::from(name), builtin_fn);
@@ -76,6 +84,7 @@ impl Builtins {
         builtins.add("__builtin_string_display", string_display);
         builtins.add("__builtin_string_display_err", string_display_err);
         builtins.add("__builtin_ffi_link_with", ffi_link_with);
+        builtins.add("__builtin_exit", exit);
 
         builtins
     }
