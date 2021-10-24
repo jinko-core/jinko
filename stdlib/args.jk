@@ -4,7 +4,7 @@ ext func __builtin_arg_get(arg_index: int) -> string;
 type Args(__fixme: int);
 
 // FIXME: This should do more
-func args_parse() -> Args {
+func args() -> Args {
     Args { __fixme = 0 }
 }
 
