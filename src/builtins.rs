@@ -146,4 +146,11 @@ mod tests {
             __builtin_ffi_link_with("tests/fixtures/clib/lib.so");
         };
     }
+
+    #[test]
+    fn t_args_builtins_are_valid() {
+        jinko! {
+            __builtin_arg_get(158);
+        };
+    }
 }
