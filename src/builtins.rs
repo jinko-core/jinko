@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use crate::ffi;
 use crate::instance::{FromObjectInstance, ToObjectInstance};
-use crate::{Context, Instruction, JkInt, JkString, ObjectInstance};
+use crate::{Context, Instruction, JkBool, JkInt, JkString, ObjectInstance};
 
 type Args = Vec<Box<dyn Instruction>>;
 type BuiltinFn = fn(&mut Context, Args) -> Option<ObjectInstance>;
@@ -49,6 +49,19 @@ fn string_display_err(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     None
 }
 
+fn string_is_empty(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let s = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    Some(JkBool::from(s.is_empty()).to_instance())
+}
+
+fn string_equals(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let lhs = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+    let rhs = JkString::from_instance(&args[1].execute(ctx).unwrap()).0;
+
+    Some(JkBool::from(lhs == rhs).to_instance())
+}
+
 /// Link with a given library at runtime
 fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let lib_path = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
@@ -58,6 +71,21 @@ fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     }
 
     None
+}
+
+// Get an argument from the argument vector at a certain index
+fn arg_get(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let idx = JkInt::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    let args = ctx.args();
+
+    // FIXME: Is this cast valid?
+    let result_string = args
+        .get(idx as usize)
+        .map(|s| s.to_owned())
+        .unwrap_or_default();
+
+    Some(JkString::from(result_string).to_instance())
 }
 
 impl Builtins {
@@ -75,7 +103,10 @@ impl Builtins {
         builtins.add("__builtin_string_concat", string_concat);
         builtins.add("__builtin_string_display", string_display);
         builtins.add("__builtin_string_display_err", string_display_err);
+        builtins.add("__builtin_string_is_empty", string_is_empty);
+        builtins.add("__builtin_string_equals", string_equals);
         builtins.add("__builtin_ffi_link_with", ffi_link_with);
+        builtins.add("__builtin_arg_get", arg_get);
 
         builtins
     }
@@ -106,6 +137,8 @@ mod tests {
             __builtin_string_concat("file", ".jk");
             __builtin_string_display("to display");
             __builtin_string_display_err("to display on err");
+            __builtin_string_equals("jin", "ko");
+            __builtin_string_is_empty("jinko");
         };
     }
 
@@ -113,6 +146,13 @@ mod tests {
     fn t_ffi_builtins_are_valid() {
         jinko! {
             __builtin_ffi_link_with("tests/fixtures/clib/lib.so");
+        };
+    }
+
+    #[test]
+    fn t_args_builtins_are_valid() {
+        jinko! {
+            __builtin_arg_get(158);
         };
     }
 }

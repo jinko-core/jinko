@@ -1,0 +1,1 @@
+"jinko".equals(concat("jin", "ko")) // returns true

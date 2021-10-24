@@ -1,0 +1,1 @@
+"jinko".is_empty() // returns false

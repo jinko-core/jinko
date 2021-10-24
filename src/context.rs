@@ -42,6 +42,9 @@ pub struct Context {
     /// We need to keep track of its path in order to load files relative to this one
     path: Option<PathBuf>,
 
+    /// Arguments given to the jinko program
+    args: Vec<String>,
+
     /// Contains the scopes of the context, in which are variables and functions
     scope_map: ScopeMap<Var, Rc<FunctionDec>, Rc<TypeDec>>,
 
@@ -99,6 +102,7 @@ impl Context {
             debug_mode: false,
             entry_point: Self::new_entry(),
             path: None,
+            args: Vec::new(),
             scope_map: ScopeMap::new(),
             builtins: Builtins::new(),
             tests: HashMap::new(),
@@ -120,6 +124,16 @@ impl Context {
     /// Get a reference to a context's source path
     pub fn path(&self) -> Option<&PathBuf> {
         self.path.as_ref()
+    }
+
+    /// Get a reference to the arguments to give to the program
+    pub fn args(&self) -> &Vec<String> {
+        &self.args
+    }
+
+    /// Set the arguments to give to the program
+    pub fn set_args(&mut self, args: Vec<String>) {
+        self.args = args;
     }
 
     /// Get a reference to a context's source path

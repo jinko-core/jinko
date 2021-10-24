@@ -8,7 +8,15 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/stdlib/string/concat.jk"
-    stdout: "jinko.jk"
+  - name: "Test str.is_empty()"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/string/is_empty.jk"
+    exit_code: 1
+  - name: "Test str.equals()"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/string/equals.jk"
   - name: "Test Maybe is a valid type"
     binary: "target/debug/jinko"
     args:
@@ -31,3 +39,9 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/stdlib/range/advance.jk"
+  - name: "Test Args fetching"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/args.jk"
+      - "hey there"
+    exit_code: 9

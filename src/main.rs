@@ -64,6 +64,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
 
     let mut ctx = Parser::parse(&input)?;
     ctx.set_path(Some(file.to_owned()));
+    ctx.set_args(args.project_args());
     ctx.set_debug(args.debug());
 
     ctx.emit_errors();
