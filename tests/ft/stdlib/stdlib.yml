@@ -45,3 +45,8 @@ tests:
       - "tests/ft/stdlib/args.jk"
       - "hey there"
     exit_code: 9
+  - name: "Test exit() function"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/exit.jk"
+    exit_code: 42
