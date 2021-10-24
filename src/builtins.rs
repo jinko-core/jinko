@@ -77,11 +77,13 @@ fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
 fn arg_get(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let idx = JkInt::from_instance(&args[0].execute(ctx).unwrap()).0;
 
-    // FIXME: Do not fetch arguments continuously
-    let mut args = std::env::args();
+    let args = ctx.args();
 
     // FIXME: Is this cast valid?
-    let result_string = args.nth(idx as usize).unwrap_or(String::new());
+    let result_string = args
+        .get(idx as usize)
+        .map(|s| s.to_owned())
+        .unwrap_or_default();
 
     Some(JkString::from(result_string).to_instance())
 }

@@ -18,6 +18,9 @@ pub struct Args {
 
     #[structopt(parse(from_os_str))]
     input: Option<PathBuf>,
+
+    #[structopt()]
+    arguments: Vec<String>,
 }
 
 impl Args {
@@ -47,6 +50,11 @@ impl Args {
     /// Is the context launched in debug mode
     pub fn debug(&self) -> bool {
         self.debug
+    }
+
+    /// Arguments given to the program
+    pub fn project_args(&self) -> Vec<String> {
+        self.arguments.clone()
     }
 
     /// File input given to the context
