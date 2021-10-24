@@ -184,7 +184,12 @@ impl nom::error::ParseError<&str> for Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.kind.as_str())
+        write!(f, "{}", self.kind.as_str())?;
+        if self.msg.is_some() {
+            write!(f, ": {}", self.msg.as_ref().unwrap())?;
+        }
+
+        Ok(())
     }
 }
 

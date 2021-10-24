@@ -1,7 +1,6 @@
 //! This module contains all builtin functions declared in the jinko interpreter
 
 use std::collections::HashMap;
-use std::io::{self, Write};
 use std::path::PathBuf;
 
 use crate::ffi;
