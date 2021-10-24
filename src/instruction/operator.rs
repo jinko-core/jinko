@@ -9,6 +9,8 @@ pub enum Operator {
     Sub,
     Mul,
     Div,
+    Lt,
+    Gt,
     LeftParenthesis,
     RightParenthesis,
 }
@@ -21,6 +23,8 @@ impl Operator {
             "-" => Operator::Sub,
             "*" => Operator::Mul,
             "/" => Operator::Div,
+            "<" => Operator::Lt,
+            ">" => Operator::Gt,
             "(" => Operator::LeftParenthesis,
             ")" => Operator::RightParenthesis,
             _ => unreachable!("Invalid operator: {}", op_str),
@@ -34,6 +38,8 @@ impl Operator {
             Operator::Sub => "-",
             Operator::Mul => "*",
             Operator::Div => "/",
+            Operator::Lt => "<",
+            Operator::Gt => ">",
             Operator::LeftParenthesis => "(",
             Operator::RightParenthesis => ")",
         }
@@ -45,6 +51,7 @@ impl Operator {
             // Classic SY operator precedence
             Operator::Mul | Operator::Div => 3,
             Operator::Add | Operator::Sub => 2,
+            Operator::Lt | Operator::Gt => 1,
 
             // Special operators. They don't really have a precedence value, and it's
             // never used

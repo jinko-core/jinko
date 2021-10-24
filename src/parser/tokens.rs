@@ -18,7 +18,7 @@ const RESERVED_KEYWORDS: [&str; 14] = [
     "as", "return",
 ];
 
-const OPERATORS: [char; 6] = ['+', '-', '*', '/', '(', ')'];
+const OPERATORS: &[char] = &['+', '-', '*', '/', '(', ')', '<', '>'];
 
 pub struct Token;
 
@@ -194,6 +194,14 @@ impl Token {
 
     pub fn right_parenthesis(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, ")")
+    }
+
+    pub fn lt(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "<")
+    }
+
+    pub fn gt(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, ">")
     }
 
     pub fn _left_shift(input: &str) -> ParseResult<&str, &str> {

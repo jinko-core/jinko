@@ -32,6 +32,8 @@ impl ShuntingYard {
             Token::sub,
             Token::mul,
             Token::div,
+            Token::lt,
+            Token::gt,
             Token::left_parenthesis,
             Token::right_parenthesis,
         ))(input)?;
@@ -242,6 +244,21 @@ mod tests {
         );
     }
 
+    fn sy_assert_bool(input: &str, value: bool) {
+        use crate::instance::ToObjectInstance;
+        use crate::Context;
+
+        let boxed_output = ShuntingYard::parse(input).unwrap().1;
+        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
+
+        let mut i = Context::new();
+
+        assert_eq!(
+            output.execute(&mut i).unwrap(),
+            JkBool::from(value).to_instance()
+        );
+    }
+
     #[test]
     fn t_sy_execute_natural_order() {
         sy_assert("4 + 7 + 3", 14);
@@ -302,6 +319,26 @@ mod tests {
         sy_assert(
             "1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2",
             1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2,
+        );
+    }
+
+    #[test]
+    fn t_sy_comparison_simple_int() {
+        sy_assert_bool("1 < 4", 1 < 4);
+        sy_assert_bool("4 < 1", 4 < 1);
+    }
+
+    #[test]
+    fn t_sy_comparison_simple_float() {
+        sy_assert_bool("1.0 < 4.0", 1.0 < 4.0);
+        sy_assert_bool("4.0 < 1.0", 4.0 < 1.0);
+    }
+
+    #[test]
+    fn t_sy_comparison_precedence() {
+        sy_assert_bool(
+            "1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2 < 45",
+            1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2 < 45,
         );
     }
 
