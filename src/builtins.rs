@@ -164,4 +164,26 @@ mod tests {
             __builtin_arg_get(158);
         };
     }
+
+    #[test]
+    fn t_exit_builtin_is_valid() {
+        use libc::{c_int, fork, waitpid, WEXITSTATUS};
+
+        let pid = unsafe { fork() };
+        if pid == 0 {
+            jinko! {
+                __builtin_exit(42);
+            };
+
+            panic!("We should have exited by now");
+        }
+
+        let mut status: c_int = 0;
+        let status_ptr: *mut c_int = &mut status;
+        unsafe {
+            waitpid(pid, status_ptr, 0);
+        }
+
+        assert_eq!(WEXITSTATUS(status), 42);
+    }
 }
