@@ -1,7 +1,12 @@
 ext func __builtin_arg_get(arg_index: int) -> string;
 
 // FIXME: This should become an empty type
-type Args();
+type Args(__fixme: int);
+
+// FIXME: This should do more
+func args_parse() -> Args {
+    Args { __fixme = 0 }
+}
 
 // FIXME: This should return a Maybe<string> once that is implemented.
 // For now, this returns an empty string

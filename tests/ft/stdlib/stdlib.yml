@@ -44,5 +44,4 @@ tests:
     args:
       - "tests/ft/stdlib/args.jk"
       - "hey there"
-    stdout:
-      "hey there"
+    exit_code: 9
