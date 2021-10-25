@@ -256,14 +256,16 @@ mod tests {
 
     #[test]
     fn valid_for_block() {
-        jinko! {
+        let ctx = jinko! {
             mut counter = 0;
             for i in range(0, 15) {
                 counter = counter + 1;
             }
-
-            // FIXME: Add assertion here
         };
+
+        // FIXME: Add assertion once #187 is fixed
+        // let counter = ctx.get_variable("counter").unwrap();
+        // assert_eq!(counter.instance(), JkInt::from(15).to_instance());
     }
 
     #[test]
