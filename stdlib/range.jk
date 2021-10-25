@@ -15,7 +15,8 @@ func advance(r: Range_int) -> Range_int {
 
 func current(r: Range_int) -> Maybe_int {
     old_current = r.current;
-    old_end = r.end;
+    mut old_end = r.end;
+    old_end = old_end - 1;
     gone_past = old_current > old_end;
     if gone_past {
         nothing()
