@@ -153,8 +153,8 @@ mod tests {
         jinko! {
             __builtin_string_len("jk");
             __builtin_string_concat("file", ".jk");
-            __builtin_string_display("to display");
-            __builtin_string_display_err("to display on err");
+            __builtin_string_display("to display", false);
+            __builtin_string_display_err("to display on err", true);
             __builtin_string_equals("jin", "ko");
             __builtin_string_is_empty("jinko");
         };
