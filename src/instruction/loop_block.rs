@@ -263,4 +263,16 @@ mod tests {
             l2 = loop { i = i + 1 }
         };
     }
+
+    #[test]
+    fn valid_for_block() {
+        jinko! {
+            mut counter = 0;
+            for i in range(0, 15) {
+                counter = counter + 1;
+            }
+
+            // FIXME: Add assertion here
+        };
+    }
 }
