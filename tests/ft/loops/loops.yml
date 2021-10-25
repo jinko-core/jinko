@@ -1,0 +1,6 @@
+tests:
+  - name: "Iterate over range 10 times"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/loops/for_loop.jk"
+    stdout: "jkjkjk"
