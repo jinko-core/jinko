@@ -6,3 +6,11 @@ incl iter
 incl ffi
 incl shell
 incl args
+
+ext func __builtin_exit(exit_code: int);
+
+// FIXME: Add a default value argument here, which defaults to 0
+// func exit(code: int = 0) {
+func exit(code: int) {
+    __builtin_exit(code)
+}
