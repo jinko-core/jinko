@@ -18,6 +18,9 @@ func current(r: Range_int) -> Maybe_int {
     mut old_end = r.end;
     old_end = old_end - 1;
     gone_past = old_current > old_end;
+
+    // FIXME: Once #320 is fixed, replace
+    // if r.current > r.end - 1 {
     if gone_past {
         nothing()
     } else {
