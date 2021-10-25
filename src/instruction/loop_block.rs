@@ -263,16 +263,4 @@ mod tests {
             l2 = loop { i = i + 1 }
         };
     }
-
-    #[test]
-    fn execute_for_loop_correctly() {
-        let ctx = jinko! {
-            x = for i in 0.range(10) {
-                i
-            };
-        };
-
-        let x = ctx.get_variable("x").unwrap();
-        assert_eq!(JkInt::from(9).to_instance(), x.instance());
-    }
 }
