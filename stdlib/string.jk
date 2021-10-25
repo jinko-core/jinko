@@ -2,6 +2,9 @@ ext func __builtin_string_len(s: string) -> int;
 ext func __builtin_string_concat(a: string, b: string) -> string;
 ext func __builtin_string_is_empty(s: string) -> bool;
 ext func __builtin_string_equals(lhs: string, rhs: string) -> bool;
+
+// FIXME: Remove `add_newline` parameter once strings with the \n character
+// are handled correctly #323
 ext func __builtin_string_display(s: string, add_newline: bool);
 ext func __builtin_string_display_err(s: string, add_newline: bool);
 
