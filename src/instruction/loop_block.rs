@@ -89,7 +89,8 @@ impl Instruction for Loop {
                 // // above process
                 // /* exec() */
                 //
-                // // FIXME: This needs to change
+                // // FIXME: This needs to change. Ideally, we'd want to mutate
+                // the `+iterator` variable
                 // +iterator = next(+iterator);
                 // +maybe_value = current(+iterator);
                 // if !+maybe_value.is_some() { break }
