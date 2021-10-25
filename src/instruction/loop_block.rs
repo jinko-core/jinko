@@ -131,10 +131,7 @@ impl Instruction for Loop {
                 // `+iterator = iter(+inner)`
                 let mut iter_constructor = FunctionCall::new(String::from("iter"));
                 iter_constructor.add_arg(Box::new(inner.clone()));
-                iterator.set_instance(iter_constructor.execute(ctx).unwrap_or_else(|| {
-                    ctx.emit_errors();
-                    ObjectInstance::empty() // FIXME: Invalid
-                }));
+                iterator.set_instance(iter_constructor.execute(ctx).unwrap());
 
                 // We fetch the first value from the iterator: `value(+iterator)`
                 // This call will be reused multiple times!
@@ -145,10 +142,6 @@ impl Instruction for Loop {
                 // This call will be reused multiple times!
                 let mut maybe_is_some = FunctionCall::new(String::from("is_some"));
                 maybe_is_some.add_arg(Box::new(maybe.clone()));
-                // let maybe_is_some = |ctx| {
-                //     let instance = maybe_is_some.execute(ctx).unwrap();
-                //     JkBool::from_instance(&instance).0.clone()
-                // };
 
                 // We advance the iterator: `next(+iterator)`
                 // This call will be reused multiple times!
@@ -163,10 +156,7 @@ impl Instruction for Loop {
                 ctx.add_variable(maybe.clone()).unwrap();
                 ctx.add_variable(iter_value.clone()).unwrap();
 
-                maybe.set_instance(iterator_value.execute(ctx).unwrap_or_else(|| {
-                    ctx.emit_errors();
-                    ObjectInstance::empty() // FIXME: Invalid
-                }));
+                maybe.set_instance(iterator_value.execute(ctx).unwrap());
                 ctx.replace_variable(maybe.clone()).unwrap();
 
                 let maybe_is_nothing = {
@@ -273,6 +263,14 @@ mod tests {
             }
 
             // FIXME: Add assertion here
+        };
+    }
+
+    #[test]
+    fn valid_for_block_without_execution() {
+        jinko! {
+            for i in range(0, 0) {
+            }
         };
     }
 }
