@@ -64,19 +64,6 @@ impl Instruction for Loop {
                 ctx.debug_step("WHILE EXIT");
             }
             LoopKind::For(var, range_expression) => {
-                // FIXME:
-                //
-                // In order to have a correct for implementation, jinko needs ranges,
-                // iterators, which implies the need for options, which implies the need
-                // for a standard library, which implies the need for code inclusion, etc
-                // etc etc... All of that is the goal of the 0.1.1 release.
-                //
-                // A possible implementation would be to execute the range, assign it
-                // to the var, and check that var is a valid iterator. For example,
-                // by calling `Iter::ok(var)` (whatever the API might be) and checking
-                // that that result, as a boolean, returns true. If it does, execute the
-                // body. If it does not, break from the for.
-
                 // Let's break down the implementation for the following loop
                 // ```
                 // for i in range(0, 10) { /* exec() */ }
