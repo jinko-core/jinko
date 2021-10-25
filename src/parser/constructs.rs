@@ -1360,6 +1360,12 @@ mod tests {
     }
 
     #[test]
+    fn t_comparison_op_valid() {
+        assert!(Construct::binary_op("a <   12 ").is_ok());
+        assert!(Construct::binary_op("some() > 12.1").is_ok());
+    }
+
+    #[test]
     fn t_binary_op_invalid() {
         assert!(Construct::binary_op("a ? 12").is_err());
     }
