@@ -1,9 +1,12 @@
 ext func __builtin_string_len(s: string) -> int;
 ext func __builtin_string_concat(a: string, b: string) -> string;
-ext func __builtin_string_display(s: string);
-ext func __builtin_string_display_err(s: string);
 ext func __builtin_string_is_empty(s: string) -> bool;
 ext func __builtin_string_equals(lhs: string, rhs: string) -> bool;
+
+// FIXME: Remove `add_newline` parameter once strings with the \n character
+// are handled correctly #323
+ext func __builtin_string_display(s: string, add_newline: bool);
+ext func __builtin_string_display_err(s: string, add_newline: bool);
 
 /// Get the length of a given string
 func len(s: string) -> int {
@@ -16,13 +19,23 @@ func concat(lhs: string, rhs: string) -> string {
 }
 
 /// Display a string on stdout
-func display(s: string) {
-    s.__builtin_string_display()
+func print(s: string) {
+    s.__builtin_string_display(false)
 }
 
-/// Display a string on stdout
-func display_err(s: string) {
-    s.__builtin_string_display_err()
+/// Display a string and a newline on stdout
+func println(s: string) {
+    s.__builtin_string_display(true)
+}
+
+/// Display a string on stderr
+func print_err(s: string) {
+    s.__builtin_string_display_err(false)
+}
+
+/// Display a string and a newline on stderr
+func println_err(s: string) {
+    s.__builtin_string_display_err(true)
 }
 
 // FIXME: Once comparison operators are implemented, return `s.len() == 0`

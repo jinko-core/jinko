@@ -1,7 +1,6 @@
 //! This module contains all builtin functions declared in the jinko interpreter
 
 use std::collections::HashMap;
-use std::io::{self, Write};
 use std::path::PathBuf;
 
 use crate::ffi;
@@ -35,16 +34,26 @@ fn string_concat(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
 
 fn string_display(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let s = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+    let add_newline = JkBool::from_instance(&args[1].execute(ctx).unwrap()).0;
 
-    io::stdout().lock().write_all(s.as_bytes()).unwrap();
+    print!("{}", s);
+
+    if add_newline {
+        println!()
+    }
 
     None
 }
 
 fn string_display_err(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let s = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+    let add_newline = JkBool::from_instance(&args[1].execute(ctx).unwrap()).0;
 
-    io::stderr().lock().write_all(s.as_bytes()).unwrap();
+    eprint!("{}", s);
+
+    if add_newline {
+        eprintln!()
+    }
 
     None
 }
@@ -144,8 +153,8 @@ mod tests {
         jinko! {
             __builtin_string_len("jk");
             __builtin_string_concat("file", ".jk");
-            __builtin_string_display("to display");
-            __builtin_string_display_err("to display on err");
+            __builtin_string_display("to display", true);
+            __builtin_string_display_err("to display on err", true);
             __builtin_string_equals("jin", "ko");
             __builtin_string_is_empty("jinko");
         };

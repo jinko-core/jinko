@@ -14,12 +14,16 @@ func advance(r: Range_int) -> Range_int {
 }
 
 func current(r: Range_int) -> Maybe_int {
-    // FIXME: Add this once parsing can handle comparisons
-    // if r.current > r.end {
-    //     nothing()
-    // } else {
-    //  some(r.current)
-    //}
+    old_current = r.current;
+    mut old_end = r.end;
+    old_end = old_end - 1;
+    gone_past = old_current > old_end;
 
-    some(r.current)
+    // FIXME: Once #320 is fixed, replace
+    // if r.current > r.end - 1 {
+    if gone_past {
+        nothing()
+    } else {
+        some(r.current)
+    }
 }
