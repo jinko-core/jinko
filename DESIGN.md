@@ -33,8 +33,8 @@ func return_func(int: x) -> func(int) -> int {
 } // This returns a lambda taking an int as argument and returning an int
 ```
 
-Statements return `Nothing`, while Expressions return `Something`. You cannot ignore
-`Something`.
+Statements are void, while Expressions return something. You cannot ignore a non-void
+return value.
 
 ## Unit tests
 
@@ -110,7 +110,7 @@ to execute.
 
 Since jinko scripts are simple scripts a la Python, where there is no main functions,
 importing simply works by "copy/pasting" other source files. There is no distinction
-between headers and source files, so it's a bit different than C's preprocessor for
+between headers and source files, so it's a bit different from C's preprocessor for
 example. However, the syntax is similar
 
 ```rust
@@ -207,12 +207,6 @@ The jinko interpreter should keep track of variables and functions. Therefore, a
 least two hashmaps are required, one for variables and one for functions. Each of these
 elements need to have a unique name to identify them.
 
-## Using rust crates
-
-The `crate` keyword should be used to signify to the interpreter to download and compile
-a specific crate, with a specific version for example. The crate will be compiled in
-release mode and placed in a specific directory, which has yet to be determined.
-
 ## Structure Types
 
 Allowing user defined types makes for cleaner as well as stricter code. One thing that
@@ -251,7 +245,7 @@ Thus, the following syntax should be adopted at first:
 type CustomType(int_value: int, some_character: char, f: float);
 
 // Let's create one
-value = CustomType{ int_value = 4, some_character = 'J', f = 27.07 };
+value = CustomType(int_value: 4, some_character: 'J', f: 27.07);
 ```
 
 If your types get too big, then just like function definitions, multilines are supported.
@@ -260,12 +254,16 @@ If your types get too big, then just like function definitions, multilines are s
 type CustomType(
     int_value: int,
     some_character: char,
-    f: float
+    f: float,
 );
 ```
 
 The only difference between a function definition and a type definition is the keyword:
 `type` or `func` and no block of code for the type instantiation.
+
+Type instantiations use the `:` token to associate a value with a field, while function
+calls do not use any token. For optional/named arguments, function calls use the `=`
+token
 
 #### Methods and functions in Jinko
 
@@ -407,9 +405,3 @@ func add_friend(name: Name, f_name: FirstName, n_name: Nickname) -> Friend {
     /* Some code */
 }
 ```
-
-The default "constructors" for these types are simple: `Name("Ritchie")` to create a new
-name, `FirstName("Dennis")` for a first name, and `Nickname("GOAT")`.
-Now, if you pass the arguments in the wrong order, the function won't compile. However,
-the performance hit must be inexistant. If the actual values are hidden behind a reference,
-then speed is lost.

@@ -1,9 +1,9 @@
-# `src/interpreter`
+# `src/context`
 
-An `Interpreter` is a structure keeping data during code execution. For example, it keeps
-track of declared types, functions and variables. Its purpose is to run through code,
+A `Context` is a structure keeping track of data during code execution, such as
+declared types, functions and variables. Its purpose is to run through code,
 typechecking and optimizing it as necessary.
-You'll find the interpreter's main implementation, which relies on the use of scope maps.
+You'll find the context's main implementation, which relies on the use of scope maps.
 Scope maps allow the use of programming scopes and are a core feature of jinko.
 
 # `src/parser`
@@ -62,9 +62,15 @@ executed, typechecked and optimized. Each part of the syntax corresponds to a sp
 `Instruction`, so you have a `FunctionCall`, a `TypeDeclaration`, a `TypeInstantiation`...
 Most of the work is done here when it comes to code execution.
 
+# `src/typechecker.rs`
+
+The typechecker is responsible for verifying that jinko code conforms to using proper,
+static, valid types. The main part of this module is the `TypeChecker` trait, which is
+implemented on all executable types.
+
 # `src/error`
 
-Houses the `JkError` type, which is used accross the project to propagate errors and
+Houses the `jinko::Error` type, which is used accross the project to propagate errors and
 display them.
 
 # `src/utils`
