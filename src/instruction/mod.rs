@@ -3,11 +3,9 @@
 //! two instructions: A function call expression, and a variable assignment statement
 
 use std::path::PathBuf;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
-
-// FIXME: Remove
-type OperatorKind = Operator;
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
@@ -58,6 +56,7 @@ pub use var_assignment::VarAssign;
 /// `1 + 1` is an expression: It will contain the result of the addition of one and one.
 /// `print("jinko")` is a statement: There is no "return value"
 // FIXME: Make InstrKind a simpler enum
+// FIXME: This can probably be removed now that we have the typechecker
 #[derive(Debug, PartialEq, Clone)]
 pub enum InstrKind {
     Statement,
@@ -128,9 +127,53 @@ pub enum Instruxion {
 }
 
 impl Instruxion {
-    pub fn execute(&self, ctx: &mut Context) {
+    pub fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         match self {
             _ => unreachable!(""),
+        }
+    }
+
+    // FIXME: This should probably return something else using location etc once
+    // we have those
+    pub fn as_code(&self) -> String {
+        match self {
+            _ => format!("unimplemented"),
+        }
+    }
+
+    /// Execute the instruction, hoping for an instance to be returned. If no instance is
+    /// returned, error out.
+    fn execute_expression(&self, ctx: &mut Context) -> Option<ObjectInstance> {
+        let instance = self.execute(ctx);
+
+        match instance {
+            Some(obj) => Some(obj),
+            None => {
+                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
+                    "statement found when expression was expected: {}",
+                    self
+                )));
+                None
+            }
+        }
+    }
+
+    /// Execute the instruction, hoping for no instance to be returned. If an instance is
+    /// returned, error out.
+    // FIXME: Cleanup the return type of this function
+    fn execute_statement(&self, ctx: &mut Context) -> Result<(), Error> {
+        let instance = self.execute(ctx);
+
+        match instance {
+            None => Ok(()),
+            Some(_) => {
+                let e = Error::new(ErrKind::Context).with_msg(format!(
+                    "expression found when statement was expected: {}",
+                    self
+                ));
+                ctx.error(e.clone());
+                Err(e)
+            }
         }
     }
 
@@ -156,6 +199,12 @@ impl Instruxion {
     }
 }
 
+impl Display for Instruxion {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        write!(f, "{}", self.as_code())
+    }
+}
+
 // FIXME: Fix documentation for execute_*()
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
@@ -170,6 +219,18 @@ pub trait Instruction: InstructionClone + Downcast + TypeCheck {
             self.print(),
             "The execution of this instruction is not implemented yet. This is a bug".red(),
         )
+    }
+
+    /// Maybe execute the instruction, transforming it in a Rust bool if possible. It is
+    /// only possible to execute as_bool on boolean variables, boolean constants, blocks
+    /// returning a boolean and functions returning a boolean.
+    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
+        ctx.error(
+            Error::new(ErrKind::Context)
+                .with_msg(format!("cannot be used as a boolean: {}", self.print())),
+        );
+
+        None
     }
 
     /// Execute the instruction, hoping for an instance to be returned. If no instance is
@@ -206,18 +267,6 @@ pub trait Instruction: InstructionClone + Downcast + TypeCheck {
                 Err(e)
             }
         }
-    }
-
-    /// Maybe execute the instruction, transforming it in a Rust bool if possible. It is
-    /// only possible to execute as_bool on boolean variables, boolean constants, blocks
-    /// returning a boolean and functions returning a boolean.
-    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
-        ctx.error(
-            Error::new(ErrKind::Context)
-                .with_msg(format!("cannot be used as a boolean: {}", self.print())),
-        );
-
-        None
     }
 
     /// What is the type of the instruction: a Statement or an Expression.
