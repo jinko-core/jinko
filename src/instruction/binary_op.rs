@@ -63,7 +63,7 @@ impl BinaryOp {
 
 impl Instruction for BinaryOp {
     fn kind(&self) -> InstrKind {
-        InstrKind::Expression(None)
+        InstrKind::Expression
     }
 
     fn print(&self) -> String {

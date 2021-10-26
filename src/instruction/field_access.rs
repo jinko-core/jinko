@@ -49,7 +49,7 @@ impl Instruction for FieldAccess {
     fn kind(&self) -> InstrKind {
         // A field access can only ever be an expression, since we cannot store statements
         // in a type
-        InstrKind::Expression(None)
+        InstrKind::Expression
     }
 
     fn print(&self) -> String {

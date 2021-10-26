@@ -88,7 +88,7 @@ macro_rules! jk_primitive {
 
         impl Instruction for JkConstant<bool> {
             fn kind(&self) -> InstrKind {
-                InstrKind::Expression(None)
+                InstrKind::Expression
             }
 
             fn print(&self) -> String {
@@ -144,7 +144,7 @@ macro_rules! jk_primitive {
 
         impl Instruction for JkConstant<$t> {
             fn kind(&self) -> InstrKind {
-                InstrKind::Expression(None)
+                InstrKind::Expression
             }
 
             fn print(&self) -> String {
@@ -221,7 +221,7 @@ impl FromObjectInstance for JkString {
 
 impl Instruction for JkString {
     fn kind(&self) -> InstrKind {
-        InstrKind::Expression(None)
+        InstrKind::Expression
     }
 
     fn print(&self) -> String {

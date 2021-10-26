@@ -59,7 +59,7 @@ impl Var {
 
 impl Instruction for Var {
     fn kind(&self) -> InstrKind {
-        InstrKind::Expression(None)
+        InstrKind::Expression
     }
 
     fn print(&self) -> String {

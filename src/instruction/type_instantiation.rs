@@ -85,7 +85,7 @@ impl TypeInstantiation {
 
 impl Instruction for TypeInstantiation {
     fn kind(&self) -> InstrKind {
-        InstrKind::Expression(None)
+        InstrKind::Expression
     }
 
     fn print(&self) -> String {

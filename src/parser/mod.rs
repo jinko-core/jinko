@@ -37,7 +37,7 @@ impl Parser {
         // value. If not, simply execute it.
         if let Some(last) = entry_block.pop_instruction() {
             match last.kind() {
-                InstrKind::Expression(_) => entry_block.set_last(Some(last)),
+                InstrKind::Expression => entry_block.set_last(Some(last)),
                 InstrKind::Statement => entry_block.add_instruction(last),
             }
         }

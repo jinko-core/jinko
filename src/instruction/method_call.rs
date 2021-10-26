@@ -21,7 +21,7 @@ impl MethodCall {
 impl Instruction for MethodCall {
     fn kind(&self) -> InstrKind {
         // FIXME: Add logic once typechecking is implemented and we can check for void
-        InstrKind::Expression(None)
+        InstrKind::Expression
     }
 
     fn print(&self) -> String {
