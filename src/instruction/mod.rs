@@ -2,7 +2,12 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
+use std::path::PathBuf;
+
 use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
+
+// FIXME: Remove
+type OperatorKind = Operator;
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
@@ -56,7 +61,99 @@ pub use var_assignment::VarAssign;
 #[derive(Debug, PartialEq, Clone)]
 pub enum InstrKind {
     Statement,
-    Expression(Option<ObjectInstance>),
+    Expression,
+}
+
+// FIXME: Rename this enum `Instruction` once it is fully implemented
+#[derive(Clone)]
+pub enum Instruxion {
+    BinaryOp {
+        // FIXME: Should we box the type here?
+        lhs: Box<Instruxion>,
+        rhs: Box<Instruxion>,
+        op: Operator,
+    },
+    Block(Vec<Instruxion>),
+    ExtraContent(ExtraKind, String),
+    FieldAccess {
+        instance: Box<Instruxion>,
+        field_name: String,
+    },
+    FunctionCall(String, Vec<Instruxion>),
+    FunctionDec {
+        name: String,
+        ty: Option<TypeId>,
+        kind: FunctionKind,
+        args: Vec<DecArg>,
+        block: Box<Instruxion>,
+    },
+    IfElse {
+        condition: Box<Instruxion>,
+        if_body: Box<Instruxion>,
+        else_body: Option<Box<Instruxion>>,
+    },
+    Incl {
+        path: String,
+        alias: Option<String>,
+        base: Option<PathBuf>,
+    },
+    JkInst {
+        kind: JkInstKind,
+        args: Vec<Instruxion>,
+    },
+    Return(Box<Instruxion>),
+    Loop(LoopKind, Box<Instruxion>),
+    MethodCall {
+        instance: Box<Instruxion>,
+        method: Box<Instruxion>,
+    },
+    TypeDec {
+        name: String,
+        fields: Vec<DecArg>,
+    },
+    TypeInstantiation {
+        type_name: TypeId,
+        fields: Vec<Instruxion>,
+    },
+    Var {
+        name: String,
+        mutable: bool,
+        instance: ObjectInstance,
+    },
+    VarAssign {
+        mutable: bool,
+        symbol: String,
+        value: Box<Instruxion>,
+    },
+}
+
+impl Instruxion {
+    pub fn execute(&self, ctx: &mut Context) {
+        match self {
+            _ => unreachable!(""),
+        }
+    }
+
+    pub fn kind(&self) -> InstrKind {
+        match self {
+            Instruxion::VarAssign { .. }
+            | Instruxion::TypeDec { .. }
+            | Instruxion::ExtraContent { .. }
+            | Instruxion::Incl { .. }
+            | Instruxion::JkInst { .. } // FIXME: Is that true?
+            | Instruxion::FunctionDec { .. } => InstrKind::Statement,
+            Instruxion::Var { .. }
+            | Instruxion::FunctionCall { .. }
+            | Instruxion::MethodCall { .. }
+            | Instruxion::TypeInstantiation { .. }
+            | Instruxion::BinaryOp { .. } => InstrKind::Expression,
+            Instruxion::IfElse { if_body: expr, .. }
+            | Instruxion::Return(expr)
+            | Instruxion::FieldAccess { instance: expr, .. }
+            | Instruxion::Loop(_, expr) => expr.kind(),
+            Instruxion::Block(block) => block.last().map_or(InstrKind::Statement, |last| last.kind()),
+        }
+    }
 }
 
 // FIXME: Fix documentation for execute_*()
