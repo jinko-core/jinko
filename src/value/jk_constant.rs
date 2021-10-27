@@ -184,6 +184,8 @@ impl Value for JkConstant<i64> {
             Operator::Gt => Ok(JkConstant::from(self.0 > other.0).to_instance()),
             Operator::LtEq => Ok(JkConstant::from(self.0 <= other.0).to_instance()),
             Operator::GtEq => Ok(JkConstant::from(self.0 >= other.0).to_instance()),
+            Operator::Equals => Ok(JkConstant::from(self.0 == other.0).to_instance()),
+            Operator::NotEquals => Ok(JkConstant::from(self.0 != other.0).to_instance()),
             _ => self.no_op(other, op),
         }
     }
@@ -200,6 +202,7 @@ impl Value for JkConstant<f64> {
             Operator::Gt => Ok(JkConstant::from(self.0 > other.0).to_instance()),
             Operator::LtEq => Ok(JkConstant::from(self.0 <= other.0).to_instance()),
             Operator::GtEq => Ok(JkConstant::from(self.0 >= other.0).to_instance()),
+            // TODO: Do we want to allow float equality comparison?
             _ => self.no_op(other, op),
         }
     }
