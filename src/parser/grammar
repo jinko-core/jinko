@@ -1,4 +1,6 @@
-expr = term ( '+' term | '-' term )*
+expr = cmp ( '<' cmp | '>' cmp | '<=' cmp | '>=' cmp | '==' cmp | '!=' cmp)*
+
+cmp = term ( '+' term | '-' term )*
 
 term = factor next ( '*' factor next | '/' factor next )*
 

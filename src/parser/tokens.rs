@@ -194,6 +194,30 @@ impl Token {
         Token::token(input, ")")
     }
 
+    pub fn lt(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "<")
+    }
+
+    pub fn gt(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, ">")
+    }
+
+    pub fn lt_eq(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "<=")
+    }
+
+    pub fn gt_eq(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, ">=")
+    }
+
+    pub fn equals(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "==")
+    }
+
+    pub fn not_equals(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "!=")
+    }
+
     pub fn _left_shift(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, "<<")
     }
