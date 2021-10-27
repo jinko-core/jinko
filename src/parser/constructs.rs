@@ -1102,4 +1102,10 @@ func void() { }"##;
     fn exprs_not_equals() {
         assert!(expr("lhs != rhs").is_ok())
     }
+
+    #[test]
+    #[ignore]
+    fn expr_with_parenthesis() {
+        assert!(expr("lhs + (rhs - lhs)").is_ok())
+    }
 }

@@ -239,4 +239,46 @@ mod tests {
         );
         assert!(!i.error_handler.has_errors());
     }
+
+    fn assert_bool(input: &str, value: bool) {
+        use crate::JkBool;
+
+        let boxed_output = crate::parser::constructs::expr(input).unwrap().1;
+        let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
+
+        let mut i = Context::new();
+
+        assert_eq!(
+            output.execute(&mut i).unwrap(),
+            JkBool::from(value).to_instance()
+        );
+    }
+
+    #[test]
+    #[allow(clippy::eq_op)]
+    fn comparison_simple_int() {
+        assert_bool("1 < 4", 1 < 4);
+        assert_bool("4 < 1", 4 < 1);
+        assert_bool("1 <= 4", 1 <= 4);
+        assert_bool("4 <= 1", 4 <= 1);
+        assert_bool("1 == 1", 1 == 1);
+        assert_bool("4 != 1", 4 != 1);
+    }
+
+    #[test]
+    fn comparison_simple_float() {
+        assert_bool("1.0 < 4.0", 1.0 < 4.0);
+        assert_bool("4.0 < 1.0", 4.0 < 1.0);
+        assert_bool("1.0 <= 4.0", 1.0 <= 4.0);
+        assert_bool("4.0 <= 1.0", 4.0 <= 1.0);
+    }
+
+    #[test]
+    #[ignore]
+    fn comparison_precedence() {
+        assert_bool(
+            "1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2 < 45",
+            1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2 < 45,
+        );
+    }
 }
