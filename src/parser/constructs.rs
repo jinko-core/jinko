@@ -55,11 +55,10 @@ pub fn expr_semicolon(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 pub fn expr(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (mut input, mut expr) = cmp(input)?;
     while let Ok((new_input, op)) = alt((
-        // FIXME: These break the parser for now
         Token::lt_eq,
         Token::gt_eq,
-        // Token::equals,
-        // Token::not_equals,
+        Token::equals,
+        Token::not_equals,
         Token::lt,
         Token::gt,
     ))(input)
@@ -1095,13 +1094,11 @@ func void() { }"##;
     }
 
     #[test]
-    #[ignore]
     fn exprs_equals() {
         assert!(expr("lhs == rhs").is_ok())
     }
 
     #[test]
-    #[ignore]
     fn exprs_not_equals() {
         assert!(expr("lhs != rhs").is_ok())
     }
