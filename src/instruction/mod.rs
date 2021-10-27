@@ -67,7 +67,6 @@ pub enum InstrKind {
 #[derive(Clone)]
 pub enum Instruxion {
     BinaryOp {
-        // FIXME: Should we box the type here?
         lhs: Box<Instruxion>,
         rhs: Box<Instruxion>,
         op: Operator,
