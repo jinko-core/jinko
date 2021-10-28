@@ -23,6 +23,7 @@ unit = 'if' expr block next [ 'else' next block ]
      | 'ext' 'func' function_declaration ';'
      | 'return' [ expr ]                      (* Not LL(1) but this entry is subject to change *)
      | '{' next inner_block
+     | '(' expr ')'
      | 'true'
      | 'false'
      | "'" CHAR "'"
