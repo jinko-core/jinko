@@ -5,8 +5,8 @@
 use nom::{
     branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
     bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
-    character::complete::char, character::is_alphanumeric, character::is_digit, combinator::opt,
-    combinator::peek, multi::many0, sequence::delimited, sequence::pair,
+    character::complete::char, character::is_alphanumeric, character::is_digit, combinator::not,
+    combinator::opt, combinator::peek, multi::many0, sequence::delimited, sequence::pair,
 };
 
 use crate::{parser::ParseResult, ErrKind, Error};
@@ -74,7 +74,12 @@ impl Token {
     }
 
     pub fn equal(input: &str) -> ParseResult<&str, char> {
-        Token::specific_char(input, '=')
+        let (input, token) = Token::specific_char(input, '=')?;
+        if !input.is_empty() {
+            peek(not(char('=')))(input)?;
+        }
+
+        Ok((input, token))
     }
 
     pub fn comma(input: &str) -> ParseResult<&str, char> {
@@ -192,6 +197,30 @@ impl Token {
 
     pub fn right_parenthesis(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, ")")
+    }
+
+    pub fn lt(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "<")
+    }
+
+    pub fn gt(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, ">")
+    }
+
+    pub fn lt_eq(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "<=")
+    }
+
+    pub fn gt_eq(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, ">=")
+    }
+
+    pub fn equals(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "==")
+    }
+
+    pub fn not_equals(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "!=")
     }
 
     pub fn _left_shift(input: &str) -> ParseResult<&str, &str> {

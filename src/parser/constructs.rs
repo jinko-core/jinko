@@ -51,8 +51,26 @@ pub fn expr_semicolon(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     Ok((input, expr))
 }
 
-/// expr = term ( '+' term | '-' term )*
+// expr = cmp ( '<' cmp | '>' cmp | '<=' cmp | '>=' cmp | '==' cmp | '!=' cmp)*
 pub fn expr(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    let (mut input, mut expr) = cmp(input)?;
+    while let Ok((new_input, op)) = alt((
+        Token::lt_eq,
+        Token::gt_eq,
+        Token::equals,
+        Token::not_equals,
+        Token::lt,
+        Token::gt,
+    ))(input)
+    {
+        let (new_input, rhs) = cmp(new_input)?;
+        input = new_input;
+        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op)));
+    }
+    Ok((input, expr))
+}
+
+pub fn cmp(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (mut input, mut expr) = term(input)?;
     while let Ok((new_input, op)) = alt((Token::add, Token::sub))(input) {
         let (new_input, rhs) = term(new_input)?;
@@ -1053,5 +1071,41 @@ func void() { }"##;
         expr.downcast_ref::<FunctionDec>().unwrap();
 
         assert_eq!(input, "");
+    }
+
+    #[test]
+    fn lt_exprs() {
+        assert!(expr("a < b").is_ok())
+    }
+
+    #[test]
+    fn gt_exprs() {
+        assert!(expr("a > b").is_ok())
+    }
+
+    #[test]
+    fn lte_exprs() {
+        assert!(expr("lhs <= rhs").is_ok())
+    }
+
+    #[test]
+    fn gte_exprs() {
+        assert!(expr("lhs >= rhs").is_ok())
+    }
+
+    #[test]
+    fn exprs_equals() {
+        assert!(expr("lhs == rhs").is_ok())
+    }
+
+    #[test]
+    fn exprs_not_equals() {
+        assert!(expr("lhs != rhs").is_ok())
+    }
+
+    #[test]
+    #[ignore]
+    fn expr_with_parenthesis() {
+        assert!(expr("lhs + (rhs - lhs)").is_ok())
     }
 }
