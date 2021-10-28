@@ -22,6 +22,11 @@ impl<V, F, T> Scope<V, F, T> {
         self.variables.get(name)
     }
 
+    /// Get a mutable reference on a variable from the scope map if it has been inserted already
+    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut V> {
+        self.variables.get_mut(name)
+    }
+
     /// Get a reference on a function from the scope map if is has been inserted already
     pub fn get_function(&self, name: &str) -> Option<&F> {
         self.functions.get(name)
@@ -136,6 +141,17 @@ impl<V, F, T> ScopeMap<V, F, T> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_variable(name) {
+                Some(v) => return Some(v),
+                None => continue,
+            };
+        }
+
+        None
+    }
+
+    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut V> {
+        for scope in self.scopes.iter_mut() {
+            match scope.get_variable_mut(name) {
                 Some(v) => return Some(v),
                 None => continue,
             };

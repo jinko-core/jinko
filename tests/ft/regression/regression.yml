@@ -4,3 +4,13 @@ tests:
     args:
       - "tests/ft/regression/string_double_free.jk"
     exit_code: 0
+  - name: "Variable mutation in block #187"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/187.jk"
+    exit_code: 0
+  - name: "Variable mutation in function #187"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/187_fn.jk"
+    exit_code: 0
