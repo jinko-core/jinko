@@ -888,7 +888,10 @@ mod tests {
 
     #[test]
     fn t_binary_op_invalid() {
-        assert!(expr("a ? 12").is_err());
+        let (input, expr) = expr("a ? 12").unwrap();
+
+        assert!(expr.downcast_ref::<BinaryOp>().is_none());
+        assert_eq!(input, "? 12");
     }
 
     #[test]
