@@ -181,9 +181,7 @@ mod tests {
     fn t_void_int() {
         let mut i = init_ctx();
 
-        let dec = constructs::expr("ext func no_arg() -> int;")
-            .unwrap()
-            .1;
+        let dec = constructs::expr("ext func no_arg() -> int;").unwrap().1;
         let dec = dec.downcast_ref::<FunctionDec>().unwrap();
         let call = constructs::expr("no_arg()").unwrap().1;
         let call = call.downcast_ref::<FunctionCall>().unwrap();
@@ -198,9 +196,7 @@ mod tests {
     fn t_void_void() {
         let mut i = init_ctx();
 
-        let dec = constructs::expr("ext func print_something();")
-            .unwrap()
-            .1;
+        let dec = constructs::expr("ext func print_something();").unwrap().1;
         let dec = dec.downcast_ref::<FunctionDec>().unwrap();
         let call = constructs::expr("print_something()").unwrap().1;
         let call = call.downcast_ref::<FunctionCall>().unwrap();

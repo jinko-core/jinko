@@ -2,7 +2,7 @@
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
-use crate::{Context, Error, InstrKind};
+use crate::{Context, Error};
 
 mod constant_construct;
 pub mod constructs;
@@ -33,16 +33,6 @@ impl Parser {
         let (_, instructions) = constructs::many_expr(input)?;
 
         entry_block.add_instructions(instructions);
-
-        // We must create the block "manually", by checking if the last parsed operation
-        // is an expression or not. If it is an expression, then use it as the return
-        // value. If not, simply execute it.
-        if let Some(last) = entry_block.pop_instruction() {
-            match last.kind() {
-                InstrKind::Expression(_) => entry_block.set_last(Some(last)),
-                InstrKind::Statement => entry_block.add_instruction(last),
-            }
-        }
 
         Ok(ctx)
     }

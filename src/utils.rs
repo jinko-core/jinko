@@ -40,7 +40,7 @@ macro_rules! jinko_fail {
 #[macro_export]
 macro_rules! jk_execute {
     ($($tokens:tt)*) => {
-        $crate::Parser::parse(stringify!($($tokens)*)).unwrap().execute().unwrap();
+        $crate::Parser::parse(stringify!($($tokens)*)).unwrap().execute().unwrap()
     }
 }
 

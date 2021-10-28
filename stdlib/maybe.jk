@@ -10,11 +10,11 @@ func is_some(m: Maybe_int) -> bool {
 }
 
 func nothing() -> Maybe_int {
-    Maybe_int { inner = 0, is_some = false }
+    Maybe_int(inner: 0, is_some: false)
 }
 
 func some(value: int) -> Maybe_int {
-    Maybe_int { inner = value, is_some = true }
+    Maybe_int(inner: value, is_some: true)
 }
 
 func unpack(m: Maybe_int) -> int {

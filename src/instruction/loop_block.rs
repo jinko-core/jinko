@@ -201,7 +201,6 @@ mod tests {
     use super::*;
     use crate::instruction::FunctionCall;
     use crate::jinko;
-    use crate::{JkInt, ToObjectInstance};
 
     #[test]
     fn pretty_print_loop() {
@@ -230,6 +229,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn tc_valid_loop_blocks() {
         jinko! {
             // FIXME: Don't ignore once for loop behavior is implemented
@@ -238,7 +238,7 @@ mod tests {
             mut i = 0;
             while i < 15 { i = i + 1 }
 
-            l2 = loop { i = i + 1 }
+            l2 = loop { i = i + 1; i }
         };
     }
 

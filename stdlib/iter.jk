@@ -1,7 +1,7 @@
 type Iter_int(inner: Range_int);
 
 func iter(r: Range_int) -> Iter_int {
-    Iter_int { inner = r }
+    Iter_int(inner: r)
 }
 
 func next(iter: Iter_int) -> Iter_int {

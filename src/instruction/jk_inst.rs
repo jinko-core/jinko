@@ -42,11 +42,6 @@ impl JkInst {
             _args: fc.args().clone(),
         })
     }
-
-    #[cfg(test)]
-    pub fn jk_inst_kind(&self) -> &JkInstKind {
-        &self.kind
-    }
 }
 
 impl Instruction for JkInst {
@@ -88,8 +83,8 @@ impl TypeCheck for JkInst {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::constructs;
     use crate::jinko;
+    use crate::parser::constructs;
 
     #[test]
     fn t_invalid_jkinst() {

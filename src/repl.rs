@@ -84,9 +84,6 @@ impl<'args> Repl<'args> {
         ep.instructions().iter().for_each(|inst| {
             inst.execute(ctx);
         });
-        if let Some(last) = ep.last() {
-            last.execute(ctx);
-        }
 
         ctx.emit_errors();
     }

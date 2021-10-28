@@ -105,9 +105,9 @@ impl TypeCheck for FieldAccess {
 mod tests {
     use super::*;
     use crate::instance::ToObjectInstance;
-    use crate::{jinko, jinko_fail};
     use crate::parser::constructs;
     use crate::JkInt;
+    use crate::{jinko, jinko_fail};
 
     fn setup() -> Context {
         let ctx = jinko! {
@@ -213,7 +213,7 @@ mod tests {
     fn tc_missing_field() {
         jinko_fail! {
             type Point(x: int, y: int);
-            p = Point { x = 14, y = 15 };
+            p = Point(x: 14, y: 15);
             p.non_existent
         };
     }

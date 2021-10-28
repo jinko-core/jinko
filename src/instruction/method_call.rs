@@ -91,7 +91,7 @@ mod tests {
             func id(x: int) -> int { x }
             15.id();
             type IntWrapper(inner: int);
-            i = IntWrapper { inner = 14 };
+            i = IntWrapper(inner: 14);
             // i.inner.id() FIXME: Fix field access and raise issue
         };
     }

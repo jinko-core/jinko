@@ -5,7 +5,7 @@ type Args(__fixme: int);
 
 // FIXME: This should do more
 func args() -> Args {
-    Args { __fixme = 0 }
+    Args(__fixme: 0)
 }
 
 // FIXME: This should return a Maybe<string> once that is implemented.

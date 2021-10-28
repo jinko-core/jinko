@@ -7,6 +7,8 @@ incl ffi
 incl shell
 incl args
 
+@dump()
+
 ext func __builtin_exit(exit_code: int);
 
 // FIXME: Add a default value argument here, which defaults to 0

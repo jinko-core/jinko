@@ -25,7 +25,6 @@ use crate::{
 #[derive(Clone, Default)]
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
-    last: Option<Box<dyn Instruction>>,
     ty: CheckedType,
 }
 
@@ -35,7 +34,6 @@ impl Block {
         // FIXME: Remove this method
         Block {
             instructions: Vec::new(),
-            last: None,
             ty: CheckedType::Unknown,
         }
     }
@@ -57,30 +55,18 @@ impl Block {
 
     /// Add an instruction at the end of the block's instructions
     pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) {
-        if let Some(prev) = self.last.replace(instruction) {
-            self.instructions.push(prev);
-        }
+        self.instructions.push(instruction);
     }
 
     /// Pop an instruction from the block, removing it from the execution pool
     pub fn pop_instruction(&mut self) -> Option<Box<dyn Instruction>> {
         self.instructions.pop()
     }
-
-    /// Returns a reference to the last expression of the block, if it exists
-    pub fn last(&self) -> Option<&dyn Instruction> {
-        self.last.as_deref()
-    }
-
-    /// Gives a last expression to the block
-    pub fn set_last(&mut self, last: Option<Box<dyn Instruction>>) {
-        self.last = last;
-    }
 }
 
 impl Instruction for Block {
     fn kind(&self) -> InstrKind {
-        match self.last() {
+        match self.instructions.last() {
             Some(last) => last.kind(),
             None => InstrKind::Statement,
         }
@@ -98,7 +84,7 @@ impl Instruction for Block {
             base.push_str(";\n");
         }
 
-        if let Some(l) = self.last() {
+        if let Some(l) = self.instructions.last() {
             base = format!("{}    {}\n", base, l.print());
         }
 
@@ -114,7 +100,7 @@ impl Instruction for Block {
             inst.execute(ctx);
         });
 
-        let ret_val = match &self.last {
+        let ret_val = match &self.instructions.last() {
             Some(e) => e.execute(ctx),
             None => None,
         };
@@ -132,7 +118,7 @@ impl TypeCheck for Block {
             inst.resolve_type(ctx);
         });
 
-        match &self.last {
+        match &self.instructions.last() {
             None => CheckedType::Void,
             Some(last) => last.resolve_type(ctx),
         }
@@ -143,7 +129,7 @@ impl TypeCheck for Block {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruction::Var;
+    use crate::instruction::{Var, VarAssign};
     use crate::value::JkInt;
     use crate::TypeCheck;
     use crate::{jinko, jinko_fail};
@@ -166,7 +152,7 @@ mod tests {
 
         b.set_instructions(instrs);
 
-        assert_eq!(b.kind(), InstrKind::Statement);
+        assert_eq!(b.kind(), InstrKind::Expression(None));
     }
 
     #[test]
@@ -180,7 +166,7 @@ mod tests {
         let last = Box::new(JkInt::from(12));
 
         b.set_instructions(instrs);
-        b.set_last(Some(last));
+        b.add_instruction(last);
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
     }
@@ -199,8 +185,15 @@ mod tests {
     fn block_execute_no_last() {
         let mut b = Block::new();
 
-        let instr: Vec<Box<dyn Instruction>> =
-            vec![Box::new(JkInt::from(12)), Box::new(JkInt::from(15))];
+        let instr: Vec<Box<dyn Instruction>> = vec![
+            Box::new(JkInt::from(12)),
+            Box::new(JkInt::from(15)),
+            Box::new(VarAssign::new(
+                true,
+                String::from("a"),
+                Box::new(JkInt::from(15)),
+            )),
+        ];
         b.set_instructions(instr);
 
         let mut i = Context::new();
@@ -220,7 +213,7 @@ mod tests {
         b.set_instructions(instr);
 
         let last = Box::new(JkInt::from(18));
-        b.set_last(Some(last));
+        b.add_instruction(last);
 
         let mut i = Context::new();
 

@@ -255,8 +255,7 @@ fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
     let (input, _) = Token::right_parenthesis(input)?;
 
-    // arg order does not matter
-    args.push(first_arg);
+    args.insert(0, first_arg);
     Ok((input, Box::new(TypeDec::new(name, args))))
 }
 
@@ -489,8 +488,7 @@ pub(crate) fn constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruction::JkInstKind;
-    use crate::{JkBool, JkChar, JkFloat, JkInt, JkString};
+    use crate::{JkFloat, JkInt};
 
     #[test]
     fn consume_whitespace() {
