@@ -1,0 +1,2 @@
+s = "jinko".concat(".jk")
+s.print()

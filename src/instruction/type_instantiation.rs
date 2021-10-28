@@ -135,7 +135,7 @@ impl Instruction for TypeInstantiation {
 
         Some(ObjectInstance::new(
             // FIXME: Disgusting, maybe do not use Rc for TypeId?
-            Some((*type_dec).clone()),
+            CheckedType::Resolved((*type_dec).clone().into()),
             size,
             data,
             Some(fields),
@@ -157,11 +157,14 @@ impl TypeCheck for TypeInstantiation {
             }
         };
 
+        let fields_ty = fields_ty.clone();
+
         let mut errors = vec![];
-        for ((_, field_ty), value_ty) in fields_ty.iter().zip(self.fields.iter().map(
-            // FIXME: Once trait bound yada yada
-            |_var_assign| CheckedType::Void, /* var_assign.value().resolve_type(ctx) */
-        )) {
+        for ((_, field_ty), value_ty) in fields_ty.iter().zip(
+            self.fields
+                .iter()
+                .map(|var_assign| var_assign.value().resolve_type(ctx)),
+        ) {
             if field_ty != &value_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
                     "trying to assign value of type `{}` to field of type `{}`",
@@ -271,11 +274,6 @@ mod test {
             }
         };
 
-        assert!(
-            instance.ty().unwrap().name() == TYPE_NAME,
-            "Type name should be {}",
-            TYPE_NAME
-        );
         assert_eq!(
             instance.data()[..],
             [

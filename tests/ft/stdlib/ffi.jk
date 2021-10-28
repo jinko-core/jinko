@@ -1,0 +1,5 @@
+link_with("tests/fixtures/clib/lib.so");
+
+ext func print_something();
+
+print_something();

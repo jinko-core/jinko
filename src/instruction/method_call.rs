@@ -84,4 +84,38 @@ mod tests {
 
         assert_eq!(mc.execute(&mut ctx).unwrap(), JkInt::from(1).to_instance());
     }
+
+    #[test]
+    fn tc_valid_call() {
+        jinko! {
+            func id(x: int) -> int { x }
+            15.id();
+            type IntWrapper(inner: int);
+            i = IntWrapper { inner = 14 };
+            // i.inner.id() FIXME: Fix field access and raise issue
+        };
+    }
+
+    #[test]
+    fn tc_valid_call_multi_arg() {
+        jinko! {
+            func to_int(self: bool, truthy_value: int) -> int {
+                if self {
+                    truthy_value
+                } else {
+                    0
+                }
+            }
+            true.to_int(15);
+            false.to_int(188);
+        };
+    }
+
+    #[test]
+    fn tc_invalid_call_type() {
+        jinko! {
+            func id(x: int) -> int { x }
+            true.id();
+        };
+    }
 }

@@ -1,7 +1,7 @@
 [package]
 name = "jinko"
-version = "0.1.1"
-authors = ["CohenArthur <arthur.cohen@epita.fr>", "Skallwar <esteban.blanc@epita.fr>"]
+version = "0.2.0"
+authors = ["CohenArthur <arthur.cohen@epita.fr>", "Skallwar <esteban.blanc@epita.fr>", "SanderJSA <sander.julien-saint-amand@epita.fr"]
 edition = "2018"
 description = "jinko is a safe, small and fast programming language with Rust interoperability"
 readme = "README.md"
@@ -17,3 +17,7 @@ nom = "7.0"
 linefeed = "0.6"
 downcast-rs = "1.2"
 anyhow = "1.0"
+libloading = "0.7"
+
+[dev-dependencies]
+libc = "0.2"

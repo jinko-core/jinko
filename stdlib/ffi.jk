@@ -1,0 +1,5 @@
+ext func __builtin_ffi_link_with(path: string);
+
+func link_with(lib: string) {
+    lib.__builtin_ffi_link_with()
+}

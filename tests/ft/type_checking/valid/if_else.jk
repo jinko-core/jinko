@@ -1,0 +1,36 @@
+t1 = if true {
+    15
+} else {
+    14
+}
+
+condition = false;
+
+t2 = if condition {
+    15
+} else {
+    14
+}
+
+func id(x: int) -> int { x }
+
+t3 = if false {
+    id(16)
+} else {
+    id(14)
+}
+
+// FIXME: Do not ignore once as_bool() is fixed
+// func ret_bool() -> bool { true }
+// 
+// t4 = if ret_bool() {
+//     id(16)
+// } else {
+//     id(14)
+// }
+// 
+// t5 = if { true } {
+//     15
+// } else {
+//     14
+// }

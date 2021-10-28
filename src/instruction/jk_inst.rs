@@ -4,7 +4,8 @@
 //! module. They are executed at "compile" time, when running through the code first.
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::{Context, ErrKind, Error, ObjectInstance};
+use crate::typechecker::{CheckedType, TypeCtx};
+use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// The potential ctx instructions
 #[derive(Clone, Debug, PartialEq)]
@@ -78,10 +79,17 @@ impl Instruction for JkInst {
     }
 }
 
+impl TypeCheck for JkInst {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+        CheckedType::Void
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::parser::constructs;
+    use crate::jinko;
 
     #[test]
     fn t_invalid_jkinst() {
@@ -108,5 +116,12 @@ mod tests {
             inst.is_ok(),
             "ir(func) is a valid use of the ir ctx directive"
         )
+    }
+
+    #[test]
+    fn tc_valid_jk_inst() {
+        jinko! {
+            @dump();
+        };
     }
 }

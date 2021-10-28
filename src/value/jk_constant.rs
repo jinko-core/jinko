@@ -1,4 +1,4 @@
-use crate::instruction::{InstrKind, Instruction, Operator, TypeDec, TypeId};
+use crate::instruction::{InstrKind, Instruction, Operator, TypeId};
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 use crate::{
     Context, Error, FromObjectInstance, JkString, ObjectInstance, ToObjectInstance, Value,
@@ -65,7 +65,7 @@ macro_rules! jk_primitive {
 
                 unsafe {
                     ObjectInstance::from_bytes(
-                        Some(TypeDec::from("bool")),
+                        CheckedType::Resolved(TypeId::from("bool")),
                         size_of::<bool>(),
                         &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
                         None,
@@ -121,7 +121,7 @@ macro_rules! jk_primitive {
 
                 unsafe {
                     ObjectInstance::from_bytes(
-                        Some(TypeDec::from($s)),
+                        CheckedType::Resolved(TypeId::from($s)),
                         size_of::<$t>(),
                         &transmute::<$t, [u8; size_of::<$t>()]>(self.0),
                         None,
@@ -211,7 +211,7 @@ impl Value for JkConstant<f64> {
 impl ToObjectInstance for JkString {
     fn to_instance(&self) -> ObjectInstance {
         ObjectInstance::from_bytes(
-            Some(TypeDec::from("string")),
+            CheckedType::Resolved(TypeId::from("string")),
             self.0.as_bytes().len(),
             self.0.as_bytes(),
             None,
@@ -262,6 +262,7 @@ impl<T> From<T> for JkConstant<T> {
 
 #[cfg(test)]
 mod tests {
+    use crate::jinko;
     use crate::{JkBool, JkFloat, JkInt};
 
     use super::*;
@@ -312,5 +313,16 @@ mod tests {
             s.resolve_type(&mut ctx),
             CheckedType::Resolved(TypeId::from("float"))
         );
+    }
+
+    #[test]
+    fn tc_primitives_available() {
+        jinko! {
+            b = true;
+            i = 15;
+            f = 4.5;
+            c = 'c';
+            s = "jinko";
+        };
     }
 }

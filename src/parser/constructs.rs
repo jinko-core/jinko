@@ -881,6 +881,17 @@ mod tests {
     }
 
     #[test]
+    fn t_comparison_op_valid() {
+        assert!(expr("a <   12 ").is_ok());
+        assert!(expr("some() > 12.1").is_ok());
+    }
+
+    #[test]
+    fn t_binary_op_invalid() {
+        assert!(expr("a ? 12").is_err());
+    }
+
+    #[test]
     fn var_assigment_mut_in_name() {
         let (input, expr) = expr("mut_var = b.call() + 1").unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();

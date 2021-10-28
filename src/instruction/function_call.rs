@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use crate::instruction::{FunctionDec, Var};
+use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::typechecker::TypeCtx;
 use crate::{
     typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
@@ -28,6 +28,10 @@ impl FunctionCall {
     /// only useful for method call desugaring
     pub fn add_arg_front(&mut self, arg: Box<dyn Instruction>) {
         self.args.insert(0, arg)
+    }
+
+    pub fn add_arg(&mut self, arg: Box<dyn Instruction>) {
+        self.args.push(arg)
     }
 
     /// Return a reference the called function's name
@@ -87,7 +91,7 @@ impl FunctionCall {
                 }
             };
 
-            instance.set_ty(Some(ty));
+            instance.set_ty(CheckedType::Resolved(ty.into()));
 
             new_var.set_instance(instance);
 
@@ -97,13 +101,40 @@ impl FunctionCall {
         }
     }
 
-    fn type_args(&self, mut args: Vec<(String, CheckedType)>, ctx: &mut TypeCtx) {
+    fn type_args(&self, args: Vec<(String, CheckedType)>, ctx: &mut TypeCtx) {
         ctx.scope_enter();
 
-        args.drain(..)
-            .for_each(|(arg_name, arg_ty)| ctx.declare_var(arg_name, arg_ty));
+        args.into_iter().for_each(|(arg_name, arg_ty)| {
+            if let Err(e) = ctx.declare_var(arg_name, arg_ty) {
+                ctx.error(e)
+            }
+        });
 
         ctx.scope_exit();
+    }
+
+    fn execute_external_function(
+        &self,
+        ctx: &mut Context,
+        dec: &FunctionDec,
+    ) -> Option<ObjectInstance> {
+        if ctx.is_builtin(dec.name()) {
+            match ctx.call_builtin(dec.name(), self.args.clone()) {
+                Ok(value) => value,
+                Err(e) => {
+                    ctx.error(e);
+                    None
+                }
+            }
+        } else {
+            match crate::ffi::execute(dec, self, ctx) {
+                Ok(value) => value,
+                Err(e) => {
+                    ctx.error(e);
+                    None
+                }
+            }
+        }
     }
 }
 
@@ -139,6 +170,10 @@ impl Instruction for FunctionCall {
             }
         };
 
+        if function.fn_kind() == FunctionKind::Ext {
+            return self.execute_external_function(ctx, &function);
+        }
+
         ctx.scope_enter();
 
         ctx.debug("CALL", self.name());
@@ -155,6 +190,7 @@ impl Instruction for FunctionCall {
 
 impl TypeCheck for FunctionCall {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: This function is very large and should be refactored
         let (args_type, return_type) = match ctx.get_function(self.name()) {
             Some(checked_type) => checked_type,
             // FIXME: This does not account for functions declared later in the code
@@ -166,6 +202,9 @@ impl TypeCheck for FunctionCall {
                 return CheckedType::Unknown;
             }
         };
+
+        let args_type = args_type.clone();
+        let return_type = return_type.clone();
 
         let mut errors = vec![];
         let mut args = vec![];
@@ -180,12 +219,14 @@ impl TypeCheck for FunctionCall {
             )));
         }
 
-        for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(self.args.iter().map(
-            |_given_arg| CheckedType::Void, /* given_arg.resolve_type() */
-        )) {
+        for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(
+            self.args
+                .iter()
+                .map(|given_arg| given_arg.clone().resolve_type(ctx)),
+        ) {
             if expected_ty != &given_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "invalid type used for function argument: expected `{}`, got `{}`:",
+                    "invalid type used for function argument: expected `{}`, got `{}`",
                     expected_ty, given_ty
                 )));
             }
@@ -193,9 +234,7 @@ impl TypeCheck for FunctionCall {
             args.push((expected_name.clone(), expected_ty.clone()));
         }
 
-        let return_type = return_type.to_owned();
-
-        errors.drain(..).for_each(|err| ctx.error(err));
+        errors.into_iter().for_each(|err| ctx.error(err));
         self.type_args(args, ctx);
 
         return_type
@@ -205,8 +244,8 @@ impl TypeCheck for FunctionCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruction::TypeId;
     use crate::parser::constructs;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn t_pretty_print_empty() {
@@ -219,35 +258,26 @@ mod tests {
 
     #[test]
     fn t_invalid_args_number() {
-        use super::super::{DecArg, FunctionDec};
-        use crate::instruction::FunctionKind;
         use crate::value::JkInt;
 
-        let mut ctx = Context::new();
-
         // Create a new function with two integers arguments
-        let mut f = FunctionDec::new("func0".to_owned(), None);
-        f.set_kind(FunctionKind::Func);
-
-        f.set_args(vec![
-            DecArg::new("a".to_owned(), TypeId::from("int")),
-            DecArg::new("b".to_owned(), TypeId::from("int")),
-        ]);
-
-        ctx.add_function(f).unwrap();
+        let mut ctx = jinko! {
+            func func0(a: int, b: int);
+        };
 
         let f_call = FunctionCall::new("func0".to_string(), vec![]);
+        let mut type_ctx = TypeCtx::new(&mut ctx);
 
-        assert!(f_call.execute(&mut ctx).is_none());
+        assert_eq!(f_call.resolve_type(&mut type_ctx), CheckedType::Unknown);
         assert!(
-            ctx.error_handler.has_errors(),
+            type_ctx.context.error_handler.has_errors(),
             "Given 0 arguments to 2 arguments function"
         );
-        ctx.clear_errors();
+        type_ctx.context.clear_errors();
 
         let f_call = FunctionCall::new("func0".to_string(), vec![Box::new(JkInt::from(12))]);
 
-        assert!(f_call.execute(&mut ctx).is_none());
+        assert_eq!(f_call.resolve_type(&mut type_ctx), CheckedType::Unknown);
         assert!(
             ctx.error_handler.has_errors(),
             "Given 1 arguments to 2 arguments function"
@@ -309,5 +339,48 @@ mod tests {
             func_call.execute(&mut i).unwrap(),
             JkInt::from(1).to_instance()
         );
+    }
+
+    #[test]
+    fn tc_invalid_type_for_arg() {
+        jinko_fail! {
+            func take_char(a: char) {}
+            take_char("hey");
+            take_char(15);
+            take_char(true);
+            take_char(4.5);
+        };
+    }
+
+    #[test]
+    fn tc_invalid_type_for_arg_complex() {
+        jinko_fail! {
+            type ComplexType(inner: char);
+            type SameButDiff(inner: char);
+            func take_char(a: ComplexType) {}
+            take_char("hey");
+            take_char(15);
+            take_char(true);
+            take_char(4.5);
+            take_char(SameButDiff { inner = 'a' })
+        };
+    }
+
+    #[test]
+    fn tc_valid_type_for_arg_complex() {
+        jinko! {
+            type ComplexType(inner: char);
+            func take_char(a: ComplexType) {}
+            take_char(ComplexType { inner = 'a' })
+        };
+    }
+
+    #[test]
+    fn t_call_invalid_builtin() {
+        jinko_fail! {
+            ext func not_a_builtin();
+
+            not_a_builtin();
+        };
     }
 }

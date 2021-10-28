@@ -1,29 +1,36 @@
 //! Utilities for developing Jinko more comfortably
 
-// FIXME: The default behavior of the macro should be to execute and check for errors
+#[macro_export]
+macro_rules! jk_parse {
+    ($($tokens:tt)*) => {
+        $crate::Parser::parse(stringify!($($tokens)*)).unwrap()
+    }
+}
+
 #[macro_export]
 macro_rules! jinko {
-    (execute-fail { $($tokens:tt)* }) => {
-        {
-            let mut ctx = jinko!($($tokens)*);
-
-            ctx.emit_errors();
-            assert!(ctx.execute().is_err());
-            assert!(ctx.error_handler.has_errors());
-
-            ctx
-        }
-    };
-    (parse { $($tokens:tt)* }) => {
-        $crate::Parser::parse(stringify!($($tokens)*)).unwrap()
-    };
     ($($tokens:tt)*) => {
         {
-            let mut ctx = jinko!(parse { $($tokens)* });
+            let mut ctx = $crate::jk_parse! { $($tokens)* };
 
             ctx.emit_errors();
             assert!(ctx.execute().is_ok());
             assert!(!ctx.error_handler.has_errors());
+
+            ctx
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! jinko_fail {
+    ($($tokens:tt)*) => {
+        {
+            let mut ctx = $crate::jk_parse! { $($tokens)* };
+
+            ctx.emit_errors();
+            assert!(ctx.execute().is_err());
+            assert!(ctx.error_handler.has_errors());
 
             ctx
         }

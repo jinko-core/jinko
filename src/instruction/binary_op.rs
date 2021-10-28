@@ -83,35 +83,35 @@ impl Instruction for BinaryOp {
         let l_value = self.execute_node(&*self.lhs, ctx)?;
         let r_value = self.execute_node(&*self.rhs, ctx)?;
 
+        // FIXME: This produces unhelpful errors for now
+        if l_value.ty() != r_value.ty() {
+            return None;
+        }
+
         let return_value;
 
-        // FIXME: DISGUSTING and do not unwap
-        match l_value.ty().unwrap().name() {
-            // FIXME: Absolutely DISGUSTING
-            "int" => {
-                let res =
-                    JkInt::from_instance(&l_value).do_op(&JkInt::from_instance(&r_value), self.op);
-                return_value = match res {
-                    Ok(r) => r,
-                    Err(e) => {
-                        ctx.error(e);
-                        return None;
-                    }
-                };
-            }
-
-            "float" => {
-                let res = JkFloat::from_instance(&l_value)
-                    .do_op(&JkFloat::from_instance(&r_value), self.op);
-                return_value = match res {
-                    Ok(r) => r,
-                    Err(e) => {
-                        ctx.error(e);
-                        return None;
-                    }
+        // At this point, we will already have checked whether or not a binary op
+        // is valid type-wise. So we can unwrap at will. If a type is still unknown
+        // at this point, this is an interpreter error
+        match l_value.ty() {
+            CheckedType::Resolved(ty) => match ty.id() {
+                "int" => {
+                    return_value = JkInt::from_instance(&l_value)
+                        .do_op(&JkInt::from_instance(&r_value), self.op)
+                        .unwrap();
                 }
-            }
-            _ => todo!("Implement empty types?"),
+                "float" => {
+                    return_value = JkFloat::from_instance(&l_value)
+                        .do_op(&JkFloat::from_instance(&r_value), self.op)
+                        .unwrap();
+                }
+                _ => unreachable!(
+                    "attempting binary operation with void type or unknown type AFTER typechecking"
+                ),
+            },
+            _ => unreachable!(
+                "attempting binary operation with void type or unknown type AFTER typechecking"
+            ),
         }
 
         ctx.debug_step("BINOP EXIT");
@@ -122,9 +122,8 @@ impl Instruction for BinaryOp {
 
 impl TypeCheck for BinaryOp {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        // TODO: Use the correct calls once TypeCheck is a bound on Instruction
-        let l_type = CheckedType::Void; // FIXME: self.lhs.resolve_type(ctx);
-        let r_type = CheckedType::Void; // FIXME: self.rhs.resolve_type(ctx);
+        let l_type = self.lhs.resolve_type(ctx);
+        let r_type = self.rhs.resolve_type(ctx);
 
         if l_type != r_type {
             ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
@@ -147,6 +146,7 @@ mod tests {
     use crate::value::JkInt;
     use crate::Context;
     use crate::ToObjectInstance;
+    use crate::{jinko, jinko_fail};
 
     fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
         let l = Box::new(JkInt::from(l_num));
@@ -280,5 +280,29 @@ mod tests {
             "1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2 < 45",
             1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2 < 45,
         );
+    }
+
+    #[test]
+    fn tc_binop_valid() {
+        jinko! {
+            t0 = 1 + 1;
+            t2 = 1.0 + 1.4;
+        };
+    }
+
+    #[test]
+    fn tc_binop_from_func() {
+        jinko! {
+            func id(x: int) -> int { x }
+            t0 = id(1) + id(id(id(id(14))));
+        };
+    }
+
+    #[test]
+    fn tc_binop_mismatched_valid() {
+        jinko_fail! {
+            t0 = 1 + '4';
+            t2 = 1.0 + "hey";
+        };
     }
 }

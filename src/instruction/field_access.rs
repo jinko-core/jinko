@@ -6,8 +6,6 @@ use crate::{
     Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
 };
 
-use super::TypeId;
-
 #[derive(Clone)]
 pub struct FieldAccess {
     instance: Box<dyn Instruction>,
@@ -71,9 +69,7 @@ impl Instruction for FieldAccess {
 
 impl TypeCheck for FieldAccess {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        // FIXME: Wait for trait bound
-        /* self.instance.resolve_type(ctx); */
-        let instance_ty = CheckedType::Resolved(TypeId::new(String::from("CustomType")));
+        let instance_ty = self.instance.resolve_type(ctx);
         let instance_ty_name = match &instance_ty {
             CheckedType::Resolved(ti) => ti.id(),
             _ => {
@@ -109,7 +105,7 @@ impl TypeCheck for FieldAccess {
 mod tests {
     use super::*;
     use crate::instance::ToObjectInstance;
-    use crate::jinko;
+    use crate::{jinko, jinko_fail};
     use crate::parser::constructs;
     use crate::JkInt;
 
@@ -175,9 +171,7 @@ mod tests {
             None => unreachable!("Error when accessing valid multi field"),
         };
 
-        let mut expected = JkInt::from(2).to_instance();
-        // FIXME: Remove once typechecking is implemented
-        expected.set_ty(None);
+        let expected = JkInt::from(2).to_instance();
 
         assert_eq!(res, expected)
     }
@@ -213,5 +207,30 @@ mod tests {
         let inst = constructs::expr("i.field_on_primitive").unwrap().1;
         assert!(inst.execute(&mut ctx).is_none());
         assert!(ctx.error_handler.has_errors())
+    }
+
+    #[test]
+    fn tc_missing_field() {
+        jinko_fail! {
+            type Point(x: int, y: int);
+            p = Point { x = 14, y = 15 };
+            p.non_existent
+        };
+    }
+
+    #[test]
+    fn tc_field_on_primitive_type() {
+        jinko_fail! {
+            some_int = 14;
+            some_int.field
+        };
+    }
+
+    #[test]
+    fn tc_valid_field_access() {
+        jinko! {
+            type Point(x: int, y: int);
+            func normalize(p: Point) -> int { p.x + p.y }
+        };
     }
 }

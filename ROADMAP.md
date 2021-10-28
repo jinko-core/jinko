@@ -22,7 +22,7 @@ be expanded. If you want to contribute, this a good place to start!
 
 * [ ] A variable cannot be assigned the `void` type
 * [x] Immutable variables cannot be assigned twice
-* [ ] `-i|--interactive` option allows you to run a script and then open a REPL
+* [x] `-i|--interactive` option allows you to run a script and then open a REPL
 
 ## Execution
 
@@ -41,18 +41,35 @@ be expanded. If you want to contribute, this a good place to start!
 
 ## Typechecker
 
-* [ ] Add typechecker trait
-* [ ] Constants
-* [ ] Variables
-* [ ] Variable assignment
-* [ ] Function definition
-* [ ] Function calls
-* [ ] Code blocks
-* [ ] If condition
-* [ ] Else condition
-* [ ] For loop
-* [ ] While loop
-* [ ] Loop loop
+* [x] Add typechecker trait
+* [x] Constants
+* [x] Variables
+* [x] Variable assignment
+* [x] Function definition
+* [x] Function calls
+* [x] Code blocks
+* [x] If condition
+* [x] Else condition
+* [x] For loop
+* [x] While loop
+* [x] Loop loop
+* [ ] Generic types
+* [ ] Sum/Multi types
+
+## Optimizer
+
+* [x] Add typechecker trait
+* [x] Constants
+* [x] Variables
+* [x] Variable assignment
+* [x] Function definition
+* [x] Function calls
+* [x] Code blocks
+* [x] If condition
+* [x] Else condition
+* [x] For loop
+* [x] While loop
+* [x] Loop loop
 
 ## REPL
 

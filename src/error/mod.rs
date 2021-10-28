@@ -69,6 +69,7 @@ pub enum ErrKind {
     Parsing,
     Context,
     TypeChecker,
+    ExternFunc,
     IO,
 }
 
@@ -79,6 +80,7 @@ impl ErrKind {
             ErrKind::Context => "Interpreter",
             ErrKind::TypeChecker => "Typechecker",
             ErrKind::IO => "I/O",
+            ErrKind::ExternFunc => "External Function",
         }
     }
 }
@@ -182,7 +184,24 @@ impl nom::error::ParseError<&str> for Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.kind.as_str())
+        write!(f, "{}", self.kind.as_str())?;
+        if self.msg.is_some() {
+            write!(f, ": {}", self.msg.as_ref().unwrap())?;
+        }
+
+        Ok(())
+    }
+}
+
+impl std::convert::From<libloading::Error> for Error {
+    fn from(e: libloading::Error) -> Self {
+        Error::new(ErrKind::ExternFunc).with_msg(e.to_string())
+    }
+}
+
+impl std::convert::From<std::env::VarError> for Error {
+    fn from(e: std::env::VarError) -> Self {
+        Error::new(ErrKind::ExternFunc).with_msg(e.to_string())
     }
 }
 

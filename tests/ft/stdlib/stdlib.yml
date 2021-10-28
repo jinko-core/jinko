@@ -1,0 +1,52 @@
+tests:
+  - name: "Test str.len()"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/string/len.jk"
+    exit_code: 3
+  - name: "Test str.concat()"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/string/concat.jk"
+  - name: "Test str.is_empty()"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/string/is_empty.jk"
+    exit_code: 1
+  - name: "Test str.equals()"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/string/equals.jk"
+  - name: "Test Maybe is a valid type"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/maybe.jk"
+  - name: "Test FFI module"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/ffi.jk"
+    stdout: "jinko called\n"
+  - name: "Test shell module"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/shell.jk"
+    stdout: "from shell\nfrom cmd builder\n"
+  - name: "Test Range starts correctly"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/range/start.jk"
+  - name: "Test Range advances correctly"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/range/advance.jk"
+  - name: "Test Args fetching"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/args.jk"
+      - "hey there"
+    exit_code: 9
+  - name: "Test exit() function"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/exit.jk"
+    exit_code: 42
