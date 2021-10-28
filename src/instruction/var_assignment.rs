@@ -157,10 +157,10 @@ impl TypeCheck for VarAssign {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::jinko_fail;
     use crate::parser::{Construct, Token};
     use crate::value::{JkInt, JkString};
     use crate::ToObjectInstance;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn non_mutable() {
@@ -222,5 +222,37 @@ mod tests {
             mut a0 = 15;
             mut a0 = 14;
         };
+    }
+
+    #[test]
+    fn assign_mutable_in_block_187() {
+        let ctx = jinko! {
+            mut x = 1;
+            {
+                x = 0;
+            }
+        };
+
+        assert_eq!(
+            ctx.get_variable("x").unwrap().instance(),
+            JkInt::from(0).to_instance()
+        );
+    }
+
+    #[test]
+    fn assign_mutable_in_function_187() {
+        let ctx = jinko! {
+            mut x = 1;
+            func change_global() {
+                x = 0;
+            }
+
+            change_global()
+        };
+
+        assert_eq!(
+            ctx.get_variable("x").unwrap().instance(),
+            JkInt::from(0).to_instance()
+        );
     }
 }

@@ -198,10 +198,12 @@ impl Context {
 
     /// Replace a variable or create it if it does not exist
     pub fn replace_variable(&mut self, var: Var) -> Result<(), Error> {
-        // Remove the variable if it exists
-        let _ = self.remove_variable(&var);
+        match self.scope_map.get_variable_mut(var.name()) {
+            None => self.add_variable(var)?,
+            Some(var_ref) => var_ref.set_instance(var.instance()),
+        }
 
-        self.add_variable(var)
+        Ok(())
     }
 
     /// Get a mutable reference on an existing function
