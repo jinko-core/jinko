@@ -187,10 +187,7 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
         unit_block(input)
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
-        let (input, expr) = expr(input)?;
-        let (input, _) = Token::right_parenthesis(input)?;
-
-        Ok((input, expr))
+        terminated(expr, Token::right_parenthesis)(input)
     } else if let Ok(res) = constant(input) {
         Ok(res)
     } else {
