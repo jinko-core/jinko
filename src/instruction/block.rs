@@ -223,12 +223,13 @@ mod tests {
 
     // FIXME: Add test for type of block containing `last` once TypeChecker is implemented
     // for all Instructions
+    // FIXME: Do not ignore once #337 is fixed
     #[test]
+    #[ignore]
     fn block_no_last_tychk() {
-        let mut b = Block::new();
-        let instr: Vec<Box<dyn Instruction>> =
-            vec![Box::new(JkInt::from(12)), Box::new(JkInt::from(15))];
-        b.set_instructions(instr);
+        let b = crate::parser::constructs::expr("{ 12; 15; a = 14; }")
+            .unwrap()
+            .1;
 
         let mut ctx = Context::new();
         let mut ctx = TypeCtx::new(&mut ctx);

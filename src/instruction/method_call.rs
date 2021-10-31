@@ -97,6 +97,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // FIXME: #340
     fn tc_valid_call_multi_arg() {
         jinko! {
             func to_int(self: bool, truthy_value: int) -> int {
@@ -112,6 +113,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // FIXME: #340
     fn tc_invalid_call_type() {
         jinko! {
             func id(x: int) -> int { x }

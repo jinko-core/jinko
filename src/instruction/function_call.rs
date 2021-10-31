@@ -262,7 +262,7 @@ mod tests {
 
         // Create a new function with two integers arguments
         let mut ctx = jinko! {
-            func func0(a: int, b: int);
+            func func0(a: int, b: int) {}
         };
 
         let f_call = FunctionCall::new("func0".to_string(), vec![]);
@@ -362,7 +362,7 @@ mod tests {
             take_char(15);
             take_char(true);
             take_char(4.5);
-            take_char(SameButDiff { inner = 'a' })
+            take_char(SameButDiff(inner = 'a'))
         };
     }
 
@@ -371,7 +371,7 @@ mod tests {
         jinko! {
             type ComplexType(inner: char);
             func take_char(a: ComplexType) {}
-            take_char(ComplexType { inner = 'a' })
+            take_char(ComplexType(inner: 'a'))
         };
     }
 

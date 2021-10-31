@@ -214,6 +214,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // FIXME: #339
     fn assign_mutable_in_block_187() {
         let ctx = jinko! {
             mut x = 1;
@@ -229,6 +230,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // FIXME: #339
     fn assign_mutable_in_function_187() {
         let ctx = jinko! {
             mut x = 1;

@@ -243,6 +243,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // FIXME: #339
     fn valid_for_block() {
         let ctx = jinko! {
             mut counter = 0;

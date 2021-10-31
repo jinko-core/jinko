@@ -126,7 +126,7 @@ mod tests {
     fn tc_valid_easy() {
         jinko! {
             type Complex(real: int, imaginary: int);
-            c = Complex { real = 15, imaginary = 14 };
+            c = Complex(real: 15, imaginary: 14);
         };
     }
 
@@ -137,10 +137,10 @@ mod tests {
             type Vector2(v0: Point, v1: Point);
 
             func zero() -> Point {
-                Point { x = 0, y = 0 }
+                Point(x: 0, y: 0)
             }
 
-            v = Vector2 { v0 = zero(), v1 = zero() };
+            v = Vector2(v0: zero(), v1: zero());
         };
     }
 
@@ -152,10 +152,10 @@ mod tests {
             type Vector2(v0: Point, v1: Point);
 
             func zero() -> NotPoint {
-                NotPoint { x = 0, y = 0 }
+                NotPoint(x: 0, y: 0)
             }
 
-            v = Vector2 { v0 = 15, v1 = zero() };
+            v = Vector2(v0: 15, v1: zero());
         };
     }
 }
