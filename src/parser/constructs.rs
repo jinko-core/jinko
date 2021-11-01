@@ -317,19 +317,19 @@ fn generic_list(input: &str) -> ParseResult<&str, Vec<TypeId>> {
 
     let (input, first_type) = whitespace_plus_id(input)?;
     let (input, mut generics) = many0(preceded(Token::comma, whitespace_plus_id))(input)?;
-    let (input, _) = Token::gt(input)?;
+    let (input, _) = Token::right_bracket(input)?;
 
     generics.insert(0, first_type);
     Ok((input, generics.into_iter().map(TypeId::new).collect()))
 }
 
-/// function_declaration = next spaced_identifier [ next '<' spaced_identifier ( ',' spaced_identifier )* '>' ] next '(' next typed_arg next return_type
+/// function_declaration = next spaced_identifier [ next '[' spaced_identifier ( ',' spaced_identifier )* ']' ] next '(' next typed_arg next return_type
 fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
     let input = next(input);
     let (input, id) = spaced_identifier(input)?;
     let input = next(input);
 
-    let (input, _generics) = if let Ok((input, _)) = Token::lt(input) {
+    let (input, _generics) = if let Ok((input, _)) = Token::left_bracket(input) {
         generic_list(input)?
     } else {
         (input, vec![])
@@ -1218,28 +1218,28 @@ func void() { }"##;
 
     #[test]
     fn func_dec_one_generic() {
-        assert!(expr("func a<T>() {}").is_ok())
+        assert!(expr("func a[T]() {}").is_ok())
     }
 
     #[test]
     fn func_dec_multiple_generic() {
-        assert!(expr("func a<T, U, V>() {}").is_ok())
+        assert!(expr("func a[T, U, V]() {}").is_ok())
     }
 
     #[test]
     fn func_dec_generic_and_whitespace() {
-        assert!(expr("func a<    T>() {}").is_ok());
-        assert!(expr("func a<    T  >() {}").is_ok());
-        assert!(expr("func a<   T , U    , V>() {}").is_ok())
+        assert!(expr("func a[    T]() {}").is_ok());
+        assert!(expr("func a[    T  ]() {}").is_ok());
+        assert!(expr("func a[   T , U    , V]() {}").is_ok())
     }
 
     #[test]
     fn func_dec_empty_generic_list() {
-        assert!(expr("func a<>() {}").is_err())
+        assert!(expr("func a[]() {}").is_err())
     }
 
     #[test]
     fn func_dec_no_generic_delimiter() {
-        assert!(expr("func a<T, U() {}").is_err())
+        assert!(expr("func a[T, U() {}").is_err())
     }
 }
