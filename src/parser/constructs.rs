@@ -15,7 +15,7 @@
 
 use nom::Err::Error as NomError;
 use nom::{
-    branch::alt, combinator::opt, multi::many0, sequence::delimited, sequence::pair,
+    branch::alt, combinator::{opt, peek}, multi::many0, sequence::delimited, sequence::pair,
     sequence::preceded, sequence::terminated,
 };
 
@@ -253,13 +253,19 @@ fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 /// spaced_identifier '(' type_inst_arg (',' type_inst_arg)* ')'
 fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, name) = spaced_identifier(input)?;
-    let (input, _) = Token::left_parenthesis(input)?;
-    let (input, first_arg) = typed_arg(input)?;
-    let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
-    let (input, _) = Token::right_parenthesis(input)?;
+    let (input, type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
+        let (input, first_arg) = typed_arg(input)?;
+        let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
 
-    args.insert(0, first_arg);
-    Ok((input, Box::new(TypeDec::new(name, args))))
+        args.insert(0, first_arg);
+
+        (input, TypeDec::new(name, args))
+    } else {
+        (input, TypeDec::new(name, vec![]))
+    };
+
+    Ok((input, Box::new(type_dec)))
 }
 
 /// spaced_identifier '=' expr
@@ -388,6 +394,7 @@ fn inner_block(input: &str) -> ParseResult<&str, Block> {
 
 /// func_type_or_var = [ '<' IDENTIFIER ( ',' IDENTIFIER )* '>' ] '(' next func_or_type_inst_args
 ///                  | '=' expr                   (* variable assigment *)
+///                  | ';'                        (* empty type instantiation *)
 ///                  | ε                          (* variable *)
 fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_bracket(input) {
@@ -397,6 +404,8 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
+    } else if let Ok((input, _)) = peek(Token::semicolon)(input) {
+        Ok((input, Box::new(TypeInstantiation::new(TypeId::new(id)))))
     } else {
         Ok((input, Box::new(Var::new(id))))
     }
@@ -1286,5 +1295,15 @@ func void() { }"##;
     #[test]
     fn type_inst_generics_multi_and_args() {
         assert!(expr("TypeInst[T, U, V](a: 0, b: 1, c: 2)").is_ok());
+    }
+
+    #[test]
+    fn empty_type_declaration() {
+        assert!(expr("type CustomType;").is_ok())
+    }
+
+    #[test]
+    fn empty_type_instantiation() {
+        assert!(expr("a = CustomType;").is_ok())
     }
 }

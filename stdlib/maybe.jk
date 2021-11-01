@@ -3,7 +3,7 @@
 
 // TODO: Implement Maybe<T> once generics are implemented
 // TODO: Implement Maybe<T> as multi-type once they are implemented
-type Maybe_int(inner: int, is_some: bool)
+type Maybe_int(inner: int, is_some: bool);
 
 func is_some(m: Maybe_int) -> bool {
     m.is_some
