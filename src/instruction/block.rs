@@ -60,9 +60,19 @@ impl Block {
         self.instructions.push(instruction);
     }
 
+    /// Add an instruction at the start of the block's instructions
+    pub fn push_front_instruction(&mut self, instruction: Box<dyn Instruction>) {
+        self.instructions.insert(0, instruction);
+    }
+
     /// Pop an instruction from the block, removing it from the execution pool
     pub fn pop_instruction(&mut self) -> Option<Box<dyn Instruction>> {
         self.instructions.pop()
+    }
+
+    /// Set block is_statement to given value
+    pub fn set_statement(&mut self, is_statement: bool) {
+        self.is_statement = is_statement;
     }
 }
 
