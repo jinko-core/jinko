@@ -310,13 +310,12 @@ impl Context {
 
         self.type_check(&ep)?;
 
-        ep.instructions()[..ep.instructions().len() - 1]
+        let res = ep
+            .instructions()
             .iter()
-            .for_each(|inst| {
-                inst.execute(self);
-            });
-
-        let res = ep.instructions().last().and_then(|last| last.execute(self));
+            .map(|inst| inst.execute(self))
+            .last()
+            .flatten();
 
         self.emit_errors();
 
