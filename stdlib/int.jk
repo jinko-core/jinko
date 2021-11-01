@@ -1,0 +1,25 @@
+func bin(i: int) -> string {
+    mut result = "";
+    mut i_copy = i;
+
+    while i_copy > 0 {
+        if i_copy % 2 == 0 {
+            result = concat("0", result);
+        } else {
+            result = concat("1", result);
+        }
+
+        i_copy = i_copy / 2;
+    }
+
+    // FIXME: We want proper 2's complement representation
+    if i < 0 {
+        concat("-", result)
+    } else {
+        result
+    }
+}
+
+func hex(i: int) -> string {
+    "0xff"
+}
