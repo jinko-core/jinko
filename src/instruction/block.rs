@@ -85,18 +85,17 @@ impl Instruction for Block {
     }
 
     fn print(&self) -> String {
-        if self.instructions.is_empty() {
-            "{\n}".to_owned()
-        } else {
-            format!(
-                "{{\n{}\n}}",
-                self.instructions()
-                    .iter()
-                    .map(|inst| inst.print())
-                    .intersperse("\n;\n    ".to_owned())
-                    .collect::<String>()
-            )
+        let mut base = String::from("{\n");
+
+        if let Some((last, instructions)) = self.instructions.split_last() {
+            instructions.iter().for_each(|instr| {
+                base = format!("{}    {};\n", base, &instr.print());
+            });
+            base = format!("{}    {}\n", base, last.print());
         }
+
+        base.push('}');
+        base
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
