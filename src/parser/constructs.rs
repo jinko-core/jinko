@@ -390,7 +390,7 @@ fn inner_block(input: &str) -> ParseResult<&str, Block> {
 ///                  | '=' expr                   (* variable assigment *)
 ///                  | ε                          (* variable *)
 fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
-    if let Ok((input, _)) = Token::lt(input) {
+    if let Ok((input, _)) = Token::left_bracket(input) {
         generic_func_or_type_inst_args(next(input), id)
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
         func_or_type_inst_args(next(input), id, None)
@@ -404,7 +404,11 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
 
 /// func_or_type_inst_args = IDENTIFIER next ':' expr (',' type_inst_arg )* ')'  (* type_instantiation *)
 ///                  | args                                            (* function_call *)
-fn func_or_type_inst_args(input: &str, id: String, generics: Option<Vec<TypeId>>) -> ParseResult<&str, Box<dyn Instruction>> {
+fn func_or_type_inst_args(
+    input: &str,
+    id: String,
+    generics: Option<Vec<TypeId>>,
+) -> ParseResult<&str, Box<dyn Instruction>> {
     if let Ok((input, first_attr)) =
         terminated(terminated(Token::identifier, nom_next), Token::colon)(input)
     {
@@ -429,7 +433,10 @@ fn func_or_type_inst_args(input: &str, id: String, generics: Option<Vec<TypeId>>
     }
 }
 
-fn generic_func_or_type_inst_args(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
+fn generic_func_or_type_inst_args(
+    input: &str,
+    id: String,
+) -> ParseResult<&str, Box<dyn Instruction>> {
     // FIXME: Assign generics to FunctionCall and TypeInstantiation
     let (input, generics) = generic_list(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
@@ -1261,21 +1268,21 @@ func void() { }"##;
 
     #[test]
     fn func_call_generics_one() {
-        assert!(expr("fn_call<T>()").is_ok());
+        assert!(expr("fn_call[T]()").is_ok());
     }
 
     #[test]
     fn func_call_generics_multi() {
-        assert!(expr("fn_call<T, U, V>()").is_ok());
+        assert!(expr("fn_call[T, U, V]()").is_ok());
     }
 
     #[test]
     fn func_call_generics_multi_and_args() {
-        assert!(expr("fn_call<T, U, V>(a, b, c)").is_ok());
+        assert!(expr("fn_call[T, U, V](a, b, c)").is_ok());
     }
 
     #[test]
     fn type_inst_generics_multi_and_args() {
-        assert!(expr("TypeInst<T, U, V>(a: 0, b: 1, c: 2)").is_ok());
+        assert!(expr("TypeInst[T, U, V](a: 0, b: 1, c: 2)").is_ok());
     }
 }
