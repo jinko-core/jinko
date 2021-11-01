@@ -339,23 +339,24 @@ pub fn block(input: &str) -> ParseResult<&str, Block> {
     inner_block(input)
 }
 
-/// inner_block = expr ( ';' expr )* '}'
-///             | '}'
+/// inner_block = '}'
+///             | expr '}'                  (* The only case where block is an expr *)
+///             | expr ';' next inner_block
 fn inner_block(input: &str) -> ParseResult<&str, Block> {
-    let mut block = Block::new();
     if let Ok((input, _)) = Token::right_curly_bracket(input) {
+        return Ok((input, Block::new()));
+    }
+
+    let (input, inst) = expr(input)?;
+    if let Ok((input, _)) = Token::right_curly_bracket(input) {
+        let mut block = Block::new();
+        block.add_instruction(inst);
+        block.set_statement(false);
         return Ok((input, block));
     }
 
-    let (mut input, inst) = expr(input)?;
-    block.add_instruction(inst);
-    while let Ok((new_input, _)) = Token::semicolon(input) {
-        let (new_input, inst) = expr(new_input)?;
-        block.add_instruction(inst);
-        input = new_input;
-    }
-    let (input, _) = Token::right_curly_bracket(input)?;
-
+    let (input, mut block) = preceded(Token::semicolon, preceded(nom_next, inner_block))(input)?;
+    block.push_front_instruction(inst);
     Ok((input, block))
 }
 
@@ -782,6 +783,21 @@ mod tests {
             var = 1 + 1;
             var = var - 2;
             var
+                                 }",
+        )
+        .unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<Block>().is_some());
+    }
+
+    #[test]
+    fn block_statement() {
+        let (input, expr) = expr(
+            "{
+            var = 1 + 1;
+            var = var - 2;
+            var;
                                  }",
         )
         .unwrap();

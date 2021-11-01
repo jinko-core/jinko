@@ -25,6 +25,7 @@ use crate::{
 #[derive(Clone, Default)]
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
+    is_statement: bool,
     ty: CheckedType,
 }
 
@@ -34,6 +35,7 @@ impl Block {
         // FIXME: Remove this method
         Block {
             instructions: Vec::new(),
+            is_statement: true,
             ty: CheckedType::Unknown,
         }
     }
@@ -58,34 +60,38 @@ impl Block {
         self.instructions.push(instruction);
     }
 
+    /// Add an instruction at the start of the block's instructions
+    pub fn push_front_instruction(&mut self, instruction: Box<dyn Instruction>) {
+        self.instructions.insert(0, instruction);
+    }
+
     /// Pop an instruction from the block, removing it from the execution pool
     pub fn pop_instruction(&mut self) -> Option<Box<dyn Instruction>> {
         self.instructions.pop()
+    }
+
+    /// Set block is_statement to given value
+    pub fn set_statement(&mut self, is_statement: bool) {
+        self.is_statement = is_statement;
     }
 }
 
 impl Instruction for Block {
     fn kind(&self) -> InstrKind {
-        match self.instructions.last() {
-            Some(last) => last.kind(),
-            None => InstrKind::Statement,
+        match self.is_statement {
+            true => InstrKind::Statement,
+            false => self.instructions.last().unwrap().kind(),
         }
     }
 
     fn print(&self) -> String {
         let mut base = String::from("{\n");
 
-        for instr in &self
-            .instructions
-            .iter()
-            .collect::<Vec<&Box<dyn Instruction>>>()
-        {
-            base = format!("{}    {}", base, &instr.print());
-            base.push_str(";\n");
-        }
-
-        if let Some(l) = self.instructions.last() {
-            base = format!("{}    {}\n", base, l.print());
+        if let Some((last, instructions)) = self.instructions.split_last() {
+            instructions.iter().for_each(|instr| {
+                base = format!("{}    {};\n", base, &instr.print());
+            });
+            base = format!("{}    {}\n", base, last.print());
         }
 
         base.push('}');
@@ -96,31 +102,34 @@ impl Instruction for Block {
         ctx.scope_enter();
         ctx.debug_step("BLOCK ENTER");
 
-        self.instructions().iter().for_each(|inst| {
-            inst.execute(ctx);
-        });
-
-        let ret_val = match &self.instructions.last() {
-            Some(e) => e.execute(ctx),
-            None => None,
-        };
+        let ret_val = self
+            .instructions
+            .iter()
+            .map(|inst| inst.execute(ctx))
+            .last();
 
         ctx.scope_exit();
         ctx.debug_step("BLOCK EXIT");
 
-        ret_val
+        match self.is_statement {
+            false => ret_val.flatten(),
+            true => None,
+        }
     }
 }
 
 impl TypeCheck for Block {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        self.instructions.iter().for_each(|inst| {
-            inst.resolve_type(ctx);
-        });
+        let last_type = self
+            .instructions
+            .iter()
+            .map(|inst| inst.resolve_type(ctx))
+            .last()
+            .unwrap_or(CheckedType::Void);
 
-        match &self.instructions.last() {
-            None => CheckedType::Void,
-            Some(last) => last.resolve_type(ctx),
+        match &self.is_statement {
+            true => CheckedType::Void,
+            false => last_type,
         }
     }
 }
@@ -151,6 +160,7 @@ mod tests {
         ];
 
         b.set_instructions(instrs);
+        b.set_statement(false);
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
     }
@@ -167,6 +177,7 @@ mod tests {
 
         b.set_instructions(instrs);
         b.add_instruction(last);
+        b.set_statement(false);
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
     }
@@ -214,6 +225,7 @@ mod tests {
 
         let last = Box::new(JkInt::from(18));
         b.add_instruction(last);
+        b.set_statement(false);
 
         let mut i = Context::new();
 
