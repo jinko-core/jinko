@@ -148,52 +148,6 @@ mod tests {
     use crate::ToObjectInstance;
     use crate::{jinko, jinko_fail};
 
-    fn binop_assert(l_num: i64, r_num: i64, op_string: &str, res: i64) {
-        let l = Box::new(JkInt::from(l_num));
-        let r = Box::new(JkInt::from(r_num));
-        let op = Operator::new(op_string);
-
-        let binop = BinaryOp::new(l, r, op);
-
-        let mut i = Context::new();
-
-        assert_eq!(
-            binop.execute(&mut i).unwrap(),
-            JkInt::from(res).to_instance(),
-        );
-        assert!(!i.error_handler.has_errors());
-    }
-
-    #[test]
-    fn t_binop_add_same() {
-        binop_assert(12, 12, "+", 24);
-    }
-
-    #[test]
-    fn t_binop_add_l_diff() {
-        binop_assert(12, 2, "+", 14);
-    }
-
-    #[test]
-    fn t_binop_add_r_diff() {
-        binop_assert(2, 99, "+", 101);
-    }
-
-    #[test]
-    fn t_binop_mul_same() {
-        binop_assert(12, 12, "*", 144);
-    }
-
-    #[test]
-    fn t_binop_mul_l_diff() {
-        binop_assert(12, 2, "*", 24);
-    }
-
-    #[test]
-    fn t_binop_mul_r_diff() {
-        binop_assert(2, 99, "*", 198);
-    }
-
     #[test]
     fn t_binop_rhs_execute() {
         let r_bin = BinaryOp::new(
@@ -304,5 +258,118 @@ mod tests {
             t0 = 1 + '4';
             t2 = 1.0 + "hey";
         };
+    }
+
+    macro_rules! binop_assert {
+        ($expr:expr) => {{
+            let mut ctx = Context::new();
+            let expr = crate::parser::constructs::expr(stringify!($expr))
+                .unwrap()
+                .1;
+
+            assert_eq!(
+                expr.execute(&mut ctx).unwrap(),
+                JkInt::from($expr).to_instance()
+            );
+        }};
+    }
+
+    #[test]
+    fn t_binop_add_same() {
+        binop_assert!(12 + 12);
+    }
+
+    #[test]
+    fn t_binop_add_l_diff() {
+        binop_assert!(12 + 2);
+    }
+
+    #[test]
+    fn t_binop_add_r_diff() {
+        binop_assert!(2 + 99);
+    }
+
+    #[test]
+    fn t_binop_mul_same() {
+        binop_assert!(12 * 12);
+    }
+
+    #[test]
+    fn t_binop_mul_l_diff() {
+        binop_assert!(12 * 2);
+    }
+
+    #[test]
+    fn t_binop_mul_r_diff() {
+        binop_assert!(2 * 99);
+    }
+
+    #[test]
+    fn binop_parentheses_execute() {
+        binop_assert!(4 * (3 + 4))
+    }
+
+    #[test]
+    fn binop_easy() {
+        binop_assert!(5 + 7)
+    }
+
+    fn binop_execute_execute_natural_order() {
+        binop_assert!(4 + 7 + 3);
+    }
+
+    #[test]
+    fn binop_execute_execute_mult_priority() {
+        binop_assert!(4 + 2 * 3);
+    }
+
+    #[test]
+    fn binop_execute_execute_mult_natural_priority() {
+        binop_assert!(2 * 3 + 4);
+    }
+
+    #[test]
+    fn binop_execute_valid_add() {
+        binop_assert!(1 + 2);
+    }
+
+    #[test]
+    fn binop_execute_valid_mul() {
+        binop_assert!(1 * 2);
+    }
+
+    #[test]
+    fn binop_execute_valid_normal_priority() {
+        binop_assert!(1 * 2 + 3);
+    }
+
+    #[test]
+    fn binop_execute_valid_back_priority() {
+        binop_assert!(3 + 1 * 2);
+    }
+
+    #[test]
+    fn binop_execute_valid_parentheses_priority() {
+        binop_assert!((3 + 1) * 2);
+    }
+
+    #[test]
+    fn binop_execute_valid_parentheses_priority_reverse() {
+        binop_assert!(2 * (3 + 1));
+    }
+
+    #[test]
+    fn binop_execute_valid_complex_expr() {
+        binop_assert!(1 + 4 * 2 - 1 + 2);
+    }
+
+    #[test]
+    fn binop_execute_valid_multi_expr() {
+        binop_assert!(3 + 4 * 2 + 5);
+    }
+
+    #[test]
+    fn binop_execute_valid_extremely_complex_expr() {
+        binop_assert!(1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2);
     }
 }

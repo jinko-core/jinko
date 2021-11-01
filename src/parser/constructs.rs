@@ -149,6 +149,7 @@ fn method_or_field(
 ///      | 'extern' 'func' function_declaration ';'
 ///      | 'return' expr
 ///      | '{' next inner_block
+///      | '(' expr ')'
 ///
 ///      | 'true'
 ///      | 'false'
@@ -185,6 +186,8 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         unit_return(input)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
         unit_block(input)
+    } else if let Ok((input, _)) = Token::left_parenthesis(input) {
+        terminated(expr, Token::right_parenthesis)(input)
     } else if let Ok(res) = constant(input) {
         Ok(res)
     } else {
@@ -1132,8 +1135,15 @@ func void() { }"##;
     }
 
     #[test]
-    #[ignore]
     fn expr_with_parenthesis() {
         assert!(expr("lhs + (rhs - lhs)").is_ok())
+    }
+
+    #[test]
+    fn parentheses() {
+        let (input, expr) = expr("4 * (3 + 5)").unwrap();
+        expr.downcast_ref::<BinaryOp>().unwrap();
+
+        assert_eq!(input, "");
     }
 }
