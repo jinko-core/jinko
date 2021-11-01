@@ -85,14 +85,18 @@ impl Instruction for Block {
     }
 
     fn print(&self) -> String {
-        format!(
-            "{{\n{}\n}}",
-            self.instructions()
-                .iter()
-                .map(|inst| inst.print())
-                .intersperse(";\n    ".to_owned())
-                .collect::<String>()
-        )
+        if self.instructions.is_empty() {
+            "{\n}".to_owned()
+        } else {
+            format!(
+                "{{\n{}\n}}",
+                self.instructions()
+                    .iter()
+                    .map(|inst| inst.print())
+                    .intersperse("\n;\n    ".to_owned())
+                    .collect::<String>()
+            )
+        }
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
@@ -157,6 +161,7 @@ mod tests {
         ];
 
         b.set_instructions(instrs);
+        b.set_statement(false);
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
     }
@@ -173,6 +178,7 @@ mod tests {
 
         b.set_instructions(instrs);
         b.add_instruction(last);
+        b.set_statement(false);
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
     }
@@ -220,6 +226,7 @@ mod tests {
 
         let last = Box::new(JkInt::from(18));
         b.add_instruction(last);
+        b.set_statement(false);
 
         let mut i = Context::new();
 

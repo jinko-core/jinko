@@ -49,8 +49,8 @@ type_inst_arg = next IDENTIFIER next ':' expr
 
 block = '{' next inner_block
 inner_block = '}'
-            | expr '}'             (* The only case where block is an expr *)
-            | expr ';' inner_block
+            | expr '}'                  (* The only case where block is an expr *)
+            | expr ';' next inner_block
 
 function_declaration = next IDENTIFIER next '(' next typed_arg next return_type
 return_type = '->' next IDENTIFIER next

@@ -340,8 +340,8 @@ pub fn block(input: &str) -> ParseResult<&str, Block> {
 }
 
 /// inner_block = '}'
-///             | expr '}'             (* The only case where block is an expr *)
-///             | expr ';' inner_block
+///             | expr '}'                  (* The only case where block is an expr *)
+///             | expr ';' next inner_block
 fn inner_block(input: &str) -> ParseResult<&str, Block> {
     if let Ok((input, _)) = Token::right_curly_bracket(input) {
         return Ok((input, Block::new()));
@@ -355,7 +355,7 @@ fn inner_block(input: &str) -> ParseResult<&str, Block> {
         return Ok((input, block));
     }
 
-    let (input, mut block) = preceded(Token::semicolon, inner_block)(input)?;
+    let (input, mut block) = preceded(Token::semicolon, preceded(nom_next, inner_block))(input)?;
     block.push_front_instruction(inst);
     Ok((input, block))
 }
@@ -783,6 +783,21 @@ mod tests {
             var = 1 + 1;
             var = var - 2;
             var
+                                 }",
+        )
+        .unwrap();
+
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<Block>().is_some());
+    }
+
+    #[test]
+    fn block_statement() {
+        let (input, expr) = expr(
+            "{
+            var = 1 + 1;
+            var = var - 2;
+            var;
                                  }",
         )
         .unwrap();
