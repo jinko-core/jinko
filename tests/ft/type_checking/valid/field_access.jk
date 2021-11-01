@@ -1,6 +1,6 @@
 type Point(x: int, y: int, name: string);
 
-p = Point { x = 15, y = 14, name = "p" };
+p = Point(x: 15, y: 14, name: "p");
 
 mut t0 = p.x;
 t0 = 15;
