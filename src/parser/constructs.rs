@@ -135,16 +135,16 @@ fn method_or_field(
 /// unit = 'if' expr block next [ 'else' next block ]
 ///      | 'while' expr block
 ///      | 'loop' next block
-///      | 'for' next IDENTIFIER next 'in' expr block
+///      | 'for' spaced_identifier 'in' expr block
 ///
 ///      | 'func' function_declaration block
 ///      | 'test' function_declaration block
 ///      | 'mock' function_declaration block
 ///
-///      | 'type' next IDENTIFIER next '(' named_args
-///      | 'incl' next IDENTIFIER next [ 'as' next IDENTIFIER ]
-///      | 'mut' next IDENTIFIER next '=' expr (* mutable variable assigment *)
-///      | '@' next IDENTIFIER next '(' args
+///      | 'type' spaced_identifier '(' named_args
+///      | 'incl' spaced_identifier [ 'as' next IDENTIFIER ]
+///      | 'mut' spaced_identifier '=' expr (* mutable variable assigment *)
+///      | '@' spaced_identifier '(' args
 ///
 ///      | 'extern' 'func' function_declaration ';'
 ///      | 'return' expr
@@ -222,9 +222,7 @@ fn unit_loop(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 }
 
 fn unit_for(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-    let input = next(input);
-    let (input, id) = Token::identifier(input)?;
-    let input = next(input);
+    let (input, id) = spaced_identifier(input)?;
     let (input, _) = Token::in_tok(input)?;
     let (input, expr) = expr(input)?;
     let (input, block) = block(input)?;
@@ -241,7 +239,7 @@ fn unit_func<'a>(input: &'a str, kind: &str) -> ParseResult<&'a str, Box<dyn Ins
 }
 
 fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-    let (input, path) = delimited(nom_next, Token::identifier, nom_next)(input)?;
+    let (input, path) = spaced_identifier(input)?;
     if let Ok((input, _)) = Token::az_tok(input) {
         let (input, alias) = preceded(nom_next, Token::identifier)(input)?;
         Ok((input, Box::new(Incl::new(path, Some(alias)))))
@@ -250,9 +248,9 @@ fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     }
 }
 
-/// next IDENTIFIER next '(' type_inst_arg (',' type_inst_arg)* ')'
+/// spaced_identifier '(' type_inst_arg (',' type_inst_arg)* ')'
 fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-    let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
+    let (input, name) = spaced_identifier(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
     let (input, first_arg) = typed_arg(input)?;
     let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
@@ -262,9 +260,9 @@ fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     Ok((input, Box::new(TypeDec::new(name, args))))
 }
 
-/// next IDENTIFIER next '=' expr
+/// spaced_identifier '=' expr
 fn unit_mut_var(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-    let (input, symbol) = delimited(nom_next, Token::identifier, nom_next)(input)?;
+    let (input, symbol) = spaced_identifier(input)?;
     let (input, _) = Token::equal(input)?;
     let (input, value) = expr(input)?;
 
@@ -305,11 +303,9 @@ fn unit_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     Ok((input, Box::new(block)))
 }
 
-/// function_declaration = next IDENTIFIER next '(' next typed_args next return_type
+/// function_declaration = spaced_identifier '(' next typed_args next return_type
 fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
-    let input = next(input);
-    let (input, id) = Token::identifier(input)?;
-    let input = next(input);
+    let (input, id) = spaced_identifier(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
     let input = next(input);
     let (input, args) = typed_args(input)?;
@@ -321,14 +317,12 @@ fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
     Ok((input, function))
 }
 
-/// return_type = '->' next IDENTIFIER next
+/// return_type = '->' spaced_identifier
 ///             | ε
 fn return_type(input: &str) -> ParseResult<&str, Option<TypeId>> {
     match Token::arrow(input) {
         Ok((input, _)) => {
-            let input = next(input);
-            let (input, ty) = Token::identifier(input)?;
-            let input = next(input);
+            let (input, ty) = spaced_identifier(input)?;
             Ok((input, Some(TypeId::from(ty.as_str()))))
         }
         _ => Ok((input, None)),
@@ -430,11 +424,9 @@ fn typed_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
     Ok((input, args))
 }
 
-/// typed_arg = next IDENTIFIER next ':' next IDENTIFIER next
+/// typed_arg = spaced_identifier ':' spaced_identifier
 fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
-    let input = next(input);
-    let (input, id) = Token::identifier(input)?;
-    let input = next(input);
+    let (input, id) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
     let (input, ty) = Token::identifier(input)?;
@@ -443,17 +435,19 @@ fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
     Ok((input, DecArg::new(id, TypeId::new(ty))))
 }
 
-/// type_inst_arg = next IDENTIFIER next ':' expr
+/// type_inst_arg = spaced_identifier ':' expr
 fn type_inst_arg(input: &str) -> ParseResult<&str, VarAssign> {
-    let input = next(input);
-    let (input, id) = Token::identifier(input)?;
-    let input = next(input);
+    let (input, id) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
     let (input, value) = expr(input)?;
     let input = next(input);
 
     Ok((input, VarAssign::new(false, id, value)))
+}
+
+fn spaced_identifier(input: &str) -> ParseResult<&str, String> {
+    delimited(nom_next, Token::identifier, nom_next)(input)
 }
 
 /// next = extra*
