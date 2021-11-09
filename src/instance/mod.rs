@@ -47,6 +47,10 @@ impl ObjectInstance {
         ObjectInstance::new(CheckedType::Unknown, 0, vec![], None)
     }
 
+    pub fn empty_with_fields() -> ObjectInstance {
+        ObjectInstance::new(None, 0, vec![], Some(vec![]))
+    }
+
     /// Create a new instance
     pub fn new(
         ty: CheckedType,
@@ -103,6 +107,50 @@ impl ObjectInstance {
                     .with_msg(format!("field `{}` does not exist on instance", field_name))),
                 |FieldInstance(_, instance)| Ok(instance.clone()),
             ),
+        }
+    }
+
+    fn add_field(&mut self, name: &str, value: ObjectInstance) -> Result<(), Error> {
+        self.size += value.size();
+        self.data.append(&mut value.data().to_vec());
+
+        // We can unwrap safely here since we already checked if the instance contained fields
+        // in `set_field()`
+        self.fields.as_mut().unwrap().insert(
+            name.to_string(),
+            FieldInstance(self.size - value.size(), value),
+        );
+
+        Ok(())
+    }
+
+    fn mutate_field(&mut self, name: &str, value: ObjectInstance) -> Result<(), Error> {
+        // We can unwrap safely here since we already checked if the instance contained fields
+        // in `set_field()`, and that the field was present
+        let FieldInstance(offset, instance) = self.fields.as_mut().unwrap().get(name).unwrap();
+
+        for i in *offset..(offset + instance.size()) {
+            if let Some(data) = self.data.get_mut(offset + i) {
+                *data = *value.data().get(i).unwrap();
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn set_field(
+        &mut self,
+        field_name: &str,
+        field_value: ObjectInstance,
+    ) -> Result<(), Error> {
+        match &mut self.fields {
+            None => {
+                Err(Error::new(ErrKind::Context).with_msg(String::from("no fields on instance")))
+            }
+            Some(field_map) => match field_map.contains_key(field_name) {
+                false => self.add_field(field_name, field_value),
+                true => self.mutate_field(field_name, field_value),
+            },
         }
     }
 

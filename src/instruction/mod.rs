@@ -12,6 +12,7 @@ mod block;
 mod dec_arg;
 mod extra_content;
 mod field_access;
+mod field_assign;
 mod function_call;
 mod function_declaration;
 mod if_else;
@@ -33,6 +34,7 @@ pub use block::Block;
 pub use dec_arg::DecArg;
 pub use extra_content::{CommentKind, ExtraContent, ExtraKind};
 pub use field_access::FieldAccess;
+pub use field_assign::FieldAssign;
 pub use function_call::FunctionCall;
 pub use function_declaration::{FunctionDec, FunctionKind};
 pub use if_else::IfElse;
@@ -67,6 +69,7 @@ pub trait Instruction: InstructionClone + Downcast + TypeCheck {
     // FIXME: Add Rename here
     /// Execute the instruction, altering the state of the context. Executing
     /// this method may return an object instance
+    // FIXME: Should this return a mutable ref instead?? On an instance kept in the context?
     fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
         unreachable!(
             "\n{}\n --> {}",

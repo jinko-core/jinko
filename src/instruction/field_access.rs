@@ -8,8 +8,8 @@ use crate::{
 
 #[derive(Clone)]
 pub struct FieldAccess {
-    instance: Box<dyn Instruction>,
-    field_name: String,
+    pub(crate) instance: Box<dyn Instruction>,
+    pub(crate) field_name: String,
 }
 
 impl FieldAccess {

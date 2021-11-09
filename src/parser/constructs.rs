@@ -18,8 +18,8 @@ use nom::{branch::alt, combinator::opt, multi::many0, sequence::preceded};
 
 use crate::error::{ErrKind, Error};
 use crate::instruction::{
-    Block, DecArg, ExtraContent, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse,
-    Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, Return, TypeDec, TypeId,
+    Block, DecArg, ExtraContent, FieldAccess, FieldAssign, FunctionCall, FunctionDec, FunctionKind,
+    IfElse, Incl, Instruction, JkInst, Loop, LoopKind, MethodCall, Return, TypeDec, TypeId,
     TypeInstantiation, Var, VarAssign,
 };
 use crate::parser::{BoxConstruct, ConstantConstruct, ParseResult, ShuntingYard, Token};
@@ -37,7 +37,8 @@ impl Construct {
         // FIXME: We need to parse the remaining input after a correct instruction
         // has been parsed
         let (input, value) = alt((
-            BoxConstruct::extra,
+            Construct::binary_op,
+            BoxConstruct::field_assign,
             BoxConstruct::function_declaration,
             BoxConstruct::type_declaration,
             BoxConstruct::ext_declaration,
@@ -929,6 +930,52 @@ impl Construct {
 
         Ok(instance)
     }
+
+    fn dot_field(input: &str) -> ParseResult<&str, String> {
+        let (input, _) = Token::dot(input)?;
+
+        Token::identifier(input)
+    }
+
+    fn inner_field_access(input: &str) -> ParseResult<&str, FieldAccess> {
+        let (input, instance) = Construct::instance(input)?;
+        let (input, field_name) = Construct::dot_field(input)?;
+
+        Ok((input, FieldAccess::new(instance, field_name)))
+    }
+
+    fn multi_field_access(input: &str) -> ParseResult<&str, FieldAccess> {
+        let (input, first_fa) = Construct::inner_field_access(input)?;
+
+        let (input, dot_field_vec) = many0(Construct::dot_field)(input)?;
+
+        let mut current_fa = first_fa;
+
+        for field_name in dot_field_vec {
+            let fa = FieldAccess::new(Box::new(current_fa), field_name);
+            current_fa = fa;
+        }
+
+        Ok((input, current_fa))
+    }
+
+    pub fn field_assign(input: &str) -> ParseResult<&str, FieldAssign> {
+        let (input, field_access) = Construct::field_access(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, _) = Token::equal(input)?;
+        let (input, _) = Token::maybe_consume_extra(input)?;
+        let (input, value) = Construct::instruction(input)?;
+
+        Ok((input, FieldAssign::new(field_access, value)))
+    }
+
+    /// Parse a field access on a custom type. This is very similar to a method call: The
+    /// only difference is that the method call shall have parentheses
+    ///
+    /// `<identifier>.<identifier>[.<identifier>]*`
+    // pub fn field_access(input: &str) -> ParseResult<&str, FieldAccess> {
+    //     Construct::multi_field_access(input)
+    // }
 
     pub fn function_call_or_var(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         let (input, id) = Token::identifier(input)?;

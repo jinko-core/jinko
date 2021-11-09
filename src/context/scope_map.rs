@@ -139,7 +139,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     /// Maybe get a variable in any available scopes
     pub fn get_variable(&self, name: &str) -> Option<&V> {
         // FIXME: Use find for code quality?
-        for scope in self.scopes.iter() {
+        for scope in self.scopes.iter_mut() {
             match scope.get_variable(name) {
                 Some(v) => return Some(v),
                 None => continue,
