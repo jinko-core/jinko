@@ -68,7 +68,7 @@ impl Instruction for Var {
             base = format!("{} /* : {} */", base, ty.id());
         }
 
-        format!("{} = {}", base, self.instance)
+        format!("{} = {}", base, self.instance.as_string())
     }
 
     fn as_bool(&self, ctx: &mut Context) -> Option<bool> {

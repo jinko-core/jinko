@@ -1,6 +1,6 @@
 //! Creates a prompt based on the context's current status
 
-use crate::context::Context;
+use jinko::Context;
 use colored::Colorize;
 
 pub struct Prompt;

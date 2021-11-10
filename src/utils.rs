@@ -9,7 +9,7 @@ pub use stack::Stack;
 #[macro_export]
 macro_rules! jk_parse {
     ($ctx:expr, $($tokens:tt)*) => {
-        $crate::Parser::parse($ctx, stringify!($($tokens)*)).unwrap()
+        $crate::parse($ctx, stringify!($($tokens)*)).unwrap()
     }
 }
 
@@ -56,7 +56,7 @@ macro_rules! jk_execute {
             let mut ctx = $crate::Context::new();
             ctx.init_stdlib().unwrap();
 
-            $crate::Parser::parse(&mut ctx, stringify!($($tokens)*)).unwrap();
+            $crate::parse(&mut ctx, stringify!($($tokens)*)).unwrap();
 
             ctx.execute().unwrap()
         }

@@ -21,3 +21,7 @@ libloading = "0.7"
 
 [dev-dependencies]
 libc = "0.2"
+
+[[bin]]
+name = "jinko"
+path = "interpreter/jinko.rs"
