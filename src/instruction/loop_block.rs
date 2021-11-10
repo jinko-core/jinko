@@ -201,7 +201,6 @@ mod tests {
     use super::*;
     use crate::instruction::FunctionCall;
     use crate::jinko;
-    use crate::{JkInt, ToObjectInstance};
 
     #[test]
     fn pretty_print_loop() {
@@ -244,7 +243,7 @@ mod tests {
 
     #[test]
     fn valid_for_block() {
-        let ctx = jinko! {
+        let _ctx = jinko! {
             mut counter = 0;
             for i in range(0, 15) {
                 counter = counter + 1;
