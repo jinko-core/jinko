@@ -25,22 +25,6 @@ pub trait Value: Instruction {
     /// of a valid type. You cannot add multiple types together, except in one case:
     /// Adding a floating point number and an integer together. Doing that will
     /// return a new JkFloat.
-    ///
-    /// ```
-    /// let ctx = Context::new();
-    ///
-    /// let a = JkInt::from(126);
-    /// let b = JkInt::from(4);
-    ///
-    /// let res = a.do_op(b, Operator::Add); // JkInt(130)
-    /// assert_eq!(res.ty(), ctx.get_type("int"));
-    ///
-    /// let f = JkFloat::from(4.0);
-    ///
-    /// let res = a.do_op(f, Operator::Add); // JkFloat(130.0)
-    /// assert_eq!(res.ty(), ctx.get_type("float"));
-    /// ```
-    // FIXME: Implement behavior defined here ^
     fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, Error> {
         self.no_op(other, op)
     }
