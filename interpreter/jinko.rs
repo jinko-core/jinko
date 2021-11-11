@@ -3,7 +3,9 @@
 mod args;
 mod repl;
 
-use jinko::{Error, CheckedType, Context, JkInt, JkBool, JkFloat, ObjectInstance, FromObjectInstance};
+use jinko::{
+    CheckedType, Context, Error, FromObjectInstance, JkBool, JkFloat, JkInt, ObjectInstance,
+};
 
 use args::Args;
 use repl::Repl;
