@@ -124,7 +124,7 @@ impl Construct {
     /// Parse a function call
     /// When a function is called in the source code.
     ///
-    /// ```
+    /// ```ignore
     /// fn(); // Function call
     /// fn() // Call the function `fn` and use the return result as an instruction
     /// x = fn(); // Assign the result of the function call to the variable x
@@ -169,14 +169,14 @@ impl Construct {
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
     /// `void` type.
     ///
-    /// ```
+    /// ```ignore
     /// x = 12; // Store 12 into the variable `x`
     /// x = 456; // Forbidden, `x` is immutable
     /// ```
     ///
     /// A variable assignment is a Statement. It cannot be used as an Expression
     ///
-    /// ```
+    /// ```ignore
     /// {
     ///     x = 12; // Block returns void
     /// }
@@ -346,7 +346,7 @@ impl Construct {
 
     /// When a type is instantiated in the source code.
     ///
-    /// ```
+    /// ```ignore
     /// type A(n: int); // Declare type A
     /// val = A(1); // Instantiate a new A type variable
     /// ```
@@ -373,14 +373,14 @@ impl Construct {
     /// When a variable is assigned a value. Ideally, a variable cannot be assigned the
     /// `void` type.
     ///
-    /// ```
+    /// ```ignore
     /// mut n = 12; // Store 12 into `n`, a mutable variable
     /// n = 1586; // Allowed
     /// ```
     ///
     /// A variable assignment is a Statement. It cannot be used as an Expression
     ///
-    /// ```
+    /// ```ignore
     /// {
     ///     x = 12; // Block returns void
     /// }
@@ -464,7 +464,7 @@ impl Construct {
     /// A block of code is a new inner scope that contains instructions. You can use
     /// them in If/Else blocks, in function declarations, or just as is.
     ///
-    /// ```
+    /// ```ignore
     /// func return_nothing() {
     ///     compute_stuff();
     /// } // Block returns void, so does the function
@@ -610,7 +610,7 @@ impl Construct {
     /// Parse a function declaration. This includes the function's signature and the
     /// associated code block
     ///
-    /// ```
+    /// ```ignore
     /// func fn_name(arg0: int) -> int {
     ///     do_something(arg0);
     ///
@@ -635,7 +635,7 @@ impl Construct {
     /// invoke them. Therefore, naming the test the same as the tested function is fine
     /// and is not any form of overloading whatsoever.
     ///
-    /// ```
+    /// ```ignore
     /// test add() {
     ///     assert_eq(12 + 2, add(12, 2));
     /// }
@@ -665,8 +665,7 @@ impl Construct {
     /// Parse a mock declaration. This returns a FunctionDec as well, but of
     /// kind `FunctionDec::Mock`.
     ///
-    ///
-    /// ```
+    /// ```ignore
     /// mock add(lhs: int, rhs: int) -> int {
     ///     mock_stuff()
     /// }
@@ -838,7 +837,7 @@ impl Construct {
     ///
     /// `<expr> <op> <expr>`
     ///
-    /// ```
+    /// ```ignore
     /// x + y; // Add x and y together
     /// a << 2; // Shift a by 2 bits
     /// a > 2; // Is a greater than 2?

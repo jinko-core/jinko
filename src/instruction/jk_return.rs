@@ -1,11 +1,11 @@
 //! Return construct is used to return early from a function
-//! ```
+//! ```ignore
 //! return
 //! ```
 //!
 //! It can be used to return values
 //!
-//! ```
+//! ```ignore
 //! return 42
 //! ```
 

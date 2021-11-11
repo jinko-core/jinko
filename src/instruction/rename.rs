@@ -15,7 +15,7 @@
 //!
 //! For some simple constructs, this simply means renaming self's name, such as a TypeDec:
 //!
-//! ```
+//! ```ignore
 //! // some_type.jk
 //! type SomeType(...);
 //!
@@ -28,7 +28,7 @@
 //! ```
 //!
 //! Other instructions also have owernship of other instructions, such as blocks:
-//! ```
+//! ```ignore
 //! // source.jk
 //! { // block enter
 //!     type InBlock(...);
