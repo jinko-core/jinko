@@ -7,8 +7,7 @@ use std::path::PathBuf;
 
 use jinko::{CheckedType, TypeCheck, TypeCtx};
 use jinko::{
-    Construct, Context, Error, FromObjectInstance, Instruction, JkConstant,
-    ObjectInstance,
+    Construct, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
 };
 
 use linefeed::{DefaultTerminal, Interface, ReadResult};
