@@ -1,31 +1,15 @@
-#[warn(missing_docs)]
+// FIXME: Add #![warn(missing_docs)]
+
 mod args;
-mod builtins;
-mod context;
-mod error;
-mod ffi;
-mod indent;
-mod instance;
-mod instruction;
-mod parser;
 mod repl;
-mod typechecker;
-mod utils;
-mod value;
+
+use jinko::{
+    CheckedType, Context, Error, FromObjectInstance, JkBool, JkFloat, JkInt, ObjectInstance,
+};
 
 use args::Args;
-use parser::Parser;
 use repl::Repl;
 use std::{fs, path::Path};
-
-pub use builtins::Builtins;
-pub use context::{Context, Scope, ScopeMap};
-pub use error::{ErrKind, Error};
-pub use indent::Indent;
-pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
-pub use instruction::{InstrKind, Instruction};
-pub use typechecker::{CheckedType, TypeCheck, TypeCtx};
-pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
 
 // FIXME: Add documentation
 pub type InteractResult = Result<(Option<ObjectInstance>, Context), Error>;
@@ -42,10 +26,10 @@ fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
         // If it's an expression, return if you can (if it's an int)
         Some(i) => match i.ty() {
             CheckedType::Resolved(ty) => match ty.id() {
-                "int" => exit(JkInt::from_instance(&i).0 as i32),
-                "float" => exit(JkFloat::from_instance(&i).0 as i32),
+                "int" => exit(JkInt::from_instance(&i).rust_value() as i32),
+                "float" => exit(JkFloat::from_instance(&i).rust_value() as i32),
                 "bool" => {
-                    let b_value = JkBool::from_instance(&i).0;
+                    let b_value = JkBool::from_instance(&i).rust_value();
                     match b_value {
                         true => exit(0),
                         false => exit(1),
@@ -62,7 +46,7 @@ fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
-    let mut ctx = Parser::parse(&input)?;
+    let mut ctx = jinko::parse(&input)?;
     ctx.set_path(Some(file.to_owned()));
     ctx.set_args(args.project_args());
     ctx.set_debug(args.debug());

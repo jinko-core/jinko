@@ -9,7 +9,7 @@ pub use stack::Stack;
 #[macro_export]
 macro_rules! jk_parse {
     ($($tokens:tt)*) => {
-        $crate::Parser::parse(stringify!($($tokens)*)).unwrap()
+        $crate::parse(stringify!($($tokens)*)).unwrap()
     }
 }
 
@@ -46,7 +46,7 @@ macro_rules! jinko_fail {
 #[macro_export]
 macro_rules! jk_execute {
     ($($tokens:tt)*) => {
-        $crate::Parser::parse(stringify!($($tokens)*)).unwrap().execute().unwrap();
+        $crate::parse(stringify!($($tokens)*)).unwrap().execute().unwrap()
     }
 }
 
