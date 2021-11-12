@@ -50,3 +50,9 @@ tests:
     args:
       - "tests/ft/stdlib/exit.jk"
     exit_code: 42
+  - name: "Test --no-std"
+    binary: "target/debug/jinko"
+    args:
+      - "--no-std"
+      - "tests/ft/stdlib/range/advance.jk"
+    exit_code: 1
