@@ -62,7 +62,10 @@ fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
-    let mut ctx = Parser::parse(&input)?;
+    let mut ctx = Context::new();
+
+    Parser::parse(&mut ctx, &input)?;
+
     ctx.set_path(Some(file.to_owned()));
     ctx.set_args(args.project_args());
     ctx.set_debug(args.debug());
