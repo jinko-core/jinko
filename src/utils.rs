@@ -18,6 +18,7 @@ macro_rules! jinko {
     ($($tokens:tt)*) => {
         {
             let mut ctx = $crate::Context::new();
+            ctx.init_stdlib().unwrap();
 
             $crate::jk_parse!(&mut ctx, $($tokens)*);
 
@@ -35,6 +36,7 @@ macro_rules! jinko_fail {
     ($($tokens:tt)*) => {
         {
             let mut ctx = $crate::Context::new();
+            ctx.init_stdlib().unwrap();
 
             $crate::jk_parse! (&mut ctx, $($tokens)*);
 
@@ -52,6 +54,8 @@ macro_rules! jk_execute {
     ($($tokens:tt)*) => {
         {
             let mut ctx = $crate::Context::new();
+            ctx.init_stdlib().unwrap();
+
             $crate::Parser::parse(&mut ctx, stringify!($($tokens)*)).unwrap();
 
             ctx.execute().unwrap()

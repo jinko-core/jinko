@@ -63,6 +63,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
     let mut ctx = Context::new();
+    ctx.init_stdlib()?;
 
     Parser::parse(&mut ctx, &input)?;
 
