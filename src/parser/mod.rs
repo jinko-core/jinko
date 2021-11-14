@@ -23,9 +23,7 @@ pub struct Parser;
 impl Parser {
     /// Parses the entire user input and returns a hashmap corresponding to the user
     /// program
-    pub fn parse(input: &str) -> Result<Context, Error> {
-        let mut ctx = Context::new();
-
+    pub fn parse(ctx: &mut Context, input: &str) -> Result<(), Error> {
         let entry_block = ctx.entry_point.block_mut().unwrap();
 
         let (_, instructions) = Construct::many_instructions(input)?;
@@ -42,6 +40,6 @@ impl Parser {
             }
         }
 
-        Ok(ctx)
+        Ok(())
     }
 }

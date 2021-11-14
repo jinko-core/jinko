@@ -13,6 +13,9 @@ pub struct Args {
     #[structopt(short, long)]
     interactive: bool,
 
+    #[structopt(long = "no-std")]
+    nostdlib: bool,
+
     #[structopt(short, long)]
     debug: bool,
 
@@ -50,6 +53,11 @@ impl Args {
     /// Is the context launched in debug mode
     pub fn debug(&self) -> bool {
         self.debug
+    }
+
+    /// Is the context launched without stdlib
+    pub fn nostdlib(&self) -> bool {
+        self.nostdlib
     }
 
     /// Arguments given to the program

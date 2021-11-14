@@ -80,24 +80,8 @@ impl Context {
         ep
     }
 
-    /// Create a new context, including the standard library
-    pub fn new() -> Context {
-        let mut ctx = Context::empty();
-
-        // Include the standard library
-        let mut stdlib_incl =
-            crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
-        stdlib_incl.set_base(PathBuf::new());
-        // FIXME: Remove unwrap
-        ctx.entry_point
-            .add_instruction(Box::new(stdlib_incl))
-            .unwrap();
-
-        ctx
-    }
-
     /// Create a new empty context without the standard library
-    pub fn empty() -> Context {
+    pub fn new() -> Context {
         let mut ctx = Context {
             debug_mode: false,
             entry_point: Self::new_entry(),
@@ -353,6 +337,17 @@ impl Context {
     pub fn libs(&self) -> &Vec<libloading::Library> {
         &self.external_libs
     }
+
+    /// Includes the standard library in the context
+    pub fn init_stdlib(&mut self) -> Result<(), Error> {
+        let mut stdlib_incl =
+            crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
+        stdlib_incl.set_base(PathBuf::new());
+
+        self.entry_point.add_instruction(Box::new(stdlib_incl))?;
+
+        Ok(())
+    }
 }
 
 /// Printer for the context's usage of the ScopeMap
@@ -414,6 +409,7 @@ mod tests {
     #[test]
     fn t_print_scopemap() {
         let mut ctx = Context::new();
+        ctx.init_stdlib().unwrap();
         ctx.execute().unwrap();
 
         let output = format!("{}", ctx.scope_map);
