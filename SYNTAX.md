@@ -90,3 +90,23 @@ x = while boolean_condition -> int {
     i++;
 } // x now equals 12
 ```
+
+## Generics
+
+In order to keep the parser simple, generics use brackets instead of chevrons.
+
+```rust
+type Nothing;
+type Some[T](T);
+type Maybe[T](Nothing | Some[T]);
+
+func takes_maybe[SomeTyName](m: Maybe[SomeTyName]) -> SomeTyName {}
+
+type Ok[T](T);
+type Err[T](T);
+type Result[T = void, E = Error](Ok[T] | Err[E]);
+
+func returns_result() -> Result[int, SomeErrorType] {}
+
+type Map[K = string, V](...);
+```
