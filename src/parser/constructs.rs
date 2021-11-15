@@ -619,6 +619,14 @@ mod tests {
     }
 
     #[test]
+    fn method_call_on_bool() {
+        let (input, expr) = expr("true.call( )").unwrap();
+
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
+        assert_eq!(input, "");
+    }
+
+    #[test]
     fn field_access_single() {
         let (input, expr) = expr("a.attribute").unwrap();
 

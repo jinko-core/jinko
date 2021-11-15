@@ -48,21 +48,15 @@ impl Token {
         token: &'tok str,
     ) -> ParseResult<&'tok str, &'tok str> {
         let (input, tag) = tag::<&str, &str, Error>(token)(input)?;
-        match input.len() {
-            0 => Ok((input, tag)),
-            _ => {
-                peek(alt((
-                    char('\t'),
-                    char('\r'),
-                    char('\n'),
-                    char(' '),
-                    char('{'),
-                    char(')'),
-                    char(';'),
-                )))(input)?;
-                Ok((input, tag))
+
+        if let Some(next_char) = input.chars().next() {
+            if next_char.is_alphanumeric() || next_char == '_' {
+                return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
+                    String::from("Unexpected alphanum character after symbol"),
+                )));
             }
         }
+        Ok((input, tag))
     }
 
     pub fn single_quote(input: &str) -> ParseResult<&str, char> {
@@ -505,6 +499,7 @@ mod tests {
         assert_eq!(Token::bool_constant("false"), Ok(("", false)));
         assert_eq!(Token::bool_constant("true a"), Ok((" a", true)));
         assert_eq!(Token::bool_constant("true; false"), Ok(("; false", true)));
+        assert_eq!(Token::bool_constant("true*false"), Ok(("*false", true)));
     }
 
     #[test]
