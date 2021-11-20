@@ -4,7 +4,6 @@ incl maybe
 incl range
 incl iter
 incl ffi
-incl shell
 incl args
 
 ext func __builtin_exit(exit_code: int);

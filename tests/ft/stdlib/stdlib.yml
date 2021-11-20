@@ -26,11 +26,6 @@ tests:
     args:
       - "tests/ft/stdlib/ffi.jk"
     stdout: "jinko called\n"
-  - name: "Test shell module"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/stdlib/shell.jk"
-    stdout: "from shell\nfrom cmd builder\n"
   - name: "Test Range starts correctly"
     binary: "target/debug/jinko"
     args:
