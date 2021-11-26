@@ -1,9 +1,9 @@
 type Cinop(lhs: int, rhs: int, op: char);
 
 func new_cinop(lhs: int, rhs: int, op: char) -> Cinop {
-    Cinop { lhs = lhs, rhs = rhs, op = op }
+    Cinop(lhs: lhs, rhs: rhs, op: op)
 }
 
-func execute(self: Cinop) -> int {
+func cinop_execute(self: Cinop) -> int {
     self.lhs + self.rhs
 }
