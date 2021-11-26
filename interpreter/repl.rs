@@ -5,32 +5,31 @@ mod prompt;
 use prompt::Prompt;
 use std::path::PathBuf;
 
+use jinko::{CheckedType, TypeCheck, TypeCtx};
+use jinko::{
+    Construct, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
+};
+
 use linefeed::{DefaultTerminal, Interface, ReadResult};
 
 use crate::args::Args;
-use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
-use crate::{
-    parser::Construct, Context, Error, FromObjectInstance, Instruction, InteractResult, JkConstant,
-    ObjectInstance,
-};
+use crate::InteractResult;
 
-// FIXME:
-// - Is Display really how we want to go about it?
-// - Cleanup the code
-// - This should not be here
-impl std::fmt::Display for ObjectInstance {
+struct ReplInstance(ObjectInstance);
+
+impl std::fmt::Display for ReplInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
-            match self.ty() {
+            match self.0.ty() {
                 CheckedType::Resolved(ty) => match ty.id() {
-                    "int" => JkConstant::<i64>::from_instance(self).print(),
-                    "float" => JkConstant::<f64>::from_instance(self).print(),
-                    "char" => JkConstant::<char>::from_instance(self).print(),
-                    "string" => JkConstant::<String>::from_instance(self).print(),
-                    "bool" => JkConstant::<bool>::from_instance(self).print(),
-                    _ => self.as_string(),
+                    "int" => JkConstant::<i64>::from_instance(&self.0).print(),
+                    "float" => JkConstant::<f64>::from_instance(&self.0).print(),
+                    "char" => JkConstant::<char>::from_instance(&self.0).print(),
+                    "string" => JkConstant::<String>::from_instance(&self.0).print(),
+                    "bool" => JkConstant::<bool>::from_instance(&self.0).print(),
+                    _ => self.0.as_string(),
                 },
                 _ => format!(""),
             }
@@ -124,7 +123,7 @@ impl<'args> Repl<'args> {
             // }
 
             if let Some(result) = inst.execute(&mut ctx) {
-                println!("{}", result);
+                println!("{}", ReplInstance(result));
             };
 
             ctx.emit_errors();
