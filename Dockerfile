@@ -12,7 +12,7 @@ RUN ./install.sh
 # Run the jinko interpreter in a fresh container
 # ----------------------------------------------
 
-FROM archlinux:latest
+FROM debian:stable
 
 COPY --from=build /root/.jinko/bin/jinko /jinko
 
