@@ -10,7 +10,13 @@ use std::convert::TryFrom;
 /// A JkConstant represents a primitive type in Jinko. It is used in order to
 /// implement integers, floating point numbers, characters, booleans and strings, as
 /// well as raw byte values later for custom types.
-pub struct JkConstant<T>(pub(crate) T);
+pub struct JkConstant<T: Clone>(pub(crate) T);
+
+impl<T: Clone> JkConstant<T> {
+    pub fn rust_value(&self) -> T {
+        self.0.clone()
+    }
+}
 
 // We can do a generic implementation instead of copy pasting it 5 times.
 // However, this part of the rust compiler is still not ready
@@ -254,7 +260,7 @@ impl From<&str> for JkConstant<String> {
     }
 }
 
-impl<T> From<T> for JkConstant<T> {
+impl<T: Clone> From<T> for JkConstant<T> {
     fn from(rust_value: T) -> Self {
         JkConstant(rust_value)
     }

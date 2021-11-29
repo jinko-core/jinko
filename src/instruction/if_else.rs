@@ -1,7 +1,7 @@
 //! `IfElse`s are used to represent an if/else statement in the source code. They have
 //! a condition, a body and an optional else body.
 //!
-//! ```
+//! ```ignore
 //! if condition {
 //!     condition_evaluates_to_true();
 //! } else {
@@ -11,7 +11,7 @@
 //!
 //! They can be used to return values, just like you would with any block.
 //!
-//! ```
+//! ```ignore
 //! x = if condition { 12 } else { 13 };
 //! ```
 

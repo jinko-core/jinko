@@ -2,8 +2,8 @@
 
 #[macro_export]
 macro_rules! jk_parse {
-    ($($tokens:tt)*) => {
-        $crate::Parser::parse(stringify!($($tokens)*)).unwrap()
+    ($ctx:expr, $($tokens:tt)*) => {
+        $crate::parse($ctx, stringify!($($tokens)*)).unwrap()
     }
 }
 
@@ -11,7 +11,10 @@ macro_rules! jk_parse {
 macro_rules! jinko {
     ($($tokens:tt)*) => {
         {
-            let mut ctx = $crate::jk_parse! { $($tokens)* };
+            let mut ctx = $crate::Context::new();
+            ctx.init_stdlib().unwrap();
+
+            $crate::jk_parse!(&mut ctx, $($tokens)*);
 
             ctx.emit_errors();
             assert!(ctx.execute().is_ok());
@@ -26,7 +29,10 @@ macro_rules! jinko {
 macro_rules! jinko_fail {
     ($($tokens:tt)*) => {
         {
-            let mut ctx = $crate::jk_parse! { $($tokens)* };
+            let mut ctx = $crate::Context::new();
+            ctx.init_stdlib().unwrap();
+
+            $crate::jk_parse! (&mut ctx, $($tokens)*);
 
             ctx.emit_errors();
             assert!(ctx.execute().is_err());
@@ -40,7 +46,21 @@ macro_rules! jinko_fail {
 #[macro_export]
 macro_rules! jk_execute {
     ($($tokens:tt)*) => {
-        $crate::Parser::parse(stringify!($($tokens)*)).unwrap().execute().unwrap()
+        {
+            let mut ctx = $crate::Context::new();
+            ctx.init_stdlib().unwrap();
+
+            $crate::parse(&mut ctx, stringify!($($tokens)*)).unwrap();
+
+            ctx.execute().unwrap()
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! jinko_ex {
+    ($($t:tt) *) => {
+        $crate::Parser::parse(stringify!( $( $t ) * )).unwrap().execute().unwrap()
     }
 }
 

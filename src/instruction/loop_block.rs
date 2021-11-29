@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn valid_for_block() {
-        let ctx = jinko! {
+        let _ctx = jinko! {
             mut counter = 0;
             for i in range(0, 15) {
                 counter = counter + 1;

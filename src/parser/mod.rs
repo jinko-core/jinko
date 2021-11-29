@@ -13,27 +13,14 @@ pub use tokens::Token;
 
 pub type ParseResult<T, I> = nom::IResult<T, I, Error>;
 
-pub struct Parser;
+/// Parses the entire user input and returns a hashmap corresponding to the user
+/// program
+pub fn parse(ctx: &mut Context, input: &str) -> Result<(), Error> {
+    let entry_block = ctx.entry_point.block_mut().unwrap();
 
-#[macro_export]
-macro_rules! jinko_ex {
-    ($($t:tt) *) => {
-        $crate::Parser::parse(stringify!( $( $t ) * )).unwrap().execute().unwrap()
-    }
-}
+    let (_, instructions) = constructs::many_expr(input)?;
 
-impl Parser {
-    /// Parses the entire user input and returns a hashmap corresponding to the user
-    /// program
-    pub fn parse(input: &str) -> Result<Context, Error> {
-        let mut ctx = Context::new();
+    entry_block.add_instructions(instructions);
 
-        let entry_block = ctx.entry_point.block_mut().unwrap();
-
-        let (_, instructions) = constructs::many_expr(input)?;
-
-        entry_block.add_instructions(instructions);
-
-        Ok(ctx)
-    }
+    Ok(())
 }

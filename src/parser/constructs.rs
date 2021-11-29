@@ -132,6 +132,7 @@ fn method_or_field(
     }
 }
 
+/// ```ignore
 /// unit = 'if' expr block next [ 'else' next block ]
 ///      | 'while' expr block
 ///      | 'loop' next block
@@ -159,6 +160,7 @@ fn method_or_field(
 ///      | DOUBLE
 ///
 ///      | IDENTIFIER next func_type_or_var
+/// ```
 fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::if_tok(input) {
         unit_if(input)

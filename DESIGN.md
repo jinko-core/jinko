@@ -405,3 +405,53 @@ func add_friend(name: Name, f_name: FirstName, n_name: Nickname) -> Friend {
     /* Some code */
 }
 ```
+
+## Generics
+
+Generics rely on the use of brackets so that the parser can *easily* differentiate between
+a generic use/declaration (`A<T>`) versus a variable comparison (`A < T`) without any sort
+of lookahead. Thus, the following in C++
+
+```c++
+std::vector<std::unordered_map<std::string, int>> map = ...;
+```
+
+would become in jinko
+
+```rust
+map: Vec[Map[string, int]] = ...; 
+```
+
+Likewise, the following Rust code
+
+```rust
+fn takes_result(r: Result<String, SomeErrorType>) {}
+```
+
+becomes
+
+```rust
+func takes_result(r: Result[string, SomeErrorType]) {}
+```
+
+This syntax is similar to scala's generics, which are quite nice to use.
+
+Generics, just like function parameters, should be able to take a default value, which
+could be specified by name.
+
+```rust
+type BaseError(inner: string);
+
+type Ok[T](T);
+type Err[T](T);
+type Result[T = void, E = BaseError](Ok[T], Err[E]);
+
+// We can avoid typing `Result` by using type promotion but w/e, this is for
+// the example's sake
+ok_0 = Result[int](Ok(15)); // E defaults to BaseError
+ok_1 = Result[int, string](Ok(15));
+ok_2 = Result[int, string](Err("oops"));
+ok_4 = Result[T = int, string](Err("oops"));
+ok_5 = Result[T = int, E = string](Err("oops"));
+ok_6 = Result[E = bool](Err(false)); // T defaults to void
+```
