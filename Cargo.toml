@@ -1,6 +1,6 @@
 [package]
 name = "jinko"
-version = "0.2.0"
+version = "0.3.0-jinx1"
 authors = ["CohenArthur <arthur.cohen@epita.fr>", "Skallwar <esteban.blanc@epita.fr>", "SanderJSA <sander.julien-saint-amand@epita.fr"]
 edition = "2018"
 description = "jinko is a safe, small and fast programming language with Rust interoperability"
