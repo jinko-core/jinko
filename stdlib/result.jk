@@ -1,0 +1,17 @@
+type Ok[T](with: T);
+type Err[E](E);
+
+type BasicError(msg: string)
+
+type Result[T = (), E = BasicError](Ok[T] | Err[E]);
+
+func is_ok[T, E](res: Result[T, E]) -> bool {
+    switch res {
+        _: Ok { true }
+        _: Err { false }
+    }
+}
+
+func is_err[T, E](res: Result[T, E]) -> bool {
+    res.is_ok().not()
+}
