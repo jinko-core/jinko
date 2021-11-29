@@ -3,11 +3,11 @@ mut global_x = 1;
 func mutate_global() {
     func inner() {
         global_x = 0;
-    }
+    };
 
     inner()
 }
 
 mutate_global();
 
-x
+global_x

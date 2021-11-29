@@ -1,7 +1,7 @@
 type Range_int(start: int, end: int, current: int);
 
 func range(start: int, end: int) -> Range_int {
-    Range_int { start = start, end = end, current = start }
+    Range_int(start: start, end: end, current: start)
 }
 
 func advance(r: Range_int) -> Range_int {
@@ -10,7 +10,7 @@ func advance(r: Range_int) -> Range_int {
     new_current = old_current + 1;
     new_start = r.start;
     new_end = r.end;
-    Range_int { start = new_start, end = new_end, current = new_current }
+    Range_int(start: new_start, end: new_end, current: new_current)
 }
 
 func current(r: Range_int) -> Maybe_int {

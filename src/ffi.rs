@@ -159,7 +159,7 @@ pub fn execute(
 mod tests {
     use super::*;
     use crate::jinko;
-    use crate::parser::Construct;
+    use crate::parser::constructs;
     use crate::{JkInt, ToObjectInstance};
 
     fn init_ctx() -> Context {
@@ -181,11 +181,9 @@ mod tests {
     fn t_void_int() {
         let mut i = init_ctx();
 
-        let dec = Construct::instruction("ext func no_arg() -> int;")
-            .unwrap()
-            .1;
+        let dec = constructs::expr("ext func no_arg() -> int;").unwrap().1;
         let dec = dec.downcast_ref::<FunctionDec>().unwrap();
-        let call = Construct::instruction("no_arg()").unwrap().1;
+        let call = constructs::expr("no_arg()").unwrap().1;
         let call = call.downcast_ref::<FunctionCall>().unwrap();
 
         assert_eq!(
@@ -198,11 +196,9 @@ mod tests {
     fn t_void_void() {
         let mut i = init_ctx();
 
-        let dec = Construct::instruction("ext func print_something();")
-            .unwrap()
-            .1;
+        let dec = constructs::expr("ext func print_something();").unwrap().1;
         let dec = dec.downcast_ref::<FunctionDec>().unwrap();
-        let call = Construct::instruction("print_something()").unwrap().1;
+        let call = constructs::expr("print_something()").unwrap().1;
         let call = call.downcast_ref::<FunctionCall>().unwrap();
 
         assert_eq!(execute(&dec, &call, &mut i), Ok(None));

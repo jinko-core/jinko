@@ -5,15 +5,14 @@ mod prompt;
 use prompt::Prompt;
 use std::path::PathBuf;
 
-use jinko::{CheckedType, TypeCheck, TypeCtx};
 use jinko::{
-    Construct, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
+    constructs, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
 };
+use jinko::{CheckedType, TypeCheck, TypeCtx};
+
+use crate::{Args, InteractResult};
 
 use linefeed::{DefaultTerminal, Interface, ReadResult};
-
-use crate::args::Args;
-use crate::InteractResult;
 
 struct ReplInstance(ObjectInstance);
 
@@ -49,7 +48,7 @@ impl<'args> Repl<'args> {
     fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, Error> {
         match input.is_empty() {
             true => Ok(None),
-            false => match Construct::instruction(input) {
+            false => match constructs::expr(input) {
                 Ok((_, value)) => Ok(Some(value)),
                 Err(e) => Err(Error::from(e)),
             },
@@ -83,9 +82,6 @@ impl<'args> Repl<'args> {
         ep.instructions().iter().for_each(|inst| {
             inst.execute(ctx);
         });
-        if let Some(last) = ep.last() {
-            last.execute(ctx);
-        }
 
         ctx.emit_errors();
     }

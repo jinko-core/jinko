@@ -5,8 +5,8 @@
 use nom::{
     branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
     bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
-    character::complete::char, character::is_alphanumeric, character::is_digit, combinator::opt,
-    combinator::peek, multi::many0, sequence::delimited, sequence::pair,
+    character::complete::char, character::is_alphanumeric, character::is_digit, combinator::not,
+    combinator::opt, combinator::peek, multi::many0, sequence::delimited, sequence::pair,
 };
 
 use crate::{parser::ParseResult, ErrKind, Error};
@@ -17,8 +17,6 @@ const RESERVED_KEYWORDS: [&str; 14] = [
     "func", "test", "mock", "type", "ext", "for", "while", "loop", "mut", "true", "false", "incl",
     "as", "return",
 ];
-
-const OPERATORS: &[char] = &['+', '-', '*', '/', '(', ')', '<', '>'];
 
 pub struct Token;
 
@@ -50,21 +48,15 @@ impl Token {
         token: &'tok str,
     ) -> ParseResult<&'tok str, &'tok str> {
         let (input, tag) = tag::<&str, &str, Error>(token)(input)?;
-        match input.len() {
-            0 => Ok((input, tag)),
-            _ => {
-                peek(alt((
-                    char('\t'),
-                    char('\r'),
-                    char('\n'),
-                    char(' '),
-                    char('{'),
-                    char(')'),
-                    char(';'),
-                )))(input)?;
-                Ok((input, tag))
+
+        if let Some(next_char) = input.chars().next() {
+            if next_char.is_alphanumeric() || next_char == '_' {
+                return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
+                    String::from("Unexpected alphanum character after symbol"),
+                )));
             }
         }
+        Ok((input, tag))
     }
 
     pub fn single_quote(input: &str) -> ParseResult<&str, char> {
@@ -76,7 +68,12 @@ impl Token {
     }
 
     pub fn equal(input: &str) -> ParseResult<&str, char> {
-        Token::specific_char(input, '=')
+        let (input, token) = Token::specific_char(input, '=')?;
+        if !input.is_empty() {
+            peek(not(char('=')))(input)?;
+        }
+
+        Ok((input, token))
     }
 
     pub fn comma(input: &str) -> ParseResult<&str, char> {
@@ -202,6 +199,22 @@ impl Token {
 
     pub fn gt(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, ">")
+    }
+
+    pub fn lt_eq(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "<=")
+    }
+
+    pub fn gt_eq(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, ">=")
+    }
+
+    pub fn equals(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "==")
+    }
+
+    pub fn not_equals(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "!=")
     }
 
     pub fn _left_shift(input: &str) -> ParseResult<&str, &str> {
@@ -367,20 +380,6 @@ impl Token {
         Ok(string)
     }
 
-    fn is_whitespace(c: char) -> bool {
-        c == ' ' || c == '\t' || c == '\n'
-    }
-
-    // FIXME: Documentation
-    pub fn is_operator(c: char) -> bool {
-        OPERATORS.contains(&c)
-    }
-
-    /// Consumes 1 or more whitespaces in an input. A whitespace is a space, a tab or a newline
-    pub fn consume_whitespaces(input: &str) -> ParseResult<&str, &str> {
-        take_while1(Token::is_whitespace)(input)
-    }
-
     #[inline(always)]
     pub fn consume_multi_comment(input: &str) -> ParseResult<&str, &str> {
         let (input, _) = Token::comment_multi_start(input)?;
@@ -407,22 +406,12 @@ impl Token {
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
-    fn consume_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_comment(input: &str) -> ParseResult<&str, &str> {
         alt((
             Token::consume_shebang_comment,
             Token::consume_single_comment,
             Token::consume_multi_comment,
         ))(input)
-    }
-
-    /// Consumes what is considered as "extra": Whitespaces, comments...
-    pub fn maybe_consume_extra(mut input: &str) -> ParseResult<&str, &str> {
-        while let Ok((new_input, _)) =
-            alt((Token::consume_comment, Token::consume_whitespaces))(input)
-        {
-            input = new_input;
-        }
-        Ok((input, ""))
     }
 }
 
@@ -485,15 +474,6 @@ mod tests {
     }
 
     #[test]
-    fn t_consume_whitespace() {
-        assert_eq!(Token::consume_whitespaces("   input"), Ok(("input", "   ")));
-        assert_eq!(
-            Token::consume_whitespaces(" \t input"),
-            Ok(("input", " \t "))
-        );
-    }
-
-    #[test]
     fn t_id() {
         assert_eq!(Token::identifier("x"), Ok(("", "x".to_string())));
         assert_eq!(Token::identifier("x_"), Ok(("", "x_".to_string())));
@@ -519,6 +499,7 @@ mod tests {
         assert_eq!(Token::bool_constant("false"), Ok(("", false)));
         assert_eq!(Token::bool_constant("true a"), Ok((" a", true)));
         assert_eq!(Token::bool_constant("true; false"), Ok(("; false", true)));
+        assert_eq!(Token::bool_constant("true*false"), Ok(("*false", true)));
     }
 
     #[test]

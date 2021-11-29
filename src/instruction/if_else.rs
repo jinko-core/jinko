@@ -156,8 +156,10 @@ mod tests {
 
         let mut if_block = Block::new();
         let mut else_block = Block::new();
-        if_block.set_last(Some(Box::new(JkInt::from(42))));
-        else_block.set_last(Some(Box::new(JkInt::from(69))));
+        if_block.set_statement(false);
+        if_block.add_instruction(Box::new(JkInt::from(42)));
+        else_block.set_statement(false);
+        else_block.add_instruction(Box::new(JkInt::from(69)));
 
         let if_else = IfElse::new(Box::new(JkBool::from(true)), if_block, Some(else_block));
 
@@ -176,8 +178,10 @@ mod tests {
 
         let mut if_block = Block::new();
         let mut else_block = Block::new();
-        if_block.set_last(Some(Box::new(JkInt::from(42))));
-        else_block.set_last(Some(Box::new(JkInt::from(69))));
+        if_block.set_statement(false);
+        if_block.add_instruction(Box::new(JkInt::from(42)));
+        else_block.set_statement(false);
+        else_block.add_instruction(Box::new(JkInt::from(69)));
 
         let if_else = IfElse::new(Box::new(JkBool::from(false)), if_block, Some(else_block));
 

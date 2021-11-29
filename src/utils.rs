@@ -1,11 +1,5 @@
 //! Utilities for developing Jinko more comfortably
 
-mod queue;
-mod stack;
-
-pub use queue::Queue;
-pub use stack::Stack;
-
 #[macro_export]
 macro_rules! jk_parse {
     ($ctx:expr, $($tokens:tt)*) => {
@@ -60,6 +54,13 @@ macro_rules! jk_execute {
 
             ctx.execute().unwrap()
         }
+    }
+}
+
+#[macro_export]
+macro_rules! jinko_ex {
+    ($($t:tt) *) => {
+        $crate::Parser::parse(stringify!( $( $t ) * )).unwrap().execute().unwrap()
     }
 }
 

@@ -25,7 +25,7 @@ use crate::{
 #[derive(Clone, Default)]
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
-    last: Option<Box<dyn Instruction>>,
+    is_statement: bool,
     ty: CheckedType,
 }
 
@@ -35,7 +35,7 @@ impl Block {
         // FIXME: Remove this method
         Block {
             instructions: Vec::new(),
-            last: None,
+            is_statement: true,
             ty: CheckedType::Unknown,
         }
     }
@@ -57,7 +57,12 @@ impl Block {
 
     /// Add an instruction at the end of the block's instructions
     pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) {
-        self.instructions.push(instruction)
+        self.instructions.push(instruction);
+    }
+
+    /// Add an instruction at the start of the block's instructions
+    pub fn push_front_instruction(&mut self, instruction: Box<dyn Instruction>) {
+        self.instructions.insert(0, instruction);
     }
 
     /// Pop an instruction from the block, removing it from the execution pool
@@ -65,39 +70,28 @@ impl Block {
         self.instructions.pop()
     }
 
-    /// Returns a reference to the last expression of the block, if it exists
-    pub fn last(&self) -> Option<&dyn Instruction> {
-        self.last.as_deref()
-    }
-
-    /// Gives a last expression to the block
-    pub fn set_last(&mut self, last: Option<Box<dyn Instruction>>) {
-        self.last = last;
+    /// Set block is_statement to given value
+    pub fn set_statement(&mut self, is_statement: bool) {
+        self.is_statement = is_statement;
     }
 }
 
 impl Instruction for Block {
     fn kind(&self) -> InstrKind {
-        match self.last() {
-            Some(last) => last.kind(),
-            None => InstrKind::Statement,
+        match self.is_statement {
+            true => InstrKind::Statement,
+            false => self.instructions.last().unwrap().kind(),
         }
     }
 
     fn print(&self) -> String {
         let mut base = String::from("{\n");
 
-        for instr in &self
-            .instructions
-            .iter()
-            .collect::<Vec<&Box<dyn Instruction>>>()
-        {
-            base = format!("{}    {}", base, &instr.print());
-            base.push_str(";\n");
-        }
-
-        if let Some(l) = self.last() {
-            base = format!("{}    {}\n", base, l.print());
+        if let Some((last, instructions)) = self.instructions.split_last() {
+            instructions.iter().for_each(|instr| {
+                base = format!("{}    {};\n", base, &instr.print());
+            });
+            base = format!("{}    {}\n", base, last.print());
         }
 
         base.push('}');
@@ -108,31 +102,34 @@ impl Instruction for Block {
         ctx.scope_enter();
         ctx.debug_step("BLOCK ENTER");
 
-        self.instructions().iter().for_each(|inst| {
-            inst.execute(ctx);
-        });
-
-        let ret_val = match &self.last {
-            Some(e) => e.execute(ctx),
-            None => None,
-        };
+        let ret_val = self
+            .instructions
+            .iter()
+            .map(|inst| inst.execute(ctx))
+            .last();
 
         ctx.scope_exit();
         ctx.debug_step("BLOCK EXIT");
 
-        ret_val
+        match self.is_statement {
+            false => ret_val.flatten(),
+            true => None,
+        }
     }
 }
 
 impl TypeCheck for Block {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        self.instructions.iter().for_each(|inst| {
-            inst.resolve_type(ctx);
-        });
+        let last_type = self
+            .instructions
+            .iter()
+            .map(|inst| inst.resolve_type(ctx))
+            .last()
+            .unwrap_or(CheckedType::Void);
 
-        match &self.last {
-            None => CheckedType::Void,
-            Some(last) => last.resolve_type(ctx),
+        match &self.is_statement {
+            true => CheckedType::Void,
+            false => last_type,
         }
     }
 }
@@ -141,7 +138,7 @@ impl TypeCheck for Block {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruction::Var;
+    use crate::instruction::{Var, VarAssign};
     use crate::value::JkInt;
     use crate::TypeCheck;
     use crate::{jinko, jinko_fail};
@@ -163,8 +160,9 @@ mod tests {
         ];
 
         b.set_instructions(instrs);
+        b.set_statement(false);
 
-        assert_eq!(b.kind(), InstrKind::Statement);
+        assert_eq!(b.kind(), InstrKind::Expression(None));
     }
 
     #[test]
@@ -178,7 +176,8 @@ mod tests {
         let last = Box::new(JkInt::from(12));
 
         b.set_instructions(instrs);
-        b.set_last(Some(last));
+        b.add_instruction(last);
+        b.set_statement(false);
 
         assert_eq!(b.kind(), InstrKind::Expression(None));
     }
@@ -197,8 +196,15 @@ mod tests {
     fn block_execute_no_last() {
         let mut b = Block::new();
 
-        let instr: Vec<Box<dyn Instruction>> =
-            vec![Box::new(JkInt::from(12)), Box::new(JkInt::from(15))];
+        let instr: Vec<Box<dyn Instruction>> = vec![
+            Box::new(JkInt::from(12)),
+            Box::new(JkInt::from(15)),
+            Box::new(VarAssign::new(
+                true,
+                String::from("a"),
+                Box::new(JkInt::from(15)),
+            )),
+        ];
         b.set_instructions(instr);
 
         let mut i = Context::new();
@@ -218,7 +224,8 @@ mod tests {
         b.set_instructions(instr);
 
         let last = Box::new(JkInt::from(18));
-        b.set_last(Some(last));
+        b.add_instruction(last);
+        b.set_statement(false);
 
         let mut i = Context::new();
 
@@ -228,12 +235,13 @@ mod tests {
 
     // FIXME: Add test for type of block containing `last` once TypeChecker is implemented
     // for all Instructions
+    // FIXME: Do not ignore once #337 is fixed
     #[test]
+    #[ignore]
     fn block_no_last_tychk() {
-        let mut b = Block::new();
-        let instr: Vec<Box<dyn Instruction>> =
-            vec![Box::new(JkInt::from(12)), Box::new(JkInt::from(15))];
-        b.set_instructions(instr);
+        let b = crate::parser::constructs::expr("{ 12; 15; a = 14; }")
+            .unwrap()
+            .1;
 
         let mut ctx = Context::new();
         let mut ctx = TypeCtx::new(&mut ctx);

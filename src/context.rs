@@ -275,7 +275,6 @@ impl Context {
         entry_point.instructions().iter().for_each(|inst| {
             inst.resolve_type(&mut ctx);
         });
-        entry_point.last().map(|l| l.resolve_type(&mut ctx));
 
         self.included.clear();
         match self.error_handler.has_errors() {
@@ -295,17 +294,18 @@ impl Context {
 
         self.type_check(&ep)?;
 
-        ep.instructions().iter().for_each(|inst| {
-            inst.execute(self);
-        });
-
-        let res = ep.last().map(|last| last.execute(self));
+        let res = ep
+            .instructions()
+            .iter()
+            .map(|inst| inst.execute(self))
+            .last()
+            .flatten();
 
         self.emit_errors();
 
         match self.error_handler.has_errors() {
             true => Err(Error::new(ErrKind::Context)),
-            false => Ok(res.flatten()),
+            false => Ok(res),
         }
     }
 

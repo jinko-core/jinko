@@ -6,4 +6,4 @@ func type_function_args(first: int, sec: string, third: bool) -> int {
     first_copy + first
 }
 
-type_function_args(15, "14", false);
+a = type_function_args(15, "14", false);

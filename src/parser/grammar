@@ -1,0 +1,75 @@
+expr = cmp ( '<' cmp | '>' cmp | '<=' cmp | '>=' cmp | '==' cmp | '!=' cmp)*
+
+cmp = term ( '+' term | '-' term )*
+
+term = factor next ( '*' factor next | '/' factor next )*
+
+factor = next unit factor_rest
+
+factor_rest = '.' IDENTIFIER next method_or_field factor_rest
+            | ε
+
+unit = 'if' expr block next [ 'else' next block ]
+     | 'while' expr block
+     | 'loop' next block
+     | 'for' spaced_identifier 'in' expr block
+     | 'type' spaced_identifier '(' type_dec_arg (',' type_dec_arg)* ')'
+     | 'incl' spaced_identifier [ 'as' next IDENTIFIER ]
+     | 'mut' spaced_identifier '=' expr (* mutable variable assigment *)
+     | '@' IDENTIFIER next '(' next args
+     | 'func' function_declaration block
+     | 'test' function_declaration block
+     | 'mock' function_declaration block
+     | 'ext' 'func' function_declaration ';'
+     | 'return' [ expr ]                      (* Not LL(1) but this entry is subject to change *)
+     | '{' next inner_block
+     | '(' expr ')'
+     | 'true'
+     | 'false'
+     | "'" CHAR "'"
+     | '"' [^"] '"'
+     | INT
+     | DOUBLE
+     | IDENTIFIER next func_type_or_var
+
+method_or_field = '(' next args               (* method call *)
+                | ε                           (* field access *)
+
+func_type_or_var = '(' next func_or_type_args
+                 | '=' expr                   (* variable assigment *)
+                 | ε                          (* variable *)
+
+(* Technically not LL(1) but should allow for better performance *)
+(* Once we reach ':' we can know for sure wether we're in a type instanciation or function call *)
+(* If we end up merging type_instantiation or function_call this won't be an issue anymore *)
+func_or_type_args = IDENTIFIER next ':' expr (',' type_arg )* ')'  (* type_instantiation *)
+                  | args                                           (* function_call *)
+
+type_inst_arg = spaced_identifier ':' expr
+
+
+block = '{' next inner_block
+inner_block = '}'
+            | expr '}'                  (* The only case where block is an expr *)
+            | expr ';' next inner_block
+
+function_declaration = spaced_identifier '(' next typed_arg next return_type
+return_type = '->' spaced_identifier
+            | ε
+
+typed_args = typed_arg ( ',' typed_arg )* ')'
+           | ')'
+typed_arg = spaced_identifier ':' spaced_identifier
+
+
+args = expr ( ',' expr )* ')'
+     | ')'
+
+spaced_identifier = next IDENTIFIER next
+
+next = extra*
+
+extra = WHITESPACE
+      | '/*' [^'*/'] '*/'
+      | '//' [^\n] '\n'
+      | '#'  [^\n] '\n'

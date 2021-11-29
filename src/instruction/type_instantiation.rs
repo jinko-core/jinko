@@ -308,13 +308,11 @@ mod test {
 
     #[test]
     fn t_instantiate_primitive() {
-        use crate::parser::Construct;
+        use crate::parser::constructs;
 
         let mut i = Context::new();
 
-        let instr = Construct::instruction("i = int { no_field = 15 }")
-            .unwrap()
-            .1;
+        let instr = constructs::expr("i = int { no_field = 15 }").unwrap().1;
 
         assert!(instr.execute(&mut i).is_none());
         assert!(i.error_handler.has_errors());

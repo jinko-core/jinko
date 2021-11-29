@@ -117,26 +117,26 @@ impl Instruction for Loop {
 
                 // We construct the iterator from the iterable expression
                 // `+iterator = iter(+inner)`
-                let mut iter_constructor = FunctionCall::new(String::from("iter"));
+                let mut iter_constructor = FunctionCall::new(String::from("iter"), vec![]);
                 iter_constructor.add_arg(Box::new(inner.clone()));
                 iterator.set_instance(iter_constructor.execute(ctx).unwrap());
 
                 // We fetch the first value from the iterator: `value(+iterator)`
                 // This call will be reused multiple times!
-                let mut iterator_value = FunctionCall::new(String::from("value"));
+                let mut iterator_value = FunctionCall::new(String::from("value"), vec![]);
                 iterator_value.add_arg(Box::new(iterator.clone()));
 
                 // We check if `+maybe_value` contains `Some` or `Nothing`: `is_some(+maybe_value)`
                 // This call will be reused multiple times!
-                let mut maybe_is_some = FunctionCall::new(String::from("is_some"));
+                let mut maybe_is_some = FunctionCall::new(String::from("is_some"), vec![]);
                 maybe_is_some.add_arg(Box::new(maybe.clone()));
 
                 // We advance the iterator: `next(+iterator)`
                 // This call will be reused multiple times!
-                let mut iterator_next = FunctionCall::new(String::from("next"));
+                let mut iterator_next = FunctionCall::new(String::from("next"), vec![]);
                 iterator_next.add_arg(Box::new(iterator.clone()));
 
-                let mut maybe_unpack = FunctionCall::new(String::from("unpack"));
+                let mut maybe_unpack = FunctionCall::new(String::from("unpack"), vec![]);
                 maybe_unpack.add_arg(Box::new(maybe.clone()));
 
                 // Now we can declare our variables in the context
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn pretty_print_for() {
-        let r = Box::new(FunctionCall::new("iter".to_owned()));
+        let r = Box::new(FunctionCall::new("iter".to_owned(), vec![]));
         let b = Block::new();
         let l = Loop::new(LoopKind::For(Var::new("i".to_owned()), r), b);
 
@@ -229,6 +229,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn tc_valid_loop_blocks() {
         jinko! {
             // FIXME: Don't ignore once for loop behavior is implemented
@@ -237,7 +238,7 @@ mod tests {
             mut i = 0;
             while i < 15 { i = i + 1 }
 
-            l2 = loop { i = i + 1 }
+            l2 = loop { i = i + 1; i }
         };
     }
 
