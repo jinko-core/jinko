@@ -92,11 +92,11 @@ impl Token {
         Token::specific_char(input, '}')
     }
 
-    pub fn _left_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn left_bracket(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, '[')
     }
 
-    pub fn _right_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn right_bracket(input: &str) -> ParseResult<&str, char> {
         Token::specific_char(input, ']')
     }
 

@@ -53,8 +53,8 @@ inner_block = '}'
             | expr '}'                  (* The only case where block is an expr *)
             | expr ';' next inner_block
 
-function_declaration = spaced_identifier '(' next typed_arg next return_type
-return_type = '->' spaced_identifier
+function_declaration = next spaced_identifier [ next '<' spaced_identifier ( ',' spaced_identifier )* '>' ] next '(' next typed_arg next return_type
+return_type = '->' next spaced_identifier next
             | ε
 
 typed_args = typed_arg ( ',' typed_arg )* ')'
