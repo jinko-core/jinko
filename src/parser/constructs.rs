@@ -407,7 +407,7 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
 fn func_or_type_inst_args(
     input: &str,
     id: String,
-    generics: Option<Vec<TypeId>>,
+    _generics: Option<Vec<TypeId>>,
 ) -> ParseResult<&str, Box<dyn Instruction>> {
     if let Ok((input, first_attr)) =
         terminated(terminated(Token::identifier, nom_next), Token::colon)(input)
@@ -425,8 +425,10 @@ fn func_or_type_inst_args(
         Ok((input, Box::new(type_inst)))
     } else {
         let (input, args) = args(input)?;
-        let mut func_call = FunctionCall::new(id, args);
+        let func_call = FunctionCall::new(id, args);
 
+        // TODO: Once we start doing more than just parsing...
+        // let mut func_call = FunctionCall::new(id, args);
         // func_call.set_generics(_generics);
 
         Ok((input, Box::new(func_call)))
