@@ -8,8 +8,11 @@ incl args
 
 ext func __builtin_exit(exit_code: int);
 
+type NoReturn;
+
 // FIXME: Add a default value argument here, which defaults to 0
 // func exit(code: int = 0) {
-func exit(code: int) {
-    __builtin_exit(code)
+func exit(code: int) -> NoReturn {
+    __builtin_exit(code);
+    NoReturn
 }
