@@ -253,6 +253,7 @@ fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 /// spaced_identifier '(' type_inst_arg (',' type_inst_arg)* ')'
 fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, name) = spaced_identifier(input)?;
+    let (input, _generics) = maybe_generic_list(input)?;
     let (input, type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
         let (input, first_arg) = typed_arg(input)?;
         let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
@@ -329,17 +330,21 @@ fn generic_list(input: &str) -> ParseResult<&str, Vec<TypeId>> {
     Ok((input, generics.into_iter().map(TypeId::new).collect()))
 }
 
+fn maybe_generic_list(input: &str) -> ParseResult<&str, Vec<TypeId>> {
+    if let Ok((input, _)) = Token::left_bracket(input) {
+        Ok(generic_list(input)?)
+    } else {
+        Ok((input, vec![]))
+    }
+}
+
 /// function_declaration = next spaced_identifier [ next '[' spaced_identifier ( ',' spaced_identifier )* ']' ] next '(' next typed_arg next return_type
 fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
     let input = next(input);
     let (input, id) = spaced_identifier(input)?;
     let input = next(input);
 
-    let (input, _generics) = if let Ok((input, _)) = Token::left_bracket(input) {
-        generic_list(input)?
-    } else {
-        (input, vec![])
-    };
+    let (input, _generics) = maybe_generic_list(input)?;
 
     let (input, _) = Token::left_parenthesis(input)?;
     let input = next(input);
@@ -1302,5 +1307,21 @@ func void() { }"##;
     #[test]
     fn empty_type_instantiation() {
         assert!(expr("a = CustomType;").is_ok())
+    }
+
+    #[test]
+    fn generic_type_decl() {
+        assert!(expr("type Generic[T](inner: T);").is_ok());
+    }
+
+    #[test]
+    fn multi_generic_type_decl() {
+        assert!(expr("type Generic[T, U, V](inner: T, outer: int, something: W);").is_ok());
+    }
+
+    #[test]
+    #[ignore] // FIXME: #379
+    fn generic_empty_type_decl() {
+        assert!(expr("type Generic[T];").is_ok());
     }
 }
