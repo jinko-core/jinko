@@ -1,3 +1,1 @@
-args = args();
-
-len(args.at(0))
+len(Args.at(0))
