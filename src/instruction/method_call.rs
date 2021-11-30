@@ -42,6 +42,13 @@ impl Instruction for MethodCall {
 
         call.execute(ctx)
     }
+
+    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
+        let mut call = self.method.clone();
+        call.add_arg_front(self.var.clone());
+
+        call.as_bool(ctx)
+    }
 }
 
 impl TypeCheck for MethodCall {
