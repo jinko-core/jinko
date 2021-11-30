@@ -1,0 +1,5 @@
+type Ok;
+type NotOk;
+
+mut o = Ok;
+o = NotOk; // tc error

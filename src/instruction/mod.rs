@@ -26,6 +26,7 @@ mod type_id;
 mod type_instantiation;
 mod var;
 mod var_assignment;
+mod var_or_empty_type;
 
 pub use binary_op::BinaryOp;
 pub use block::Block;
@@ -45,6 +46,7 @@ pub use type_id::{TypeId, PRIMITIVE_TYPES};
 pub use type_instantiation::TypeInstantiation;
 pub use var::Var;
 pub use var_assignment::VarAssign;
+pub use var_or_empty_type::VarOrEmptyType;
 
 /// The type of instructions available. An Instruction either is a statement, or an
 /// expression. An expression contains an instance of a result. For example,

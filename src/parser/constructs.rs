@@ -15,14 +15,19 @@
 
 use nom::Err::Error as NomError;
 use nom::{
-    branch::alt, combinator::{opt, peek}, multi::many0, sequence::delimited, sequence::pair,
-    sequence::preceded, sequence::terminated,
+    branch::alt,
+    combinator::{opt, peek},
+    multi::many0,
+    sequence::delimited,
+    sequence::pair,
+    sequence::preceded,
+    sequence::terminated,
 };
 
 use crate::instruction::{
     BinaryOp, Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl,
     Instruction, JkInst, Loop, LoopKind, MethodCall, Operator, Return, TypeDec, TypeId,
-    TypeInstantiation, Var, VarAssign,
+    TypeInstantiation, Var, VarAssign, VarOrEmptyType,
 };
 use crate::parser::{ConstantConstruct, ParseResult, Token};
 
@@ -405,7 +410,7 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
     } else if let Ok((input, _)) = peek(Token::semicolon)(input) {
-        Ok((input, Box::new(TypeInstantiation::new(TypeId::new(id)))))
+        Ok((input, Box::new(VarOrEmptyType::new(id))))
     } else {
         Ok((input, Box::new(Var::new(id))))
     }
