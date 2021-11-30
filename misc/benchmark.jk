@@ -1,0 +1,25 @@
+func print_usage() -> NoReturn {
+    println_err("Usage: ./benchmark.jk <commit1> <commit2>");
+    println_err("This program compares the performance of the jinko interpreter between");
+    println_err("two commits, and outputs a performance difference exprimed as a percentage");
+    println_err("A positive percentage indicates that <commit2> is faster than <commit1>");
+    exit(1)
+}
+
+cli_args = args()
+
+f_commit = cli_args.at(0)
+s_commit = cli_args.at(1)
+
+// FIXME: Ugly
+arg_equals_two = cli_args.amount() != 2;
+
+if arg_equals_two {
+    println_err("benchmark.jk: invalid argument amount");
+    print_usage();
+}
+
+if f_commit.equals(s_commit) {
+    println_err("benchmark.jk: the two given commits should be different");
+    print_usage();
+}
