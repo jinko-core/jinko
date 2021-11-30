@@ -426,15 +426,33 @@ fn typed_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
     Ok((input, args))
 }
 
+// FIXME: This should not return a String
+fn multi_type(input: &str) -> ParseResult<&str, String> {
+    // FIXME: Remove with #342
+    fn whitespace_plus_id(input: &str) -> ParseResult<&str, String> {
+        delimited(nom_next, Token::identifier, nom_next)(input)
+    }
+
+    // FIXME: We want to allow generic types here later on
+    let (input, first_type) = whitespace_plus_id(input)?;
+
+    let (input, mut types) = many0(preceded(Token::pipe, whitespace_plus_id))(input)?;
+
+    // FIXME: Remove clone once we have a proper MultiType struct to return
+    types.insert(0, first_type.clone());
+
+    Ok((input, first_type))
+}
+
 /// typed_arg = spaced_identifier ':' spaced_identifier
 fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
     let (input, id) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
-    let (input, ty) = Token::identifier(input)?;
+    let (input, types) = multi_type(input)?;
     let input = next(input);
 
-    Ok((input, DecArg::new(id, TypeId::new(ty))))
+    Ok((input, DecArg::new(id, TypeId::new(types))))
 }
 
 /// type_inst_arg = spaced_identifier ':' expr
@@ -1149,5 +1167,25 @@ func void() { }"##;
         expr.downcast_ref::<BinaryOp>().unwrap();
 
         assert_eq!(input, "");
+    }
+
+    #[test]
+    fn multi_type_2() {
+        assert!(expr("func takes_mt(a: int | string) {}").is_ok())
+    }
+
+    #[test]
+    fn multi_type_unclosed() {
+        assert!(expr("func invalid_mt(a: int |) {}").is_err())
+    }
+
+    #[test]
+    fn multi_type_long() {
+        assert!(expr("func long_mt(a: int | string | float | char | bool) {}").is_ok())
+    }
+
+    #[test]
+    fn multi_type_in_type_dec() {
+        assert!(expr("type MultiTy(a: int | string | float | char | bool);").is_ok())
     }
 }
