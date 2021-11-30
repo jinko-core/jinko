@@ -97,6 +97,10 @@ fn arg_get(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     Some(JkString::from(result_string).to_instance())
 }
 
+fn arg_amount(ctx: &mut Context, _args: Args) -> Option<ObjectInstance> {
+    Some(JkInt::from(ctx.args().len() as i64).to_instance())
+}
+
 /// Exit the interpreter with a given exit code
 fn exit(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let exit_code = JkInt::from_instance(&args[0].execute(ctx).unwrap()).0;
@@ -124,6 +128,7 @@ impl Builtins {
         builtins.add("__builtin_string_equals", string_equals);
         builtins.add("__builtin_ffi_link_with", ffi_link_with);
         builtins.add("__builtin_arg_get", arg_get);
+        builtins.add("__builtin_arg_amount", arg_amount);
         builtins.add("__builtin_exit", exit);
 
         builtins
@@ -171,6 +176,7 @@ mod tests {
     fn t_args_builtins_are_valid() {
         jinko! {
             __builtin_arg_get(158);
+            amount = __builtin_arg_amount();
         };
     }
 
