@@ -160,7 +160,7 @@ impl Token {
         Token::specific_token(input, "return")
     }
 
-    pub fn _type_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn type_tok(input: &str) -> ParseResult<&str, &str> {
         Token::specific_token(input, "type")
     }
 

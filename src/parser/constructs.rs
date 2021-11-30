@@ -176,7 +176,7 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
         unit_func(input, kind)
     } else if let Ok((input, _)) = Token::incl_tok(input) {
         unit_incl(input)
-    } else if let Ok((input, _)) = Token::_type_tok(input) {
+    } else if let Ok((input, _)) = Token::type_tok(input) {
         unit_type_decl(input)
     } else if let Ok((input, _)) = Token::mut_tok(input) {
         unit_mut_var(input)
