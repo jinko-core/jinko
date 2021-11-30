@@ -51,13 +51,24 @@ impl Instruction for VarOrEmptyType {
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         let symbol_type_id = TypeId::new(self.symbol.clone());
         match ctx.get_type(&symbol_type_id) {
-            Some(ty) => {
+            Some(_) => {
                 let ty_inst = TypeInstantiation::new(symbol_type_id);
                 ty_inst.execute(ctx)
             }
             None => {
                 let var_inst = Var::new(self.symbol.clone());
                 var_inst.execute(ctx)
+            }
+        }
+    }
+
+    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
+        let symbol_type_id = TypeId::new(self.symbol.clone());
+        match ctx.get_type(&symbol_type_id) {
+            Some(_) => None,
+            None => {
+                let var_inst = Var::new(self.symbol.clone());
+                var_inst.as_bool(ctx)
             }
         }
     }

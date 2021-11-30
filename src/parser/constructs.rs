@@ -15,13 +15,8 @@
 
 use nom::Err::Error as NomError;
 use nom::{
-    branch::alt,
-    combinator::{opt, peek},
-    multi::many0,
-    sequence::delimited,
-    sequence::pair,
-    sequence::preceded,
-    sequence::terminated,
+    branch::alt, combinator::opt, multi::many0, sequence::delimited, sequence::pair,
+    sequence::preceded, sequence::terminated,
 };
 
 use crate::instruction::{
@@ -397,10 +392,9 @@ fn inner_block(input: &str) -> ParseResult<&str, Block> {
     Ok((input, block))
 }
 
-/// func_type_or_var = [ '<' IDENTIFIER ( ',' IDENTIFIER )* '>' ] '(' next func_or_type_inst_args
+/// func_type_or_var = '(' next func_or_type_inst_args
 ///                  | '=' expr                   (* variable assigment *)
-///                  | ';'                        (* empty type instantiation *)
-///                  | ε                          (* variable *)
+///                  | ε                          (* variable or empty type instantiation *)
 fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_bracket(input) {
         generic_func_or_type_inst_args(next(input), id)
@@ -409,10 +403,8 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
-    } else if let Ok((input, _)) = peek(Token::semicolon)(input) {
-        Ok((input, Box::new(VarOrEmptyType::new(id))))
     } else {
-        Ok((input, Box::new(Var::new(id))))
+        Ok((input, Box::new(VarOrEmptyType::new(id))))
     }
 }
 

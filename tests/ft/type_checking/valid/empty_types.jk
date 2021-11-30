@@ -9,3 +9,9 @@ o = Ok;
 func takes_ok(o: Ok) {}
 
 o.takes_ok()
+Ok.takes_ok()
+{ Ok }.takes_ok()
+
+func return_ok() -> Ok {
+    Ok
+}
