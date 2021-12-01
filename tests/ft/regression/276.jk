@@ -1,0 +1,11 @@
+func takes_int(a: int) -> int { a }
+
+takes_int({
+    a = 14;
+    mut b = 14;
+    if true {
+        b = 3;
+    };
+
+    a * b
+})

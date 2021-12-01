@@ -14,3 +14,23 @@ tests:
     args:
       - "tests/ft/regression/187_fn.jk"
     exit_code: 0
+  - name: "Expression as if else conditions #320"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/320.jk"
+    exit_code: 0
+  - name: "if-else in block returning int #276"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/276.jk"
+    exit_code: 42
+  - name: "Field access in binary operation #306"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/306.jk"
+    exit_code: 0
+  - name: "Field initalization accepts binary operation #284"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/284.jk"
+    exit_code: 0
