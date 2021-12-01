@@ -25,3 +25,6 @@ libc = "0.2"
 [[bin]]
 name = "jinko"
 path = "interpreter/jinko.rs"
+
+[profile.release]
+lto = true
