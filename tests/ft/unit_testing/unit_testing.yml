@@ -1,0 +1,31 @@
+tests:
+  - name: "Flag --test is present"
+    binary: "target/debug/jinko"
+    args:
+      - "--test"
+      - "tests/ft/unit_testing/valid/no_tests.jk"
+    exit_code: 0
+  - name: "Run one test"
+    binary: "target/debug/jinko"
+    args:
+      - "--test"
+      - "tests/ft/unit_testing/valid/one_test.jk"
+    exit_code: 0
+    stdout: "zero\n"
+
+  # FIXME: Once we have assertions, do that instead and do not ignore
+  # - name: "Run multiple tests"
+  #   binary: "target/debug/jinko"
+  #   args:
+  #     - "--test"
+  #     - "tests/ft/unit_testing/valid/multi_tests.jk"
+  #   exit_code: 0
+
+  - name: "Filter tests"
+    binary: "target/debug/jinko"
+    args:
+      - "--test"
+      - "tests/ft/unit_testing/valid/multi_tests.jk"
+      - "one"
+    exit_code: 0
+    stdout: "one\n"

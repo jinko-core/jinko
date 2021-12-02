@@ -52,7 +52,7 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
         .iter()
         .map(|(k, _)| k.into())
         .filter(|test_name| {
-            if ctx.args().len() > 0 {
+            if !ctx.args().is_empty() {
                 ctx.args().contains(test_name)
             } else {
                 true
