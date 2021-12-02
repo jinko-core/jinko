@@ -1,14 +1,14 @@
 // FIXME: Make crate attribute `#![warn(missing_docs)]`
 
-mod builtins;
+pub mod builtins;
 mod context;
 mod error;
 mod ffi;
 mod indent;
-mod instance;
-mod instruction;
-mod parser;
-mod typechecker;
+pub mod instance;
+pub mod instruction;
+pub mod parser;
+pub mod typechecker;
 mod utils;
 mod value;
 

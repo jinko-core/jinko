@@ -3,8 +3,10 @@
 mod args;
 mod repl;
 
+use colored::Colorize;
 use jinko::{
-    CheckedType, Context, Error, FromObjectInstance, JkBool, JkFloat, JkInt, ObjectInstance,
+    CheckedType, Context, ErrKind, Error, FromObjectInstance, JkBool, JkFloat, JkInt,
+    ObjectInstance,
 };
 
 use args::Args;
@@ -43,6 +45,47 @@ fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
     }
 }
 
+fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
+    let res = ctx.execute()?;
+    let tests: Vec<String> = ctx
+        .tests()
+        .iter()
+        .map(|(k, _)| k.into())
+        .filter(|test_name| {
+            if !ctx.args().is_empty() {
+                ctx.args().contains(test_name)
+            } else {
+                true
+            }
+        })
+        .collect();
+
+    for test_name in tests {
+        eprint!(
+            "[{}] running test `{}`... ",
+            "WTNG".yellow().blink(),
+            test_name
+        );
+        let fdec = ctx.tests().get(&test_name).unwrap().clone();
+        let _test_result = fdec.run(ctx);
+        eprintln!("\r[ {} ] running test `{}`... ", "OK".green(), test_name);
+
+        // FIXME: We should think about handling error values in tests
+        // match test_result.unwrap().ty() {
+        //     CheckedType::Resolved(ty) => match ty.id() {
+        //         "Ok" => eprintln!("{}", "OK".green()),
+        //         "Err" => eprintln!("{}", "KO".red()),
+        //         _ => unreachable!(), // FIXME:
+        //     },
+        //     _ => unreachable!(), // FIXME:
+        //     }
+    }
+
+    ctx.emit_errors();
+
+    Ok(res)
+}
+
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
@@ -61,11 +104,23 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
     ctx.emit_errors();
     ctx.clear_errors();
 
-    match args.interactive() {
-        true => Repl::new(args)?.with_context(ctx).launch(),
-        false => {
-            let res = ctx.execute()?;
-            ctx.emit_errors();
+    match args.test() {
+        false => match args.interactive() {
+            true => Repl::new(args)?.with_context(ctx).launch(),
+            false => {
+                let res = ctx.execute()?;
+                ctx.emit_errors();
+
+                Ok((res, ctx))
+            }
+        },
+        true => {
+            if args.interactive() {
+                return Err(Error::new(ErrKind::Context)
+                    .with_msg(String::from("cannot run tests in interactive mode")));
+            }
+
+            let res = run_tests(&mut ctx)?;
 
             Ok((res, ctx))
         }

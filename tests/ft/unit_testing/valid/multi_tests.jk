@@ -1,0 +1,11 @@
+test zero() {
+    println("zero")
+}
+
+test one() {
+    println("one")
+}
+
+test two() {
+    println("two")
+}

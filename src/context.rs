@@ -348,6 +348,11 @@ impl Context {
 
         Ok(())
     }
+
+    /// Get a reference to all tests contained in the context
+    pub fn tests(&self) -> &HashMap<CtxKey, FunctionDec> {
+        &self.tests
+    }
 }
 
 /// Printer for the context's usage of the ScopeMap
