@@ -4,7 +4,7 @@
 /**
  * The Pair type holds two instances of two types, which may or may not be different.
  */
-type Pair_int(f: int, s: int)
+type Pair_int(f: int, s: int);
 
 /**
  * Create a new pair from two instances of types T and U
