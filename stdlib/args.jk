@@ -1,15 +1,14 @@
 ext func __builtin_arg_get(arg_index: int) -> string;
+ext func __builtin_arg_amount() -> int;
 
-// FIXME: This should become an empty type
-type Args(__fixme: int);
-
-// FIXME: This should do more
-func args() -> Args {
-    Args(__fixme: 0)
-}
+type Args;
 
 // FIXME: This should return a Maybe<string> once that is implemented.
 // For now, this returns an empty string
 func at(a: Args, index: int) -> string {
     __builtin_arg_get(index)
+}
+
+func amount(a: Args) -> int {
+    __builtin_arg_amount()
 }
