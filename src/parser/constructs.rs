@@ -1320,7 +1320,6 @@ func void() { }"##;
     }
 
     #[test]
-    #[ignore] // FIXME: #379
     fn generic_empty_type_decl() {
         assert!(expr("type Generic[T];").is_ok());
     }
