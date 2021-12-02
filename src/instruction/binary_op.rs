@@ -8,7 +8,7 @@
 use crate::{
     instruction::Operator,
     typechecker::{CheckedType, TypeCtx},
-    Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkFloat, JkInt,
+    Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkBool, JkFloat, JkInt,
     ObjectInstance, TypeCheck, Value,
 };
 
@@ -117,6 +117,43 @@ impl Instruction for BinaryOp {
         ctx.debug_step("BINOP EXIT");
 
         Some(return_value)
+    }
+
+    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
+        // FIXME: Remove these
+        let l_value = self.execute_node(&*self.lhs, ctx)?;
+        let r_value = self.execute_node(&*self.rhs, ctx)?;
+
+        match &self.op {
+            Operator::Equals |
+                Operator::NotEquals |
+                Operator::Lt |
+                Operator::LtEq |
+                Operator::Gt |
+                Operator::GtEq => match l_value.ty() {
+                CheckedType::Resolved(ty) => match ty.id() {
+                    "int" => {
+                        Some(JkBool::from_instance(&JkInt::from_instance(&l_value)
+                                .do_op(&JkInt::from_instance(&r_value), self.op)
+                                .unwrap()).0)
+                    }
+                    "float" => {
+                        Some(JkBool::from_instance(&JkFloat::from_instance(&l_value)
+                                .do_op(&JkFloat::from_instance(&r_value), self.op)
+                                .unwrap()).0)
+                    }
+                    _ => unreachable!(
+                        "attempting as_bool operation with void type or unknown type AFTER typechecking"
+                    ),
+                }
+                _ => unreachable!(
+                    "attempting binary operation with void type or unknown type AFTER typechecking"
+                ),
+            }
+            _ => unreachable!(
+                "attempting as bool operation with non equality operator AFTER typechecking"
+            ),
+        }
     }
 }
 

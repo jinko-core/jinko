@@ -16,3 +16,9 @@ tests:
     args:
       - "tests/ft/booleans/return_0_arg.jk"
     exit_code: 0
+
+  - name: "Use equality operation in as_bool condition"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/booleans/binop_as_bool.jk"
+    exit_code: 0
