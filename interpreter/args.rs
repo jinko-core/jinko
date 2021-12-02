@@ -16,6 +16,9 @@ pub struct Args {
     #[structopt(long = "no-std")]
     nostdlib: bool,
 
+    #[structopt(long = "test")]
+    test: bool,
+
     #[structopt(short, long)]
     debug: bool,
 
@@ -58,6 +61,11 @@ impl Args {
     /// Is the context launched without stdlib
     pub fn nostdlib(&self) -> bool {
         self.nostdlib
+    }
+
+    /// Is the interpreter launched in test mode
+    pub fn test(&self) -> bool {
+        self.test
     }
 
     /// Arguments given to the program
