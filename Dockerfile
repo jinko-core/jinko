@@ -5,16 +5,17 @@ FROM rust:slim-bullseye as build
 
 COPY . /jinko
 WORKDIR /jinko
-RUN ./install.sh
-
-# ENTRYPOINT ["/root/.jinko/bin/jinko"]
+RUN rustup target add x86_64-unknown-linux-musl
+RUN cargo build --target=x86_64-unknown-linux-musl
 
 # Run the jinko interpreter in a fresh container
 # ----------------------------------------------
 
-FROM debian:stable
+FROM alpine:3.15.0
 
-COPY --from=build /root/.jinko/bin/jinko /jinko
+COPY --from=build /jinko/target/x86_64-unknown-linux-musl/debug/jinko /jinko
+
+RUN apk add ncurses
 
 ENTRYPOINT ["/jinko"]
 
