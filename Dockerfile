@@ -13,10 +13,11 @@ RUN cargo build --target=x86_64-unknown-linux-musl --no-default-features --relea
 
 FROM alpine:3.15.0
 
-COPY --from=build /jinko/target/x86_64-unknown-linux-musl/release/jinko /jinko
+COPY --from=build /jinko/target/x86_64-unknown-linux-musl/release/jinko /bin/jinko
+COPY --from=build /jinko/stdlib /root/.jinko/libs/stdlib
 
 RUN apk add --no-cache ncurses-libs
 
-ENTRYPOINT ["/jinko"]
+ENTRYPOINT ["jinko"]
 
 LABEL maintainer="Tanguy Segarra <tanguy.segarra@epita.fr>"
