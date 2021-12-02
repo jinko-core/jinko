@@ -38,8 +38,9 @@ tests:
     binary: "target/debug/jinko"
     args:
       - "tests/ft/stdlib/args.jk"
-      - "hey there"
-    exit_code: 9
+      - "hey"
+      - "there"
+    stdout: "tests/ft/stdlib/args.jk\nhey\nthere\n"
   - name: "Test exit() function"
     binary: "target/debug/jinko"
     args:

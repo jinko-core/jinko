@@ -88,11 +88,16 @@ fn arg_get(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
 
     let args = ctx.args();
 
-    // FIXME: Is this cast valid?
-    let result_string = args
-        .get(idx as usize)
-        .map(|s| s.to_owned())
-        .unwrap_or_default();
+    let result_string = match idx {
+        0 => ctx.path().map_or(std::env::args().next().unwrap(), |s| {
+            s.to_str().unwrap().to_string()
+        }),
+        _ => args
+            // FIXME: Is this cast valid?
+            .get((idx - 1) as usize)
+            .map(|s| s.to_owned())
+            .unwrap_or_default(),
+    };
 
     Some(JkString::from(result_string).to_instance())
 }

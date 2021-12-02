@@ -1,1 +1,5 @@
-len(Args.at(0))
+args = Args;
+
+println(args.at(0))
+println(args.at(1))
+println(args.at(2))
