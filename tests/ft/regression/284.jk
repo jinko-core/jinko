@@ -1,0 +1,9 @@
+type NotRange_int(start: int, end: int, current: int);
+
+func not_range(start: int, end: int) -> NotRange_int {
+    NotRange_int(start: start, end: end, current: start)
+}
+
+func not_advance(r: NotRange_int) -> NotRange_int {
+    NotRange_int(start: r.start, end: r.end, current: r.current + 1)
+}
