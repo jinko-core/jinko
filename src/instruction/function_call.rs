@@ -4,8 +4,8 @@
 use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::typechecker::TypeCtx;
 use crate::{
-    typechecker::CheckedType, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction,
-    JkBool, ObjectInstance, TypeCheck,
+    typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
+    TypeCheck,
 };
 use std::rc::Rc;
 
@@ -185,20 +185,6 @@ impl Instruction for FunctionCall {
         ctx.scope_exit();
 
         ret_val
-    }
-
-    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
-        self.execute(ctx).map(|instance| match instance.ty() {
-            CheckedType::Resolved(ty) => match ty.id() {
-                // FIXME:
-                "bool" => JkBool::from_instance(&instance).as_bool(ctx).unwrap(),
-                // We can safely unwrap since we checked the type of the variable
-                // FIXME: Is this correct?
-                _ => unreachable!(),
-            },
-            // FIXME: Is this correct?
-            _ => unreachable!(),
-        })
     }
 }
 

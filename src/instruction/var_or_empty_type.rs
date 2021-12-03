@@ -61,17 +61,6 @@ impl Instruction for VarOrEmptyType {
             }
         }
     }
-
-    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
-        let symbol_type_id = TypeId::new(self.symbol.clone());
-        match ctx.get_type(&symbol_type_id) {
-            Some(_) => None,
-            None => {
-                let var_inst = Var::new(self.symbol.clone());
-                var_inst.as_bool(ctx)
-            }
-        }
-    }
 }
 
 impl TypeCheck for VarOrEmptyType {

@@ -111,18 +111,6 @@ pub trait Instruction: InstructionClone + Downcast + TypeCheck {
         }
     }
 
-    /// Maybe execute the instruction, transforming it in a Rust bool if possible. It is
-    /// only possible to execute as_bool on boolean variables, boolean constants, blocks
-    /// returning a boolean and functions returning a boolean.
-    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
-        ctx.error(
-            Error::new(ErrKind::Context)
-                .with_msg(format!("cannot be used as a boolean: {}", self.print())),
-        );
-
-        None
-    }
-
     /// What is the type of the instruction: a Statement or an Expression.
     /// This method will always return Expression(None) if the instruction is an
     /// expression. This method does not care about the return value or the execution

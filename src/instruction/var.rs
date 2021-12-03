@@ -5,15 +5,13 @@
 
 use crate::instruction::TypeDec;
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance, TypeCheck};
+use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct Var {
     name: String,
     mutable: bool,
     instance: ObjectInstance,
-    // FIXME: Maybe we can refactor this using the instance's type?
-    ty: CheckedType,
 }
 
 impl Var {
@@ -23,7 +21,6 @@ impl Var {
             name,
             mutable: false,
             instance: ObjectInstance::empty(),
-            ty: CheckedType::Unknown,
         }
     }
 
@@ -69,40 +66,6 @@ impl Instruction for Var {
         }
 
         format!("{} = {}", base, self.instance.as_string())
-    }
-
-    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
-        use crate::FromObjectInstance;
-
-        // FIXME: Cleanup
-
-        match self.execute(ctx) {
-            Some(instance) => match instance.ty() {
-                CheckedType::Resolved(ty) => match ty.id() {
-                    // FIXME:
-                    "bool" => Some(JkBool::from_instance(&instance).as_bool(ctx).unwrap()),
-                    // We can safely unwrap since we checked the type of the variable
-                    _ => {
-                        ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                            "var {} cannot be interpreted as boolean",
-                            self.name
-                        )));
-                        None
-                    }
-                },
-                _ => todo!(
-                    "If the type of the variable hasn't been determined yet,
-                    typecheck it and call self.as_bool() again"
-                ),
-            },
-            _ => {
-                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                    "var {} cannot be interpreted as boolean",
-                    self.name
-                )));
-                None
-            }
-        }
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
