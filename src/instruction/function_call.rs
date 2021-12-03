@@ -186,20 +186,6 @@ impl Instruction for FunctionCall {
 
         ret_val
     }
-
-    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
-        self.execute(ctx).map(|instance| match instance.ty() {
-            CheckedType::Resolved(ty) => match ty.id() {
-                // FIXME:
-                "bool" => JkBool::from_instance(&instance).as_bool(ctx).unwrap(),
-                // We can safely unwrap since we checked the type of the variable
-                // FIXME: Is this correct?
-                _ => unreachable!(),
-            },
-            // FIXME: Is this correct?
-            _ => unreachable!(),
-        })
-    }
 }
 
 impl TypeCheck for FunctionCall {

@@ -101,10 +101,6 @@ macro_rules! jk_primitive {
                 self.0.to_string()
             }
 
-            fn as_bool(&self, _ctx: &mut Context) -> Option<bool> {
-                Some(self.0)
-            }
-
             fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
                 ctx.debug("CONSTANT", &self.0.to_string());
 

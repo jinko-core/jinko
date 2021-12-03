@@ -63,10 +63,10 @@ impl Instruction for IfElse {
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         ctx.debug_step("IF_ELSE ENTER");
 
-        let cond = self.condition.as_bool(ctx)?;
-        ctx.debug("COND", &cond.to_string());
+        let cond = self.condition.execute(ctx)?;
+        // ctx.debug("COND", &cond.to_string());
 
-        if cond {
+        if JkBool::from_instance(&cond).rust_value() {
             ctx.debug_step("IF ENTER");
             self.if_body.execute(ctx)
         } else {

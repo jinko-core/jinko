@@ -71,40 +71,6 @@ impl Instruction for Var {
         format!("{} = {}", base, self.instance.as_string())
     }
 
-    fn as_bool(&self, ctx: &mut Context) -> Option<bool> {
-        use crate::FromObjectInstance;
-
-        // FIXME: Cleanup
-
-        match self.execute(ctx) {
-            Some(instance) => match instance.ty() {
-                CheckedType::Resolved(ty) => match ty.id() {
-                    // FIXME:
-                    "bool" => Some(JkBool::from_instance(&instance).as_bool(ctx).unwrap()),
-                    // We can safely unwrap since we checked the type of the variable
-                    _ => {
-                        ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                            "var {} cannot be interpreted as boolean",
-                            self.name
-                        )));
-                        None
-                    }
-                },
-                _ => todo!(
-                    "If the type of the variable hasn't been determined yet,
-                    typecheck it and call self.as_bool() again"
-                ),
-            },
-            _ => {
-                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                    "var {} cannot be interpreted as boolean",
-                    self.name
-                )));
-                None
-            }
-        }
-    }
-
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         let var = match ctx.get_variable(self.name()) {
             Some(v) => v,
