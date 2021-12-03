@@ -58,7 +58,8 @@ impl Instruction for Loop {
             },
             LoopKind::While(cond) => {
                 ctx.debug_step("WHILE ENTER");
-                while cond.as_bool(ctx)? {
+                let cond = cond.execute(ctx)?;
+                while JkBool::from_instance(&cond).rust_value() {
                     self.block.execute(ctx)?;
                 }
                 ctx.debug_step("WHILE EXIT");
