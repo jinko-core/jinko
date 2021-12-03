@@ -87,7 +87,7 @@ impl TypeCheck for IfElse {
         let cond_ty = self.condition.resolve_type(ctx);
         if cond_ty != bool_checkedtype {
             ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                "if condition should be a boolean, not a {}",
+                "if condition should be a boolean, not a `{}`",
                 cond_ty
             )));
         }
