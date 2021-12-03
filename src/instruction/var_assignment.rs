@@ -2,7 +2,7 @@
 
 use crate::instruction::{InstrKind, Var};
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{Context, ErrKind, Error, Instruction, ObjectInstance, TypeCheck};
+use crate::{log, Context, ErrKind, Error, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -55,7 +55,7 @@ impl Instruction for VarAssign {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug("ASSIGN VAR", self.symbol());
+        log!("assign var: {}", self.symbol());
 
         // Are we creating the variable or not
         let mut var_creation = false;

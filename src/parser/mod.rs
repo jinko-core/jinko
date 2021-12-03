@@ -2,7 +2,7 @@
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
-use crate::{Context, Error, log};
+use crate::{log, Context, Error};
 
 mod constant_construct;
 pub mod constructs;

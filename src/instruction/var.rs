@@ -4,6 +4,7 @@
 //! or it's not.
 
 use crate::instruction::TypeDec;
+use crate::log;
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
@@ -81,7 +82,7 @@ impl Instruction for Var {
             }
         };
 
-        ctx.debug("VAR", var.print().as_ref());
+        log!("var: {}", var.print());
 
         Some(var.instance())
     }

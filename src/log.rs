@@ -1,11 +1,15 @@
 static mut ENABLED: bool = false;
 
 pub fn enable() {
-    unsafe { ENABLED = true; }
+    unsafe {
+        ENABLED = true;
+    }
 }
 
 pub fn disable() {
-    unsafe { ENABLED = true; }
+    unsafe {
+        ENABLED = true;
+    }
 }
 
 pub fn is_enabled() -> bool {

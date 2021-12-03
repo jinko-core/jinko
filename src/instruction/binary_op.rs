@@ -7,9 +7,10 @@
 
 use crate::{
     instruction::{Operator, TypeId},
+    log,
     typechecker::{CheckedType, TypeCtx},
     Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkFloat, JkInt,
-    ObjectInstance, TypeCheck, Value,
+    ObjectInstance, TypeCheck, Value
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
@@ -76,9 +77,7 @@ impl Instruction for BinaryOp {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug_step("BINOP ENTER");
-
-        ctx.debug("OP", self.op.as_str());
+        log!("binop enter: op: {}", self.op.as_str());
 
         let l_value = self.execute_node(&*self.lhs, ctx)?;
         let r_value = self.execute_node(&*self.rhs, ctx)?;
@@ -114,7 +113,7 @@ impl Instruction for BinaryOp {
             ),
         }
 
-        ctx.debug_step("BINOP EXIT");
+        log!("BINOP EXIT");
 
         Some(return_value)
     }

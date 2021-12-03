@@ -3,7 +3,7 @@
 
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
+use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -129,7 +129,7 @@ impl Instruction for FunctionDec {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug_step("FUNCDEC ENTER");
+        log!("funcdec enter: {}", self.name());
 
         match self.fn_kind() {
             FunctionKind::Func | FunctionKind::Ext => {
@@ -148,7 +148,7 @@ impl Instruction for FunctionDec {
             ),
         }
 
-        ctx.debug_step("FUNCDEC EXIT");
+        log!("funcdec exit: {}", self.name());
 
         None
     }

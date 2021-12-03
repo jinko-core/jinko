@@ -4,8 +4,8 @@
 use crate::instruction::{FunctionDec, FunctionKind, TypeId, Var};
 use crate::typechecker::TypeCtx;
 use crate::{
-    typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
-    TypeCheck,
+    log, typechecker::CheckedType, Context, ErrKind, Error, InstrKind,
+    Instruction, ObjectInstance, TypeCheck,
 };
 use std::rc::Rc;
 
@@ -64,9 +64,9 @@ impl FunctionCall {
     /// Map each argument to its corresponding instruction
     fn map_args(&self, function: &FunctionDec, ctx: &mut Context) {
         for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
-            ctx.debug(
-                "VAR MAP",
-                format!("Mapping `{}` to `{}`", func_arg.name(), call_arg.print()).as_ref(),
+            log!(
+                "var map: {}",
+                format!("mapping `{}` to `{}`", func_arg.name(), call_arg.print()),
             );
 
             // Create a new variable, and execute the content of the function argument
@@ -182,7 +182,7 @@ impl Instruction for FunctionCall {
 
         ctx.scope_enter();
 
-        ctx.debug("CALL", self.name());
+        log!("call: {}", self.name());
 
         self.map_args(&function, ctx);
 

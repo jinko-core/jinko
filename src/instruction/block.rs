@@ -18,6 +18,7 @@
 //! Otherwise, it's `void`
 
 use crate::{
+    log,
     typechecker::{CheckedType, TypeCtx},
     Context, InstrKind, Instruction, ObjectInstance, TypeCheck,
 };
@@ -98,7 +99,7 @@ impl Instruction for Block {
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         ctx.scope_enter();
-        ctx.debug_step("BLOCK ENTER");
+        log!("block enter");
 
         let ret_val = self
             .instructions
@@ -107,7 +108,7 @@ impl Instruction for Block {
             .last();
 
         ctx.scope_exit();
-        ctx.debug_step("BLOCK EXIT");
+        log!("block exit");
 
         match self.is_statement {
             false => ret_val.flatten(),

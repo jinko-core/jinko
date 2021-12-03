@@ -6,7 +6,7 @@ use prompt::Prompt;
 use std::path::PathBuf;
 
 use jinko::{
-    log, constructs, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
+    constructs, log, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
 };
 use jinko::{CheckedType, TypeCheck, TypeCtx};
 
