@@ -8,7 +8,7 @@
 use crate::{
     instruction::{Operator, TypeId},
     typechecker::{CheckedType, TypeCtx},
-    Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkBool, JkFloat, JkInt,
+    Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkFloat, JkInt,
     ObjectInstance, TypeCheck, Value,
 };
 

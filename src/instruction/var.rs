@@ -5,15 +5,13 @@
 
 use crate::instruction::TypeDec;
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, JkBool, ObjectInstance, TypeCheck};
+use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct Var {
     name: String,
     mutable: bool,
     instance: ObjectInstance,
-    // FIXME: Maybe we can refactor this using the instance's type?
-    ty: CheckedType,
 }
 
 impl Var {
@@ -23,7 +21,6 @@ impl Var {
             name,
             mutable: false,
             instance: ObjectInstance::empty(),
-            ty: CheckedType::Unknown,
         }
     }
 

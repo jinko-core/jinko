@@ -4,8 +4,8 @@
 use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::typechecker::TypeCtx;
 use crate::{
-    typechecker::CheckedType, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction,
-    JkBool, ObjectInstance, TypeCheck,
+    typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
+    TypeCheck,
 };
 use std::rc::Rc;
 

@@ -26,7 +26,6 @@ use crate::{
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
     is_statement: bool,
-    ty: CheckedType,
 }
 
 impl Block {
@@ -36,7 +35,6 @@ impl Block {
         Block {
             instructions: Vec::new(),
             is_statement: true,
-            ty: CheckedType::Unknown,
         }
     }
 
