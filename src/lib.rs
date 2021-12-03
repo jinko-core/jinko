@@ -7,6 +7,7 @@ mod ffi;
 mod indent;
 pub mod instance;
 pub mod instruction;
+pub mod log;
 pub mod parser;
 pub mod typechecker;
 mod utils;
