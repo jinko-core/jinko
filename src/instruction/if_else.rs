@@ -15,8 +15,10 @@
 //! x = if condition { 12 } else { 13 };
 //! ```
 
-use crate::instruction::{Block, InstrKind, Instruction};
+use crate::instance::FromObjectInstance;
+use crate::instruction::{Block, InstrKind, Instruction, TypeId};
 use crate::typechecker::TypeCtx;
+use crate::value::JkBool;
 use crate::{typechecker::CheckedType, Context, ObjectInstance, TypeCheck};
 use crate::{ErrKind, Error};
 
@@ -81,6 +83,15 @@ impl Instruction for IfElse {
 
 impl TypeCheck for IfElse {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+        let bool_checkedtype = CheckedType::Resolved(TypeId::from("bool"));
+        let cond_ty = self.condition.resolve_type(ctx);
+        if cond_ty != bool_checkedtype {
+            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                "if condition should be a boolean, not a {}",
+                cond_ty
+            )));
+        }
+
         let if_ty = self.if_body.resolve_type(ctx);
         let else_ty = self
             .else_body
