@@ -6,7 +6,7 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::Operator,
+    instruction::{Operator, TypeId},
     typechecker::{CheckedType, TypeCtx},
     Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkBool, JkFloat, JkInt,
     ObjectInstance, TypeCheck, Value,
@@ -172,7 +172,15 @@ impl TypeCheck for BinaryOp {
             return CheckedType::Unknown;
         }
 
-        l_type
+        match self.op {
+            Operator::Lt
+            | Operator::Gt
+            | Operator::LtEq
+            | Operator::GtEq
+            | Operator::Equals
+            | Operator::NotEquals => CheckedType::Resolved(TypeId::from("bool")),
+            _ => l_type,
+        }
     }
 }
 
