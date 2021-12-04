@@ -3,10 +3,10 @@
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
 use nom::{
-    branch::alt, bytes::complete::is_not, bytes::complete::tag, bytes::complete::take_until,
-    bytes::complete::take_while, bytes::complete::take_while1, character::complete::anychar,
-    character::complete::char, character::is_alphanumeric, character::is_digit, combinator::not,
-    combinator::opt, combinator::peek, multi::many0, sequence::delimited, sequence::pair,
+    branch::alt, bytes::complete::tag, bytes::complete::take_until, bytes::complete::take_while,
+    bytes::complete::take_while1, character::complete::anychar, character::complete::char,
+    character::is_alphanumeric, character::is_digit, combinator::not, combinator::opt,
+    combinator::peek, multi::many0, sequence::delimited, sequence::pair,
 };
 
 use crate::{parser::ParseResult, ErrKind, Error};
@@ -379,7 +379,7 @@ impl Token {
     /// Parse a string constant and return the characters between the double quotes
     pub fn string_constant(input: &str) -> ParseResult<&str, &str> {
         // FIXME: This does not allow for string escaping yet
-        let string = delimited(Token::double_quote, is_not("\""), Token::double_quote)(input)?;
+        let string = delimited(Token::double_quote, take_until("\""), Token::double_quote)(input)?;
 
         Ok(string)
     }
@@ -443,6 +443,7 @@ mod tests {
         assert_eq!(Token::string_constant("\"a str\""), Ok(("", "a str")));
         assert_eq!(Token::string_constant("\"999 89 9\""), Ok(("", "999 89 9")));
         assert_eq!(Token::string_constant("\"4.01f\""), Ok(("", "4.01f")));
+        assert_eq!(Token::string_constant("\"\""), Ok(("", "")));
 
         // FIXME: Fix string escaping
     }
