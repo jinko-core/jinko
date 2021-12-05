@@ -344,7 +344,7 @@ fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
     let (input, id) = spaced_identifier(input)?;
     let input = next(input);
 
-    let (input, _generics) = maybe_generic_list(input)?;
+    let (input, generics) = maybe_generic_list(input)?;
 
     let (input, _) = Token::left_parenthesis(input)?;
     let input = next(input);
@@ -352,8 +352,7 @@ fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
     let input = next(input);
     let (input, return_type) = return_type(input)?;
 
-    let mut function = FunctionDec::new(id, return_type);
-    function.set_args(args);
+    let function = FunctionDec::new(id, return_type, generics, args);
     Ok((input, function))
 }
 
