@@ -123,9 +123,11 @@ fn method_or_field(
 ) -> ParseResult<&str, Box<dyn Instruction>> {
     match Token::left_parenthesis(input) {
         Ok((input, _)) => {
+            // FIXME: We need to parse generics here too
             let input = next(input);
             let (input, args) = args(input)?;
-            let method_call = MethodCall::new(expr, FunctionCall::new(id, args));
+            // FIXME: Remove this `vec![]`
+            let method_call = MethodCall::new(expr, FunctionCall::new(id, vec![], args));
             Ok((input, Box::new(method_call)))
         }
         _ => Ok((input, Box::new(FieldAccess::new(expr, id)))),
@@ -284,7 +286,8 @@ fn unit_jk_inst(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, _) = Token::left_parenthesis(input)?;
     let (input, args) = args(next(input))?;
 
-    let call = FunctionCall::new(name, args);
+    // A jk_inst will never contain generics
+    let call = FunctionCall::new(name, vec![], args);
     match JkInst::from_function_call(&call) {
         Ok(inst) => Ok((input, Box::new(inst))),
         Err(err) => Err(NomError(err)),
@@ -403,7 +406,7 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
     if let Ok((input, _)) = Token::left_bracket(input) {
         generic_func_or_type_inst_args(next(input), id)
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
-        func_or_type_inst_args(next(input), id, None)
+        func_or_type_inst_args(next(input), id, vec![])
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
@@ -417,7 +420,7 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
 fn func_or_type_inst_args(
     input: &str,
     id: String,
-    _generics: Option<Vec<TypeId>>,
+    generics: Vec<TypeId>,
 ) -> ParseResult<&str, Box<dyn Instruction>> {
     if let Ok((input, first_attr)) =
         terminated(terminated(Token::identifier, nom_next), Token::colon)(input)
@@ -430,16 +433,12 @@ fn func_or_type_inst_args(
         type_inst.add_field(VarAssign::new(false, first_attr, first_attr_val));
         attrs.into_iter().for_each(|attr| type_inst.add_field(attr));
 
-        // type_inst.set_generics(_generics);
+        type_inst.set_generics(generics);
 
         Ok((input, Box::new(type_inst)))
     } else {
         let (input, args) = args(input)?;
-        let func_call = FunctionCall::new(id, args);
-
-        // TODO: Once we start doing more than just parsing...
-        // let mut func_call = FunctionCall::new(id, args);
-        // func_call.set_generics(_generics);
+        let func_call = FunctionCall::new(id, generics, args);
 
         Ok((input, Box::new(func_call)))
     }
@@ -453,7 +452,7 @@ fn generic_func_or_type_inst_args(
     let (input, generics) = generic_list(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
 
-    func_or_type_inst_args(next(input), id, Some(generics))
+    func_or_type_inst_args(next(input), id, generics)
 }
 
 ///

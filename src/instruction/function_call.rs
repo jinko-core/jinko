@@ -1,7 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use crate::instruction::{FunctionDec, FunctionKind, Var};
+use crate::instruction::{FunctionDec, FunctionKind, TypeId, Var};
 use crate::typechecker::TypeCtx;
 use crate::{
     typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
@@ -11,17 +11,23 @@ use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct FunctionCall {
-    /// Name of the function to call
     fn_name: String,
-
-    /// Arguments to give to the function
+    generics: Vec<TypeId>,
     args: Vec<Box<dyn Instruction>>,
 }
 
 impl FunctionCall {
     /// Create a new function call and return it
-    pub fn new(fn_name: String, args: Vec<Box<dyn Instruction>>) -> FunctionCall {
-        FunctionCall { fn_name, args }
+    pub fn new(
+        fn_name: String,
+        generics: Vec<TypeId>,
+        args: Vec<Box<dyn Instruction>>,
+    ) -> FunctionCall {
+        FunctionCall {
+            fn_name,
+            generics,
+            args,
+        }
     }
 
     /// Add an argument to the beginning of the function call's argument list. This is
@@ -249,7 +255,7 @@ mod tests {
 
     #[test]
     fn t_pretty_print_empty() {
-        let function = FunctionCall::new("something".to_owned(), vec![]);
+        let function = FunctionCall::new("something".to_owned(), vec![], vec![]);
 
         assert_eq!(function.print(), "something()");
     }
@@ -265,7 +271,7 @@ mod tests {
             func func0(a: int, b: int) {}
         };
 
-        let f_call = FunctionCall::new("func0".to_string(), vec![]);
+        let f_call = FunctionCall::new("func0".to_string(), vec![], vec![]);
         let mut type_ctx = TypeCtx::new(&mut ctx);
 
         assert_eq!(f_call.resolve_type(&mut type_ctx), CheckedType::Unknown);
@@ -275,7 +281,8 @@ mod tests {
         );
         type_ctx.context.clear_errors();
 
-        let f_call = FunctionCall::new("func0".to_string(), vec![Box::new(JkInt::from(12))]);
+        let f_call =
+            FunctionCall::new("func0".to_string(), vec![], vec![Box::new(JkInt::from(12))]);
 
         assert_eq!(f_call.resolve_type(&mut type_ctx), CheckedType::Unknown);
         assert!(

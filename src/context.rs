@@ -391,8 +391,8 @@ mod tests {
 
     #[test]
     fn t_redefinition_of_function() {
-        let f0 = FunctionDec::new("f0".to_owned(), None);
-        let f0_copy = FunctionDec::new("f0".to_owned(), None);
+        let f0 = FunctionDec::new("f0".to_owned(), None, vec![], vec![]);
+        let f0_copy = FunctionDec::new("f0".to_owned(), None, vec![], vec![]);
 
         let mut i = Context::new();
 
