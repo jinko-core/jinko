@@ -198,7 +198,7 @@ mod test {
             DecArg::new("a".to_owned(), TypeId::from("int")),
             DecArg::new("b".to_owned(), TypeId::from("int")),
         ];
-        let t = TypeDec::new("Type_Test".to_owned(), fields);
+        let t = TypeDec::new("Type_Test".to_owned(), vec![], fields);
 
         t.execute(&mut ctx);
 
@@ -251,7 +251,7 @@ mod test {
             DecArg::new("a".to_owned(), TypeId::from("string")),
             DecArg::new("b".to_owned(), TypeId::from("int")),
         ];
-        let t = TypeDec::new(TYPE_NAME.to_owned(), fields);
+        let t = TypeDec::new(TYPE_NAME.to_owned(), vec![], fields);
 
         t.execute(&mut ctx);
 

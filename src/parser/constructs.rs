@@ -253,7 +253,7 @@ fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 /// spaced_identifier '(' type_inst_arg (',' type_inst_arg)* ')'
 fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let (input, name) = spaced_identifier(input)?;
-    let (input, _generics) = maybe_generic_list(input)?;
+    let (input, generics) = maybe_generic_list(input)?;
     let (input, type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
         let (input, first_arg) = typed_arg(input)?;
         let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
@@ -261,9 +261,9 @@ fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 
         args.insert(0, first_arg);
 
-        (input, TypeDec::new(name, args))
+        (input, TypeDec::new(name, generics, args))
     } else {
-        (input, TypeDec::new(name, vec![]))
+        (input, TypeDec::new(name, generics, vec![]))
     };
 
     Ok((input, Box::new(type_dec)))
