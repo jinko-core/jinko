@@ -13,6 +13,7 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub struct TypeInstantiation {
     type_name: TypeId,
+    generics: Vec<TypeId>,
     fields: Vec<VarAssign>,
 }
 
@@ -21,7 +22,8 @@ impl TypeInstantiation {
     pub fn new(type_name: TypeId) -> TypeInstantiation {
         TypeInstantiation {
             type_name,
-            fields: Vec::new(),
+            generics: vec![],
+            fields: vec![],
         }
     }
 
@@ -80,6 +82,10 @@ impl TypeInstantiation {
             ))),
             false => Ok(()),
         }
+    }
+
+    pub fn set_generics(&mut self, generics: Vec<TypeId>) {
+        self.generics = generics
     }
 }
 
