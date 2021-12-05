@@ -1,19 +1,20 @@
-static mut ENABLED: bool = false;
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref ENABLED: Mutex<bool> = Mutex::new(false);
+}
 
 pub fn enable() {
-    unsafe {
-        ENABLED = true;
-    }
+    *ENABLED.lock().unwrap() = true;
 }
 
 pub fn disable() {
-    unsafe {
-        ENABLED = true;
-    }
+    *ENABLED.lock().unwrap() = true;
 }
 
 pub fn is_enabled() -> bool {
-    unsafe { ENABLED }
+    *ENABLED.lock().unwrap()
 }
 
 #[macro_export]

@@ -10,7 +10,7 @@ use crate::{
     log,
     typechecker::{CheckedType, TypeCtx},
     Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkFloat, JkInt,
-    ObjectInstance, TypeCheck, Value
+    ObjectInstance, TypeCheck, Value,
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
