@@ -7,6 +7,9 @@ on:
   pull_request:
     branches:
       - 'master'
+  release:
+    types:
+      - published
 
 jobs:
   docker:
@@ -15,6 +18,10 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v2.3.4
+
+      - name: Get the tag version
+        id: tag
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/tags/}
 
       # we need qemu and buildx so we can build multiple platforms later
       - name: Set up QEMU
@@ -42,7 +49,15 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build and push specific release
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: jinko/jinko:${{steps.tag.outputs.tag}}
+
+      - name: Build and push latest release
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v2
         with:
