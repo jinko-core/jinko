@@ -1,20 +1,20 @@
 use lazy_static::lazy_static;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 lazy_static! {
-    static ref ENABLED: Mutex<bool> = Mutex::new(false);
+    static ref ENABLED: AtomicBool = AtomicBool::new(false);
 }
 
 pub fn enable() {
-    *ENABLED.lock().unwrap() = true;
+    ENABLED.store(true, Ordering::Relaxed);
 }
 
 pub fn disable() {
-    *ENABLED.lock().unwrap() = true;
+    ENABLED.store(false, Ordering::Relaxed);
 }
 
 pub fn is_enabled() -> bool {
-    *ENABLED.lock().unwrap()
+    ENABLED.load(Ordering::Relaxed)
 }
 
 #[macro_export]
