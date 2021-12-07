@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "jinko"
-version = "0.3.0-jinx1"
+version = "0.3.0-jinx2"
 dependencies = [
  "anyhow",
  "colored",
