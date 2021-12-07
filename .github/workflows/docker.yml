@@ -50,7 +50,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Build and push specific release
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'release'
         uses: docker/build-push-action@v2
         with:
           context: .
