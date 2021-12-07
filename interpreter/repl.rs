@@ -30,7 +30,7 @@ impl std::fmt::Display for ReplInstance {
                     "bool" => JkConstant::<bool>::from_instance(&self.0).print(),
                     _ => self.0.as_string(),
                 },
-                _ => format!(""),
+                _ => String::new(),
             }
         )
     }
