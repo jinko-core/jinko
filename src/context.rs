@@ -72,7 +72,7 @@ impl Default for Context {
 
 impl Context {
     fn new_entry() -> FunctionDec {
-        let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None);
+        let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None, vec![], vec![]);
 
         ep.set_kind(FunctionKind::Func);
         ep.set_block(Block::new());
@@ -391,8 +391,8 @@ mod tests {
 
     #[test]
     fn t_redefinition_of_function() {
-        let f0 = FunctionDec::new("f0".to_owned(), None);
-        let f0_copy = FunctionDec::new("f0".to_owned(), None);
+        let f0 = FunctionDec::new("f0".to_owned(), None, vec![], vec![]);
+        let f0_copy = FunctionDec::new("f0".to_owned(), None, vec![], vec![]);
 
         let mut i = Context::new();
 

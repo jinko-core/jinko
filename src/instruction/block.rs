@@ -138,7 +138,6 @@ mod tests {
     use super::*;
     use crate::instruction::{Var, VarAssign};
     use crate::value::JkInt;
-    use crate::TypeCheck;
     use crate::{jinko, jinko_fail};
 
     #[test]

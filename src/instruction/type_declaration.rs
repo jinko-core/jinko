@@ -8,13 +8,18 @@ use crate::{
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
     name: String,
+    generics: Vec<TypeId>,
     fields: Vec<DecArg>,
 }
 
 impl TypeDec {
     /// Create a new type
-    pub fn new(name: String, fields: Vec<DecArg>) -> TypeDec {
-        TypeDec { name, fields }
+    pub fn new(name: String, generics: Vec<TypeId>, fields: Vec<DecArg>) -> TypeDec {
+        TypeDec {
+            name,
+            generics,
+            fields,
+        }
     }
 
     /// Get a reference to the name of the type
@@ -49,20 +54,35 @@ impl Instruction for TypeDec {
 
     // FIXME: Really unefficient
     fn print(&self) -> String {
-        let mut base = format!("type {} (", self.name);
+        let mut base = format!("type {}", self.name);
 
-        base.push_str(
-            self.fields
-                .get(0)
-                .map_or(String::new(), |f| format!("{}", f))
-                .as_str(),
-        );
+        if !self.generics.is_empty() {
+            base.push('[');
+            base.push_str(self.generics.first().unwrap().id());
+            let generic_str = self
+                .generics
+                .iter()
+                .skip(1)
+                .fold(String::new(), |acc, ty_id| {
+                    format!("{}, {}", acc, ty_id.id())
+                });
+            base.push_str(&generic_str);
+            base.push(']');
+        }
 
-        self.fields()
-            .iter()
-            .skip(1)
-            .for_each(|field| base.push_str(format!(", {}", field).as_str()));
-        format!("{});", base)
+        if !self.fields.is_empty() {
+            base.push('(');
+            base.push_str(&format!("{}", self.fields.first().unwrap()));
+            let arg_str = self
+                .fields
+                .iter()
+                .skip(1)
+                .fold(String::new(), |acc, field| format!("{}, {}", acc, field));
+            base.push_str(&arg_str);
+            base.push(')');
+        }
+
+        base
     }
 }
 
@@ -107,6 +127,7 @@ impl From<String> for TypeDec {
     fn from(type_name: String) -> TypeDec {
         TypeDec {
             name: type_name,
+            generics: vec![],
             fields: vec![],
         }
     }

@@ -21,18 +21,25 @@ pub struct FunctionDec {
     name: String,
     ty: Option<TypeId>,
     kind: FunctionKind,
+    generics: Vec<TypeId>,
     args: Vec<DecArg>,
     block: Option<Block>,
 }
 
 impl FunctionDec {
     /// Create a new function declaration with a given name, no args and no code block
-    pub fn new(name: String, ty: Option<TypeId>) -> FunctionDec {
+    pub fn new(
+        name: String,
+        ty: Option<TypeId>,
+        generics: Vec<TypeId>,
+        args: Vec<DecArg>,
+    ) -> FunctionDec {
         FunctionDec {
             name,
             ty,
             kind: FunctionKind::Unknown,
-            args: Vec::new(),
+            generics,
+            args,
             block: None,
         }
     }
@@ -95,6 +102,10 @@ impl FunctionDec {
         self.args = args
     }
 
+    pub fn set_generics(&mut self, generics: Vec<TypeId>) {
+        self.generics = generics
+    }
+
     /// Return a reference to the function's block
     pub fn block(&self) -> Option<&Block> {
         self.block.as_ref()
@@ -151,22 +162,37 @@ impl Instruction for FunctionDec {
             FunctionKind::Unknown => "UNKNOWN",
         });
 
-        base = format!("{} {}(", base, self.name);
+        base = format!("{} {}", base, self.name);
 
-        let mut first_arg = true;
-        for arg in &self.args {
-            if !first_arg {
-                base.push_str(", ");
-            }
-
-            base.push_str(&format!("{}: {}", arg.name(), arg.get_type().id()));
-
-            first_arg = false;
+        if !self.generics.is_empty() {
+            base.push('[');
+            base.push_str(self.generics.first().unwrap().id());
+            let generic_str = self
+                .generics
+                .iter()
+                .skip(1)
+                .fold(String::new(), |acc, ty_id| {
+                    format!("{}, {}", acc, ty_id.id())
+                });
+            base.push_str(&generic_str);
+            base.push(']');
         }
 
+        base.push('(');
+        if !self.args.is_empty() {
+            base.push_str(&format!("{}", self.args().iter().next().unwrap()));
+            let arg_str = self
+                .args
+                .iter()
+                .skip(1)
+                .fold(String::new(), |acc, field| format!("{}, {}", acc, field));
+            base.push_str(&arg_str);
+        }
+        base.push(')');
+
         base = match &self.ty {
-            Some(ty) => format!("{}) -> {}", base, ty.id()),
-            None => format!("{})", base),
+            Some(ty) => format!("{} -> {}", base, ty.id()),
+            None => base,
         };
 
         match &self.block {
@@ -235,7 +261,7 @@ impl TypeCheck for FunctionDec {
 
 impl Default for FunctionDec {
     fn default() -> Self {
-        FunctionDec::new(String::new(), None)
+        FunctionDec::new(String::new(), None, vec![], vec![])
     }
 }
 
@@ -264,7 +290,7 @@ mod tests {
 
     #[test]
     fn simple_no_arg() {
-        let mut function = FunctionDec::new("fn".to_owned(), None);
+        let mut function = FunctionDec::new("fn".to_owned(), None, vec![], vec![]);
         function.set_kind(FunctionKind::Func);
 
         assert_eq!(function.print(), "func fn() {}");
@@ -272,21 +298,22 @@ mod tests {
 
     #[test]
     fn simple_args() {
-        let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")));
-        function.set_kind(FunctionKind::Func);
         let args = vec![
             DecArg::new("arg0".to_owned(), TypeId::from("int")),
             DecArg::new("arg1".to_owned(), TypeId::from("int")),
         ];
 
-        function.set_args(args);
+        let mut function =
+            FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")), vec![], args);
+        function.set_kind(FunctionKind::Func);
 
         assert_eq!(function.print(), "func fn(arg0: int, arg1: int) -> int {}");
     }
 
     #[test]
     fn tc_ext_func() {
-        let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")));
+        let mut function =
+            FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")), vec![], vec![]);
         function.set_kind(FunctionKind::Ext);
 
         let mut ctx = Context::new();
@@ -298,7 +325,8 @@ mod tests {
 
     #[test]
     fn tc_valid() {
-        let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")));
+        let mut function =
+            FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")), vec![], vec![]);
         function.set_kind(FunctionKind::Func);
 
         let block = constructs::block("{ 15 }").unwrap().1;
@@ -313,7 +341,12 @@ mod tests {
 
     #[test]
     fn tc_invalid() {
-        let mut function = FunctionDec::new("fn".to_owned(), Some(TypeId::from("string")));
+        let mut function = FunctionDec::new(
+            "fn".to_owned(),
+            Some(TypeId::from("string")),
+            vec![],
+            vec![],
+        );
         function.set_kind(FunctionKind::Func);
 
         let block = constructs::block("{ 15 }").unwrap().1;

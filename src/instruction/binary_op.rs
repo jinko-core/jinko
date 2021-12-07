@@ -322,6 +322,7 @@ mod tests {
         binop_assert!(5 + 7)
     }
 
+    #[test]
     fn binop_execute_execute_natural_order() {
         binop_assert!(4 + 7 + 3);
     }
