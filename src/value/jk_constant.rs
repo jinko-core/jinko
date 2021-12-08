@@ -1,6 +1,6 @@
+use super::string_interpolation::JkStringFmt;
 use crate::instruction::{InstrKind, Instruction, Operator, TypeId};
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
-use super::string_interpolation::JkStringFmt;
 use crate::{
     log, Context, Error, FromObjectInstance, Generic, JkString, ObjectInstance, ToObjectInstance,
     Value,
@@ -331,12 +331,15 @@ impl Instruction for JkString {
         format!("\"{}\"", self.0.clone())
     }
 
-    fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         log!("constant: {}", &self.0.to_string());
 
         let interpolated = match JkStringFmt::interpolate(&self.0, ctx) {
             Ok(new_s) => JkString::from(new_s),
-            Err(e) => { ctx.error(e); return None},
+            Err(e) => {
+                ctx.error(e);
+                return None;
+            }
         };
 
         Some(interpolated.to_instance())

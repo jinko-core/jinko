@@ -5,7 +5,7 @@ mod context;
 mod error;
 #[cfg(feature = "ffi")]
 mod ffi;
-mod generics;
+pub mod generics;
 mod indent;
 pub mod instance;
 pub mod instruction;
