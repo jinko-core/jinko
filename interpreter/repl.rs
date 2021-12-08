@@ -6,11 +6,11 @@ use prompt::Prompt;
 use std::path::PathBuf;
 
 use jinko::{
-    constructs, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
+    constructs, log, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
 };
 use jinko::{CheckedType, TypeCheck, TypeCtx};
 
-use crate::{Args, InteractResult};
+use crate::InteractResult;
 
 use linefeed::{DefaultTerminal, Interface, ReadResult};
 
@@ -36,13 +36,12 @@ impl std::fmt::Display for ReplInstance {
     }
 }
 
-pub struct Repl<'args> {
-    args: &'args Args,
+pub struct Repl {
     ctx: Option<Context>,
     reader: Interface<DefaultTerminal>,
 }
 
-impl<'args> Repl<'args> {
+impl Repl {
     /// Parse a new instruction from the user's input. This function uses the parser's
     /// `instruction` method, and can therefore parse any valid Jinko instruction
     fn parse_instruction(input: &str) -> Result<Option<Box<dyn Instruction>>, Error> {
@@ -55,23 +54,21 @@ impl<'args> Repl<'args> {
         }
     }
 
-    pub fn new(args: &Args) -> std::io::Result<Repl> {
+    pub fn new() -> std::io::Result<Repl> {
         Ok(Repl {
-            args,
             ctx: None,
             reader: Interface::new("jinko")?,
         })
     }
 
-    pub fn with_context(self, ctx: Context) -> Repl<'args> {
+    pub fn with_context(self, ctx: Context) -> Repl {
         Repl {
             ctx: Some(ctx),
             ..self
         }
     }
 
-    fn setup_context(args: &Args, ctx: &mut Context) {
-        ctx.set_debug(args.debug());
+    fn setup_context(ctx: &mut Context) {
         ctx.set_path(Some(PathBuf::from("repl")));
 
         let ep = ctx.entry_point.block().unwrap().clone();
@@ -88,12 +85,14 @@ impl<'args> Repl<'args> {
 
     /// Launch the REPL
     pub fn launch(self) -> InteractResult {
+        log!("starting REPL");
+
         let mut ctx = match self.ctx {
             Some(ctx) => ctx,
             None => Context::new(),
         };
 
-        Repl::setup_context(self.args, &mut ctx);
+        Repl::setup_context(&mut ctx);
 
         self.reader.set_prompt(&Prompt::get(&ctx))?;
 

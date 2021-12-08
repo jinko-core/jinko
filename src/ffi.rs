@@ -3,6 +3,7 @@
 //! FIXME
 
 use crate::instruction::{FunctionCall, FunctionDec};
+use crate::log;
 use crate::{
     Context, ErrKind, Error, FromObjectInstance, JkInt, JkString, ObjectInstance, ToObjectInstance,
 };
@@ -91,7 +92,7 @@ pub fn execute(
     call: &FunctionCall,
     ctx: &mut Context,
 ) -> Result<Option<ObjectInstance>, Error> {
-    ctx.debug("EXT CALL", call.name());
+    log!("ext call: {}", call.name());
     let sym = call.name().as_bytes();
 
     // FIXME: Don't unwrap

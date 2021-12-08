@@ -3,7 +3,7 @@
 
 use crate::instruction::FunctionCall;
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
+use crate::{log, Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -29,16 +29,16 @@ impl Instruction for MethodCall {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug("METHOD CALL ENTER", &self.print());
+        log!("method call enter: {}", &self.print());
 
         // FIXME: No clone here
         let mut call = self.method.clone();
 
         call.add_arg_front(self.var.clone());
 
-        ctx.debug("DESUGARING TO", &call.print());
+        log!("desugaring to: {}", &call.print());
 
-        ctx.debug("METHOD CALL EXIT", &self.print());
+        log!("method call exit: {}", &self.print());
 
         call.execute(ctx)
     }

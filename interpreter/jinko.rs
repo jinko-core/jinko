@@ -99,14 +99,13 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
 
     ctx.set_path(Some(file.to_owned()));
     ctx.set_args(args.project_args());
-    ctx.set_debug(args.debug());
 
     ctx.emit_errors();
     ctx.clear_errors();
 
     match args.test() {
         false => match args.interactive() {
-            true => Repl::new(args)?.with_context(ctx).launch(),
+            true => Repl::new()?.with_context(ctx).launch(),
             false => {
                 let res = ctx.execute()?;
                 ctx.emit_errors();
@@ -129,9 +128,12 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::handle();
+    if args.debug() {
+        jinko::log::enable();
+    }
 
     let result = args.input().map_or_else(
-        || Repl::new(&args)?.launch(),
+        || Repl::new()?.launch(),
         |filename| handle_input(&args, filename),
     )?;
 

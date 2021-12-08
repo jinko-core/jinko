@@ -3,7 +3,7 @@
 
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{Context, FromObjectInstance, JkBool, ObjectInstance, TypeCheck};
+use crate::{log, Context, FromObjectInstance, JkBool, ObjectInstance, TypeCheck};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
@@ -52,19 +52,20 @@ impl Instruction for Loop {
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         match &self.kind {
             LoopKind::Loop => loop {
-                ctx.debug_step("LOOP ENTER");
+                log!("loop enter");
                 self.block.execute(ctx)?;
-                ctx.debug_step("LOOP EXIT");
+                log!("loop exit");
             },
             LoopKind::While(cond) => {
-                ctx.debug_step("WHILE ENTER");
                 let cond = cond.execute(ctx)?;
+                log!("while enter");
                 while JkBool::from_instance(&cond).rust_value() {
                     self.block.execute(ctx)?;
                 }
-                ctx.debug_step("WHILE EXIT");
+                log!("while exit");
             }
             LoopKind::For(var, range_expression) => {
+                log!("foreach enter");
                 // Let's break down the implementation for the following loop
                 // ```
                 // for i in range(0, 10) { /* exec() */ }
@@ -183,6 +184,7 @@ impl Instruction for Loop {
                 }
 
                 ctx.scope_exit();
+                log!("foreach exit");
             }
         }
 

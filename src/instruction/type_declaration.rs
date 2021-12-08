@@ -1,6 +1,7 @@
 use super::{DecArg, InstrKind, Instruction, TypeId};
 
 use crate::{
+    log,
     typechecker::{CheckedType, TypeCtx},
     Context, ObjectInstance, TypeCheck,
 };
@@ -39,14 +40,14 @@ impl Instruction for TypeDec {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug_step(&format!("CUSTOM TYPE {} ENTER", self.name));
+        log!("custom type enter: {}", self.name);
 
         if let Err(e) = ctx.add_type(self.clone()) {
             ctx.error(e);
             return None;
         }
 
-        ctx.debug_step(&format!("CUSTOM TYPE {} EXIT", self.name));
+        log!("custom type enter: {}", self.name);
 
         // Declaring a type is always a statement (for now)
         None

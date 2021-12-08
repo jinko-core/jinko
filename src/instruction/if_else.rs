@@ -19,8 +19,8 @@ use crate::instance::FromObjectInstance;
 use crate::instruction::{Block, InstrKind, Instruction, TypeId};
 use crate::typechecker::TypeCtx;
 use crate::value::JkBool;
+use crate::{log, ErrKind, Error};
 use crate::{typechecker::CheckedType, Context, ObjectInstance, TypeCheck};
-use crate::{ErrKind, Error};
 
 #[derive(Clone)]
 pub struct IfElse {
@@ -61,16 +61,15 @@ impl Instruction for IfElse {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug_step("IF_ELSE ENTER");
+        log!("if_else enter");
 
         let cond = self.condition.execute(ctx)?;
-        // ctx.debug("COND", &cond.to_string());
 
         if JkBool::from_instance(&cond).rust_value() {
-            ctx.debug_step("IF ENTER");
+            log!("if enter");
             self.if_body.execute(ctx)
         } else {
-            ctx.debug_step("ELSE ENTER");
+            log!("else enter");
             match &self.else_body {
                 Some(b) => b.execute(ctx),
                 // FIXME: Fix logic: If an `if` returns something, the else should too.

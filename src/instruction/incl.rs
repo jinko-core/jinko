@@ -4,6 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
+    log,
     parser::constructs,
     typechecker::{CheckedType, TypeCtx},
     Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
@@ -81,7 +82,7 @@ impl Incl {
             return Ok((formatted, vec![]));
         }
 
-        ctx.debug("FINAL PATH", &format!("{:?}", formatted));
+        log!("final path: {}", &format!("{:?}", formatted));
 
         let input = std::fs::read_to_string(&formatted)?;
 
@@ -201,12 +202,12 @@ impl Instruction for Incl {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug("INCL ENTER", self.print().as_str());
+        log!("incl enter: {}", self.print().as_str());
 
         let base = self.get_base(ctx);
         let _prefix = self.format_prefix()?;
 
-        ctx.debug("BASE DIR", &format!("{:#?}", base));
+        log!("base dir: {}", &format!("{:#?}", base));
 
         let old_path = ctx.path().cloned();
 
@@ -218,8 +219,6 @@ impl Instruction for Incl {
         content.iter_mut().for_each(|instr| {
             // FIXME: Rework prefixing
             // instr.prefix(&prefix);
-
-            ctx.debug("INCLUDING", instr.print().as_str());
 
             instr.execute(ctx);
         });

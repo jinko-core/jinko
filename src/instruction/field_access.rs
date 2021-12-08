@@ -2,6 +2,7 @@
 //! FIXME: Add doc
 
 use crate::{
+    log,
     typechecker::{CheckedType, TypeCtx},
     Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
 };
@@ -57,11 +58,11 @@ impl Instruction for FieldAccess {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug("FIELD ACCESS ENTER", &self.print());
+        log!("field access enter: {}", &self.print());
 
         let field_instance = self.get_field_instance(ctx);
 
-        ctx.debug("FIELD ACCESS EXIT", &self.print());
+        log!("field access exit: {}", &self.print());
 
         field_instance
     }

@@ -150,11 +150,6 @@ impl Context {
         self.error_handler.clear();
     }
 
-    /// Set the debug mode of a previously created ctx
-    pub fn set_debug(&mut self, debug: bool) {
-        self.debug_mode = debug
-    }
-
     /// Add a function to the context. Returns `Ok` if the function was added, `Err`
     /// if it existed already and was not.
     pub fn add_function(&mut self, function: FunctionDec) -> Result<(), Error> {

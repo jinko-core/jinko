@@ -5,7 +5,7 @@
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{Context, ErrKind, Error, ObjectInstance, TypeCheck};
+use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// The potential ctx instructions
 #[derive(Clone, Debug, PartialEq)]
@@ -59,7 +59,7 @@ impl Instruction for JkInst {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        ctx.debug("JINKO_INST", &self.print());
+        log!("jinko_inst: {}", &self.print());
 
         match self.kind {
             JkInstKind::Dump => println!("{}", ctx.print()),
