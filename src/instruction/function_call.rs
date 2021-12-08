@@ -12,7 +12,7 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub struct FunctionCall {
     fn_name: String,
-    generics: Vec<TypeId>,
+    _generics: Vec<TypeId>,
     args: Vec<Box<dyn Instruction>>,
 }
 
@@ -25,7 +25,7 @@ impl FunctionCall {
     ) -> FunctionCall {
         FunctionCall {
             fn_name,
-            generics,
+            _generics: generics,
             args,
         }
     }
