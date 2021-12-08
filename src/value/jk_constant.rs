@@ -342,6 +342,8 @@ impl Instruction for JkString {
             }
         };
 
+        log!("post-interpolation: {}", &interpolated.rust_value());
+
         Some(interpolated.to_instance())
     }
 }

@@ -5,6 +5,7 @@ incl range
 incl iter
 incl ffi
 incl args
+incl fmt
 
 ext func __builtin_exit(exit_code: int);
 
