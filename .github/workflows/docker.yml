@@ -64,3 +64,11 @@ jobs:
           context: .
           push: true
           tags: jinko/jinko:latest
+
+      - name: Build and push bleeding edge release
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: jinko/jinko:bleeding
