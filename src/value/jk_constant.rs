@@ -1,6 +1,6 @@
+use super::string_interpolation::JkStringFmt;
 use crate::instruction::{InstrKind, Instruction, Operator, TypeId};
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
-use super::string_interpolation::JkStringFmt;
 use crate::{
     log, Context, Error, FromObjectInstance, JkString, ObjectInstance, ToObjectInstance, Value,
 };
@@ -293,7 +293,10 @@ impl Instruction for JkString {
 
         let interpolated = match JkStringFmt::interpolate(&self.0, ctx) {
             Ok(new_s) => JkString::from(new_s),
-            Err(e) => { ctx.error(e); return None},
+            Err(e) => {
+                ctx.error(e);
+                return None;
+            }
         };
 
         Some(interpolated.to_instance())

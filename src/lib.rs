@@ -4,6 +4,7 @@ pub mod builtins;
 mod context;
 mod error;
 mod ffi;
+pub mod generics;
 mod indent;
 pub mod instance;
 pub mod instruction;
