@@ -35,6 +35,6 @@ mod tests {
 
     #[test]
     fn no_generic() {
-        assert_eq!(format_function_name("f", vec![]), "__f_");
+        assert_eq!(format_function_name("f", vec![]), "__f");
     }
 }

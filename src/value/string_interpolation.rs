@@ -41,7 +41,7 @@ impl JkStringFmt {
     /// Parse a "pre expression" in a string to interpolate. The pre expressions are
     /// highlighted in the following string, spaces included
     ///
-    /// ```
+    /// ```ignore
     /// "Hey my name is {name} and I am {age} years old"
     ///  ^^^^^^^^^^^^^^^      ^^^^^^^^^^     ^^^^^^^^^^
     /// ```
@@ -54,7 +54,7 @@ impl JkStringFmt {
     /// through the same parsing rules as regular jinko expressions. They must be valid
     /// code.
     ///
-    /// ```
+    /// ```ignore
     /// "Hey my name is {name} and I am {age} years old"
     ///                 ^^^^^^          ^^^^^
     /// ```
@@ -195,7 +195,7 @@ mod tests {
     fn setup() -> Context {
         jinko! {
             a = 1;
-            b = 1;
+            b = 2;
         }
     }
 
