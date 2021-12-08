@@ -7,8 +7,8 @@ use crate::generics::format_function_name;
 use crate::instruction::{FunctionCall, Var};
 use crate::parser::{constructs, ParseResult};
 use crate::{
-    CheckedType, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkString,
-    ObjectInstance,
+    log, CheckedType, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction,
+    JkString, ObjectInstance,
 };
 
 use nom::bytes::complete::{is_not, take_while};
@@ -101,18 +101,31 @@ impl JkStringFmt {
             _ => unreachable!("Formatting operation which has not been typechecked or executed"),
         };
 
+        log!("interpolating on type: {}", &type_id.id());
+
         ctx.scope_enter();
-        let mut tmp_var = Var::new(String::from("__tmp_instance"));
+        let mut tmp_var = Var::new(String::from("+instance"));
         tmp_var.set_mutable(true);
+
         let mut tmp_var_expanded = tmp_var.clone();
         tmp_var_expanded.set_instance(inst);
+        ctx.add_variable(tmp_var_expanded)?;
+
         let fmt_name = format_function_name("fmt", vec![type_id.clone()]);
+        log!("generic fmt name: {}", &fmt_name);
+
         let fmt_call = FunctionCall::new(fmt_name, vec![], vec![Box::new(tmp_var)]);
 
-        match fmt_call.execute(ctx) {
-            None => Err(Error::new(ErrKind::Context).with_msg(format!("invalid call to formatting function: is the `fmt()` function implemented for the type `{}`?", CheckedType::Resolved(type_id)))),
+        let result = match fmt_call.execute(ctx) {
+            None => Err(Error::new(ErrKind::Context).with_msg(
+                    format!("invalid call to formatting function: is the `fmt()` function implemented for the type `{}`?",
+                    CheckedType::Resolved(type_id)))),
             Some(instance) => Ok(JkString::from_instance(&instance).rust_value())
-        }
+        };
+
+        ctx.scope_enter();
+
+        result
     }
 
     /// Execute a parsed expression in the current context. This function returns the

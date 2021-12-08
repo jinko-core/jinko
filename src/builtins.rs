@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use crate::ffi;
 use crate::instance::{FromObjectInstance, ToObjectInstance};
-use crate::{Context, Instruction, JkBool, JkInt, JkChar, JkFloat, JkString, ObjectInstance};
+use crate::{Context, Instruction, JkBool, JkChar, JkFloat, JkInt, JkString, ObjectInstance};
 
 type Args = Vec<Box<dyn Instruction>>;
 type BuiltinFn = fn(&mut Context, Args) -> Option<ObjectInstance>;
