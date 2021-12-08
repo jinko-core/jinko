@@ -6,8 +6,8 @@
 use crate::instruction::{FunctionCall, Var};
 use crate::parser::{constructs, ParseResult};
 use crate::{
-    CheckedType, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkString,
-    ObjectInstance,
+    log, CheckedType, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction,
+    JkString, ObjectInstance,
 };
 
 use nom::bytes::complete::{is_not, take_while};
@@ -100,9 +100,12 @@ impl JkStringFmt {
             _ => unreachable!("Formatting operation which has not been typechecked or executed"),
         };
 
+        log!("interpolating on type: {}", &type_id.id());
+
         ctx.scope_enter();
-        let mut tmp_var = Var::new(String::from("__tmp_instance"));
+        let mut tmp_var = Var::new(String::from("+instance"));
         tmp_var.set_mutable(true);
+
         let mut tmp_var_expanded = tmp_var.clone();
         tmp_var_expanded.set_instance(inst);
         // FIXME: Remove these calls
