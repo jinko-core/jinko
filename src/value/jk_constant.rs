@@ -288,7 +288,7 @@ impl Instruction for JkString {
         format!("\"{}\"", self.0.clone())
     }
 
-    fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
+    fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         log!("constant: {}", &self.0.to_string());
 
         let interpolated = match JkStringFmt::interpolate(&self.0, ctx) {
@@ -298,6 +298,8 @@ impl Instruction for JkString {
                 return None;
             }
         };
+
+        log!("post-interpolation: {}", &interpolated.rust_value());
 
         Some(interpolated.to_instance())
     }

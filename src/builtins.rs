@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use crate::ffi;
 use crate::instance::{FromObjectInstance, ToObjectInstance};
-use crate::{Context, Instruction, JkBool, JkInt, JkString, ObjectInstance};
+use crate::{Context, Instruction, JkBool, JkInt, JkChar, JkFloat, JkString, ObjectInstance};
 
 type Args = Vec<Box<dyn Instruction>>;
 type BuiltinFn = fn(&mut Context, Args) -> Option<ObjectInstance>;
@@ -114,6 +114,34 @@ fn exit(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     std::process::exit(exit_code as i32);
 }
 
+fn fmt_int(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let value = JkInt::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    Some(JkString::from(format!("{}", value)).to_instance())
+}
+
+fn fmt_float(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let value = JkFloat::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    Some(JkString::from(format!("{}", value)).to_instance())
+}
+
+fn fmt_char(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let value = JkChar::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    Some(JkString::from(format!("{}", value)).to_instance())
+}
+
+fn fmt_bool(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let value = JkBool::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    Some(JkString::from(format!("{}", value)).to_instance())
+}
+
+fn fmt_string(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    args[0].execute(ctx)
+}
+
 impl Builtins {
     fn add(&mut self, name: &'static str, builtin_fn: BuiltinFn) {
         self.functions.insert(String::from(name), builtin_fn);
@@ -135,6 +163,11 @@ impl Builtins {
         builtins.add("__builtin_arg_get", arg_get);
         builtins.add("__builtin_arg_amount", arg_amount);
         builtins.add("__builtin_exit", exit);
+        builtins.add("__fmt_int", fmt_int);
+        builtins.add("__fmt_float", fmt_float);
+        builtins.add("__fmt_char", fmt_char);
+        builtins.add("__fmt_bool", fmt_bool);
+        builtins.add("__fmt_string", fmt_string);
 
         builtins
     }
