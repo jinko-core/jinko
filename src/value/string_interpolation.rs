@@ -4,7 +4,10 @@
 //! In order to use the '{' or '}' character themselves, use '{{' and '}}'.
 
 use crate::parser::{constructs, ParseResult};
-use crate::{InstrKind, Instruction, Context, ErrKind, Error};
+use crate::{
+    log, CheckedType, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkBool,
+    JkChar, JkFloat, JkInt, JkString, ObjectInstance,
+};
 
 use nom::bytes::complete::{is_not, take_while};
 use nom::character::complete::char;
@@ -16,6 +19,8 @@ const L_DELIM: char = '{';
 const R_DELIM: char = '}';
 
 pub struct JkStringFmt;
+
+type PreExprExpr<'s> = (Option<&'s str>, Option<Box<dyn Instruction>>);
 
 impl JkStringFmt {
     /// Consume input until a certain character is met. This is useful for interpolation,
@@ -36,7 +41,7 @@ impl JkStringFmt {
     /// Parse a "pre expression" in a string to interpolate. The pre expressions are
     /// highlighted in the following string, spaces included
     ///
-    /// ```
+    /// ```ignore
     /// "Hey my name is {name} and I am {age} years old"
     ///  ^^^^^^^^^^^^^^^      ^^^^^^^^^^     ^^^^^^^^^^
     /// ```
@@ -49,7 +54,7 @@ impl JkStringFmt {
     /// through the same parsing rules as regular jinko expressions. They must be valid
     /// code.
     ///
-    /// ```
+    /// ```ignore
     /// "Hey my name is {name} and I am {age} years old"
     ///                 ^^^^^^          ^^^^^
     /// ```
@@ -69,7 +74,7 @@ impl JkStringFmt {
     /// The string "Hello {name}" has a pre_expr "Hello" and an expression "name".
     /// The string "{name}, how are you?" has an empty pre_expr, an expression "name", a
     /// pre_expr ", how are you?" and an empty expr
-    fn parser(input: &str) -> ParseResult<&str, (Option<&str>, Option<Box<dyn Instruction>>)> {
+    fn parser(input: &str) -> ParseResult<&str, PreExprExpr> {
         use nom::error::{ErrorKind, ParseError};
         use nom::Err;
 
@@ -86,6 +91,30 @@ impl JkStringFmt {
         }
     }
 
+    fn format_instance(inst: ObjectInstance) -> Result<String, Error> {
+        // TODO: This is a *very* PoC and simple way of calling generic functions and
+        // should be refactored and bettered later on. It works here because the idea
+        // behind `fmt` functions is very simple: We can only ever call them with one
+        // instance and thus one generic type
+        let type_id = match inst.ty() {
+            CheckedType::Resolved(ty_id) => ty_id.clone(),
+            _ => unreachable!("Formatting operation which has not been typechecked or executed"),
+        };
+
+        log!("interpolating on type: {}", &type_id.id());
+
+        match type_id.id() {
+            "int" => Ok(JkInt::from_instance(&inst).0.to_string()),
+            "float" => Ok(JkFloat::from_instance(&inst).0.to_string()),
+            "bool" => Ok(JkBool::from_instance(&inst).0.to_string()),
+            "char" => Ok(JkChar::from_instance(&inst).0.to_string()),
+            "string" => Ok(JkString::from_instance(&inst).0),
+            _ => Err(Error::new(ErrKind::Context).
+                with_msg(
+                    format!("cannot format type `{}`: consider implementing a function to represent this type as a string", CheckedType::Resolved(type_id)))),
+        }
+    }
+
     /// Execute a parsed expression in the current context. This function returns the
     /// expression's execution's result as a String
     fn interpolate_expr(
@@ -96,15 +125,15 @@ impl JkStringFmt {
         // We must check if the expression is a statement or not. If it is
         // an expression, then it is invalid in an Interpolation context
         match expr.kind() {
-            InstrKind::Statement => Err(Error::new(
-                ErrKind::Context).with_msg(
-                format!("invalid argument to string interpolation: {}", expr.print())),
-            ), // FIXME: Fix loc and input
+            InstrKind::Statement => Err(Error::new(ErrKind::Context).with_msg(format!(
+                "invalid argument to string interpolation: {}",
+                expr.print()
+            ))), // FIXME: Fix loc and input
             InstrKind::Expression(_) => {
                 match expr.execute(ctx) {
                     // FIXME: Call some jinko code, in order to enable custom types,
                     // instead of `to_string()` in Rust
-                    Some(_res) => Ok(format!("todo :D") /* res.to_string() */),
+                    Some(res) => JkStringFmt::format_instance(res),
                     // We just checked that we couldn't execute
                     // anything other than an expression. This pattern should never
                     // be encountered
@@ -124,11 +153,8 @@ impl JkStringFmt {
 
         for (pre_expr, expr) in expressions {
             result.push_str(pre_expr.unwrap_or(""));
-            match expr {
-                Some(expr) => {
-                    result.push_str(&JkStringFmt::interpolate_expr(expr, s, ctx)?)
-                }
-                None => {}
+            if let Some(expr) = expr {
+                result.push_str(&JkStringFmt::interpolate_expr(expr, s, ctx)?);
             }
         }
 
@@ -155,7 +181,7 @@ mod tests {
     fn setup() -> Context {
         jinko! {
             a = 1;
-            b = 1;
+            b = 2;
         }
     }
 
@@ -180,10 +206,7 @@ mod tests {
         let mut ctx = setup();
 
         let s = "Hey {a}";
-        assert_eq!(
-            JkStringFmt::interpolate(s, &mut ctx).unwrap(),
-            "Hey 1"
-        );
+        assert_eq!(JkStringFmt::interpolate(s, &mut ctx).unwrap(), "Hey 1");
     }
 
     #[test]
@@ -191,10 +214,7 @@ mod tests {
         let mut ctx = setup();
 
         let s = "{a} Hey";
-        assert_eq!(
-            JkStringFmt::interpolate(s, &mut ctx).unwrap(),
-            "1 Hey"
-        );
+        assert_eq!(JkStringFmt::interpolate(s, &mut ctx).unwrap(), "1 Hey");
     }
 
     #[test]
@@ -202,10 +222,7 @@ mod tests {
         let mut ctx = setup();
 
         let s = "{a} Hey {b}";
-        assert_eq!(
-            JkStringFmt::interpolate(s, &mut ctx).unwrap(),
-            "1 Hey 2"
-        );
+        assert_eq!(JkStringFmt::interpolate(s, &mut ctx).unwrap(), "1 Hey 2");
     }
 
     #[test]
@@ -213,10 +230,7 @@ mod tests {
         let mut ctx = setup();
 
         let s = "Hey {b} Hey";
-        assert_eq!(
-            JkStringFmt::interpolate(s, &mut ctx).unwrap(),
-            "Hey 2 Hey"
-        );
+        assert_eq!(JkStringFmt::interpolate(s, &mut ctx).unwrap(), "Hey 2 Hey");
     }
 
     #[test]
