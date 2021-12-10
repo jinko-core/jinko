@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //! The [`Generic`] trait is required to enable the generic type expansion of
 //! variables, type and function declarations, type instantiations and function
 //! calls. Its basic goal is to replace all instances of `T` with an actual [`TypeId`].
@@ -93,6 +94,18 @@ pub trait Generic {
     fn generate_new(&self, _type_map: GenericMap) -> Option<Box<dyn Instruction>> {
         None
     }
+=======
+use crate::instruction::TypeId;
+
+/// Format a function name to correspond to the low level implementation after generics
+/// have been expanded
+fn _format_function_name(fn_name: &str, generics: Vec<TypeId>) -> String {
+    generics
+        .iter()
+        .fold(format!("__{}", fn_name), |acc, type_id| {
+            format!("{}_{}", acc, type_id.id())
+        })
+>>>>>>> 612c95a (string_interpolation: Only format primitive types)
 }
 
 #[cfg(test)]
@@ -112,22 +125,38 @@ mod tests {
     }
 
     #[test]
+<<<<<<< HEAD
     fn mangle_one_generic() {
         assert_eq!(_mangle("mangled", &[ty!("bool")]), "mangled+bool");
+=======
+    fn one_generic() {
+        let types = vec![TypeId::new(String::from("int"))];
+        assert_eq!(_format_function_name("f", types), "__f_int");
+>>>>>>> 612c95a (string_interpolation: Only format primitive types)
     }
 
     #[test]
     fn mangle_multi_generic() {
         assert_eq!(
+<<<<<<< HEAD
             _mangle("mangled", &[ty!("float"), ty!("ComplexType")]),
             "mangled+float+ComplexType"
+=======
+            _format_function_name("f", types),
+            "__f_int_string_CustomType"
+>>>>>>> 612c95a (string_interpolation: Only format primitive types)
         );
     }
 
     #[test]
+<<<<<<< HEAD
     fn create_map_different_size() {
         let mut ctx = Context::new();
 
         assert!(create_map(&[ty!("int"), ty!("float")], &[ty!("T")], &mut ctx).is_err());
+=======
+    fn no_generic() {
+        assert_eq!(_format_function_name("f", vec![]), "__f");
+>>>>>>> 612c95a (string_interpolation: Only format primitive types)
     }
 }
