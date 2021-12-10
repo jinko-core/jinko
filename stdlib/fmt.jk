@@ -1,4 +1,0 @@
-ext func __fmt_int(to_fmt: int) -> string;
-ext func __fmt_float(to_fmt: int) -> string;
-ext func __fmt_char(to_fmt: int) -> string;
-ext func __fmt_bool(to_fmt: int) -> string;
