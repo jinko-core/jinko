@@ -58,6 +58,7 @@ pub struct Context {
     included: HashSet<PathBuf>,
 
     /// External libraries to use via FFI
+    #[cfg(feature = "ffi")]
     external_libs: Vec<libloading::Library>,
 
     /// Errors being kept by the context
@@ -91,6 +92,7 @@ impl Context {
             builtins: Builtins::new(),
             tests: HashMap::new(),
             included: HashSet::new(),
+            #[cfg(feature = "ffi")]
             external_libs: Vec::new(),
             error_handler: ErrorHandler::default(),
         };
@@ -324,11 +326,13 @@ impl Context {
     }
 
     /// Add a library to the interpreter
+    #[cfg(feature = "ffi")]
     pub fn add_lib(&mut self, lib: libloading::Library) {
         self.external_libs.push(lib)
     }
 
     /// Get a reference on all shared libraries loaded in the interpreter
+    #[cfg(feature = "ffi")]
     pub fn libs(&self) -> &Vec<libloading::Library> {
         &self.external_libs
     }

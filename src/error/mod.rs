@@ -193,6 +193,7 @@ impl Display for Error {
     }
 }
 
+#[cfg(feature = "ffi")]
 impl std::convert::From<libloading::Error> for Error {
     fn from(e: libloading::Error) -> Self {
         Error::new(ErrKind::ExternFunc).with_msg(e.to_string())

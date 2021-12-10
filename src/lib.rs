@@ -3,6 +3,7 @@
 pub mod builtins;
 mod context;
 mod error;
+#[cfg(feature = "ffi")]
 mod ffi;
 mod indent;
 pub mod instance;
