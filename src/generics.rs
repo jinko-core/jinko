@@ -2,7 +2,7 @@ use crate::instruction::TypeId;
 
 /// Format a function name to correspond to the low level implementation after generics
 /// have been expanded
-pub fn format_function_name(fn_name: &str, generics: Vec<TypeId>) -> String {
+fn format_function_name(fn_name: &str, generics: Vec<TypeId>) -> String {
     generics
         .iter()
         .fold(format!("__{}", fn_name), |acc, type_id| {
