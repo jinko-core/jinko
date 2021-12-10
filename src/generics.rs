@@ -2,7 +2,7 @@ use crate::instruction::TypeId;
 
 /// Format a function name to correspond to the low level implementation after generics
 /// have been expanded
-fn format_function_name(fn_name: &str, generics: Vec<TypeId>) -> String {
+fn _format_function_name(fn_name: &str, generics: Vec<TypeId>) -> String {
     generics
         .iter()
         .fold(format!("__{}", fn_name), |acc, type_id| {
@@ -17,7 +17,7 @@ mod tests {
     #[test]
     fn one_generic() {
         let types = vec![TypeId::new(String::from("int"))];
-        assert_eq!(format_function_name("f", types), "__f_int");
+        assert_eq!(_format_function_name("f", types), "__f_int");
     }
 
     #[test]
@@ -28,13 +28,13 @@ mod tests {
             TypeId::new(String::from("CustomType")),
         ];
         assert_eq!(
-            format_function_name("f", types),
+            _format_function_name("f", types),
             "__f_int_string_CustomType"
         );
     }
 
     #[test]
     fn no_generic() {
-        assert_eq!(format_function_name("f", vec![]), "__f");
+        assert_eq!(_format_function_name("f", vec![]), "__f");
     }
 }

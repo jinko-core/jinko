@@ -3,12 +3,10 @@
 //! the current value of the `expression`'s execution in the ctx at that time.
 //! In order to use the '{' or '}' character themselves, use '{{' and '}}'.
 
-use crate::generics::format_function_name;
-use crate::instruction::{FunctionCall, Var};
 use crate::parser::{constructs, ParseResult};
 use crate::{
-    log, CheckedType, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction,
-    JkString, ObjectInstance,
+    log, CheckedType, Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkBool,
+    JkChar, JkFloat, JkInt, JkString, ObjectInstance,
 };
 
 use nom::bytes::complete::{is_not, take_while};
@@ -91,7 +89,7 @@ impl JkStringFmt {
         }
     }
 
-    fn format_instance(inst: ObjectInstance, ctx: &mut Context) -> Result<String, Error> {
+    fn format_instance(inst: ObjectInstance) -> Result<String, Error> {
         // TODO: This is a *very* PoC and simple way of calling generic functions and
         // should be refactored and bettered later on. It works here because the idea
         // behind `fmt` functions is very simple: We can only ever call them with one
@@ -103,29 +101,16 @@ impl JkStringFmt {
 
         log!("interpolating on type: {}", &type_id.id());
 
-        ctx.scope_enter();
-        let mut tmp_var = Var::new(String::from("+instance"));
-        tmp_var.set_mutable(true);
-
-        let mut tmp_var_expanded = tmp_var.clone();
-        tmp_var_expanded.set_instance(inst);
-        ctx.add_variable(tmp_var_expanded)?;
-
-        let fmt_name = format_function_name("fmt", vec![type_id.clone()]);
-        log!("generic fmt name: {}", &fmt_name);
-
-        let fmt_call = FunctionCall::new(fmt_name, vec![], vec![Box::new(tmp_var)]);
-
-        let result = match fmt_call.execute(ctx) {
-            None => Err(Error::new(ErrKind::Context).with_msg(
-                    format!("invalid call to formatting function: is the `fmt()` function implemented for the type `{}`?",
-                    CheckedType::Resolved(type_id)))),
-            Some(instance) => Ok(JkString::from_instance(&instance).rust_value())
-        };
-
-        ctx.scope_enter();
-
-        result
+        match type_id.id() {
+            "int" => Ok(JkInt::from_instance(&inst).0.to_string()),
+            "float" => Ok(JkFloat::from_instance(&inst).0.to_string()),
+            "bool" => Ok(JkBool::from_instance(&inst).0.to_string()),
+            "char" => Ok(JkChar::from_instance(&inst).0.to_string()),
+            "string" => Ok(JkString::from_instance(&inst).0),
+            _ => Err(Error::new(ErrKind::Context).
+                with_msg(
+                    format!("cannot format type `{}`: consider implementing a function to represent this type as a string", CheckedType::Resolved(type_id)))),
+        }
     }
 
     /// Execute a parsed expression in the current context. This function returns the
@@ -146,7 +131,7 @@ impl JkStringFmt {
                 match expr.execute(ctx) {
                     // FIXME: Call some jinko code, in order to enable custom types,
                     // instead of `to_string()` in Rust
-                    Some(res) => JkStringFmt::format_instance(res, ctx),
+                    Some(res) => JkStringFmt::format_instance(res),
                     // We just checked that we couldn't execute
                     // anything other than an expression. This pattern should never
                     // be encountered
