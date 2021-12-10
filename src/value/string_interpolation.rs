@@ -20,6 +20,8 @@ const R_DELIM: char = '}';
 
 pub struct JkStringFmt;
 
+type PreExprExpr<'s> = (Option<&'s str>, Option<Box<dyn Instruction>>);
+
 impl JkStringFmt {
     /// Consume input until a certain character is met. This is useful for interpolation,
     /// as consume_until("Some non interpolated text {some_var}", '{') will return
@@ -72,7 +74,7 @@ impl JkStringFmt {
     /// The string "Hello {name}" has a pre_expr "Hello" and an expression "name".
     /// The string "{name}, how are you?" has an empty pre_expr, an expression "name", a
     /// pre_expr ", how are you?" and an empty expr
-    fn parser(input: &str) -> ParseResult<&str, (Option<&str>, Option<Box<dyn Instruction>>)> {
+    fn parser(input: &str) -> ParseResult<&str, PreExprExpr> {
         use nom::error::{ErrorKind, ParseError};
         use nom::Err;
 
@@ -151,9 +153,8 @@ impl JkStringFmt {
 
         for (pre_expr, expr) in expressions {
             result.push_str(pre_expr.unwrap_or(""));
-            match expr {
-                Some(expr) => result.push_str(&JkStringFmt::interpolate_expr(expr, s, ctx)?),
-                None => {}
+            if let Some(expr) = expr {
+                result.push_str(&JkStringFmt::interpolate_expr(expr, s, ctx)?);
             }
         }
 
