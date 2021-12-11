@@ -9,7 +9,7 @@ use crate::instruction::{FunctionCall, Instruction, MethodCall};
 use crate::parser::{ParseResult, Token};
 use crate::{ErrKind, Error, JkBool, JkChar, JkFloat, JkInt, JkString};
 
-use nom::sequence::terminated;
+use nom::sequence::{preceded, terminated};
 use nom::Err::Error as NomError;
 
 pub struct ConstantConstruct;
@@ -22,37 +22,49 @@ impl ConstantConstruct {
         Ok((input, Box::new(JkChar::from(char_value))))
     }
 
-    pub(crate) fn string_constant(mut input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-        let mut ast: Box<dyn Instruction> = Box::new(JkString::from(""));
-        let special: &[_] = &['"', '{'];
-        while !input.is_empty() {
-            if let Ok((input, _)) = Token::double_quote(input) {
-                return Ok((input, ast));
-            }
-            if let Ok((new_input, _)) = Token::left_curly_bracket(input) {
-                let (new_input, expr) = terminated(expr, Token::right_curly_bracket)(new_input)?;
-                ast = ConstantConstruct::format_expr(ast, expr);
-                input = new_input;
-            } else if let Some(index) = input.find(special) {
-                ast = Box::new(JkString::from(&input[..index]));
-                input = &input[index..];
-            } else {
-                break;
-            }
-        }
-        Err(NomError(
-            Error::new(ErrKind::Parsing).with_msg(String::from("Undelimited string")),
-        ))
+    pub(crate) fn string_constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+        let (input, inner) = preceded(Token::double_quote, ConstantConstruct::inner_string)(input)?;
+        let string = inner.unwrap_or_else(|| Box::new(JkString::from("")));
+
+        Ok((input, string))
     }
 
-    fn format_expr(
-        string: Box<dyn Instruction>,
-        expr: Box<dyn Instruction>,
+    /// inner_string = '"'
+    ///              | '{' expr '}' string
+    ///              | CHAR string
+    fn inner_string(input: &str) -> ParseResult<&str, Option<Box<dyn Instruction>>> {
+        let special: &[_] = &['"', '{'];
+
+        if let Ok((input, _)) = Token::double_quote(input) {
+            Ok((input, None))
+        } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
+            let (input, expr) = terminated(expr, Token::right_curly_bracket)(input)?;
+            let (input, next) = ConstantConstruct::inner_string(input)?;
+
+            Ok((input, Some(ConstantConstruct::concat(expr, next))))
+        } else if let Some(index) = input.find(special) {
+            let expr = Box::new(JkString::from(&input[..index]));
+            let (input, next) = ConstantConstruct::inner_string(&input[index..])?;
+
+            Ok((input, Some(ConstantConstruct::concat(expr, next))))
+        } else {
+            Err(NomError(
+                Error::new(ErrKind::Parsing).with_msg(String::from("Undelimited string")),
+            ))
+        }
+    }
+
+    fn concat(
+        left: Box<dyn Instruction>,
+        right: Option<Box<dyn Instruction>>,
     ) -> Box<dyn Instruction> {
-        Box::new(MethodCall::new(
-            string,
-            FunctionCall::new(String::from("concat"), vec![], vec![expr]),
-        ))
+        match right {
+            None => left,
+            Some(right) => Box::new(MethodCall::new(
+                left,
+                FunctionCall::new(String::from("concat"), vec![], vec![right]),
+            )),
+        }
     }
 
     pub(crate) fn float_constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
@@ -79,8 +91,18 @@ mod tests {
     use super::*;
 
     #[test]
+    fn empty_string() {
+        let input = "\"\"";
+
+        let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
+        assert_eq!(input, "");
+        let string = expr.downcast_ref::<JkString>().unwrap();
+        assert_eq!(string.0, "");
+    }
+
+    #[test]
     fn basic_string() {
-        let input = "hello\"";
+        let input = "\"hello\"";
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
         assert_eq!(input, "");
@@ -90,7 +112,16 @@ mod tests {
 
     #[test]
     fn formatted_once() {
-        let input = "hello {world}\"";
+        let input = "\"hello {world}\"";
+
+        let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
+    }
+
+    #[test]
+    fn formatted_middle() {
+        let input = "\"hello {world} !\"";
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
         assert_eq!(input, "");
@@ -99,14 +130,14 @@ mod tests {
 
     #[test]
     fn formatted_not_delimited() {
-        let input = "hello {world}";
+        let input = "\"hello {world}";
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }
 
     #[test]
     fn basic_not_delimited() {
-        let input = "Rust Transmute Task Force";
+        let input = "\"Rust Transmute Task Force";
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }
