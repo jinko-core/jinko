@@ -555,7 +555,7 @@ fn nom_next(input: &str) -> ParseResult<&str, ()> {
 pub(crate) fn constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     let constant = alt((
         ConstantConstruct::char_constant,
-        ConstantConstruct::string_constant,
+        preceded(Token::double_quote, ConstantConstruct::string_constant),
         ConstantConstruct::float_constant,
         ConstantConstruct::int_constant,
         ConstantConstruct::bool_constant,
