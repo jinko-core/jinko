@@ -129,6 +129,15 @@ mod tests {
     }
 
     #[test]
+    fn formatted_start() {
+        let input = "\"{10 + 9} is 21\"";
+
+        let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
+    }
+
+    #[test]
     fn formatted_not_delimited() {
         let input = "\"hello {world}";
 
