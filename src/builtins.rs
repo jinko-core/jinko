@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+#[cfg(feature = "ffi")]
 use crate::ffi;
 use crate::instance::{FromObjectInstance, ToObjectInstance};
 use crate::{Context, Instruction, JkBool, JkInt, JkString, ObjectInstance};
@@ -73,13 +74,27 @@ fn string_equals(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
 
 /// Link with a given library at runtime
 fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
-    let lib_path = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
+    #[cfg(feature = "ffi")]
+    {
+        let lib_path = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
 
-    if let Err(e) = ffi::link_with(ctx, PathBuf::from(&lib_path)) {
-        ctx.error(e.with_msg(format!("couldn't link with library `{}`", &lib_path)));
+        if let Err(e) = ffi::link_with(ctx, PathBuf::from(&lib_path)) {
+            ctx.error(e.with_msg(format!("couldn't link with library `{}`", &lib_path)));
+        }
+
+        None
     }
 
-    None
+    #[cfg(not(feature = "ffi"))]
+    {
+        use crate::{ErrKind, Error};
+
+        ctx.error(Error::new(ErrKind::Context).with_msg(format!(
+            "jinko is not compiled with FFI support. `link_with()` is disabled"
+        )));
+
+        None
+    }
 }
 
 // Get an argument from the argument vector at a certain index
@@ -156,7 +171,7 @@ impl Default for Builtins {
 
 #[cfg(test)]
 mod tests {
-    use crate::jinko;
+    use crate::{jinko, jinko_fail};
 
     #[test]
     fn t_string_builtins_are_valid() {
@@ -171,8 +186,17 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "ffi")]
     fn t_ffi_builtins_are_valid() {
         jinko! {
+            __builtin_ffi_link_with("tests/fixtures/clib/lib.so");
+        };
+    }
+
+    #[test]
+    #[cfg(not(feature = "ffi"))]
+    fn t_ffi_builtins_are_valid_no_ffi() {
+        jinko_fail! {
             __builtin_ffi_link_with("tests/fixtures/clib/lib.so");
         };
     }

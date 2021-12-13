@@ -1,6 +1,7 @@
 // FIXME: Add #![warn(missing_docs)]
 
 mod args;
+#[cfg(feature = "repl")]
 mod repl;
 
 use colored::Colorize;
@@ -10,6 +11,7 @@ use jinko::{
 };
 
 use args::Args;
+#[cfg(feature = "repl")]
 use repl::Repl;
 use std::{fs, path::Path};
 
@@ -105,7 +107,10 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
 
     match args.test() {
         false => match args.interactive() {
+            #[cfg(feature = "repl")]
             true => Repl::new()?.with_context(ctx).launch(),
+            #[cfg(not(feature = "repl"))]
+            true => panic!("Jinko is not compiled with repl support"),
             false => {
                 let res = ctx.execute()?;
                 ctx.emit_errors();
@@ -132,10 +137,17 @@ fn main() -> anyhow::Result<()> {
         jinko::log::enable();
     }
 
+    #[cfg(feature = "repl")]
     let result = args.input().map_or_else(
         || Repl::new()?.launch(),
         |filename| handle_input(&args, filename),
     )?;
+
+    #[cfg(not(feature = "repl"))]
+    let result = args
+        .input()
+        .map(|filename| handle_input(&args, filename))
+        .unwrap()?;
 
     handle_exit_code(result.0)
 }

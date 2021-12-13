@@ -133,12 +133,22 @@ impl FunctionCall {
                 }
             }
         } else {
+            #[cfg(feature = "ffi")]
             match crate::ffi::execute(dec, self, ctx) {
                 Ok(value) => value,
                 Err(e) => {
                     ctx.error(e);
                     None
                 }
+            }
+
+            #[cfg(not(feature = "ffi"))]
+            {
+                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
+                    "jinko is not compiled with FFI support. Cannot call `{}` external function",
+                    dec.name()
+                )));
+                None
             }
         }
     }

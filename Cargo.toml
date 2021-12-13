@@ -10,15 +10,21 @@ repository = "https://github.com/cohenarthur/jinko"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [dependencies]
 structopt = "0.3"
 colored = "2.0"
 nom = "7.0"
-linefeed = "0.6"
+linefeed = { version = "0.6", optional = true }
 downcast-rs = "1.2"
 anyhow = "1.0"
-libloading = "0.7"
+libloading = { version = "0.7", optional = true }
 lazy_static = "1.4"
+
+[features]
+default = ["repl", "ffi"]
+repl = ["linefeed"]
+ffi = ["libloading"]
 
 [dev-dependencies]
 libc = "0.2"
