@@ -145,7 +145,7 @@ impl FunctionCall {
             #[cfg(not(feature = "ffi"))]
             {
                 ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                    "Jinko is not compiled with FFI support. Cannot call `{}` external function",
+                    "jinko is not compiled with FFI support. Cannot call `{}` external function",
                     dec.name()
                 )));
                 None

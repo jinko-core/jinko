@@ -90,7 +90,7 @@ fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
         use crate::{ErrKind, Error};
 
         ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-            "Jinko is not compiled with FFI support. `t_call_invalid_builtin` is disable"
+            "jinko is not compiled with FFI support. `link_with()` is disabled"
         )));
 
         None
