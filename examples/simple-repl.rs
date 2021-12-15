@@ -9,13 +9,14 @@ fn main() -> Result<()> {
     let mut input = String::new();
 
     loop {
+        ctx.clear_errors();
         print!("> ");
         stdout.flush()?;
 
         input.clear();
         stdin.read_line(&mut input)?;
 
-        // ctx.eval(input);
+        ctx.eval(&input);
 
         print!("{}", input);
     }
