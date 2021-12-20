@@ -17,8 +17,8 @@ use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
-use crate::typechecker::TypeCtx;
-use crate::Builtins;
+use crate::typechecker::{TypeCtx, TypeCheck};
+use crate::{Builtins, CheckedType};
 use crate::ObjectInstance;
 
 /// Type the context uses for keys
@@ -63,6 +63,9 @@ pub struct Context {
 
     /// Errors being kept by the context
     pub(crate) error_handler: ErrorHandler,
+
+    /// Various passes ran by the context
+    typechecker: TypeCtx,
 }
 
 impl Default for Context {
@@ -95,6 +98,7 @@ impl Context {
             #[cfg(feature = "ffi")]
             external_libs: Vec::new(),
             error_handler: ErrorHandler::default(),
+            typechecker: TypeCtx::new(),
         };
 
         ctx.scope_enter();
@@ -266,20 +270,14 @@ impl Context {
         self.included.remove(source);
     }
 
-    fn type_check(&mut self, entry_point: &Block) -> Result<(), Error> {
-        let mut ctx = TypeCtx::new(self);
+    pub fn type_check(&mut self, instruction: &dyn Instruction) -> Result<CheckedType, Error> {
+        let res = instruction.resolve_type(&mut self.typechecker);
 
-        entry_point.instructions().iter().for_each(|inst| {
-            inst.resolve_type(&mut ctx);
-        });
+        self.error_handler.append(&mut self.typechecker.error_handler);
 
-        self.included.clear();
         match self.error_handler.has_errors() {
-            true => {
-                self.emit_errors();
-                Err(Error::new(ErrKind::TypeChecker))
-            }
-            false => Ok(()),
+            true => Err(Error::new(ErrKind::TypeChecker)),
+            false => Ok(res),
         }
     }
 
@@ -289,7 +287,9 @@ impl Context {
 
         self.scope_enter();
 
-        self.type_check(&ep)?;
+        ep.resolve_type(&mut self.typechecker);
+        self.error_handler.append(&mut self.typechecker.error_handler);
+        self.included.clear();
 
         let res = ep
             .instructions()

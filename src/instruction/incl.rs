@@ -232,26 +232,28 @@ impl Instruction for Incl {
 
 impl TypeCheck for Incl {
     // FIXME: We need to not add the path to the interpreter here
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: Maybe the inclusion part should be done separately ahead of typechecking
+        // and execution?
         // FIXME: This is a lot of code in common with execute()
-        let base = self.get_base(ctx.context);
+        // let base = self.get_base(ctx.context);
 
-        let old_path = ctx.context.path().cloned();
+        // let old_path = ctx.context.path().cloned();
 
-        let (new_path, mut content) = match self.load(&base, ctx.context) {
-            None => return CheckedType::Unknown,
-            Some(tuple) => tuple,
-        };
+        // let (new_path, mut content) = match self.load(&base, ctx.context) {
+        //     None => return CheckedType::Unknown,
+        //     Some(tuple) => tuple,
+        // };
 
-        // Temporarily change the path of the context
-        ctx.context.set_path(Some(new_path));
+        // // Temporarily change the path of the context
+        // ctx.context.set_path(Some(new_path));
 
-        content.iter_mut().for_each(|instr| {
-            instr.resolve_type(ctx);
-        });
+        // content.iter_mut().for_each(|instr| {
+        //     instr.resolve_type(ctx);
+        // });
 
-        // Reset the old path before leaving the instruction
-        ctx.context.set_path(old_path);
+        // // Reset the old path before leaving the instruction
+        // ctx.context.set_path(old_path);
 
         CheckedType::Void
     }

@@ -25,6 +25,12 @@ impl ErrorHandler {
         self.errors.push(err)
     }
 
+    /// Drains all the errors contained in another handler in order to accumulate them
+    /// in one place
+    pub fn append(&mut self, other: &mut ErrorHandler) {
+        self.errors.append(&mut other.errors)
+    }
+
     /// Remove all the errors contained in the handler
     pub fn clear(&mut self) {
         self.errors.clear()

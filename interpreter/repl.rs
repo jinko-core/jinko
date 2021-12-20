@@ -6,9 +6,8 @@ use prompt::Prompt;
 use std::path::PathBuf;
 
 use jinko::{
-    constructs, log, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance,
+    constructs, log, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance, CheckedType
 };
-use jinko::{CheckedType, TypeCheck, TypeCtx};
 
 use crate::InteractResult;
 
@@ -71,14 +70,7 @@ impl Repl {
     fn setup_context(ctx: &mut Context) {
         ctx.set_path(Some(PathBuf::from("repl")));
 
-        let ep = ctx.entry_point.block().unwrap().clone();
-        let mut ty_ctx = TypeCtx::new(ctx);
-
-        ep.resolve_type(&mut ty_ctx);
-
-        ep.instructions().iter().for_each(|inst| {
-            inst.execute(ctx);
-        });
+        ctx.execute().unwrap();
 
         ctx.emit_errors();
     }
@@ -110,12 +102,11 @@ impl Repl {
                 None => continue,
             };
 
-            // FIXME: Add typechecking to REPL
-            // if let CheckedType::Unknown = inst.resolve_type(&mut ty_ctx) {
-            //     ctx.emit_errors();
-            //     ctx.clear_errors();
-            //     continue;
-            // }
+            if ctx.type_check(&*inst).is_err() {
+                ctx.emit_errors();
+                ctx.clear_errors();
+                continue;
+            }
 
             if let Some(result) = inst.execute(&mut ctx) {
                 println!("{}", ReplInstance(result));

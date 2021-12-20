@@ -2,7 +2,7 @@
 //! need to get its type checked multiple times, then it can implement the [`CachedTypeCheck`]
 //! trait on top of it.
 
-use crate::{instruction::TypeId, Context, Error, ScopeMap};
+use crate::{instruction::TypeId, Error, ScopeMap, error::ErrorHandler};
 use colored::Colorize;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
@@ -52,9 +52,9 @@ struct CustomTypeType {
 /// in order to resolve to a concrete type.Each declaration (First [`VarAssign`],
 /// [`FunctionDec`]s and [`TypeDec`]s) can also declare a new type and make it available
 /// to all instructions in the avaialble scopes.
-pub struct TypeCtx<'ctx> {
-    /// Reference to the original context in order to emit errors properly
-    pub(crate) context: &'ctx mut Context,
+pub struct TypeCtx {
+    /// Reference to the context's error handler
+    pub(crate) error_handler: ErrorHandler,
     /// The Type Context stores [`CheckedType`]s for all three generics kept in the scope
     /// map: Variables, Functions and Types.
     /// For functions, we keep a vector of argument types as well as the return type.
@@ -62,12 +62,12 @@ pub struct TypeCtx<'ctx> {
     types: ScopeMap<CheckedType, FunctionType, CustomTypeType>,
 }
 
-impl<'ctx> TypeCtx<'ctx> {
+impl TypeCtx {
     /// Create a new empty [`TypeCtx`]
-    pub fn new(ctx: &'ctx mut Context) -> TypeCtx {
+    pub fn new() -> TypeCtx {
         // FIXME: This doesn't contain builtins
         let mut ctx = TypeCtx {
-            context: ctx,
+            error_handler: ErrorHandler::default(),
             types: ScopeMap::new(),
         };
 
@@ -157,7 +157,13 @@ impl<'ctx> TypeCtx<'ctx> {
 
     /// Create a new error to propagate to the original context
     pub fn error(&mut self, err: Error) {
-        self.context.error(err)
+        self.error_handler.add(err)
+    }
+}
+
+impl Default for TypeCtx {
+    fn default() -> TypeCtx {
+        TypeCtx::new()
     }
 }
 
