@@ -31,9 +31,10 @@ impl ConstantConstruct {
 
     /// inner_string = '"'
     ///              | '{' expr '}' string
+    ///              | '\' CHAR string
     ///              | CHAR string
     fn inner_string(input: &str) -> ParseResult<&str, Option<Box<dyn Instruction>>> {
-        let special: &[_] = &['"', '{'];
+        let special: &[_] = &['"', '{', '\\'];
 
         if let Ok((input, _)) = Token::double_quote(input) {
             Ok((input, None))
@@ -42,6 +43,32 @@ impl ConstantConstruct {
             let (input, next) = ConstantConstruct::inner_string(input)?;
 
             Ok((input, Some(ConstantConstruct::concat(expr, next))))
+        } else if let Ok((input, _)) = Token::backslash(input) {
+            if input.is_empty() {
+                return Err(NomError(
+                    Error::new(ErrKind::Parsing).with_msg(String::from("Undelimited string")),
+                ));
+            }
+            let (special, input) = input.split_at(1);
+            let escaped = match special {
+                "\"" => "\"",
+                "{" => "{",
+                "}" => "}",
+                "n" => "\n",
+                "r" => "\r",
+                "t" => "\t",
+                _ => {
+                    return Err(NomError(
+                        Error::new(ErrKind::Parsing)
+                            .with_msg(String::from("Unknown character escape")),
+                    ));
+                }
+            };
+
+            let escaped = Box::new(JkString::from(escaped));
+            let (input, next) = ConstantConstruct::inner_string(input)?;
+
+            Ok((input, Some(ConstantConstruct::concat(escaped, next))))
         } else if let Some(index) = input.find(special) {
             let expr = Box::new(JkString::from(&input[..index]));
             let (input, next) = ConstantConstruct::inner_string(&input[index..])?;
@@ -53,6 +80,46 @@ impl ConstantConstruct {
             ))
         }
     }
+
+    /*
+        fn special(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+            if let Ok((input, _)) = Token::left_curly_bracket(input) {
+                terminated(expr, Token::right_curly_bracket)(input)
+            } else if let Ok((input, _)) = Token::backslash(input) {
+                if let Some((special, input)) = input.split_at(1) {
+                    let char = match special {
+                        "n" => "\n",
+                        "r" => "\r",
+                        "t" => "\t",
+                        "{" => "{",
+                        "}" => "}",
+                        _ => Err(NomError(
+                    Error::new(ErrKind::Parsing).with_msg(String::from("Undelimited string")),
+                ))
+    ,
+                    }
+                }
+            else {
+
+            }
+
+            }
+        }
+
+        fn escape_char(input: &str) -> Option<&str> {
+            if input.is_empty() {
+                return None;
+            }
+            match &input[..1] {
+                "n" => Some("\n"),
+                "r" => Some("\r"),
+                "t" => Some("\t"),
+                "{" => Some("{"),
+                "}" => Some("}"),
+                _ => None,
+            }
+        }
+        */
 
     fn concat(
         left: Box<dyn Instruction>,
@@ -138,6 +205,24 @@ mod tests {
     }
 
     #[test]
+    fn escape_start() {
+        let input = "\"\neat\"";
+
+        let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
+    }
+
+    #[test]
+    fn escape_end() {
+        let input = "\"hello\n\"";
+
+        let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
+    }
+
+    #[test]
     fn formatted_not_delimited() {
         let input = "\"hello {world}";
 
@@ -147,6 +232,20 @@ mod tests {
     #[test]
     fn basic_not_delimited() {
         let input = "\"Rust Transmute Task Force";
+
+        assert!(ConstantConstruct::string_constant(input).is_err());
+    }
+
+    #[test]
+    fn escape_unexpected_end_of_string() {
+        let input = "\"Rust Transmute Task Force\\";
+
+        assert!(ConstantConstruct::string_constant(input).is_err());
+    }
+
+    #[test]
+    fn invalid_escape() {
+        let input = "\"Rust Transmute \\a Task Force\"";
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }
