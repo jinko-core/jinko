@@ -173,6 +173,10 @@ impl Token {
         Token::specific_token(input, "as")
     }
 
+    pub fn backslash(input: &str) -> ParseResult<&str, &str> {
+        Token::token(input, "\\")
+    }
+
     pub fn add(input: &str) -> ParseResult<&str, &str> {
         Token::token(input, "+")
     }
