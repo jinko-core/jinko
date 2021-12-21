@@ -283,7 +283,7 @@ mod tests {
 
         let f_call = FunctionCall::new("func0".to_string(), vec![], vec![]);
 
-        assert_eq!(ctx.type_check(&f_call).unwrap(), CheckedType::Unknown);
+        assert!(ctx.type_check(&f_call).is_err());
         assert!(
             ctx.error_handler.has_errors(),
             "Given 0 arguments to 2 arguments function"
@@ -293,7 +293,7 @@ mod tests {
         let f_call =
             FunctionCall::new("func0".to_string(), vec![], vec![Box::new(JkInt::from(12))]);
 
-        assert_eq!(ctx.type_check(&f_call).unwrap(), CheckedType::Unknown);
+        assert!(ctx.type_check(&f_call).is_err());
         assert!(
             ctx.error_handler.has_errors(),
             "Given 1 arguments to 2 arguments function"

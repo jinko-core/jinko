@@ -6,7 +6,8 @@ use prompt::Prompt;
 use std::path::PathBuf;
 
 use jinko::{
-    constructs, log, Context, Error, FromObjectInstance, Instruction, JkConstant, ObjectInstance, CheckedType
+    constructs, log, CheckedType, Context, Error, FromObjectInstance, Instruction, JkConstant,
+    ObjectInstance,
 };
 
 use crate::InteractResult;

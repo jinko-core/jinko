@@ -352,7 +352,7 @@ mod tests {
 
         let mut ctx = Context::new();
 
-        assert_eq!(ctx.type_check(&function).unwrap(), CheckedType::Void);
+        assert!(ctx.type_check(&function).is_err());
         assert!(ctx.error_handler.has_errors());
     }
 

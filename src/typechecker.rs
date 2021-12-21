@@ -2,9 +2,13 @@
 //! need to get its type checked multiple times, then it can implement the [`CachedTypeCheck`]
 //! trait on top of it.
 
-use crate::{instruction::TypeId, Error, ScopeMap, error::ErrorHandler};
+use crate::{error::ErrorHandler, instruction::TypeId, Error, ScopeMap};
 use colored::Colorize;
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::{
+    collections::HashSet,
+    fmt::{Display, Formatter, Result as FmtResult},
+    path::{Path, PathBuf},
+};
 
 /// The [`CheckedType`] enum contains three possible states about the type. Either the
 /// type has been properly resolved to something, or it corresponds to a Void type. If the
@@ -60,6 +64,10 @@ pub struct TypeCtx {
     /// For functions, we keep a vector of argument types as well as the return type.
     /// Custom types need to keep a type for themselves, as well as types for all their fields
     types: ScopeMap<CheckedType, FunctionType, CustomTypeType>,
+    // FIXME: Remove both of these fields...
+    /// Path from which the typechecking context was instantiated
+    path: Option<PathBuf>,
+    included: HashSet<PathBuf>,
 }
 
 impl TypeCtx {
@@ -69,6 +77,8 @@ impl TypeCtx {
         let mut ctx = TypeCtx {
             error_handler: ErrorHandler::default(),
             types: ScopeMap::new(),
+            path: None,
+            included: HashSet::new(),
         };
 
         macro_rules! declare_primitive {
@@ -91,6 +101,23 @@ impl TypeCtx {
         declare_primitive!(string);
 
         ctx
+    }
+
+    // FIXME: Remove these three functions
+    pub fn set_path(&mut self, path: Option<PathBuf>) {
+        self.path = path
+    }
+
+    pub fn path(&self) -> Option<&PathBuf> {
+        self.path.as_ref()
+    }
+
+    pub fn include(&mut self, path: PathBuf) {
+        self.included.insert(path);
+    }
+
+    pub fn is_included(&self, path: &Path) -> bool {
+        self.included.contains(path)
     }
 
     /// Enter a new scope. This is the same as lexical scopes
