@@ -317,9 +317,8 @@ mod tests {
         function.set_kind(FunctionKind::Ext);
 
         let mut ctx = Context::new();
-        let mut ty_ctx = TypeCtx::new(&mut ctx);
 
-        assert_eq!(function.resolve_type(&mut ty_ctx), CheckedType::Void);
+        assert_eq!(ctx.type_check(&function).unwrap(), CheckedType::Void);
         assert!(!ctx.error_handler.has_errors());
     }
 
@@ -333,9 +332,8 @@ mod tests {
         function.set_block(block);
 
         let mut ctx = Context::new();
-        let mut ty_ctx = TypeCtx::new(&mut ctx);
 
-        assert_eq!(function.resolve_type(&mut ty_ctx), CheckedType::Void);
+        assert_eq!(ctx.type_check(&function).unwrap(), CheckedType::Void);
         assert!(!ctx.error_handler.has_errors());
     }
 
@@ -353,9 +351,8 @@ mod tests {
         function.set_block(block);
 
         let mut ctx = Context::new();
-        let mut ty_ctx = TypeCtx::new(&mut ctx);
 
-        assert_eq!(function.resolve_type(&mut ty_ctx), CheckedType::Unknown);
+        assert!(ctx.type_check(&function).is_err());
         assert!(ctx.error_handler.has_errors());
     }
 

@@ -171,7 +171,7 @@ impl Default for Builtins {
 
 #[cfg(test)]
 mod tests {
-    use crate::{jinko, jinko_fail};
+    use crate::jinko;
 
     #[test]
     fn t_string_builtins_are_valid() {
@@ -196,6 +196,8 @@ mod tests {
     #[test]
     #[cfg(not(feature = "ffi"))]
     fn t_ffi_builtins_are_valid_no_ffi() {
+        use crate::jinko_fail;
+
         jinko_fail! {
             __builtin_ffi_link_with("tests/fixtures/clib/lib.so");
         };

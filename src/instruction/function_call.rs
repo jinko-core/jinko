@@ -282,19 +282,18 @@ mod tests {
         };
 
         let f_call = FunctionCall::new("func0".to_string(), vec![], vec![]);
-        let mut type_ctx = TypeCtx::new(&mut ctx);
 
-        assert_eq!(f_call.resolve_type(&mut type_ctx), CheckedType::Unknown);
+        assert!(ctx.type_check(&f_call).is_err());
         assert!(
-            type_ctx.context.error_handler.has_errors(),
+            ctx.error_handler.has_errors(),
             "Given 0 arguments to 2 arguments function"
         );
-        type_ctx.context.clear_errors();
+        ctx.clear_errors();
 
         let f_call =
             FunctionCall::new("func0".to_string(), vec![], vec![Box::new(JkInt::from(12))]);
 
-        assert_eq!(f_call.resolve_type(&mut type_ctx), CheckedType::Unknown);
+        assert!(ctx.type_check(&f_call).is_err());
         assert!(
             ctx.error_handler.has_errors(),
             "Given 1 arguments to 2 arguments function"

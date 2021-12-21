@@ -242,9 +242,8 @@ mod tests {
             .1;
 
         let mut ctx = Context::new();
-        let mut ctx = TypeCtx::new(&mut ctx);
 
-        assert_eq!(b.resolve_type(&mut ctx), CheckedType::Void)
+        assert_eq!(ctx.type_check(b.as_ref()).unwrap(), CheckedType::Void)
     }
 
     #[test]
