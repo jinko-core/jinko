@@ -19,6 +19,7 @@ use crate::instance::FromObjectInstance;
 use crate::instruction::{Block, InstrKind, Instruction, TypeId};
 use crate::typechecker::TypeCtx;
 use crate::value::JkBool;
+use crate::Generic;
 use crate::{log, ErrKind, Error};
 use crate::{typechecker::CheckedType, Context, ObjectInstance, TypeCheck};
 
@@ -120,6 +121,8 @@ impl TypeCheck for IfElse {
         }
     }
 }
+
+impl Generic for IfElse {}
 
 #[cfg(test)]
 mod tests {

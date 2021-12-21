@@ -2,6 +2,7 @@
 
 use crate::instruction::{InstrKind, Var};
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::Generic;
 use crate::{log, Context, ErrKind, Error, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
@@ -148,6 +149,8 @@ impl TypeCheck for VarAssign {
         CheckedType::Void
     }
 }
+
+impl Generic for VarAssign {}
 
 #[cfg(test)]
 mod tests {

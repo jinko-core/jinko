@@ -1,7 +1,8 @@
 use crate::instruction::{InstrKind, Instruction, Operator, TypeId};
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 use crate::{
-    log, Context, Error, FromObjectInstance, JkString, ObjectInstance, ToObjectInstance, Value,
+    log, Context, Error, FromObjectInstance, Generic, JkString, ObjectInstance, ToObjectInstance,
+    Value,
 };
 
 use std::convert::TryFrom;
@@ -115,6 +116,8 @@ macro_rules! jk_primitive {
                 CheckedType::Resolved(TypeId::from("bool"))
             }
         }
+
+        impl Generic for JkConstant<bool> {}
     };
     (char) => {
         impl ToObjectInstance for JkConstant<char> {
@@ -167,6 +170,8 @@ macro_rules! jk_primitive {
                 CheckedType::Resolved(TypeId::from("char"))
             }
         }
+
+        impl Generic for JkConstant<char> {}
     };
     ($t:ty, $s:expr) => {
         impl ToObjectInstance for JkConstant<$t> {
@@ -217,6 +222,8 @@ macro_rules! jk_primitive {
                 CheckedType::Resolved(TypeId::from($s))
             }
         }
+
+        impl Generic for JkConstant<$t> {}
     };
 }
 
@@ -299,6 +306,8 @@ impl TypeCheck for JkString {
         CheckedType::Resolved(TypeId::from("string"))
     }
 }
+
+impl Generic for JkString {}
 
 impl From<&str> for JkConstant<String> {
     fn from(s: &str) -> Self {

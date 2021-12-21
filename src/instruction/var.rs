@@ -6,6 +6,7 @@
 use crate::instruction::TypeDec;
 use crate::log;
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::Generic;
 use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
@@ -108,6 +109,8 @@ impl Default for Var {
         Var::new(String::new())
     }
 }
+
+impl Generic for Var {}
 
 #[cfg(test)]
 mod tests {

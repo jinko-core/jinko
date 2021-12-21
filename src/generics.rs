@@ -4,9 +4,9 @@
 
 use std::collections::HashMap;
 
-use crate::instruction::TypeId;
-use crate::typechecker::TypeCtx;
+use crate::instruction::{Instruction, TypeId};
 use crate::log;
+use crate::typechecker::TypeCtx;
 
 pub type GenericMap = HashMap<String, TypeId>;
 
@@ -53,7 +53,7 @@ pub trait Generic {
     /// ```ignore
     /// func generic_f+float(a: float); // according to the mangling rules
     /// ```
-    fn generate_new(&self, _type_map: GenericMap) -> Option<Box<Self>> {
+    fn generate_new(&self, _type_map: GenericMap) -> Option<Box<dyn Instruction>> {
         None
     }
 }
@@ -64,7 +64,9 @@ mod tests {
     use crate::instruction::TypeId;
 
     macro_rules! s {
-        ($str:literal) => ( String::from($str) )
+        ($str:literal) => {
+            String::from($str)
+        };
     }
 
     #[test]
@@ -74,11 +76,20 @@ mod tests {
 
     #[test]
     fn mangle_one_generic() {
-        assert_eq!(mangle("mangled", &[TypeId::new(s!("bool"))]), "mangled+bool");
+        assert_eq!(
+            mangle("mangled", &[TypeId::new(s!("bool"))]),
+            "mangled+bool"
+        );
     }
 
     #[test]
     fn mangle_multi_generic() {
-        assert_eq!(mangle("mangled", &[TypeId::new(s!("float")), TypeId::new(s!("ComplexType"))]), "mangled+float+ComplexType");
+        assert_eq!(
+            mangle(
+                "mangled",
+                &[TypeId::new(s!("float")), TypeId::new(s!("ComplexType"))]
+            ),
+            "mangled+float+ComplexType"
+        );
     }
 }

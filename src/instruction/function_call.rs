@@ -4,8 +4,8 @@
 use crate::instruction::{FunctionDec, FunctionKind, TypeId, Var};
 use crate::typechecker::TypeCtx;
 use crate::{
-    log, typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
-    TypeCheck,
+    log, typechecker::CheckedType, Context, ErrKind, Error, Generic, InstrKind, Instruction,
+    ObjectInstance, TypeCheck,
 };
 use std::rc::Rc;
 
@@ -256,6 +256,8 @@ impl TypeCheck for FunctionCall {
         return_type
     }
 }
+
+impl Generic for FunctionCall {}
 
 #[cfg(test)]
 mod tests {

@@ -9,7 +9,7 @@ use crate::{
     instruction::{Operator, TypeId},
     log,
     typechecker::{CheckedType, TypeCtx},
-    Context, ErrKind, Error, FromObjectInstance, InstrKind, Instruction, JkFloat, JkInt,
+    Context, ErrKind, Error, FromObjectInstance, Generic, InstrKind, Instruction, JkFloat, JkInt,
     ObjectInstance, TypeCheck, Value,
 };
 
@@ -145,6 +145,8 @@ impl TypeCheck for BinaryOp {
         }
     }
 }
+
+impl Generic for BinaryOp {}
 
 // TODO: Add typechecking tests
 #[cfg(test)]

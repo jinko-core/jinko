@@ -12,7 +12,7 @@
 use crate::instruction::{InstrKind, Instruction};
 use crate::{
     typechecker::{CheckedType, TypeCtx},
-    Context, ObjectInstance, TypeCheck,
+    Context, Generic, ObjectInstance, TypeCheck,
 };
 
 #[derive(Clone)]
@@ -60,6 +60,8 @@ impl TypeCheck for Return {
         }
     }
 }
+
+impl Generic for Return {}
 
 #[cfg(test)]
 mod tests {
