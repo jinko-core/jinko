@@ -30,24 +30,29 @@ impl ConstantConstruct {
     }
 
     /// inner_string = '"'
-    ///              | '{' expr '}' string
-    ///              | '\' CHAR string
-    ///              | CHAR string
+    ///              | special string
     fn inner_string(input: &str) -> ParseResult<&str, Option<Box<dyn Instruction>>> {
-        let special: &[_] = &['"', '{', '\\'];
-
         if let Ok((input, _)) = Token::double_quote(input) {
             Ok((input, None))
-        } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
-            let (input, expr) = terminated(expr, Token::right_curly_bracket)(input)?;
+        } else {
+            let (input, special) = ConstantConstruct::special(input)?;
             let (input, next) = ConstantConstruct::inner_string(input)?;
 
-            Ok((input, Some(ConstantConstruct::concat(expr, next))))
+            Ok((input, Some(ConstantConstruct::concat(special, next))))
+        }
+    }
+
+    /// | '{' expr '}'
+    /// | '\' CHAR
+    /// | CHAR (* anything except "{\ *)
+    fn special(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+        let special: &[_] = &['"', '{', '\\'];
+
+        if let Ok((input, _)) = Token::left_curly_bracket(input) {
+            terminated(expr, Token::right_curly_bracket)(input)
         } else if let Ok((input, _)) = Token::backslash(input) {
             if input.is_empty() {
-                return Err(NomError(
-                    Error::new(ErrKind::Parsing).with_msg(String::from("Undelimited string")),
-                ));
+                return ConstantConstruct::special(input);
             }
             let (special, input) = input.split_at(1);
             let escaped = match special {
@@ -61,65 +66,19 @@ impl ConstantConstruct {
                     return Err(NomError(
                         Error::new(ErrKind::Parsing)
                             .with_msg(String::from("Unknown character escape")),
-                    ));
+                    ))
                 }
             };
 
-            let escaped = Box::new(JkString::from(escaped));
-            let (input, next) = ConstantConstruct::inner_string(input)?;
-
-            Ok((input, Some(ConstantConstruct::concat(escaped, next))))
+            Ok((input, Box::new(JkString::from(escaped))))
         } else if let Some(index) = input.find(special) {
-            let expr = Box::new(JkString::from(&input[..index]));
-            let (input, next) = ConstantConstruct::inner_string(&input[index..])?;
-
-            Ok((input, Some(ConstantConstruct::concat(expr, next))))
+            Ok((&input[index..], Box::new(JkString::from(&input[..index]))))
         } else {
             Err(NomError(
                 Error::new(ErrKind::Parsing).with_msg(String::from("Undelimited string")),
             ))
         }
     }
-
-    /*
-        fn special(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
-            if let Ok((input, _)) = Token::left_curly_bracket(input) {
-                terminated(expr, Token::right_curly_bracket)(input)
-            } else if let Ok((input, _)) = Token::backslash(input) {
-                if let Some((special, input)) = input.split_at(1) {
-                    let char = match special {
-                        "n" => "\n",
-                        "r" => "\r",
-                        "t" => "\t",
-                        "{" => "{",
-                        "}" => "}",
-                        _ => Err(NomError(
-                    Error::new(ErrKind::Parsing).with_msg(String::from("Undelimited string")),
-                ))
-    ,
-                    }
-                }
-            else {
-
-            }
-
-            }
-        }
-
-        fn escape_char(input: &str) -> Option<&str> {
-            if input.is_empty() {
-                return None;
-            }
-            match &input[..1] {
-                "n" => Some("\n"),
-                "r" => Some("\r"),
-                "t" => Some("\t"),
-                "{" => Some("{"),
-                "}" => Some("}"),
-                _ => None,
-            }
-        }
-        */
 
     fn concat(
         left: Box<dyn Instruction>,
@@ -206,7 +165,7 @@ mod tests {
 
     #[test]
     fn escape_start() {
-        let input = "\"\neat\"";
+        let input = "\"\\neat\"";
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
         assert_eq!(input, "");
@@ -215,7 +174,16 @@ mod tests {
 
     #[test]
     fn escape_end() {
-        let input = "\"hello\n\"";
+        let input = "\"hello\\n\"";
+
+        let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
+        assert_eq!(input, "");
+        assert!(expr.downcast_ref::<MethodCall>().is_some());
+    }
+
+    #[test]
+    fn escape_formatting() {
+        let input = "\"hello \\{world\\}\"";
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
         assert_eq!(input, "");
