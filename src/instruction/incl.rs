@@ -238,6 +238,9 @@ impl TypeCheck for Incl {
         // them their proper location (path etc) so that we can visit them easily
         // FIXME: This is a lot of code in common with execute()
         let base = self.get_base(ctx.path());
+
+        log!("base: {}", base.display());
+
         let formatted = match self.find_include_path(&base) {
             Ok(f) => f,
             Err(e) => {

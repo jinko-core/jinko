@@ -128,7 +128,10 @@ impl Context {
 
     /// Get a reference to a context's source path
     pub fn set_path(&mut self, path: Option<PathBuf>) {
-        self.path = path;
+        // FIXME: Remove that clone...
+        self.path = path.clone();
+        self.typechecker.set_path(path);
+
         // FIXME: Is that correct? Remove that clone()...
         self.error_handler
             .set_path(self.path.clone().unwrap_or_default());
