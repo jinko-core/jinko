@@ -62,7 +62,7 @@ pub struct Context {
     external_libs: Vec<libloading::Library>,
 
     /// Errors being kept by the context
-    pub(crate) error_handler: ErrorHandler,
+    pub error_handler: ErrorHandler,
 
     /// Various passes ran by the context
     typechecker: TypeCtx,
