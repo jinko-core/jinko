@@ -20,7 +20,7 @@ use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec,
 use crate::parser;
 use crate::typechecker::{TypeCheck, TypeCtx};
 use crate::ObjectInstance;
-use crate::{Builtins, CheckedType};
+use crate::{Builtins, CheckedType, Generic};
 
 /// Type the context uses for keys
 type CtxKey = String;
@@ -293,15 +293,18 @@ impl Context {
         self.scope_enter();
 
         ep.resolve_type(&mut self.typechecker);
+        ep.expand(&mut self.typechecker);
+        self.typechecker.start_second_pass();
+        ep.resolve_type(&mut self.typechecker);
+
         self.error_handler
             .append(&mut self.typechecker.error_handler);
         self.emit_errors();
+        self.included.clear();
 
         if self.has_errors() {
             return Err(Error::new(ErrKind::TypeChecker));
         };
-
-        self.included.clear();
 
         let res = ep
             .instructions()
