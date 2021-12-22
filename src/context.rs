@@ -293,7 +293,7 @@ impl Context {
         self.scope_enter();
 
         ep.resolve_type(&mut self.typechecker);
-        ep.expand(&mut self.typechecker);
+        ep.expand(self);
         self.typechecker.start_second_pass();
         ep.resolve_type(&mut self.typechecker);
 

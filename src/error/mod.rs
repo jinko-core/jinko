@@ -75,6 +75,7 @@ pub enum ErrKind {
     Parsing,
     Context,
     TypeChecker,
+    Generics,
     ExternFunc,
     IO,
 }
@@ -85,6 +86,7 @@ impl ErrKind {
             ErrKind::Parsing => "Parsing",
             ErrKind::Context => "Interpreter",
             ErrKind::TypeChecker => "Typechecker",
+            ErrKind::Generics => "Generics",
             ErrKind::IO => "I/O",
             ErrKind::ExternFunc => "External Function",
         }

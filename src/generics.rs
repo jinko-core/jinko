@@ -5,10 +5,10 @@
 use std::collections::HashMap;
 
 use crate::instruction::{Instruction, TypeId};
-use crate::log;
-use crate::typechecker::TypeCtx;
+use crate::Context;
+use crate::{log, ErrKind, Error};
 
-pub type GenericMap = HashMap<String, TypeId>;
+pub type GenericMap = HashMap<TypeId, TypeId>;
 
 /// Mangle a name to resolve it to its proper expanded name.
 /// The format used is the following:
@@ -25,6 +25,35 @@ pub fn mangle(name: &str, types: &[TypeId]) -> String {
     mangled
 }
 
+/// Create a generic map from two sets of [`TypeId`]s: The set of generics to resolve,
+/// and the set of resolved generics.
+pub fn create_map(
+    generics: &[TypeId],
+    resolved: &[TypeId],
+    ctx: &mut Context,
+) -> Result<GenericMap, Error> {
+    if generics.len() != resolved.len() {
+        // FIXME: Add better error message here printing both sets of generics
+        let err_msg = String::from("missing types in generic expansion");
+        return Err(Error::new(ErrKind::Generics).with_msg(err_msg));
+    }
+
+    let mut map = GenericMap::new();
+
+    generics.iter().zip(resolved).for_each(|(l_ty, r_ty)| {
+        log!("mapping generic: {} <- {}", l_ty, r_ty);
+        match map.insert(l_ty.clone(), r_ty.clone()) {
+            None => {}
+            Some(existing_ty) => ctx.error(Error::new(ErrKind::Generics).with_msg(format!(
+                "mapping type to already mapped generic type: {} <- {} with {}",
+                l_ty, existing_ty, r_ty
+            ))),
+        }
+    });
+
+    Ok(map)
+}
+
 /// Since most of the instructions cannot do generic expansion, we can implement
 /// default methods which do nothing. This avoid more boilerplate code for instructions
 /// such as constants or variables which cannot be generic.
@@ -32,7 +61,7 @@ pub trait Generic {
     /// Expand all generics contained in the current instruction, or its sub-instructions.
     /// For example, a [`Block`] is responsible for expanding the generics of all the
     /// functions defined within itself.
-    fn expand(&self, _type_ctx: &mut TypeCtx) {}
+    fn expand(&self, _ctx: &mut Context) {}
 
     /// Mutate an instruction in order to resolve to the proper, expanded generic instruction.
     /// For example, a call to the function `f[T]` should now be replaced by a call to
@@ -63,9 +92,9 @@ mod tests {
     use super::*;
     use crate::instruction::TypeId;
 
-    macro_rules! s {
+    macro_rules! ty {
         ($str:literal) => {
-            String::from($str)
+            TypeId::new(String::from($str))
         };
     }
 
@@ -76,20 +105,21 @@ mod tests {
 
     #[test]
     fn mangle_one_generic() {
-        assert_eq!(
-            mangle("mangled", &[TypeId::new(s!("bool"))]),
-            "mangled+bool"
-        );
+        assert_eq!(mangle("mangled", &[ty!("bool")]), "mangled+bool");
     }
 
     #[test]
     fn mangle_multi_generic() {
         assert_eq!(
-            mangle(
-                "mangled",
-                &[TypeId::new(s!("float")), TypeId::new(s!("ComplexType"))]
-            ),
+            mangle("mangled", &[ty!("float"), ty!("ComplexType")]),
             "mangled+float+ComplexType"
         );
+    }
+
+    #[test]
+    fn create_map_different_size() {
+        let mut ctx = Context::new();
+
+        assert!(create_map(&[ty!("int"), ty!("float")], &[ty!("T")], &mut ctx).is_err());
     }
 }

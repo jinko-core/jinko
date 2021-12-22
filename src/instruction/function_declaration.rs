@@ -45,6 +45,10 @@ impl FunctionDec {
         }
     }
 
+    pub fn generics(&self) -> &Vec<TypeId> {
+        &self.generics
+    }
+
     /// Set the block of a given function declaration. This is useful since parsing a
     /// function's block comes after the function signature.
     pub fn set_block(&mut self, block: Block) {

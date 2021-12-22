@@ -1,11 +1,16 @@
 //! A TypeId refers to a type's identifier. For example, the TypeId of `int` is "int".
 //! The TypeId of `type Custom(a: int, b: OtherCustom)` is `Custom`.
 
+use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::hash::{Hash, Hasher};
+
+use colored::Colorize;
+
 use crate::instruction::TypeDec;
 
 pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"];
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeId {
     id: String,
 }
@@ -39,5 +44,17 @@ impl From<&TypeDec> for TypeId {
 impl From<TypeDec> for TypeId {
     fn from(td: TypeDec) -> Self {
         TypeId::from(&td)
+    }
+}
+
+impl Hash for TypeId {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state)
+    }
+}
+
+impl Display for TypeId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}", self.id.purple())
     }
 }

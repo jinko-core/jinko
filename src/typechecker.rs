@@ -28,13 +28,11 @@ impl Default for CheckedType {
 
 impl Display for CheckedType {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let ty_str = match self {
-            CheckedType::Resolved(ty) => ty.id(),
-            CheckedType::Void => "void",
-            CheckedType::Unknown => "!!unknown!!",
-        };
-
-        write!(f, "{}", ty_str.purple())
+        match self {
+            CheckedType::Resolved(ty) => write!(f, "{}", ty),
+            CheckedType::Void => write!(f, "{}", "void".purple()),
+            CheckedType::Unknown => write!(f, "{}", "!!unknown!!".red()),
+        }
     }
 }
 
