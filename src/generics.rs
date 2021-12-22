@@ -5,15 +5,15 @@
 use std::collections::HashMap;
 
 use crate::instruction::{Instruction, TypeId};
-use crate::Context;
 use crate::{log, ErrKind, Error};
+use crate::{Context, TypeCtx};
 
 pub type GenericMap = HashMap<TypeId, TypeId>;
 
 /// Mangle a name to resolve it to its proper expanded name.
 /// The format used is the following:
 /// <name> '+' <T0> '+' <T1>...
-pub fn _mangle(name: &str, types: &[TypeId]) -> String {
+pub fn mangle(name: &str, types: &[TypeId]) -> String {
     let mut mangled = String::from(name);
     for type_id in types.iter() {
         mangled.push('+');
@@ -30,7 +30,7 @@ pub fn _mangle(name: &str, types: &[TypeId]) -> String {
 pub fn create_map(
     generics: &[TypeId],
     resolved: &[TypeId],
-    ctx: &mut Context,
+    ctx: &mut TypeCtx,
 ) -> Result<GenericMap, Error> {
     if generics.len() != resolved.len() {
         // FIXME: Add better error message here printing both sets of generics
@@ -73,8 +73,8 @@ pub trait Generic {
 
     /// Mutate an instruction in order to resolve to the proper, expanded generic instruction.
     /// For example, a call to the function `f[T]` should now be replaced by a call to
-    /// the function `generics::mangle("f", GenericMap { TypeId "T" })`
-    fn resolve_self(&mut self, _type_map: GenericMap) {}
+    /// the function `generics::mangle("f", GenericMap { TypeId "T" })` // FIXME: Fix doc
+    fn resolve_self(&mut self, _ctx: &mut TypeCtx) {}
 
     /// Generate a new instruction from itself, according to a given type map. The generated
     /// instruction should not contain any generic types. In the case of the following
@@ -108,25 +108,25 @@ mod tests {
 
     #[test]
     fn mangle_no_generics() {
-        assert_eq!(_mangle("mangled", &[]), "mangled");
+        assert_eq!(mangle("mangled", &[]), "mangled");
     }
 
     #[test]
     fn mangle_one_generic() {
-        assert_eq!(_mangle("mangled", &[ty!("bool")]), "mangled+bool");
+        assert_eq!(mangle("mangled", &[ty!("bool")]), "mangled+bool");
     }
 
     #[test]
     fn mangle_multi_generic() {
         assert_eq!(
-            _mangle("mangled", &[ty!("float"), ty!("ComplexType")]),
+            mangle("mangled", &[ty!("float"), ty!("ComplexType")]),
             "mangled+float+ComplexType"
         );
     }
 
     #[test]
     fn create_map_different_size() {
-        let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new();
 
         assert!(create_map(&[ty!("int"), ty!("float")], &[ty!("T")], &mut ctx).is_err());
     }

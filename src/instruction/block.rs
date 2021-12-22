@@ -143,7 +143,17 @@ impl TypeCheck for Block {
     }
 }
 
-impl Generic for Block {}
+impl Generic for Block {
+    fn expand(&self, ctx: &mut Context) {
+        self.instructions.iter().for_each(|inst| inst.expand(ctx))
+    }
+
+    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        self.instructions
+            .iter_mut()
+            .for_each(|inst| inst.resolve_self(ctx))
+    }
+}
 
 // TODO: Add tests once TypeCheck is a trait bound on Instruction
 #[cfg(test)]

@@ -23,6 +23,11 @@ impl DecArg {
     pub fn get_type(&self) -> &TypeId {
         &self.ty
     }
+
+    /// Set the type of the argument
+    pub fn set_type(&mut self, ty: TypeId) {
+        self.ty = ty
+    }
 }
 
 impl Display for DecArg {

@@ -208,9 +208,14 @@ impl Instruction for FunctionCall {
 
 impl TypeCheck for FunctionCall {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: Is this what we really want to do?
+        if !self.generics.is_empty() {
+            return CheckedType::Void;
+        }
+
         // FIXME: This function is very large and should be refactored
-        let (args_type, return_type) = match ctx.get_function(self.name()) {
-            Some(checked_type) => checked_type,
+        let function = match ctx.get_function(self.name()) {
+            Some(f) => f.clone(), // FIXME: Remove this clone...
             // FIXME: This does not account for functions declared later in the code
             None => {
                 ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
@@ -220,6 +225,7 @@ impl TypeCheck for FunctionCall {
                 return CheckedType::Error;
             }
         };
+        let (args_type, return_type) = (function.args(), function.ty());
 
         let args_type = args_type.clone();
         let return_type = return_type.clone();
@@ -237,25 +243,26 @@ impl TypeCheck for FunctionCall {
             )));
         }
 
-        for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(
+        for (dec_arg, given_ty) in args_type.iter().zip(
             self.args
                 .iter()
                 .map(|given_arg| given_arg.clone().type_of(ctx)),
         ) {
-            if expected_ty != &given_ty {
+            let expected_ty = CheckedType::Resolved(dec_arg.get_type().clone());
+            if expected_ty != given_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
                     "invalid type used for function argument: expected `{}`, got `{}`",
                     expected_ty, given_ty
                 )));
             }
 
-            args.push((expected_name.clone(), expected_ty.clone()));
+            args.push((String::from(dec_arg.name()), expected_ty.clone()));
         }
 
         errors.into_iter().for_each(|err| ctx.error(err));
         self.type_args(args, ctx);
 
-        return_type
+        return_type.map_or_else(|| CheckedType::Void, |t| CheckedType::Resolved(t.clone()))
     }
 
     fn cached_type(&self) -> Option<&CheckedType> {
@@ -274,8 +281,37 @@ impl Generic for FunctionCall {
     fn expand(&self, ctx: &mut Context) {
         // We can unwrap here since this is a typechecking error and should have been
         // caught already in an earlier pass
-        let dec = self.get_declaration(ctx).unwrap();
-        let _map = generics::create_map(&self.generics, dec.generics(), ctx);
+        let dec = ctx.typechecker.get_function(&self.fn_name).unwrap().clone(); // FIXME: No clone
+        let type_map =
+            match generics::create_map(dec.generics(), &self.generics, &mut ctx.typechecker) {
+                Err(e) => {
+                    ctx.error(e);
+                    return;
+                }
+                Ok(m) => m,
+            };
+
+        let new_fn = dec.from_type_map(generics::mangle(dec.name(), &self.generics), &type_map);
+
+        // FIXME: No unwrap
+        ctx.add_function(new_fn).unwrap();
+    }
+
+    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        // FIXME: We can only have actual types here: Not void, not unknown, nothing
+        let resolved_types: Vec<TypeId> = self
+            .args
+            // FIXME: Should we actually call `type_of` here? Not `cached_type`?
+            // Do we want to perform type resolution for the arguments of the call
+            // or is that an error?
+            .iter_mut()
+            .map(|arg| match arg.type_of(ctx) {
+                CheckedType::Resolved(ty) => ty,
+                _ => unreachable!(), // FIXME: No
+            })
+            .collect();
+
+        self.fn_name = generics::mangle(self.name(), &resolved_types);
     }
 }
 

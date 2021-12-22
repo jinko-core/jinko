@@ -1,6 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use crate::generics::GenericMap;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::Generic;
@@ -45,6 +46,23 @@ impl FunctionDec {
             block: None,
             typechecked: false,
         }
+    }
+
+    /// Generate a new instance of [`FunctionDec`] from a given generic type map
+    pub fn from_type_map(&self, name: String, type_map: &GenericMap) -> FunctionDec {
+        let mut new_fn = self.clone();
+        new_fn.name = name;
+        new_fn.generics = vec![];
+
+        new_fn
+            .args
+            .iter_mut()
+            .zip(self.args().iter())
+            .for_each(|(new_arg, old_generic)| {
+                new_arg.set_type(type_map.get(old_generic.get_type()).unwrap().clone())
+            });
+
+        new_fn
     }
 
     pub fn generics(&self) -> &Vec<TypeId> {
@@ -211,6 +229,24 @@ impl Instruction for FunctionDec {
 
 impl TypeCheck for FunctionDec {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        if !self.generics.is_empty() {
+            if let Err(e) = ctx.declare_function(self.name().into(), self.clone()) {
+                ctx.error(e);
+                return CheckedType::Unknown;
+            }
+
+            return CheckedType::Void;
+        }
+
+        // FIXME: Remove clone?
+        if let Err(e) = ctx.declare_function(self.name().into(), self.clone()) {
+            ctx.error(e);
+        }
+
+        ctx.scope_enter();
+
+        // FIXME: Both return_ty and args_ty can be factored from the `ty_declare`
+        // function
         let return_ty = match &self.ty {
             // FIXME: Remove clone?
             Some(ty) => CheckedType::Resolved(ty.clone()),
@@ -227,14 +263,6 @@ impl TypeCheck for FunctionDec {
                 )
             })
             .collect();
-
-        // FIXME: Remove clone?
-        if let Err(e) = ctx.declare_function(self.name.clone(), args_ty.clone(), return_ty.clone())
-        {
-            ctx.error(e);
-        }
-
-        ctx.scope_enter();
 
         args_ty.iter().for_each(|(name, ty)| {
             if let Err(e) = ctx.declare_var(name.clone(), ty.clone()) {

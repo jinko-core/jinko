@@ -66,7 +66,7 @@ pub struct Context {
     pub error_handler: ErrorHandler,
 
     /// Various passes ran by the context
-    typechecker: TypeCtx,
+    pub(crate) typechecker: TypeCtx,
 }
 
 impl Default for Context {
@@ -294,6 +294,7 @@ impl Context {
 
         ep.type_of(&mut self.typechecker);
         ep.expand(self);
+        ep.resolve_self(&mut self.typechecker);
         self.typechecker.start_second_pass();
         ep.type_of(&mut self.typechecker);
 

@@ -2,7 +2,11 @@
 //! need to get its type checked multiple times, then it can implement the [`CachedTypeCheck`]
 //! trait on top of it.
 
-use crate::{error::ErrorHandler, instruction::TypeId, Error, ScopeMap};
+use crate::{
+    error::ErrorHandler,
+    instruction::{FunctionDec, TypeId},
+    Error, ScopeMap,
+};
 use colored::Colorize;
 use std::{
     collections::HashSet,
@@ -37,12 +41,6 @@ impl Display for CheckedType {
     }
 }
 
-struct FunctionType {
-    /// We need to keep track of the function's arguments name and expected type
-    args_ty: Vec<(String, CheckedType)>,
-    return_ty: CheckedType,
-}
-
 struct CustomTypeType {
     self_ty: CheckedType,
     fields_ty: Vec<(String, CheckedType)>,
@@ -62,7 +60,7 @@ pub struct TypeCtx {
     /// map: Variables, Functions and Types.
     /// For functions, we keep a vector of argument types as well as the return type.
     /// Custom types need to keep a type for themselves, as well as types for all their fields
-    types: ScopeMap<CheckedType, FunctionType, CustomTypeType>,
+    types: ScopeMap<CheckedType, FunctionDec, CustomTypeType>,
     /// Is the type context executing its second pass or not. The second pass of the typechecking
     /// process is to resolve generic calls and make sure that the functions called on the
     /// expanded types are actually present. Plus, this also allows us to call/instantiate
@@ -153,15 +151,14 @@ impl TypeCtx {
     }
 
     /// Declare a newly-created function's type
-    pub fn declare_function(
-        &mut self,
-        name: String,
-        args_ty: Vec<(String, CheckedType)>,
-        return_ty: CheckedType,
-    ) -> Result<(), Error> {
-        self.types
-            .add_function(name, FunctionType { args_ty, return_ty })
-            .or_else(|e| if self.is_second_pass { Ok(()) } else { Err(e) })
+    pub fn declare_function(&mut self, name: String, function: FunctionDec) -> Result<(), Error> {
+        self.types.add_function(name, function).or_else(|e| {
+            if self.is_second_pass {
+                Ok(())
+            } else {
+                Err(e)
+            }
+        })
     }
 
     /// Declare a newly-created custom type
@@ -182,13 +179,8 @@ impl TypeCtx {
     }
 
     /// Access a previously declared function's type
-    pub fn get_function(
-        &mut self,
-        name: &str,
-    ) -> Option<(&Vec<(String, CheckedType)>, &CheckedType)> {
-        self.types
-            .get_function(name)
-            .map(|func| (&func.args_ty, &func.return_ty))
+    pub fn get_function(&mut self, name: &str) -> Option<&FunctionDec> {
+        self.types.get_function(name)
     }
 
     /// Access a previously declared custom type
