@@ -17,6 +17,7 @@ use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
+use crate::parser;
 use crate::typechecker::{TypeCheck, TypeCtx};
 use crate::ObjectInstance;
 use crate::{Builtins, CheckedType};
@@ -317,6 +318,21 @@ impl Context {
         }
     }
 
+    pub fn eval(&mut self, input: &str) -> Result<Option<ObjectInstance>, Error> {
+        self.entry_point = Context::new_entry();
+
+        parser::parse(self, input)?;
+
+        self.emit_errors();
+        self.clear_errors();
+
+        let res = self.execute()?;
+        self.emit_errors();
+        self.clear_errors();
+
+        Ok(res)
+    }
+
     pub fn has_errors(&self) -> bool {
         self.error_handler.has_errors()
     }
@@ -454,5 +470,32 @@ mod tests {
         jinko! {
             "hey".__builtin_string_len();
         };
+    }
+
+    #[test]
+    fn t_eval() {
+        let mut ctx = Context::new();
+        let input = String::from("my_var = 1");
+
+        ctx.eval(&input).unwrap();
+        let output = ctx.print();
+
+        assert!(output.contains("my_var"));
+    }
+
+    #[test]
+    fn t_double_eval() {
+        let mut ctx = Context::new();
+
+        let mut input = String::from("my_var = 1");
+        ctx.eval(&input).unwrap();
+
+        input = String::from("my_new_var = 2");
+        ctx.eval(&input).unwrap();
+
+        let output = ctx.print();
+
+        assert!(output.contains("my_var"));
+        assert!(output.contains("my_new_var"));
     }
 }
