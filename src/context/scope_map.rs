@@ -4,7 +4,7 @@
 //! scope. If the specified name cannot be found, it searches the other scopes, defined
 //! before the current one, until it finds the correct component.
 
-use std::collections::{HashMap, LinkedList};
+use std::collections::HashMap;
 
 use crate::{ErrKind, Error};
 
@@ -101,45 +101,51 @@ impl<V, F, T> Default for Scope<V, F, T> {
     }
 }
 
-/// A scope stack is a reversed stack. This alias is made for code clarity
-pub type ScopeStack<T> = LinkedList<T>;
-
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
 #[derive(Clone, Default)]
 pub struct ScopeMap<V, F, T> {
-    scopes: ScopeStack<Scope<V, F, T>>,
+    scopes: Vec<Scope<V, F, T>>,
+    current_index: Option<usize>,
 }
 
 impl<V, F, T> ScopeMap<V, F, T> {
     /// Create a new empty scope map, at depth 0
     pub fn new() -> ScopeMap<V, F, T> {
         ScopeMap {
-            scopes: ScopeStack::new(),
+            scopes: Vec::new(),
+            current_index: None,
         }
     }
 
     /// Get a reference on the scopes inside a ScopeMap
-    pub fn scopes(&self) -> &ScopeStack<Scope<V, F, T>> {
+    pub fn scopes(&self) -> &Vec<Scope<V, F, T>> {
         &self.scopes
     }
 
     /// Enter into a new scope
     pub fn scope_enter(&mut self) {
-        self.scopes.push_front(Scope::default());
+        self.scopes.push(Scope::default());
+        self.current_index = Some(self.current_index.map_or(0, |idx| idx + 1));
     }
 
     /// Exit the last added scope
     pub fn scope_exit(&mut self) {
         // We unwrap since we want the context to crash in case we pop an unexisting
         // scope.
-        self.scopes.pop_front().unwrap();
+        self.scopes.pop().unwrap();
+        match self.current_index {
+            // FIXME: Is that really the behavior we want...
+            None => panic!("Exiting empty scope map"),
+            Some(0) => self.current_index = None,
+            Some(idx) => self.current_index = Some(idx - 1),
+        }
     }
 
     /// Maybe get a variable in any available scopes
     pub fn get_variable(&self, name: &str) -> Option<&V> {
         // FIXME: Use find for code quality?
-        for scope in self.scopes.iter() {
+        for scope in self.scopes.split_at(self.current_index? + 1).0.iter().rev() {
             match scope.get_variable(name) {
                 Some(v) => return Some(v),
                 None => continue,
@@ -150,7 +156,13 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut V> {
-        for scope in self.scopes.iter_mut() {
+        for scope in self
+            .scopes
+            .split_at_mut(self.current_index? + 1)
+            .0
+            .iter_mut()
+            .rev()
+        {
             match scope.get_variable_mut(name) {
                 Some(v) => return Some(v),
                 None => continue,
@@ -163,7 +175,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     /// Maybe get a function in any available scopes
     pub fn get_function(&self, name: &str) -> Option<&F> {
         // FIXME: Use find for code quality?
-        for scope in self.scopes.iter() {
+        for scope in self.scopes.split_at(self.current_index? + 1).0.iter().rev() {
             match scope.get_function(name) {
                 Some(v) => return Some(v),
                 None => continue,
@@ -176,7 +188,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     /// Maybe get a type in any available scopes
     pub fn get_type(&self, name: &str) -> Option<&T> {
         // FIXME: Use find for code quality?
-        for scope in self.scopes.iter() {
+        for scope in self.scopes.split_at(self.current_index? + 1).0.iter().rev() {
             match scope.get_type(name) {
                 Some(v) => return Some(v),
                 None => continue,
@@ -188,8 +200,8 @@ impl<V, F, T> ScopeMap<V, F, T> {
 
     /// Add a variable to the current scope if it hasn't been added before
     pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
-        match self.scopes.front_mut() {
-            Some(head) => head.add_variable(name, var),
+        match self.current_index {
+            Some(idx) => self.scopes.get_mut(idx).unwrap().add_variable(name, var),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding variable to empty scopemap"))),
         }
@@ -197,8 +209,8 @@ impl<V, F, T> ScopeMap<V, F, T> {
 
     /// Remove a variable from the current scope if it hasn't been added before
     pub fn remove_variable(&mut self, name: &str) -> Result<(), Error> {
-        match self.scopes.front_mut() {
-            Some(head) => head.remove_variable(name),
+        match self.current_index {
+            Some(idx) => self.scopes.get_mut(idx).unwrap().remove_variable(name),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Removing variable from empty scopemap"))),
         }
@@ -206,8 +218,8 @@ impl<V, F, T> ScopeMap<V, F, T> {
 
     /// Add a function to the current scope if it hasn't been added before
     pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
-        match self.scopes.front_mut() {
-            Some(head) => head.add_function(name, func),
+        match self.current_index {
+            Some(idx) => self.scopes.get_mut(idx).unwrap().add_function(name, func),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding function to empty scopemap"))),
         }
@@ -215,8 +227,12 @@ impl<V, F, T> ScopeMap<V, F, T> {
 
     /// Add a type to the current scope if it hasn't been added before
     pub fn add_type(&mut self, name: String, custom_type: T) -> Result<(), Error> {
-        match self.scopes.front_mut() {
-            Some(head) => head.add_type(name, custom_type),
+        match self.current_index {
+            Some(idx) => self
+                .scopes
+                .get_mut(idx)
+                .unwrap()
+                .add_type(name, custom_type),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding new custom type to empty scopemap"))),
         }
