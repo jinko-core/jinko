@@ -40,18 +40,26 @@ pub fn create_map(
 
     let mut map = GenericMap::new();
 
+    let mut is_err = false;
+
     generics.iter().zip(resolved).for_each(|(l_ty, r_ty)| {
         log!("mapping generic: {} <- {}", l_ty, r_ty);
         match map.insert(l_ty.clone(), r_ty.clone()) {
             None => {}
-            Some(existing_ty) => ctx.error(Error::new(ErrKind::Generics).with_msg(format!(
-                "mapping type to already mapped generic type: {} <- {} with {}",
-                l_ty, existing_ty, r_ty
-            ))),
+            Some(existing_ty) => {
+                ctx.error(Error::new(ErrKind::Generics).with_msg(format!(
+                    "mapping type to already mapped generic type: {} <- {} with {}",
+                    l_ty, existing_ty, r_ty
+                )));
+                is_err = true;
+            }
         }
     });
 
-    Ok(map)
+    match is_err {
+        true => Err(Error::new(ErrKind::Generics)),
+        false => Ok(map),
+    }
 }
 
 /// Since most of the instructions cannot do generic expansion, we can implement
