@@ -1,6 +1,7 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
+use crate::PrettyPrint;
 use crate::{
     log,
     typechecker::{CheckedType, TypeCtx},
@@ -145,6 +146,8 @@ impl Generic for FieldAccess {
         self.instance.resolve_self(ctx)
     }
 }
+
+impl PrettyPrint for FieldAccess {}
 
 #[cfg(test)]
 mod tests {

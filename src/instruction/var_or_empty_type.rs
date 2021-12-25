@@ -1,3 +1,4 @@
+use crate::PrettyPrint;
 use crate::{
     instruction::{TypeInstantiation, Var},
     symbol::Symbol,
@@ -111,3 +112,7 @@ impl TypeCheck for VarOrEmptyType {
 }
 
 impl Generic for VarOrEmptyType {}
+
+impl PrettyPrint for VarOrEmptyType {}
+
+// FIXME: Add tests here

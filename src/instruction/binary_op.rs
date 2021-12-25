@@ -5,6 +5,7 @@
 //! The available operators are `+`, `-`, `*` and `/`.
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
+use crate::PrettyPrint;
 use crate::{
     instruction::Operator,
     log,
@@ -175,6 +176,8 @@ impl TypeCheck for BinaryOp {
 }
 
 impl Generic for BinaryOp {}
+
+impl PrettyPrint for BinaryOp {}
 
 // TODO: Add typechecking tests
 #[cfg(test)]

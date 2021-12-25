@@ -4,8 +4,10 @@ use crate::{
     log, Context, Error, FromObjectInstance, Generic, JkString, ObjectInstance, SpanTuple,
     ToObjectInstance, Value,
 };
+use crate::{PrettyPrint, PrintCtx};
 
 use std::convert::TryFrom;
+use std::fmt::Display;
 
 #[derive(Clone)]
 /// A JkConstant represents a primitive type in Jinko. It is used in order to
@@ -384,6 +386,16 @@ impl From<&str> for JkConstant<String> {
 impl From<String> for JkConstant<String> {
     fn from(s: String) -> Self {
         JkConstant(s, CheckedType::Resolved(TypeId::from("string")), None)
+    }
+}
+
+impl<T: Display + Clone> PrettyPrint for JkConstant<T> {
+    fn code(&self, ctx: &mut PrintCtx) {
+        ctx.write(format!("{}", self.0))
+    }
+
+    fn ast(&self, ctx: &mut PrintCtx) {
+        ctx.write(format!("JkConstant({})", self.0))
     }
 }
 

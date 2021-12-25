@@ -1,5 +1,6 @@
 //! The VarAssign struct is used when assigning values to variables.
 
+use crate::PrettyPrint;
 use crate::instruction::{InstrKind, Var};
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::{log, Context, ErrKind, Error, Instruction, ObjectInstance, TypeCheck};
@@ -206,6 +207,8 @@ impl Generic for VarAssign {
         self.value.resolve_self(ctx)
     }
 }
+
+impl PrettyPrint for VarAssign {}
 
 #[cfg(test)]
 mod tests {

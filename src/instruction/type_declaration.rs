@@ -1,5 +1,6 @@
 use super::{DecArg, InstrKind, Instruction};
 
+use crate::PrettyPrint;
 use crate::{
     generics::GenericMap,
     log,
@@ -193,6 +194,8 @@ impl std::fmt::Display for TypeDec {
         write!(f, "{}", self.name)
     }
 }
+
+impl PrettyPrint for TypeDec {}
 
 #[cfg(test)]
 mod tests {

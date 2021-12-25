@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use nom_locate::LocatedSpan;
 
+use crate::PrettyPrint;
 use crate::{
     log,
     parser::constructs,
@@ -233,6 +234,8 @@ impl TypeCheck for Incl {
 }
 
 impl Generic for Incl {}
+
+impl PrettyPrint for Incl {}
 
 #[cfg(test)]
 mod tests {

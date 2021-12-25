@@ -7,6 +7,7 @@ use crate::typechecker::{CheckedType, TypeCtx, TypeId};
 use crate::Generic;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 use crate::{Location, SpanTuple};
+use crate::{PrettyPrint, PrintCtx};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -404,6 +405,60 @@ impl From<&str> for FunctionKind {
             "ext" => FunctionKind::Ext,
             _ => FunctionKind::Unknown,
         }
+    }
+}
+
+impl PrettyPrint for FunctionDec {
+    fn code(&self, ctx: &mut PrintCtx) {
+        let header = match self.kind {
+            FunctionKind::Func => "func",
+            FunctionKind::Ext => "ext func",
+            FunctionKind::Test => "test",
+            FunctionKind::Mock => "mock",
+            FunctionKind::Unknown => "UNKNOWN",
+        };
+
+        ctx.write(format!("{} {}", header, self.name));
+
+        if !self.generics.is_empty() {
+            ctx.write('[');
+            ctx.write(self.generics.first().unwrap().id());
+            let generic_str = self
+                .generics
+                .iter()
+                .skip(1)
+                .fold(String::new(), |acc, ty_id| {
+                    format!("{}, {}", acc, ty_id.id())
+                });
+            ctx.write(&generic_str);
+            ctx.write(']');
+        }
+
+        ctx.write('(');
+        if !self.args.is_empty() {
+            ctx.write(&format!("{}", self.args().iter().next().unwrap()));
+            let arg_str = self
+                .args
+                .iter()
+                .skip(1)
+                .fold(String::new(), |acc, field| format!("{}, {}", acc, field));
+            ctx.write(&arg_str);
+        }
+        ctx.write(')');
+
+        if let Some(ty) = &self.ty {
+            ctx.write(format!(" -> {}", ty.id()));
+        }
+
+        match &self.block {
+            Some(block) => {
+                ctx.write(" ");
+                block.code(ctx)
+            }
+            None => ctx.writeln(";"),
+        }
+
+        ctx.writeln("");
     }
 }
 

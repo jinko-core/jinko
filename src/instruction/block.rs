@@ -18,6 +18,7 @@
 //! Otherwise, it's `void`
 
 use crate::{
+    PrettyPrint, PrintCtx,
     log,
     typechecker::{CheckedType, TypeCtx},
     Context, Error, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
@@ -127,6 +128,27 @@ impl Instruction for Block {
 
     fn location(&self) -> Option<&SpanTuple> {
         self.location.as_ref()
+    }
+}
+
+impl PrettyPrint for Block {
+    fn code(&self, ctx: &mut PrintCtx) {
+        ctx.increment_indent();
+        ctx.writeln("{");
+
+        self.instructions.iter().for_each(|inst| inst.code(ctx));
+
+        ctx.decrement_indent();
+        ctx.writeln("}");
+    }
+
+    fn ast(&self, ctx: &mut PrintCtx) {
+        ctx.writeln(format!("Block (is_statement: {}):", self.is_statement));
+        ctx.increment_indent();
+
+        self.instructions.iter().for_each(|inst| inst.code(ctx));
+
+        ctx.decrement_indent();
     }
 }
 

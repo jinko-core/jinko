@@ -6,7 +6,7 @@ use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::typechecker::{CheckedType, SpecializedNode, TypeCtx, TypeId};
 use crate::{
     generics, log, Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance,
-    SpanTuple, TypeCheck,
+    PrettyPrint, SpanTuple, TypeCheck,
 };
 use std::rc::Rc;
 
@@ -470,6 +470,8 @@ impl Generic for FunctionCall {
         }
     }
 }
+
+impl PrettyPrint for FunctionCall {}
 
 #[cfg(test)]
 mod tests {

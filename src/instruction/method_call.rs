@@ -4,6 +4,7 @@
 use crate::generics::Generic;
 use crate::instruction::FunctionCall;
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::PrettyPrint;
 use crate::{log, Context, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck};
 
 #[derive(Clone)]
@@ -121,6 +122,8 @@ impl Generic for MethodCall {
     //     call.resolve_self(ctx);
     // }
 }
+
+impl PrettyPrint for MethodCall {}
 
 #[cfg(test)]
 mod tests {

@@ -21,6 +21,7 @@ use crate::typechecker::{SpecializedNode, TypeCheck, TypeCtx, TypeId};
 use crate::ObjectInstance;
 use crate::{log, parser};
 use crate::{Builtins, CheckedType};
+use crate::{PrintCtx, PrettyPrint};
 
 /// Type the context uses for keys
 type CtxKey = String;
@@ -230,11 +231,15 @@ impl Context {
     }
 
     /// Pretty-prints valid jinko code from a given ctx
-    pub fn print(&self) -> String {
-        let mut s = format!("{}\n", self.scope_map);
-        s = format!("{}{}", s, self.entry_point.print());
+    pub fn print(&self) {
+        let mut print_ctx = PrintCtx::default();
+        self.entry_point.block().unwrap().code(&mut print_ctx);
+    }
 
-        s
+    /// Prints the AST of a given context
+    pub fn dump_ast(&self) {
+        let mut print_ctx = PrintCtx::default();
+        self.entry_point.block().unwrap().ast(&mut print_ctx);
     }
 
     /// Print a debug message if the context is in debug mode, according to the

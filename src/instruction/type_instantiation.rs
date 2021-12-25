@@ -6,6 +6,7 @@ use crate::generics::{self, GenericMap};
 use crate::instance::Name;
 use crate::symbol::Symbol;
 use crate::typechecker::{SpecializedNode, TypeCtx};
+use crate::PrettyPrint;
 use crate::{log, Generic, SpanTuple};
 use crate::{typechecker::CheckedType, TypeCheck, TypeId};
 
@@ -241,6 +242,8 @@ impl TypeCheck for TypeInstantiation {
 }
 
 impl Generic for TypeInstantiation {}
+
+impl PrettyPrint for TypeInstantiation {}
 
 #[cfg(test)]
 mod test {

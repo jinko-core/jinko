@@ -5,6 +5,7 @@
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::PrettyPrint;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 use crate::{Generic, SpanTuple};
 
@@ -12,6 +13,7 @@ use crate::{Generic, SpanTuple};
 #[derive(Clone, Debug, PartialEq)]
 pub enum JkInstKind {
     Dump,
+    DumpAst,
     Quit,
     Ir,
 }
@@ -30,6 +32,7 @@ impl JkInst {
 
         let kind = match func_name {
             "dump" => JkInstKind::Dump,
+            "dump_ast" => JkInstKind::DumpAst,
             "quit" => JkInstKind::Quit,
             "ir" => JkInstKind::Ir,
             // FIXME: Fix location
@@ -55,6 +58,7 @@ impl Instruction for JkInst {
     fn print(&self) -> String {
         match self.kind {
             JkInstKind::Dump => "@dump",
+            JkInstKind::DumpAst => "@dump_ast",
             JkInstKind::Quit => "@quit",
             JkInstKind::Ir => "@ir",
         }
@@ -65,7 +69,8 @@ impl Instruction for JkInst {
         log!("jinko_inst: {}", &self.print());
 
         match self.kind {
-            JkInstKind::Dump => println!("{}", ctx.print()),
+            JkInstKind::Dump => ctx.print(),
+            JkInstKind::DumpAst => ctx.dump_ast(),
             JkInstKind::Quit => std::process::exit(0),
             JkInstKind::Ir => eprintln!("usage: {:?} <statement|expr>", JkInstKind::Ir),
         };
@@ -94,6 +99,8 @@ impl TypeCheck for JkInst {
 }
 
 impl Generic for JkInst {}
+
+impl PrettyPrint for JkInst {}
 
 #[cfg(test)]
 mod tests {

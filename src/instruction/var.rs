@@ -6,6 +6,7 @@
 use crate::instruction::TypeDec;
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::Generic;
+use crate::PrettyPrint;
 use crate::{log, SpanTuple};
 use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
@@ -137,6 +138,8 @@ impl Default for Var {
 }
 
 impl Generic for Var {}
+
+impl PrettyPrint for Var {}
 
 #[cfg(test)]
 mod tests {

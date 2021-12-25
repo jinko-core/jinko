@@ -10,6 +10,7 @@
 //! ```
 
 use crate::instruction::{InstrKind, Instruction};
+use crate::PrettyPrint;
 use crate::SpanTuple;
 use crate::{
     typechecker::{CheckedType, TypeCtx},
@@ -85,6 +86,8 @@ impl TypeCheck for Return {
 }
 
 impl Generic for Return {}
+
+impl PrettyPrint for Return {}
 
 #[cfg(test)]
 mod tests {

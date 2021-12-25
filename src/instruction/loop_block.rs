@@ -3,6 +3,7 @@
 
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::PrettyPrint;
 use crate::{log, Context, FromObjectInstance, JkBool, ObjectInstance, TypeCheck};
 use crate::{Generic, SpanTuple};
 
@@ -224,6 +225,8 @@ impl TypeCheck for Loop {
 }
 
 impl Generic for Loop {}
+
+impl PrettyPrint for Loop {}
 
 #[cfg(test)]
 mod tests {

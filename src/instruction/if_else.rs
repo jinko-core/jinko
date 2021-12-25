@@ -15,6 +15,7 @@
 //! x = if condition { 12 } else { 13 };
 //! ```
 
+use crate::PrettyPrint;
 use crate::instance::FromObjectInstance;
 use crate::instruction::{Block, InstrKind, Instruction};
 use crate::typechecker::{TypeCtx, TypeId};
@@ -190,6 +191,8 @@ impl Generic for IfElse {
         };
     }
 }
+
+impl PrettyPrint for IfElse {}
 
 #[cfg(test)]
 mod tests {
