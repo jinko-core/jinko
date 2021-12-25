@@ -243,6 +243,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
 mod tests {
     use super::*;
     use crate::instruction::Var;
+    use crate::jinko;
 
     macro_rules! s {
         ($s:literal) => {
@@ -323,5 +324,17 @@ mod tests {
     fn t_scope_of_anything() {
         let _ = Scope::<i32, i32, String>::default();
         let _ = Scope::<(), (), ()>::default();
+    }
+
+    #[test]
+    fn blocks_with_same_vars() {
+        jinko! {
+            {
+                a = 15;
+            };
+            {
+                a = true;
+            }
+        };
     }
 }
