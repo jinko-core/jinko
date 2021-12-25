@@ -5,6 +5,7 @@
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::Generic;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// The potential ctx instructions
@@ -79,6 +80,8 @@ impl TypeCheck for JkInst {
         CheckedType::Void
     }
 }
+
+impl Generic for JkInst {}
 
 #[cfg(test)]
 mod tests {

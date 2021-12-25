@@ -4,6 +4,7 @@
 //! pretty printing and code formatting.
 
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::Generic;
 use crate::{Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
@@ -81,3 +82,5 @@ impl TypeCheck for ExtraContent {
         CheckedType::Void
     }
 }
+
+impl Generic for ExtraContent {}

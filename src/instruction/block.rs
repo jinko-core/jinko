@@ -20,7 +20,7 @@
 use crate::{
     log,
     typechecker::{CheckedType, TypeCtx},
-    Context, InstrKind, Instruction, ObjectInstance, TypeCheck,
+    Context, Generic, InstrKind, Instruction, ObjectInstance, TypeCheck,
 };
 
 #[derive(Clone, Default)]
@@ -132,6 +132,8 @@ impl TypeCheck for Block {
         }
     }
 }
+
+impl Generic for Block {}
 
 // TODO: Add tests once TypeCheck is a trait bound on Instruction
 #[cfg(test)]

@@ -7,7 +7,7 @@ use crate::{
     log,
     parser::constructs,
     typechecker::{CheckedType, TypeCtx},
-    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
+    Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance, TypeCheck,
 };
 
 /// An `Incl` is constituted of a path, an optional alias and contains a context.
@@ -280,6 +280,8 @@ impl TypeCheck for Incl {
         CheckedType::Void
     }
 }
+
+impl Generic for Incl {}
 
 #[cfg(test)]
 mod tests {

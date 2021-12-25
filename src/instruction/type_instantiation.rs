@@ -6,6 +6,7 @@ use super::{
 };
 use crate::instance::Name;
 use crate::typechecker::TypeCtx;
+use crate::Generic;
 use crate::{typechecker::CheckedType, TypeCheck};
 
 use std::rc::Rc;
@@ -187,6 +188,8 @@ impl TypeCheck for TypeInstantiation {
         CheckedType::Resolved(self.type_name.clone())
     }
 }
+
+impl Generic for TypeInstantiation {}
 
 #[cfg(test)]
 mod test {

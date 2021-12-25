@@ -4,7 +4,7 @@
 use crate::{
     log,
     typechecker::{CheckedType, TypeCtx},
-    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck,
+    Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance, TypeCheck,
 };
 
 #[derive(Clone)]
@@ -101,6 +101,8 @@ impl TypeCheck for FieldAccess {
         }
     }
 }
+
+impl Generic for FieldAccess {}
 
 #[cfg(test)]
 mod tests {

@@ -3,6 +3,7 @@
 
 use crate::instruction::FunctionCall;
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::Generic;
 use crate::{log, Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
@@ -52,6 +53,8 @@ impl TypeCheck for MethodCall {
         call.resolve_type(ctx)
     }
 }
+
+impl Generic for MethodCall {}
 
 #[cfg(test)]
 mod tests {

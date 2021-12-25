@@ -4,15 +4,15 @@
 use crate::instruction::{FunctionDec, FunctionKind, TypeId, Var};
 use crate::typechecker::TypeCtx;
 use crate::{
-    log, typechecker::CheckedType, Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance,
-    TypeCheck,
+    generics, log, typechecker::CheckedType, Context, ErrKind, Error, Generic, InstrKind,
+    Instruction, ObjectInstance, TypeCheck,
 };
 use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct FunctionCall {
     fn_name: String,
-    _generics: Vec<TypeId>,
+    generics: Vec<TypeId>,
     args: Vec<Box<dyn Instruction>>,
 }
 
@@ -25,7 +25,7 @@ impl FunctionCall {
     ) -> FunctionCall {
         FunctionCall {
             fn_name,
-            _generics: generics,
+            generics,
             args,
         }
     }
@@ -254,6 +254,15 @@ impl TypeCheck for FunctionCall {
         self.type_args(args, ctx);
 
         return_type
+    }
+}
+
+impl Generic for FunctionCall {
+    fn expand(&self, ctx: &mut Context) {
+        // We can unwrap here since this is a typechecking error and should have been
+        // caught already in an earlier pass
+        let dec = self.get_declaration(ctx).unwrap();
+        let _map = generics::create_map(&self.generics, dec.generics(), ctx);
     }
 }
 

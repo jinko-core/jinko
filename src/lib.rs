@@ -5,6 +5,7 @@ mod context;
 mod error;
 #[cfg(feature = "ffi")]
 mod ffi;
+mod generics;
 mod indent;
 pub mod instance;
 pub mod instruction;
@@ -17,6 +18,7 @@ mod value;
 pub use builtins::Builtins;
 pub use context::{Context, Scope, ScopeMap};
 pub use error::{ErrKind, Error};
+pub use generics::Generic;
 pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};

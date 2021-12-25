@@ -3,6 +3,7 @@
 
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::Generic;
 use crate::{log, Context, FromObjectInstance, JkBool, ObjectInstance, TypeCheck};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
@@ -198,6 +199,8 @@ impl TypeCheck for Loop {
         self.block.resolve_type(ctx)
     }
 }
+
+impl Generic for Loop {}
 
 #[cfg(test)]
 mod tests {

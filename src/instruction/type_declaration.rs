@@ -3,7 +3,7 @@ use super::{DecArg, InstrKind, Instruction, TypeId};
 use crate::{
     log,
     typechecker::{CheckedType, TypeCtx},
-    Context, ObjectInstance, TypeCheck,
+    Context, Generic, ObjectInstance, TypeCheck,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -111,6 +111,8 @@ impl TypeCheck for TypeDec {
         CheckedType::Void
     }
 }
+
+impl Generic for TypeDec {}
 
 impl From<&str> for TypeDec {
     fn from(type_name: &str) -> TypeDec {

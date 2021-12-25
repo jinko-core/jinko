@@ -1,6 +1,6 @@
 use crate::{
     instruction::{TypeId, TypeInstantiation, Var},
-    CheckedType, Context, InstrKind, Instruction, ObjectInstance, TypeCheck, TypeCtx,
+    CheckedType, Context, Generic, InstrKind, Instruction, ObjectInstance, TypeCheck, TypeCtx,
 };
 
 #[derive(Clone, PartialEq)]
@@ -78,3 +78,5 @@ impl TypeCheck for VarOrEmptyType {
         }
     }
 }
+
+impl Generic for VarOrEmptyType {}

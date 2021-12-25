@@ -3,6 +3,7 @@
 
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
 use crate::typechecker::{CheckedType, TypeCtx};
+use crate::Generic;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
@@ -42,6 +43,10 @@ impl FunctionDec {
             args,
             block: None,
         }
+    }
+
+    pub fn generics(&self) -> &Vec<TypeId> {
+        &self.generics
     }
 
     /// Set the block of a given function declaration. This is useful since parsing a
@@ -258,6 +263,8 @@ impl TypeCheck for FunctionDec {
         CheckedType::Void
     }
 }
+
+impl Generic for FunctionDec {}
 
 impl Default for FunctionDec {
     fn default() -> Self {
