@@ -15,8 +15,6 @@ impl Indent {
         Indent(self.0 + Indent::INDENT_STEP)
     }
 
-    // FIXME: Ugly...
-    #[cfg(test)]
     /// Decrement an indent to the next step, stopping at zero spaces
     pub fn decrement(self) -> Indent {
         Indent(self.0.saturating_sub(Indent::INDENT_STEP))
