@@ -262,7 +262,7 @@ impl Generic for FunctionCall {
         // We can unwrap here since this is a typechecking error and should have been
         // caught already in an earlier pass
         let dec = self.get_declaration(ctx).unwrap();
-        let map = generics::create_map(&self.generics, dec.generics(), ctx);
+        let _map = generics::create_map(&self.generics, dec.generics(), ctx);
     }
 }
 

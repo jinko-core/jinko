@@ -13,7 +13,7 @@ pub type GenericMap = HashMap<TypeId, TypeId>;
 /// Mangle a name to resolve it to its proper expanded name.
 /// The format used is the following:
 /// <name> '+' <T0> '+' <T1>...
-pub fn mangle(name: &str, types: &[TypeId]) -> String {
+pub fn _mangle(name: &str, types: &[TypeId]) -> String {
     let mut mangled = String::from(name);
     for type_id in types.iter() {
         mangled.push('+');
@@ -100,18 +100,18 @@ mod tests {
 
     #[test]
     fn mangle_no_generics() {
-        assert_eq!(mangle("mangled", &[]), "mangled");
+        assert_eq!(_mangle("mangled", &[]), "mangled");
     }
 
     #[test]
     fn mangle_one_generic() {
-        assert_eq!(mangle("mangled", &[ty!("bool")]), "mangled+bool");
+        assert_eq!(_mangle("mangled", &[ty!("bool")]), "mangled+bool");
     }
 
     #[test]
     fn mangle_multi_generic() {
         assert_eq!(
-            mangle("mangled", &[ty!("float"), ty!("ComplexType")]),
+            _mangle("mangled", &[ty!("float"), ty!("ComplexType")]),
             "mangled+float+ComplexType"
         );
     }
