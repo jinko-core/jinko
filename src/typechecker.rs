@@ -219,11 +219,36 @@ impl Default for TypeCtx {
 ///     - Void: The [`Instruction`] is not of any type. It corresponds to a statement.
 ///     - Unknown: This means that even after the typechecking pass, the instruction's
 ///     type is still unclear.
+/// Every [`Instruction`] should keep a cached copy of its own type. This is important
+/// for later passes of the typechecker or generic expansion. To do so, a special field
+/// of the type `Option<CheckedType>` should be kept, and originally initialized to `None`
 pub trait TypeCheck {
     /// Go through the context in order to figure out the type of an instruction.
     /// This function should report errors using the context, and the [`ErrKind::TypeCheck`]
     /// error kind.
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType;
+
+    /// Cache the type of an instruction
+    fn set_cached_type(&mut self, ty: CheckedType);
+
+    /// Access the cached type of an instruction
+    fn cached_type(&self) -> Option<&CheckedType>;
+
+    /// Access the cached type of an instruction or perform the type resolution process.
+    /// This avoid typechecking an entire instruction a second time and allows the
+    /// context to just access it. This is useful for passes such as generic expansion.
+    fn type_of(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: Remove clones
+        match self.cached_type() {
+            None => {
+                let new_ty = self.resolve_type(ctx);
+                self.set_cached_type(new_ty.clone());
+
+                new_ty
+            }
+            Some(ty) => ty.clone(),
+        }
+    }
 }
 
 /// Some [`Instruction`]s need to have their type checked multiple times. For example, a
