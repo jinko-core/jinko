@@ -14,6 +14,7 @@ pub struct VarAssign {
     symbol: String,
 
     value: Box<dyn Instruction>,
+    typechecked: bool,
 }
 
 impl VarAssign {
@@ -22,6 +23,7 @@ impl VarAssign {
             mutable,
             symbol,
             value,
+            typechecked: false,
         }
     }
 
@@ -151,6 +153,17 @@ impl TypeCheck for VarAssign {
         }
 
         CheckedType::Void
+    }
+
+    fn set_cached_type(&mut self, _ty: CheckedType) {
+        self.typechecked = true;
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        match self.typechecked {
+            true => Some(&CheckedType::Void),
+            false => None,
+        }
     }
 }
 

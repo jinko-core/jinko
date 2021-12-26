@@ -10,12 +10,17 @@ use crate::{log, Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 pub struct MethodCall {
     var: Box<dyn Instruction>,
     method: FunctionCall,
+    cached_type: Option<CheckedType>,
 }
 
 impl MethodCall {
     /// Create a new MethodCall from a variable and an associated function
     pub fn new(var: Box<dyn Instruction>, method: FunctionCall) -> MethodCall {
-        MethodCall { var, method }
+        MethodCall {
+            var,
+            method,
+            cached_type: None,
+        }
     }
 }
 
@@ -51,6 +56,14 @@ impl TypeCheck for MethodCall {
         call.add_arg_front(self.var.clone());
 
         call.resolve_type(ctx)
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty)
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 

@@ -16,6 +16,7 @@ pub struct TypeInstantiation {
     type_name: TypeId,
     generics: Vec<TypeId>,
     fields: Vec<VarAssign>,
+    cached_type: Option<CheckedType>,
 }
 
 impl TypeInstantiation {
@@ -25,6 +26,7 @@ impl TypeInstantiation {
             type_name,
             generics: vec![],
             fields: vec![],
+            cached_type: None,
         }
     }
 
@@ -186,6 +188,14 @@ impl TypeCheck for TypeInstantiation {
         }
 
         CheckedType::Resolved(self.type_name.clone())
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty)
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 

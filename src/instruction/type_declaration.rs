@@ -11,6 +11,7 @@ pub struct TypeDec {
     name: String,
     generics: Vec<TypeId>,
     fields: Vec<DecArg>,
+    typechecked: bool,
 }
 
 impl TypeDec {
@@ -20,6 +21,7 @@ impl TypeDec {
             name,
             generics,
             fields,
+            typechecked: false,
         }
     }
 
@@ -110,6 +112,17 @@ impl TypeCheck for TypeDec {
 
         CheckedType::Void
     }
+
+    fn set_cached_type(&mut self, _ty: CheckedType) {
+        self.typechecked = true
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        match self.typechecked {
+            true => Some(&CheckedType::Void),
+            false => None,
+        }
+    }
 }
 
 impl Generic for TypeDec {}
@@ -132,6 +145,7 @@ impl From<String> for TypeDec {
             name: type_name,
             generics: vec![],
             fields: vec![],
+            typechecked: false,
         }
     }
 }

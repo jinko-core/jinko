@@ -27,6 +27,7 @@ use crate::{
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
     is_statement: bool,
+    cached_type: Option<CheckedType>,
 }
 
 impl Block {
@@ -36,6 +37,7 @@ impl Block {
         Block {
             instructions: Vec::new(),
             is_statement: true,
+            cached_type: None,
         }
     }
 
@@ -130,6 +132,14 @@ impl TypeCheck for Block {
             true => CheckedType::Void,
             false => last_type,
         }
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty)
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 

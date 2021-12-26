@@ -14,6 +14,7 @@ pub struct FunctionCall {
     fn_name: String,
     generics: Vec<TypeId>,
     args: Vec<Box<dyn Instruction>>,
+    typechecked: bool,
 }
 
 impl FunctionCall {
@@ -27,6 +28,7 @@ impl FunctionCall {
             fn_name,
             generics,
             args,
+            typechecked: false,
         }
     }
 
@@ -254,6 +256,17 @@ impl TypeCheck for FunctionCall {
         self.type_args(args, ctx);
 
         return_type
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        match self.typechecked {
+            true => Some(&CheckedType::Void),
+            false => None,
+        }
+    }
+
+    fn set_cached_type(&mut self, _ty: CheckedType) {
+        self.typechecked = true;
     }
 }
 

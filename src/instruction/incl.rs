@@ -18,6 +18,7 @@ pub struct Incl {
     path: String,
     alias: Option<String>,
     base: Option<PathBuf>,
+    typechecked: bool,
 }
 
 /// Default file that gets included when including a directory in jinko source code
@@ -29,6 +30,7 @@ impl Incl {
             path,
             alias,
             base: None,
+            typechecked: false,
         }
     }
 
@@ -278,6 +280,17 @@ impl TypeCheck for Incl {
         ctx.set_path(old_path);
 
         CheckedType::Void
+    }
+
+    fn set_cached_type(&mut self, _ty: CheckedType) {
+        self.typechecked = true
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        match self.typechecked {
+            true => Some(&CheckedType::Void),
+            false => None,
+        }
     }
 }
 

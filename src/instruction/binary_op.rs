@@ -20,12 +20,18 @@ pub struct BinaryOp {
     lhs: Box<dyn Instruction>,
     rhs: Box<dyn Instruction>,
     op: Operator,
+    cached_type: Option<CheckedType>,
 }
 
 impl BinaryOp {
     /// Create a new `BinaryOp` from two instructions and an operator
     pub fn new(lhs: Box<dyn Instruction>, rhs: Box<dyn Instruction>, op: Operator) -> Self {
-        BinaryOp { lhs, rhs, op }
+        BinaryOp {
+            lhs,
+            rhs,
+            op,
+            cached_type: None,
+        }
     }
 
     /// Return the operator used by the BinaryOp
@@ -143,6 +149,14 @@ impl TypeCheck for BinaryOp {
             | Operator::NotEquals => CheckedType::Resolved(TypeId::from("bool")),
             _ => l_type,
         }
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty)
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 

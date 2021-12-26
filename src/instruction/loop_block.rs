@@ -22,11 +22,16 @@ pub enum LoopKind {
 pub struct Loop {
     kind: LoopKind,
     block: Block,
+    cached_type: Option<CheckedType>,
 }
 
 impl Loop {
     pub fn new(kind: LoopKind, block: Block) -> Loop {
-        Loop { kind, block }
+        Loop {
+            kind,
+            block,
+            cached_type: None,
+        }
     }
 }
 
@@ -197,6 +202,14 @@ impl Instruction for Loop {
 impl TypeCheck for Loop {
     fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
         self.block.resolve_type(ctx)
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty)
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 

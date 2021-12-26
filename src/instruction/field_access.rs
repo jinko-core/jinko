@@ -11,6 +11,7 @@ use crate::{
 pub struct FieldAccess {
     instance: Box<dyn Instruction>,
     field_name: String,
+    cached_type: Option<CheckedType>,
 }
 
 impl FieldAccess {
@@ -19,6 +20,7 @@ impl FieldAccess {
         FieldAccess {
             instance,
             field_name,
+            cached_type: None,
         }
     }
 
@@ -99,6 +101,14 @@ impl TypeCheck for FieldAccess {
                 CheckedType::Unknown
             }
         }
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty)
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 

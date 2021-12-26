@@ -25,6 +25,7 @@ pub struct FunctionDec {
     generics: Vec<TypeId>,
     args: Vec<DecArg>,
     block: Option<Block>,
+    typechecked: bool,
 }
 
 impl FunctionDec {
@@ -42,6 +43,7 @@ impl FunctionDec {
             generics,
             args,
             block: None,
+            typechecked: false,
         }
     }
 
@@ -261,6 +263,17 @@ impl TypeCheck for FunctionDec {
         ctx.scope_exit();
 
         CheckedType::Void
+    }
+
+    fn set_cached_type(&mut self, _ty: CheckedType) {
+        self.typechecked = true
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        match self.typechecked {
+            true => Some(&CheckedType::Void),
+            false => None,
+        }
     }
 }
 
