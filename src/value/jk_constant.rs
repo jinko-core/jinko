@@ -118,7 +118,7 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<bool> {
-            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
+            fn resolve_type(&mut self, _: &mut TypeCtx) -> CheckedType {
                 CheckedType::Resolved(TypeId::from("bool"))
             }
 
@@ -184,7 +184,7 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<char> {
-            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
+            fn resolve_type(&mut self, _: &mut TypeCtx) -> CheckedType {
                 CheckedType::Resolved(TypeId::from("char"))
             }
 
@@ -242,7 +242,7 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<$t> {
-            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
+            fn resolve_type(&mut self, _: &mut TypeCtx) -> CheckedType {
                 CheckedType::Resolved(TypeId::from($s))
             }
 
@@ -257,7 +257,7 @@ macro_rules! jk_primitive {
 
         impl From<$t> for JkConstant<$t> {
             fn from(rust_value: $t) -> Self {
-                JkConstant(rust_value, CheckedType::Resolved(TypeId::from("$s")))
+                JkConstant(rust_value, CheckedType::Resolved(TypeId::from($s)))
             }
         }
     };
@@ -338,7 +338,7 @@ impl Instruction for JkString {
 }
 
 impl TypeCheck for JkString {
-    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, _ctx: &mut TypeCtx) -> CheckedType {
         CheckedType::Resolved(TypeId::from("string"))
     }
 
@@ -373,10 +373,10 @@ mod tests {
     #[test]
     fn tc_string_type() {
         let mut ctx = Context::new();
-        let s = JkString::from("that's a jk string");
+        let mut s = JkString::from("that's a jk string");
 
         assert_eq!(
-            ctx.type_check(&s).unwrap(),
+            ctx.type_check(&mut s).unwrap(),
             CheckedType::Resolved(TypeId::from("string"))
         );
     }
@@ -384,10 +384,10 @@ mod tests {
     #[test]
     fn tc_bool_type() {
         let mut ctx = Context::new();
-        let s = JkBool::from(false);
+        let mut s = JkBool::from(false);
 
         assert_eq!(
-            ctx.type_check(&s).unwrap(),
+            ctx.type_check(&mut s).unwrap(),
             CheckedType::Resolved(TypeId::from("bool"))
         );
     }
@@ -395,10 +395,10 @@ mod tests {
     #[test]
     fn tc_i_type() {
         let mut ctx = Context::new();
-        let s = JkInt::from(0);
+        let mut s = JkInt::from(0);
 
         assert_eq!(
-            ctx.type_check(&s).unwrap(),
+            ctx.type_check(&mut s).unwrap(),
             CheckedType::Resolved(TypeId::from("int"))
         );
     }
@@ -406,10 +406,10 @@ mod tests {
     #[test]
     fn tc_f_type() {
         let mut ctx = Context::new();
-        let s = JkFloat::from(15.4);
+        let mut s = JkFloat::from(15.4);
 
         assert_eq!(
-            ctx.type_check(&s).unwrap(),
+            ctx.type_check(&mut s).unwrap(),
             CheckedType::Resolved(TypeId::from("float"))
         );
     }
