@@ -274,8 +274,8 @@ impl Context {
         self.included.remove(source);
     }
 
-    pub fn type_check(&mut self, instruction: &dyn Instruction) -> Result<CheckedType, Error> {
-        let res = instruction.resolve_type(&mut self.typechecker);
+    pub fn type_check(&mut self, instruction: &mut dyn Instruction) -> Result<CheckedType, Error> {
+        let res = instruction.type_of(&mut self.typechecker);
 
         self.error_handler
             .append(&mut self.typechecker.error_handler);
@@ -288,14 +288,14 @@ impl Context {
 
     pub fn execute(&mut self) -> Result<Option<ObjectInstance>, Error> {
         // The entry point always has a block
-        let ep = self.entry_point.block().unwrap().clone();
+        let mut ep = self.entry_point.block().unwrap().clone();
 
         self.scope_enter();
 
-        ep.resolve_type(&mut self.typechecker);
+        ep.type_of(&mut self.typechecker);
         ep.expand(self);
         self.typechecker.start_second_pass();
-        ep.resolve_type(&mut self.typechecker);
+        ep.type_of(&mut self.typechecker);
 
         self.error_handler
             .append(&mut self.typechecker.error_handler);

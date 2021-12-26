@@ -92,7 +92,7 @@ impl Instruction for Var {
 }
 
 impl TypeCheck for Var {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         match ctx.get_var(self.name()) {
             Some(var_ty) => var_ty.clone(),
             None => {

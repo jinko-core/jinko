@@ -200,8 +200,8 @@ impl Instruction for Loop {
 }
 
 impl TypeCheck for Loop {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        self.block.resolve_type(ctx)
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        self.block.type_of(ctx)
     }
 
     fn set_cached_type(&mut self, ty: CheckedType) {

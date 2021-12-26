@@ -98,12 +98,12 @@ impl Repl {
                 }
             };
 
-            let inst = match inst {
+            let mut inst = match inst {
                 Some(i) => i,
                 None => continue,
             };
 
-            if ctx.type_check(&*inst).is_err() {
+            if ctx.type_check(&mut *inst).is_err() {
                 ctx.emit_errors();
                 ctx.clear_errors();
                 continue;

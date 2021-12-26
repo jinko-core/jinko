@@ -126,9 +126,9 @@ impl Instruction for BinaryOp {
 }
 
 impl TypeCheck for BinaryOp {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        let l_type = self.lhs.resolve_type(ctx);
-        let r_type = self.rhs.resolve_type(ctx);
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        let l_type = self.lhs.type_of(ctx);
+        let r_type = self.rhs.type_of(ctx);
 
         if l_type != r_type {
             ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(

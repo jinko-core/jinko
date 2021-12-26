@@ -71,8 +71,8 @@ impl Instruction for FieldAccess {
 }
 
 impl TypeCheck for FieldAccess {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        let instance_ty = self.instance.resolve_type(ctx);
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        let instance_ty = self.instance.type_of(ctx);
         let instance_ty_name = match &instance_ty {
             CheckedType::Resolved(ti) => ti.id(),
             _ => {

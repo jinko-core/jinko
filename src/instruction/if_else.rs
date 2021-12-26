@@ -84,9 +84,9 @@ impl Instruction for IfElse {
 }
 
 impl TypeCheck for IfElse {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let bool_checkedtype = CheckedType::Resolved(TypeId::from("bool"));
-        let cond_ty = self.condition.resolve_type(ctx);
+        let cond_ty = self.condition.type_of(ctx);
         if cond_ty != bool_checkedtype {
             ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
                 "if condition should be a boolean, not a `{}`",
@@ -94,11 +94,11 @@ impl TypeCheck for IfElse {
             )));
         }
 
-        let if_ty = self.if_body.resolve_type(ctx);
+        let if_ty = self.if_body.type_of(ctx);
         let else_ty = self
             .else_body
-            .as_ref()
-            .map(|else_body| else_body.resolve_type(ctx));
+            .as_mut()
+            .map(|else_body| else_body.type_of(ctx));
 
         match (if_ty, else_ty) {
             (CheckedType::Void, None) => CheckedType::Void,

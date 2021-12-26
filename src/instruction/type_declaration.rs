@@ -90,7 +90,7 @@ impl Instruction for TypeDec {
 }
 
 impl TypeCheck for TypeDec {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         // TODO: FunctionDecs and TypeDec are very similar. Should we factor them together?
         let fields_ty = self
             .fields

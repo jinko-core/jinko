@@ -68,7 +68,7 @@ impl Instruction for VarOrEmptyType {
 }
 
 impl TypeCheck for VarOrEmptyType {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let kind = if self.kind == Kind::Unknown {
             self.resolve_kind(ctx)
         } else {
@@ -86,7 +86,7 @@ impl TypeCheck for VarOrEmptyType {
         match ty {
             CheckedType::Void => self.kind = Kind::VarAccess,
             CheckedType::Resolved(_) => self.kind = Kind::EmptyTypeInst,
-            CheckedType::Unknown => unreachable!(),
+            CheckedType::Unknown => self.kind = Kind::Unknown,
         }
         self.cached_type = Some(ty);
     }

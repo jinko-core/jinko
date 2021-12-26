@@ -226,7 +226,7 @@ pub trait TypeCheck {
     /// Go through the context in order to figure out the type of an instruction.
     /// This function should report errors using the context, and the [`ErrKind::TypeCheck`]
     /// error kind.
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType;
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType;
 
     /// Cache the type of an instruction
     fn set_cached_type(&mut self, ty: CheckedType);
@@ -247,25 +247,6 @@ pub trait TypeCheck {
                 new_ty
             }
             Some(ty) => ty.clone(),
-        }
-    }
-}
-
-/// Some [`Instruction`]s need to have their type checked multiple times. For example, a
-/// function might be called in multiple places, by various vaiables. These instructions
-/// can "cache" their type in order to not go through the resolver each time
-pub trait CachedTypeCheck: TypeCheck {
-    /// Store the given type somewhere in order to cache it
-    fn set_type(&mut self, ty: CheckedType);
-
-    /// Return a reference to the cached type, previously stored using [`set_type()`]
-    fn get_type(&self) -> &CheckedType;
-
-    /// If the type is not known yet, compute it by going through the [`TypeCheck`]
-    /// resolver. Otherwise, fetch it from the cached instance
-    fn type_check(&mut self, ctx: &mut TypeCtx) {
-        if let CheckedType::Unknown = self.get_type() {
-            self.set_type(self.resolve_type(ctx))
         }
     }
 }

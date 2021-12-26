@@ -51,11 +51,11 @@ impl Instruction for MethodCall {
 }
 
 impl TypeCheck for MethodCall {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let mut call = self.method.clone();
         call.add_arg_front(self.var.clone());
 
-        call.resolve_type(ctx)
+        call.type_of(ctx)
     }
 
     fn set_cached_type(&mut self, ty: CheckedType) {

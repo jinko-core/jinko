@@ -153,7 +153,7 @@ impl Instruction for TypeInstantiation {
 }
 
 impl TypeCheck for TypeInstantiation {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let (_, fields_ty) = match ctx.get_custom_type(self.type_name.id()) {
             Some(ty) => ty,
             None => {
@@ -171,8 +171,8 @@ impl TypeCheck for TypeInstantiation {
         let mut errors = vec![];
         for ((_, field_ty), value_ty) in fields_ty.iter().zip(
             self.fields
-                .iter()
-                .map(|var_assign| var_assign.value().resolve_type(ctx)),
+                .iter_mut()
+                .map(|var_assign| var_assign.value_mut().type_of(ctx)),
         ) {
             if field_ty != &value_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(

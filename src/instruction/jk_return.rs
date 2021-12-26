@@ -57,10 +57,10 @@ impl Instruction for Return {
 }
 
 impl TypeCheck for Return {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        match &self.value {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        match &mut self.value {
             None => CheckedType::Void,
-            Some(v) => v.resolve_type(ctx),
+            Some(v) => v.type_of(ctx),
         }
     }
 

@@ -77,7 +77,7 @@ impl Instruction for ExtraContent {
 }
 
 impl TypeCheck for ExtraContent {
-    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, _ctx: &mut TypeCtx) -> CheckedType {
         // FIXME: This should probably be removed, as well as the ExtraContent struct
         CheckedType::Void
     }
