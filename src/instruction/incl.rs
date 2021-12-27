@@ -18,6 +18,7 @@ pub struct Incl {
     path: String,
     alias: Option<String>,
     base: Option<PathBuf>,
+    typechecked: bool,
 }
 
 /// Default file that gets included when including a directory in jinko source code
@@ -29,6 +30,7 @@ impl Incl {
             path,
             alias,
             base: None,
+            typechecked: false,
         }
     }
 
@@ -232,7 +234,7 @@ impl Instruction for Incl {
 
 impl TypeCheck for Incl {
     // FIXME: We need to not add the path to the interpreter here
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         // TODO: Once we have proper locations for AST nodes this will no longer be necessary:
         // We'll be able to desugar an incl block into its list of nodes, and assign each of
         // them their proper location (path etc) so that we can visit them easily
@@ -271,13 +273,24 @@ impl TypeCheck for Incl {
         ctx.set_path(Some(formatted));
 
         content.iter_mut().for_each(|instr| {
-            instr.resolve_type(ctx);
+            instr.type_of(ctx);
         });
 
         // Reset the old path before leaving the instruction
         ctx.set_path(old_path);
 
         CheckedType::Void
+    }
+
+    fn set_cached_type(&mut self, _ty: CheckedType) {
+        self.typechecked = true
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        match self.typechecked {
+            true => Some(&CheckedType::Void),
+            false => None,
+        }
     }
 }
 

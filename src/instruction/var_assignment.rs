@@ -14,6 +14,7 @@ pub struct VarAssign {
     symbol: String,
 
     value: Box<dyn Instruction>,
+    typechecked: bool,
 }
 
 impl VarAssign {
@@ -22,6 +23,7 @@ impl VarAssign {
             mutable,
             symbol,
             value,
+            typechecked: false,
         }
     }
 
@@ -38,6 +40,11 @@ impl VarAssign {
     /// Get a reference to the value used to initialize the variable
     pub fn value(&self) -> &dyn Instruction {
         &*self.value
+    }
+
+    /// Get a mutable reference to the value used to initialize the variable
+    pub fn value_mut(&mut self) -> &mut dyn Instruction {
+        &mut *self.value
     }
 }
 
@@ -97,7 +104,7 @@ impl Instruction for VarAssign {
 }
 
 impl TypeCheck for VarAssign {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let second_pass = ctx.is_second_pass();
         let var_ty = match ctx.get_var(&self.symbol) {
             // FIXME: Remove clone?
@@ -120,7 +127,7 @@ impl TypeCheck for VarAssign {
                 checked_ty.clone()
             }
             None => {
-                let instance_ty = self.value.resolve_type(ctx);
+                let instance_ty = self.value.type_of(ctx);
                 if let Err(e) = ctx.declare_var(self.symbol.clone(), instance_ty) {
                     ctx.error(e);
                 }
@@ -132,7 +139,7 @@ impl TypeCheck for VarAssign {
         };
 
         // FIXME: We resolve the value twice
-        let value_ty = self.value.resolve_type(ctx);
+        let value_ty = self.value.type_of(ctx);
         if value_ty == CheckedType::Void {
             ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
                 "trying to assign statement `{}` to variable `{}`",
@@ -151,6 +158,17 @@ impl TypeCheck for VarAssign {
         }
 
         CheckedType::Void
+    }
+
+    fn set_cached_type(&mut self, _ty: CheckedType) {
+        self.typechecked = true;
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        match self.typechecked {
+            true => Some(&CheckedType::Void),
+            false => None,
+        }
     }
 }
 

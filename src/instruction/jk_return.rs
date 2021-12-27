@@ -18,12 +18,16 @@ use crate::{
 #[derive(Clone)]
 pub struct Return {
     value: Option<Box<dyn Instruction>>,
+    cached_type: Option<CheckedType>,
 }
 
 impl Return {
     /// Create a new Return instruction
     pub fn new(value: Option<Box<dyn Instruction>>) -> Return {
-        Return { value }
+        Return {
+            value,
+            cached_type: None,
+        }
     }
 }
 
@@ -53,11 +57,19 @@ impl Instruction for Return {
 }
 
 impl TypeCheck for Return {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
-        match &self.value {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        match &mut self.value {
             None => CheckedType::Void,
-            Some(v) => v.resolve_type(ctx),
+            Some(v) => v.type_of(ctx),
         }
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty)
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 

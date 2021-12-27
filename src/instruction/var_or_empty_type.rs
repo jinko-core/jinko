@@ -14,6 +14,9 @@ enum Kind {
 pub struct VarOrEmptyType {
     kind: Kind,
     symbol: String,
+    // FIXME: We can probably avoid keeping a `cached_type` and a `kind`. Only one
+    // is enough. Refactor later
+    cached_type: Option<CheckedType>,
 }
 
 impl VarOrEmptyType {
@@ -21,6 +24,7 @@ impl VarOrEmptyType {
         VarOrEmptyType {
             kind: Kind::Unknown,
             symbol,
+            cached_type: None,
         }
     }
 
@@ -64,7 +68,7 @@ impl Instruction for VarOrEmptyType {
 }
 
 impl TypeCheck for VarOrEmptyType {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let kind = if self.kind == Kind::Unknown {
             self.resolve_kind(ctx)
         } else {
@@ -76,6 +80,19 @@ impl TypeCheck for VarOrEmptyType {
             Kind::EmptyTypeInst => CheckedType::Resolved(TypeId::new(self.symbol.clone())),
             Kind::VarAccess => ctx.get_var(&self.symbol).unwrap().to_owned(),
         }
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        match ty {
+            CheckedType::Void => self.kind = Kind::VarAccess,
+            CheckedType::Resolved(_) => self.kind = Kind::EmptyTypeInst,
+            CheckedType::Unknown => self.kind = Kind::Unknown,
+        }
+        self.cached_type = Some(ty);
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 

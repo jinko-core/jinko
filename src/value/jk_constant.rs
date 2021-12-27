@@ -11,7 +11,7 @@ use std::convert::TryFrom;
 /// A JkConstant represents a primitive type in Jinko. It is used in order to
 /// implement integers, floating point numbers, characters, booleans and strings, as
 /// well as raw byte values later for custom types.
-pub struct JkConstant<T: Clone>(pub(crate) T);
+pub struct JkConstant<T: Clone>(pub(crate) T, CheckedType);
 
 impl<T: Clone> JkConstant<T> {
     pub fn rust_value(&self) -> T {
@@ -93,6 +93,12 @@ macro_rules! jk_primitive {
             }
         }
 
+        impl From<bool> for JkConstant<bool> {
+            fn from(value: bool) -> JkConstant<bool> {
+                JkConstant(value, CheckedType::Resolved(TypeId::from("bool")))
+            }
+        }
+
         impl Instruction for JkConstant<bool> {
             fn kind(&self) -> InstrKind {
                 InstrKind::Expression(None)
@@ -112,8 +118,14 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<bool> {
-            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
+            fn resolve_type(&mut self, _: &mut TypeCtx) -> CheckedType {
                 CheckedType::Resolved(TypeId::from("bool"))
+            }
+
+            fn set_cached_type(&mut self, _: CheckedType) {}
+
+            fn cached_type(&self) -> Option<&CheckedType> {
+                Some(&self.1)
             }
         }
 
@@ -147,6 +159,12 @@ macro_rules! jk_primitive {
             }
         }
 
+        impl From<char> for JkConstant<char> {
+            fn from(value: char) -> JkConstant<char> {
+                JkConstant(value, CheckedType::Resolved(TypeId::from("char")))
+            }
+        }
+
         impl Instruction for JkConstant<char> {
             fn kind(&self) -> InstrKind {
                 InstrKind::Expression(None)
@@ -166,8 +184,14 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<char> {
-            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
+            fn resolve_type(&mut self, _: &mut TypeCtx) -> CheckedType {
                 CheckedType::Resolved(TypeId::from("char"))
+            }
+
+            fn set_cached_type(&mut self, _: CheckedType) {}
+
+            fn cached_type(&self) -> Option<&CheckedType> {
+                Some(&self.1)
             }
         }
 
@@ -218,12 +242,24 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<$t> {
-            fn resolve_type(&self, _: &mut TypeCtx) -> CheckedType {
+            fn resolve_type(&mut self, _: &mut TypeCtx) -> CheckedType {
                 CheckedType::Resolved(TypeId::from($s))
+            }
+
+            fn set_cached_type(&mut self, _: CheckedType) {}
+
+            fn cached_type(&self) -> Option<&CheckedType> {
+                Some(&self.1)
             }
         }
 
         impl Generic for JkConstant<$t> {}
+
+        impl From<$t> for JkConstant<$t> {
+            fn from(rust_value: $t) -> Self {
+                JkConstant(rust_value, CheckedType::Resolved(TypeId::from($s)))
+            }
+        }
     };
 }
 
@@ -302,8 +338,14 @@ impl Instruction for JkString {
 }
 
 impl TypeCheck for JkString {
-    fn resolve_type(&self, _ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, _ctx: &mut TypeCtx) -> CheckedType {
         CheckedType::Resolved(TypeId::from("string"))
+    }
+
+    fn set_cached_type(&mut self, _: CheckedType) {}
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        Some(&self.1)
     }
 }
 
@@ -311,13 +353,13 @@ impl Generic for JkString {}
 
 impl From<&str> for JkConstant<String> {
     fn from(s: &str) -> Self {
-        JkConstant(s.to_string())
+        JkConstant(s.to_string(), CheckedType::Resolved(TypeId::from("string")))
     }
 }
 
-impl<T: Clone> From<T> for JkConstant<T> {
-    fn from(rust_value: T) -> Self {
-        JkConstant(rust_value)
+impl From<String> for JkConstant<String> {
+    fn from(s: String) -> Self {
+        JkConstant(s, CheckedType::Resolved(TypeId::from("string")))
     }
 }
 
@@ -331,10 +373,10 @@ mod tests {
     #[test]
     fn tc_string_type() {
         let mut ctx = Context::new();
-        let s = JkString::from("that's a jk string");
+        let mut s = JkString::from("that's a jk string");
 
         assert_eq!(
-            ctx.type_check(&s).unwrap(),
+            ctx.type_check(&mut s).unwrap(),
             CheckedType::Resolved(TypeId::from("string"))
         );
     }
@@ -342,10 +384,10 @@ mod tests {
     #[test]
     fn tc_bool_type() {
         let mut ctx = Context::new();
-        let s = JkBool::from(false);
+        let mut s = JkBool::from(false);
 
         assert_eq!(
-            ctx.type_check(&s).unwrap(),
+            ctx.type_check(&mut s).unwrap(),
             CheckedType::Resolved(TypeId::from("bool"))
         );
     }
@@ -353,10 +395,10 @@ mod tests {
     #[test]
     fn tc_i_type() {
         let mut ctx = Context::new();
-        let s = JkInt::from(0);
+        let mut s = JkInt::from(0);
 
         assert_eq!(
-            ctx.type_check(&s).unwrap(),
+            ctx.type_check(&mut s).unwrap(),
             CheckedType::Resolved(TypeId::from("int"))
         );
     }
@@ -364,10 +406,10 @@ mod tests {
     #[test]
     fn tc_f_type() {
         let mut ctx = Context::new();
-        let s = JkFloat::from(15.4);
+        let mut s = JkFloat::from(15.4);
 
         assert_eq!(
-            ctx.type_check(&s).unwrap(),
+            ctx.type_check(&mut s).unwrap(),
             CheckedType::Resolved(TypeId::from("float"))
         );
     }

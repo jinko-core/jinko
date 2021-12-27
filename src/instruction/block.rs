@@ -27,6 +27,7 @@ use crate::{
 pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
     is_statement: bool,
+    cached_type: Option<CheckedType>,
 }
 
 impl Block {
@@ -36,6 +37,7 @@ impl Block {
         Block {
             instructions: Vec::new(),
             is_statement: true,
+            cached_type: None,
         }
     }
 
@@ -118,11 +120,11 @@ impl Instruction for Block {
 }
 
 impl TypeCheck for Block {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let last_type = self
             .instructions
-            .iter()
-            .map(|inst| inst.resolve_type(ctx))
+            .iter_mut()
+            .map(|inst| inst.type_of(ctx))
             .last()
             .unwrap_or(CheckedType::Void);
 
@@ -130,6 +132,14 @@ impl TypeCheck for Block {
             true => CheckedType::Void,
             false => last_type,
         }
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty)
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 
@@ -239,13 +249,13 @@ mod tests {
     #[test]
     #[ignore]
     fn block_no_last_tychk() {
-        let b = crate::parser::constructs::expr("{ 12; 15; a = 14; }")
+        let mut b = crate::parser::constructs::expr("{ 12; 15; a = 14; }")
             .unwrap()
             .1;
 
         let mut ctx = Context::new();
 
-        assert_eq!(ctx.type_check(b.as_ref()).unwrap(), CheckedType::Void)
+        assert_eq!(ctx.type_check(b.as_mut()).unwrap(), CheckedType::Void)
     }
 
     #[test]

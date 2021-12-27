@@ -14,6 +14,7 @@ pub struct FunctionCall {
     fn_name: String,
     generics: Vec<TypeId>,
     args: Vec<Box<dyn Instruction>>,
+    typechecked: bool,
 }
 
 impl FunctionCall {
@@ -27,6 +28,7 @@ impl FunctionCall {
             fn_name,
             generics,
             args,
+            typechecked: false,
         }
     }
 
@@ -205,7 +207,7 @@ impl Instruction for FunctionCall {
 }
 
 impl TypeCheck for FunctionCall {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         // FIXME: This function is very large and should be refactored
         let (args_type, return_type) = match ctx.get_function(self.name()) {
             Some(checked_type) => checked_type,
@@ -238,7 +240,7 @@ impl TypeCheck for FunctionCall {
         for ((expected_name, expected_ty), given_ty) in args_type.iter().zip(
             self.args
                 .iter()
-                .map(|given_arg| given_arg.clone().resolve_type(ctx)),
+                .map(|given_arg| given_arg.clone().type_of(ctx)),
         ) {
             if expected_ty != &given_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
@@ -254,6 +256,17 @@ impl TypeCheck for FunctionCall {
         self.type_args(args, ctx);
 
         return_type
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        match self.typechecked {
+            true => Some(&CheckedType::Void),
+            false => None,
+        }
+    }
+
+    fn set_cached_type(&mut self, _ty: CheckedType) {
+        self.typechecked = true;
     }
 }
 
@@ -290,19 +303,19 @@ mod tests {
             func func0(a: int, b: int) {}
         };
 
-        let f_call = FunctionCall::new("func0".to_string(), vec![], vec![]);
+        let mut f_call = FunctionCall::new("func0".to_string(), vec![], vec![]);
 
-        assert!(ctx.type_check(&f_call).is_err());
+        assert!(ctx.type_check(&mut f_call).is_err());
         assert!(
             ctx.error_handler.has_errors(),
             "Given 0 arguments to 2 arguments function"
         );
         ctx.clear_errors();
 
-        let f_call =
+        let mut f_call =
             FunctionCall::new("func0".to_string(), vec![], vec![Box::new(JkInt::from(12))]);
 
-        assert!(ctx.type_check(&f_call).is_err());
+        assert!(ctx.type_check(&mut f_call).is_err());
         assert!(
             ctx.error_handler.has_errors(),
             "Given 1 arguments to 2 arguments function"

@@ -16,7 +16,7 @@ pub struct TypeId {
 }
 
 impl TypeId {
-    pub fn new(id: String) -> TypeId {
+    pub const fn new(id: String) -> TypeId {
         TypeId { id }
     }
 

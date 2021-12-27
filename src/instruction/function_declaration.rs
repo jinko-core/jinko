@@ -25,6 +25,7 @@ pub struct FunctionDec {
     generics: Vec<TypeId>,
     args: Vec<DecArg>,
     block: Option<Block>,
+    typechecked: bool,
 }
 
 impl FunctionDec {
@@ -42,6 +43,7 @@ impl FunctionDec {
             generics,
             args,
             block: None,
+            typechecked: false,
         }
     }
 
@@ -208,7 +210,7 @@ impl Instruction for FunctionDec {
 }
 
 impl TypeCheck for FunctionDec {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let return_ty = match &self.ty {
             // FIXME: Remove clone?
             Some(ty) => CheckedType::Resolved(ty.clone()),
@@ -241,8 +243,8 @@ impl TypeCheck for FunctionDec {
         });
 
         // If the function has no block, trust the declaration
-        if let Some(b) = &self.block {
-            let block_ty = b.resolve_type(ctx);
+        if let Some(b) = &mut self.block {
+            let block_ty = b.type_of(ctx);
 
             if block_ty != return_ty {
                 ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
@@ -261,6 +263,17 @@ impl TypeCheck for FunctionDec {
         ctx.scope_exit();
 
         CheckedType::Void
+    }
+
+    fn set_cached_type(&mut self, _ty: CheckedType) {
+        self.typechecked = true
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        match self.typechecked {
+            true => Some(&CheckedType::Void),
+            false => None,
+        }
     }
 }
 
@@ -325,7 +338,7 @@ mod tests {
 
         let mut ctx = Context::new();
 
-        assert_eq!(ctx.type_check(&function).unwrap(), CheckedType::Void);
+        assert_eq!(ctx.type_check(&mut function).unwrap(), CheckedType::Void);
         assert!(!ctx.error_handler.has_errors());
     }
 
@@ -340,7 +353,7 @@ mod tests {
 
         let mut ctx = Context::new();
 
-        assert_eq!(ctx.type_check(&function).unwrap(), CheckedType::Void);
+        assert_eq!(ctx.type_check(&mut function).unwrap(), CheckedType::Void);
         assert!(!ctx.error_handler.has_errors());
     }
 
@@ -359,7 +372,7 @@ mod tests {
 
         let mut ctx = Context::new();
 
-        assert!(ctx.type_check(&function).is_err());
+        assert!(ctx.type_check(&mut function).is_err());
         assert!(ctx.error_handler.has_errors());
     }
 

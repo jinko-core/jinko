@@ -16,6 +16,7 @@ pub struct TypeInstantiation {
     type_name: TypeId,
     generics: Vec<TypeId>,
     fields: Vec<VarAssign>,
+    cached_type: Option<CheckedType>,
 }
 
 impl TypeInstantiation {
@@ -25,6 +26,7 @@ impl TypeInstantiation {
             type_name,
             generics: vec![],
             fields: vec![],
+            cached_type: None,
         }
     }
 
@@ -151,7 +153,7 @@ impl Instruction for TypeInstantiation {
 }
 
 impl TypeCheck for TypeInstantiation {
-    fn resolve_type(&self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let (_, fields_ty) = match ctx.get_custom_type(self.type_name.id()) {
             Some(ty) => ty,
             None => {
@@ -169,8 +171,8 @@ impl TypeCheck for TypeInstantiation {
         let mut errors = vec![];
         for ((_, field_ty), value_ty) in fields_ty.iter().zip(
             self.fields
-                .iter()
-                .map(|var_assign| var_assign.value().resolve_type(ctx)),
+                .iter_mut()
+                .map(|var_assign| var_assign.value_mut().type_of(ctx)),
         ) {
             if field_ty != &value_ty {
                 errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
@@ -186,6 +188,14 @@ impl TypeCheck for TypeInstantiation {
         }
 
         CheckedType::Resolved(self.type_name.clone())
+    }
+
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty)
+    }
+
+    fn cached_type(&self) -> Option<&CheckedType> {
+        self.cached_type.as_ref()
     }
 }
 
