@@ -1,0 +1,3 @@
+incl generic_fns
+
+returns_generic[bool]()
