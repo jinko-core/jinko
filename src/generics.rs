@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use crate::instruction::{Instruction, TypeId};
+use crate::instruction::TypeId;
 use crate::{log, ErrKind, Error};
 use crate::{Context, TypeCtx};
 
@@ -75,24 +75,6 @@ pub trait Generic {
     /// For example, a call to the function `f[T]` should now be replaced by a call to
     /// the function `generics::mangle("f", GenericMap { TypeId "T" })` // FIXME: Fix doc
     fn resolve_self(&mut self, _ctx: &mut TypeCtx) {}
-
-    /// Generate a new instruction from itself, according to a given type map. The generated
-    /// instruction should not contain any generic types. In the case of the following
-    /// function declaration:
-    ///
-    /// ```ignore
-    /// func generic_f[T](a: T);
-    /// ```
-    ///
-    /// With a typemap linking the type `T` to the type `float`, this call would generate
-    /// the following function declaration:
-    ///
-    /// ```ignore
-    /// func generic_f+float(a: float); // according to the mangling rules
-    /// ```
-    fn generate_new(&self, _type_map: GenericMap) -> Option<Box<dyn Instruction>> {
-        None
-    }
 }
 
 #[cfg(test)]
