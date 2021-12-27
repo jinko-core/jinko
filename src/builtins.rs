@@ -126,12 +126,6 @@ fn fmt_char(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     Some(JkString::from(value.to_string()).to_instance())
 }
 
-fn fmt_bool(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
-    let value = JkBool::from_instance(&args[0].execute(ctx).unwrap()).0;
-
-    Some(JkString::from(value.to_string()).to_instance())
-}
-
 fn fmt_float(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let value = JkFloat::from_instance(&args[0].execute(ctx).unwrap()).0;
 
@@ -158,7 +152,6 @@ impl Builtins {
         builtins.add("__builtin_ffi_link_with", ffi_link_with);
         builtins.add("__builtin_fmt_int", fmt_int);
         builtins.add("__builtin_fmt_char", fmt_char);
-        builtins.add("__builtin_fmt_bool", fmt_bool);
         builtins.add("__builtin_fmt_float", fmt_float);
         builtins.add("__builtin_arg_get", arg_get);
         builtins.add("__builtin_arg_amount", arg_amount);
@@ -238,7 +231,6 @@ mod tests {
     #[test]
     fn t_fmt_builtins_are_valid() {
         jinko! {
-            __builtin_fmt_bool(true);
             __builtin_fmt_char('a');
             __builtin_fmt_int(158);
             __builtin_fmt_float(7.4);
