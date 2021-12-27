@@ -290,11 +290,16 @@ impl Generic for FunctionCall {
                 Ok(m) => m,
             };
 
-        let new_fn =
+        let mut new_fn =
             dec.from_type_map(generics::mangle(dec.name(), &self.generics), ctx, &type_map);
-
-        // FIXME: No unwrap
-        ctx.add_function(new_fn).unwrap();
+        if let Err(e) = ctx.type_check(&mut new_fn) {
+            // FIXME: This should probably be a generic error instead
+            // FIXME: The name is also mangled and shouldn't be
+            ctx.error(e);
+        } else {
+            // FIXME: No unwrap
+            ctx.add_function(new_fn).unwrap();
+        }
     }
 
     fn resolve_self(&mut self, ctx: &mut TypeCtx) {

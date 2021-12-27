@@ -51,23 +51,26 @@ impl FunctionDec {
     /// Generate a new instance of [`FunctionDec`] from a given generic type map
     pub fn from_type_map(
         &self,
-        name: String,
+        mangled_name: String,
         _ctx: &mut Context,
         type_map: &GenericMap,
     ) -> FunctionDec {
         let mut new_fn = self.clone();
-        new_fn.name = name;
+        new_fn.name = mangled_name;
         new_fn.generics = vec![];
-
-        // FIXME: This does not change the return type?
 
         new_fn
             .args
             .iter_mut()
             .zip(self.args().iter())
             .for_each(|(new_arg, old_generic)| {
+                // FIXME: Can we unwrap here?
                 new_arg.set_type(type_map.get(old_generic.get_type()).unwrap().clone())
             });
+
+        // FIXME: Can we unwrap here? Are we sure that we have been typechecked or that
+        // the type exists? If not, we need to return a Result<FunctionDec>
+        new_fn.ty = new_fn.ty.map(|return_ty| type_map.get(&return_ty).unwrap().clone());
 
         // FIXME: We also need to generate a new version of each instruction in the
         // block
