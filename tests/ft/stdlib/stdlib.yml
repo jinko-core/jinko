@@ -52,3 +52,8 @@ tests:
       - "--no-std"
       - "tests/ft/stdlib/range/advance.jk"
     exit_code: 1
+  - name: "Test formatting functions"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/stdlib/fmt.jk"
+    exit_code: 0

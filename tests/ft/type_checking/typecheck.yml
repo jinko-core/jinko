@@ -96,3 +96,8 @@ tests:
     args:
       - "tests/ft/type_checking/invalid/empty_types.jk"
     exit_code: 1
+  - name: "Invalid format string"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/fmt.jk"
+    exit_code: 1
