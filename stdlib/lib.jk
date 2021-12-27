@@ -1,4 +1,5 @@
 incl pair
+incl int
 incl string
 incl maybe
 incl range
