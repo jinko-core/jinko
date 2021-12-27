@@ -42,7 +42,7 @@ fn handle_exit_code(result: Option<ObjectInstance>) -> ! {
                 _ => exit(0),
             },
             CheckedType::Void => exit(0),
-            CheckedType::Unknown => unreachable!("this shouldn't happen"),
+            CheckedType::Later | CheckedType::Error => unreachable!("this shouldn't happen"),
         },
     }
 }

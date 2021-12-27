@@ -247,7 +247,7 @@ impl TypeCheck for Incl {
             Ok(f) => f,
             Err(e) => {
                 ctx.error(e);
-                return CheckedType::Unknown;
+                return CheckedType::Error;
             }
         };
 
@@ -262,7 +262,7 @@ impl TypeCheck for Incl {
             Err((e1, e2)) => {
                 ctx.error(e1);
                 ctx.error(e2);
-                return CheckedType::Unknown;
+                return CheckedType::Error;
             }
         };
 

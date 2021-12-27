@@ -162,7 +162,7 @@ impl TypeCheck for TypeInstantiation {
                     // FIXME: Remove this clone, not useful
                     CheckedType::Resolved(self.type_name.clone())
                 )));
-                return CheckedType::Unknown;
+                return CheckedType::Error;
             }
         };
 

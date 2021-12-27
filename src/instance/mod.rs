@@ -44,7 +44,7 @@ pub struct ObjectInstance {
 impl ObjectInstance {
     /// Create a new, empty instance without a type or a size
     pub fn empty() -> ObjectInstance {
-        ObjectInstance::new(CheckedType::Unknown, 0, vec![], None)
+        ObjectInstance::new(CheckedType::Error, 0, vec![], None)
     }
 
     /// Create a new instance

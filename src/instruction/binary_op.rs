@@ -137,7 +137,7 @@ impl TypeCheck for BinaryOp {
                 self.op.as_str(),
                 r_type,
             )));
-            return CheckedType::Unknown;
+            return CheckedType::Error;
         }
 
         match self.op {

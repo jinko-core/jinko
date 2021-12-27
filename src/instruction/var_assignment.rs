@@ -121,7 +121,7 @@ impl TypeCheck for VarAssign {
                         self.symbol()
                     );
                     ctx.error(Error::new(ErrKind::TypeChecker).with_msg(err_msg));
-                    return CheckedType::Unknown;
+                    return CheckedType::Error;
                 }
 
                 checked_ty.clone()
@@ -146,7 +146,7 @@ impl TypeCheck for VarAssign {
                 self.value().print(),
                 self.symbol
             )));
-            return CheckedType::Unknown;
+            return CheckedType::Error;
         }
 
         if var_ty != value_ty {
@@ -154,7 +154,7 @@ impl TypeCheck for VarAssign {
                 "trying to assign value of types `{}` to variable of type `{}`",
                 value_ty, var_ty
             )));
-            return CheckedType::Unknown;
+            return CheckedType::Error;
         }
 
         CheckedType::Void
