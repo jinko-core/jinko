@@ -49,10 +49,17 @@ impl FunctionDec {
     }
 
     /// Generate a new instance of [`FunctionDec`] from a given generic type map
-    pub fn from_type_map(&self, name: String, type_map: &GenericMap) -> FunctionDec {
+    pub fn from_type_map(
+        &self,
+        name: String,
+        _ctx: &mut Context,
+        type_map: &GenericMap,
+    ) -> FunctionDec {
         let mut new_fn = self.clone();
         new_fn.name = name;
         new_fn.generics = vec![];
+
+        // FIXME: This does not change the return type?
 
         new_fn
             .args
@@ -61,6 +68,12 @@ impl FunctionDec {
             .for_each(|(new_arg, old_generic)| {
                 new_arg.set_type(type_map.get(old_generic.get_type()).unwrap().clone())
             });
+
+        // FIXME: We also need to generate a new version of each instruction in the
+        // block
+        // if let Some(b) = &mut new_fn.block {
+        //     b.resolve_self(ctx);
+        // }
 
         new_fn
     }
@@ -229,13 +242,18 @@ impl Instruction for FunctionDec {
 
 impl TypeCheck for FunctionDec {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        // If a declaration contains generic types, there is no point in type-checking
+        // it: All the methods or field accesses will, by definition, not exist, since
+        // the generic types do not exist yet
         if !self.generics.is_empty() {
+            // Just declare the function so we have it in the context and can
+            // duplicate it
             if let Err(e) = ctx.declare_function(self.name().into(), self.clone()) {
                 ctx.error(e);
-                return CheckedType::Unknown;
+                return CheckedType::Error;
             }
 
-            return CheckedType::Void;
+            return CheckedType::Later;
         }
 
         // FIXME: Remove clone?

@@ -228,7 +228,6 @@ impl TypeCheck for FunctionCall {
         let (args_type, return_type) = (function.args(), function.ty());
 
         let args_type = args_type.clone();
-        let return_type = return_type.clone();
 
         let mut errors = vec![];
         let mut args = vec![];
@@ -291,7 +290,8 @@ impl Generic for FunctionCall {
                 Ok(m) => m,
             };
 
-        let new_fn = dec.from_type_map(generics::mangle(dec.name(), &self.generics), &type_map);
+        let new_fn =
+            dec.from_type_map(generics::mangle(dec.name(), &self.generics), ctx, &type_map);
 
         // FIXME: No unwrap
         ctx.add_function(new_fn).unwrap();
