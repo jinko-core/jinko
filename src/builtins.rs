@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use crate::ffi;
 use crate::instance::{FromObjectInstance, ToObjectInstance};
-use crate::{Context, Instruction, JkBool, JkInt, JkString, ObjectInstance};
+use crate::{Context, Instruction, JkBool, JkChar, JkFloat, JkInt, JkString, ObjectInstance};
 
 type Args = Vec<Box<dyn Instruction>>;
 type BuiltinFn = fn(&mut Context, Args) -> Option<ObjectInstance>;
@@ -114,6 +114,30 @@ fn exit(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     std::process::exit(exit_code as i32);
 }
 
+fn fmt_int(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let value = JkInt::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    Some(JkString::from(value.to_string()).to_instance())
+}
+
+fn fmt_char(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let value = JkChar::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    Some(JkString::from(value.to_string()).to_instance())
+}
+
+fn fmt_bool(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let value = JkBool::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    Some(JkString::from(value.to_string()).to_instance())
+}
+
+fn fmt_float(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let value = JkFloat::from_instance(&args[0].execute(ctx).unwrap()).0;
+
+    Some(JkString::from(value.to_string()).to_instance())
+}
+
 impl Builtins {
     fn add(&mut self, name: &'static str, builtin_fn: BuiltinFn) {
         self.functions.insert(String::from(name), builtin_fn);
@@ -132,6 +156,10 @@ impl Builtins {
         builtins.add("__builtin_string_is_empty", string_is_empty);
         builtins.add("__builtin_string_equals", string_equals);
         builtins.add("__builtin_ffi_link_with", ffi_link_with);
+        builtins.add("__builtin_fmt_int", fmt_int);
+        builtins.add("__builtin_fmt_char", fmt_char);
+        builtins.add("__builtin_fmt_bool", fmt_bool);
+        builtins.add("__builtin_fmt_float", fmt_float);
         builtins.add("__builtin_arg_get", arg_get);
         builtins.add("__builtin_arg_amount", arg_amount);
         builtins.add("__builtin_exit", exit);
@@ -205,5 +233,15 @@ mod tests {
         }
 
         assert_eq!(WEXITSTATUS(status), 42);
+    }
+
+    #[test]
+    fn t_fmt_builtins_are_valid() {
+        jinko! {
+            __builtin_fmt_bool(true);
+            __builtin_fmt_char('a');
+            __builtin_fmt_int(158);
+            __builtin_fmt_float(7.4);
+        };
     }
 }
