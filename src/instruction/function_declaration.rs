@@ -54,7 +54,7 @@ impl FunctionDec {
         mangled_name: String,
         _ctx: &mut Context,
         type_map: &GenericMap,
-    ) -> FunctionDec {
+    ) -> Result<FunctionDec, Error> {
         let mut new_fn = self.clone();
         new_fn.name = mangled_name;
         new_fn.generics = vec![];
@@ -70,7 +70,9 @@ impl FunctionDec {
 
         // FIXME: Can we unwrap here? Are we sure that we have been typechecked or that
         // the type exists? If not, we need to return a Result<FunctionDec>
-        new_fn.ty = new_fn.ty.map(|return_ty| type_map.get(&return_ty).unwrap().clone());
+        new_fn.ty = new_fn
+            .ty
+            .map(|return_ty| type_map.get(&return_ty).unwrap().clone());
 
         // FIXME: We also need to generate a new version of each instruction in the
         // block
@@ -78,7 +80,7 @@ impl FunctionDec {
         //     b.resolve_self(ctx);
         // }
 
-        new_fn
+        Ok(new_fn)
     }
 
     pub fn generics(&self) -> &Vec<TypeId> {

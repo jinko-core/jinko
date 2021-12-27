@@ -291,7 +291,14 @@ impl Generic for FunctionCall {
             };
 
         let mut new_fn =
-            dec.from_type_map(generics::mangle(dec.name(), &self.generics), ctx, &type_map);
+            match dec.from_type_map(generics::mangle(dec.name(), &self.generics), ctx, &type_map) {
+                Ok(f) => f,
+                Err(e) => {
+                    ctx.error(e);
+                    return;
+                }
+            };
+
         if let Err(e) = ctx.type_check(&mut new_fn) {
             // FIXME: This should probably be a generic error instead
             // FIXME: The name is also mangled and shouldn't be
