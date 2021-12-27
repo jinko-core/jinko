@@ -80,7 +80,7 @@ impl TypeCheck for FieldAccess {
                     "trying to access field `{}` on statement",
                     self.field_name
                 )));
-                return CheckedType::Unknown;
+                return CheckedType::Error;
             }
         };
 
@@ -98,7 +98,7 @@ impl TypeCheck for FieldAccess {
                     "trying to access field `{}` on instance of type `{}`",
                     self.field_name, instance_ty
                 )));
-                CheckedType::Unknown
+                CheckedType::Error
             }
         }
     }

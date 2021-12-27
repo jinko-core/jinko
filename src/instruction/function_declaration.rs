@@ -256,7 +256,7 @@ impl TypeCheck for FunctionDec {
 
                 ctx.scope_exit();
 
-                return CheckedType::Unknown;
+                return CheckedType::Error;
             }
         }
 

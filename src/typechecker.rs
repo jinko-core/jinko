@@ -17,12 +17,13 @@ use std::{
 pub enum CheckedType {
     Resolved(TypeId),
     Void,
-    Unknown,
+    Later,
+    Error,
 }
 
 impl Default for CheckedType {
     fn default() -> CheckedType {
-        CheckedType::Unknown
+        CheckedType::Error
     }
 }
 
@@ -31,7 +32,7 @@ impl Display for CheckedType {
         match self {
             CheckedType::Resolved(ty) => write!(f, "{}", ty),
             CheckedType::Void => write!(f, "{}", "void".purple()),
-            CheckedType::Unknown => write!(f, "{}", "!!unknown!!".red()),
+            CheckedType::Later | CheckedType::Error => write!(f, "{}", "!!unknown!!".red()),
         }
     }
 }
@@ -217,8 +218,12 @@ impl Default for TypeCtx {
 ///     - Resolve(type): This means that the type of the [`Instruction`] was abled to
 ///     get resolved statically
 ///     - Void: The [`Instruction`] is not of any type. It corresponds to a statement.
-///     - Unknown: This means that even after the typechecking pass, the instruction's
-///     type is still unclear.
+///     - Later: The [`Instruction`] cannot be typechecked at the time. This can happen
+///       due to a function/type declaration being past the call/instantiation site, or in
+///       the case of generics when monomorphized functions might not have been generated
+///       yet.
+///     - Error: This means that even after the typechecking pass, the instruction's
+///       type is still unclear.
 /// Every [`Instruction`] should keep a cached copy of its own type. This is important
 /// for later passes of the typechecker or generic expansion. To do so, a special field
 /// of the type `Option<CheckedType>` should be kept, and originally initialized to `None`

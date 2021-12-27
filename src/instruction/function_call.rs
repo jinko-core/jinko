@@ -217,7 +217,7 @@ impl TypeCheck for FunctionCall {
                     "function `{}` was not declared in this scope",
                     self.name()
                 )));
-                return CheckedType::Unknown;
+                return CheckedType::Error;
             }
         };
 

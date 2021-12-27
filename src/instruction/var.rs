@@ -100,7 +100,7 @@ impl TypeCheck for Var {
                     Error::new(ErrKind::TypeChecker)
                         .with_msg(format!("use of undeclared variable: `{}`", self.name())),
                 );
-                CheckedType::Unknown
+                CheckedType::Error
             }
         }
     }

@@ -108,7 +108,7 @@ impl TypeCheck for IfElse {
                         "incompatible types for `if` and `else` block: {} and {}",
                         if_ty, else_ty,
                     )));
-                    CheckedType::Unknown
+                    CheckedType::Error
                 } else {
                     if_ty
                 }
@@ -118,7 +118,7 @@ impl TypeCheck for IfElse {
                     "`if` block has a return type ({}) but no else block to match it",
                     if_ty
                 )));
-                CheckedType::Unknown
+                CheckedType::Error
             }
         }
     }

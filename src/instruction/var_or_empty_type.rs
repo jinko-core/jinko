@@ -76,7 +76,7 @@ impl TypeCheck for VarOrEmptyType {
         };
 
         match kind {
-            Kind::Unknown => CheckedType::Unknown,
+            Kind::Unknown => CheckedType::Error,
             Kind::EmptyTypeInst => CheckedType::Resolved(TypeId::new(self.symbol.clone())),
             Kind::VarAccess => ctx.get_var(&self.symbol).unwrap().to_owned(),
         }
@@ -86,7 +86,8 @@ impl TypeCheck for VarOrEmptyType {
         match ty {
             CheckedType::Void => self.kind = Kind::VarAccess,
             CheckedType::Resolved(_) => self.kind = Kind::EmptyTypeInst,
-            CheckedType::Unknown => self.kind = Kind::Unknown,
+            // FIXME: Is Later truly an error here?
+            CheckedType::Later | CheckedType::Error => self.kind = Kind::Unknown,
         }
         self.cached_type = Some(ty);
     }
