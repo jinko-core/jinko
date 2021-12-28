@@ -112,7 +112,15 @@ impl TypeCheck for FieldAccess {
     }
 }
 
-impl Generic for FieldAccess {}
+impl Generic for FieldAccess {
+    fn expand(&self, ctx: &mut Context) {
+        self.instance.expand(ctx)
+    }
+
+    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        self.instance.resolve_self(ctx)
+    }
+}
 
 #[cfg(test)]
 mod tests {

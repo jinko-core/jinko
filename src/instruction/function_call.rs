@@ -209,9 +209,8 @@ impl Instruction for FunctionCall {
 
 impl TypeCheck for FunctionCall {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        // FIXME: Is this what we really want to do?
         if !self.generics.is_empty() {
-            return CheckedType::Void;
+            return CheckedType::Later;
         }
 
         // FIXME: This function is very large and should be refactored
@@ -226,6 +225,12 @@ impl TypeCheck for FunctionCall {
                 return CheckedType::Error;
             }
         };
+
+        // If the declaration contains generics but not the call, typecheck later still
+        if !function.generics().is_empty() {
+            return CheckedType::Later;
+        }
+
         let (args_type, return_type) = (function.args(), function.ty());
 
         let args_type = args_type.clone();
