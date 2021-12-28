@@ -24,3 +24,8 @@ tests:
     args:
       - "tests/ft/generics/undeclared_arg_generic.jk"
     exit_code: 1
+  - name: "Valid call to same generic fn twice"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_call_generic_twice.jk"
+    exit_code: 0

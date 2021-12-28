@@ -1,0 +1,4 @@
+incl generic_fns
+
+id[bool](false);
+id[bool](true);

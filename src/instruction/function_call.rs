@@ -279,20 +279,21 @@ impl TypeCheck for FunctionCall {
 
 impl Generic for FunctionCall {
     fn expand(&self, ctx: &mut Context) {
-        // We can unwrap here since this is a typechecking error and should have been
-        // caught already in an earlier pass
-        let dec = ctx.typechecker.get_function(&self.fn_name).unwrap().clone(); // FIXME: No clone
-        let type_map =
-            match GenericMap::create(dec.generics(), &self.generics, &mut ctx.typechecker) {
-                Err(e) => {
-                    ctx.error(e);
-                    return;
-                }
-                Ok(m) => m,
-            };
+        let generic_name = generics::mangle(&self.fn_name, &self.generics);
+        if ctx.get_function(&generic_name).is_none() {
+            // We can unwrap here since this is a typechecking error and should have been
+            // caught already in an earlier pass
+            let dec = ctx.typechecker.get_function(&self.fn_name).unwrap().clone(); // FIXME: No clone
+            let type_map =
+                match GenericMap::create(dec.generics(), &self.generics, &mut ctx.typechecker) {
+                    Err(e) => {
+                        ctx.error(e);
+                        return;
+                    }
+                    Ok(m) => m,
+                };
 
-        let mut new_fn =
-            match dec.from_type_map(generics::mangle(dec.name(), &self.generics), &type_map, ctx) {
+            let mut new_fn = match dec.from_type_map(generic_name, &type_map, ctx) {
                 Ok(f) => f,
                 Err(e) => {
                     ctx.error(e);
@@ -300,13 +301,13 @@ impl Generic for FunctionCall {
                 }
             };
 
-        if let Err(e) = ctx.type_check(&mut new_fn) {
-            // FIXME: This should probably be a generic error instead
-            // FIXME: The name is also mangled and shouldn't be
-            ctx.error(e);
-        } else {
-            // FIXME: No unwrap
-            ctx.add_function(new_fn).unwrap();
+            if let Err(e) = ctx.type_check(&mut new_fn) {
+                // FIXME: This should probably be a generic error instead
+                // FIXME: The name is also mangled and shouldn't be
+                ctx.error(e);
+            } else {
+                ctx.add_function(new_fn).unwrap();
+            }
         }
     }
 
