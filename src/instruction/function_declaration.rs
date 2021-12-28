@@ -51,23 +51,36 @@ impl FunctionDec {
     /// Generate a new instance of [`FunctionDec`] from a given generic type map
     pub fn from_type_map(
         &self,
-        name: String,
-        _ctx: &mut Context,
+        mangled_name: String,
         type_map: &GenericMap,
-    ) -> FunctionDec {
+        ctx: &mut Context,
+    ) -> Result<FunctionDec, Error> {
         let mut new_fn = self.clone();
-        new_fn.name = name;
+        new_fn.name = mangled_name;
         new_fn.generics = vec![];
 
-        // FIXME: This does not change the return type?
+        let mut is_err = false;
 
         new_fn
             .args
             .iter_mut()
             .zip(self.args().iter())
             .for_each(|(new_arg, old_generic)| {
-                new_arg.set_type(type_map.get(old_generic.get_type()).unwrap().clone())
+                let new_type = match type_map.get_match(old_generic.get_type()) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        ctx.error(e);
+                        is_err = true;
+                        TypeId::void()
+                    }
+                };
+                new_arg.set_type(new_type);
             });
+
+        if let Some(ret_ty) = new_fn.ty {
+            let new_ret_ty = type_map.get_match(&ret_ty)?;
+            new_fn.ty = Some(new_ret_ty);
+        }
 
         // FIXME: We also need to generate a new version of each instruction in the
         // block
@@ -75,7 +88,10 @@ impl FunctionDec {
         //     b.resolve_self(ctx);
         // }
 
-        new_fn
+        match is_err {
+            true => Err(Error::new(ErrKind::Generics)),
+            false => Ok(new_fn),
+        }
     }
 
     pub fn generics(&self) -> &Vec<TypeId> {

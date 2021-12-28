@@ -14,3 +14,13 @@ tests:
     args:
       - "tests/ft/generics/valid_id.jk"
     exit_code: 0
+  - name: "Undeclared return type"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/undeclared_return_generic.jk"
+    exit_code: 1
+  - name: "Undeclared type in arguments"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/undeclared_arg_generic.jk"
+    exit_code: 1

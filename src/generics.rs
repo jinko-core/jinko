@@ -8,7 +8,63 @@ use crate::instruction::TypeId;
 use crate::{log, ErrKind, Error};
 use crate::{Context, TypeCtx};
 
-pub type GenericMap = HashMap<TypeId, TypeId>;
+#[derive(Default)]
+pub struct GenericMap {
+    map: HashMap<TypeId, TypeId>,
+}
+
+impl GenericMap {
+    /// Create a generic map from two sets of [`TypeId`]s: The set of generics to resolve,
+    /// and the set of resolved generics.
+    pub fn create(
+        generics: &[TypeId],
+        resolved: &[TypeId],
+        ctx: &mut TypeCtx,
+    ) -> Result<GenericMap, Error> {
+        if generics.len() != resolved.len() {
+            // FIXME: Add better error message here printing both sets of generics
+            let err_msg = String::from("missing types in generic expansion");
+            return Err(Error::new(ErrKind::Generics).with_msg(err_msg));
+        }
+
+        let mut map = GenericMap::default();
+
+        let mut is_err = false;
+
+        generics.iter().zip(resolved).for_each(|(l_ty, r_ty)| {
+            log!("mapping generic: {} <- {}", l_ty, r_ty);
+            if let Err(e) = map.declare(l_ty.clone(), r_ty.clone()) {
+                ctx.error(e);
+                is_err = true;
+            }
+        });
+
+        match is_err {
+            true => Err(Error::new(ErrKind::Generics)),
+            false => Ok(map),
+        }
+    }
+
+    /// Declare a new type "match" in the map. This function associates a generic type
+    /// with its resolved counterpart, and errors out otherwise
+    pub fn declare(&mut self, lty: TypeId, rty: TypeId) -> Result<(), Error> {
+        match self.map.insert(lty.clone(), rty.clone()) {
+            None => Ok(()),
+            Some(existing_ty) => Err(Error::new(ErrKind::Generics).with_msg(format!(
+                "mapping type to already mapped generic type: {} <- {} with {}",
+                lty, existing_ty, rty
+            ))),
+        }
+    }
+
+    /// Get the type associated with a generic type in a previous call to `declare()`
+    pub fn get_match(&self, to_resolve: &TypeId) -> Result<TypeId, Error> {
+        self.map.get(to_resolve).cloned().ok_or_else(|| {
+            Error::new(ErrKind::Generics)
+                .with_msg(format!("undeclared generic type: {}", to_resolve))
+        })
+    }
+}
 
 /// Mangle a name to resolve it to its proper expanded name.
 /// The format used is the following:
@@ -23,43 +79,6 @@ pub fn mangle(name: &str, types: &[TypeId]) -> String {
     log!("mangled: {}", &mangled);
 
     mangled
-}
-
-/// Create a generic map from two sets of [`TypeId`]s: The set of generics to resolve,
-/// and the set of resolved generics.
-pub fn create_map(
-    generics: &[TypeId],
-    resolved: &[TypeId],
-    ctx: &mut TypeCtx,
-) -> Result<GenericMap, Error> {
-    if generics.len() != resolved.len() {
-        // FIXME: Add better error message here printing both sets of generics
-        let err_msg = String::from("missing types in generic expansion");
-        return Err(Error::new(ErrKind::Generics).with_msg(err_msg));
-    }
-
-    let mut map = GenericMap::new();
-
-    let mut is_err = false;
-
-    generics.iter().zip(resolved).for_each(|(l_ty, r_ty)| {
-        log!("mapping generic: {} <- {}", l_ty, r_ty);
-        match map.insert(l_ty.clone(), r_ty.clone()) {
-            None => {}
-            Some(existing_ty) => {
-                ctx.error(Error::new(ErrKind::Generics).with_msg(format!(
-                    "mapping type to already mapped generic type: {} <- {} with {}",
-                    l_ty, existing_ty, r_ty
-                )));
-                is_err = true;
-            }
-        }
-    });
-
-    match is_err {
-        true => Err(Error::new(ErrKind::Generics)),
-        false => Ok(map),
-    }
 }
 
 /// Since most of the instructions cannot do generic expansion, we can implement
