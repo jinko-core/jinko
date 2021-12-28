@@ -44,12 +44,12 @@ tests:
     args:
       - "tests/ft/generics/invalid_ducktyping.jk"
     exit_code: 1
-      # FIXME: Do not ignore once #459 is fixed
+      # FIXME: Do not ignore once #464 is fixed
       # - name: "Valid generic on field access"
       #   binary: "target/debug/jinko"
       #   args:
       #     - "tests/ft/generics/valid_field_access.jk"
-      #   exit_code: 0
+      #   exit_code: 159
   - name: "Valid generic on if else block"
     binary: "target/debug/jinko"
     args:

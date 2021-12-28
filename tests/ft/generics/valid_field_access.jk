@@ -2,9 +2,8 @@ incl generic_fns
 
 type SomeType(inner: int);
 
-func return_some_type() -> SomeType {
-    SomeType(inner: 1)
+func return_some_type[T]() -> SomeType {
+    SomeType(inner: 159)
 }
 
-// FIXME: Needs #459
-return_some_type()
+return_some_type[int]().inner
