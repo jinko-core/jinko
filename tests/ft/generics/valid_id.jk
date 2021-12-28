@@ -1,0 +1,6 @@
+incl generic_fns
+
+id[string]("hey");
+
+if id[bool](true) {
+}

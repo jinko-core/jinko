@@ -1,6 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use crate::generics::GenericMap;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::Generic;
@@ -44,6 +45,52 @@ impl FunctionDec {
             args,
             block: None,
             typechecked: false,
+        }
+    }
+
+    /// Generate a new instance of [`FunctionDec`] from a given generic type map
+    pub fn from_type_map(
+        &self,
+        mangled_name: String,
+        type_map: &GenericMap,
+        ctx: &mut Context,
+    ) -> Result<FunctionDec, Error> {
+        let mut new_fn = self.clone();
+        new_fn.name = mangled_name;
+        new_fn.generics = vec![];
+
+        let mut is_err = false;
+
+        new_fn
+            .args
+            .iter_mut()
+            .zip(self.args().iter())
+            .for_each(|(new_arg, old_generic)| {
+                let new_type = match type_map.get_match(old_generic.get_type()) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        ctx.error(e);
+                        is_err = true;
+                        TypeId::void()
+                    }
+                };
+                new_arg.set_type(new_type);
+            });
+
+        if let Some(ret_ty) = new_fn.ty {
+            let new_ret_ty = type_map.get_match(&ret_ty)?;
+            new_fn.ty = Some(new_ret_ty);
+        }
+
+        // FIXME: We also need to generate a new version of each instruction in the
+        // block
+        // if let Some(b) = &mut new_fn.block {
+        //     b.resolve_self(ctx);
+        // }
+
+        match is_err {
+            true => Err(Error::new(ErrKind::Generics)),
+            false => Ok(new_fn),
         }
     }
 
@@ -211,6 +258,29 @@ impl Instruction for FunctionDec {
 
 impl TypeCheck for FunctionDec {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        // If a declaration contains generic types, there is no point in type-checking
+        // it: All the methods or field accesses will, by definition, not exist, since
+        // the generic types do not exist yet
+        if !self.generics.is_empty() {
+            // Just declare the function so we have it in the context and can
+            // duplicate it
+            if let Err(e) = ctx.declare_function(self.name().into(), self.clone()) {
+                ctx.error(e);
+                return CheckedType::Error;
+            }
+
+            return CheckedType::Later;
+        }
+
+        // FIXME: Remove clone?
+        if let Err(e) = ctx.declare_function(self.name().into(), self.clone()) {
+            ctx.error(e);
+        }
+
+        ctx.scope_enter();
+
+        // FIXME: Both return_ty and args_ty can be factored from the `ty_declare`
+        // function
         let return_ty = match &self.ty {
             // FIXME: Remove clone?
             Some(ty) => CheckedType::Resolved(ty.clone()),
@@ -227,14 +297,6 @@ impl TypeCheck for FunctionDec {
                 )
             })
             .collect();
-
-        // FIXME: Remove clone?
-        if let Err(e) = ctx.declare_function(self.name.clone(), args_ty.clone(), return_ty.clone())
-        {
-            ctx.error(e);
-        }
-
-        ctx.scope_enter();
 
         args_ty.iter().for_each(|(name, ty)| {
             if let Err(e) = ctx.declare_var(name.clone(), ty.clone()) {

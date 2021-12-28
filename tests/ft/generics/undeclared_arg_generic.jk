@@ -1,0 +1,5 @@
+func undeclared_arg_generic[T, U, V](a0: T, a1: V, a2: W) {}
+
+// FIXME: Should this be caught *before* function calls and during type checking of
+// the first declaration?
+undeclared_arg_generic[T, U, V]();

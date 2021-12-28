@@ -1,0 +1,63 @@
+tests:
+  - name: "Function with generic return value valid"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_return_type.jk"
+    exit_code: 0
+  - name: "Function with generic return value invalid"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/invalid_return_type.jk"
+    exit_code: 1
+  - name: "Valid generic id()"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_id.jk"
+    exit_code: 0
+  - name: "Undeclared return type"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/undeclared_return_generic.jk"
+    exit_code: 1
+  - name: "Undeclared type in arguments"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/undeclared_arg_generic.jk"
+    exit_code: 1
+  - name: "Valid call to same generic fn twice"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_call_generic_twice.jk"
+    exit_code: 0
+  - name: "Valid use of ducktyping"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_ducktyping.jk"
+    exit_code: 0
+  - name: "Valid multi-use of ducktyping"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_multiple_ducktyping.jk"
+    exit_code: 0
+  - name: "Invalid use of ducktyping"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/invalid_ducktyping.jk"
+    exit_code: 1
+      # FIXME: Do not ignore once #464 is fixed
+      # - name: "Valid generic on field access"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "tests/ft/generics/valid_field_access.jk"
+      #   exit_code: 159
+  - name: "Valid generic on if else block"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_if_else.jk"
+    exit_code: 0
+      # FIXME: Do not ignore once #409 is fixed
+      # - name: "Valid generic on method call"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "tests/ft/generics/valid_method_call.jk"
+      #   exit_code: 0

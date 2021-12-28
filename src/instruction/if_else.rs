@@ -87,6 +87,11 @@ impl TypeCheck for IfElse {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let bool_checkedtype = CheckedType::Resolved(TypeId::from("bool"));
         let cond_ty = self.condition.type_of(ctx);
+
+        if cond_ty == CheckedType::Later && !ctx.is_second_pass() {
+            return CheckedType::Later;
+        }
+
         if cond_ty != bool_checkedtype {
             ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
                 "if condition should be a boolean, not a `{}`",
@@ -132,7 +137,23 @@ impl TypeCheck for IfElse {
     }
 }
 
-impl Generic for IfElse {}
+impl Generic for IfElse {
+    fn expand(&self, ctx: &mut Context) {
+        self.condition.expand(ctx);
+        self.if_body.expand(ctx);
+        if let Some(b) = &self.else_body {
+            b.expand(ctx)
+        };
+    }
+
+    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        self.condition.resolve_self(ctx);
+        self.if_body.resolve_self(ctx);
+        if let Some(b) = &mut self.else_body {
+            b.resolve_self(ctx)
+        };
+    }
+}
 
 #[cfg(test)]
 mod tests {

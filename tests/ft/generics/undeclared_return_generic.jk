@@ -1,0 +1,3 @@
+func returns_unknown[T]() -> U {}
+
+returns_unknown[bool]()

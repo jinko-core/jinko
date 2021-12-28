@@ -1,0 +1,17 @@
+// This is valid, but means we can only ever call returns_generic[bool]
+func returns_generic[T]() -> T { true }
+
+func id[T](value: T) -> T { value }
+
+func call_bark_method[T](instance: T) {
+    instance.bark()
+}
+
+func animal_full_suite[A](animal: A) {
+    animal.bark();
+    animal.eat();
+    animal.scream();
+    animal.run();
+    animal.swim();
+    animal.fly();
+}

@@ -1,0 +1,9 @@
+incl generic_fns
+
+type SomeType(inner: int);
+
+func return_some_type[T]() -> SomeType {
+    SomeType(inner: 159)
+}
+
+return_some_type[int]().inner

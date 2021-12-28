@@ -1,0 +1,5 @@
+incl generic_fns
+
+// This should fail typechecking, since T should be replaced by string and `true` cannot
+// ever be a string
+returns_generic[string]()

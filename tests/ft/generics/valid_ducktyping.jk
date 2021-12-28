@@ -1,0 +1,11 @@
+incl generic_fns
+
+type Dog;
+
+func bark(dog: Dog) {
+    println("Hey!")
+}
+
+// Create an instance of Dog
+rex = Dog;
+call_bark_method[Dog](rex);

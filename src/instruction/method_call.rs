@@ -67,7 +67,22 @@ impl TypeCheck for MethodCall {
     }
 }
 
-impl Generic for MethodCall {}
+impl Generic for MethodCall {
+    // FIXME: Avoid recreating the same structure all the time and cache it
+    fn expand(&self, ctx: &mut Context) {
+        let mut call = self.method.clone();
+        call.add_arg_front(self.var.clone());
+
+        call.expand(ctx)
+    }
+
+    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        let mut call = self.method.clone();
+        call.add_arg_front(self.var.clone());
+
+        call.resolve_self(ctx)
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -1,0 +1,7 @@
+incl generic_fns
+
+if id[bool](true) {
+    true
+} else {
+    false
+}

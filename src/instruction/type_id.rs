@@ -20,6 +20,10 @@ impl TypeId {
         TypeId { id }
     }
 
+    pub fn void() -> TypeId {
+        TypeId::new(String::from("void"))
+    }
+
     pub fn id(&self) -> &str {
         &self.id
     }
