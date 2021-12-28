@@ -326,14 +326,7 @@ impl Context {
 
         parser::parse(self, input)?;
 
-        self.emit_errors();
-        self.clear_errors();
-
-        let res = self.execute()?;
-        self.emit_errors();
-        self.clear_errors();
-
-        Ok(res)
+        self.execute()
     }
 
     pub fn has_errors(&self) -> bool {
