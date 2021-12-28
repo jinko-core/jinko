@@ -129,6 +129,6 @@ mod tests {
     fn create_map_different_size() {
         let mut ctx = TypeCtx::new();
 
-        assert!(create_map(&[ty!("int"), ty!("float")], &[ty!("T")], &mut ctx).is_err());
+        assert!(GenericMap::create(&[ty!("int"), ty!("float")], &[ty!("T")], &mut ctx).is_err());
     }
 }
