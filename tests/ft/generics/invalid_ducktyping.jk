@@ -1,0 +1,14 @@
+incl generic_fns
+
+func bark(dog: int) {
+    println("I'm an integer wtf")
+}
+
+type Cat;
+
+func meow(cat: Cat) {
+    // It's a silent cat
+}
+
+garfield = Cat;
+call_bark_method[Cat](garfield);

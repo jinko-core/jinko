@@ -1,0 +1,13 @@
+incl generic_fns;
+
+type Griffin;
+
+func bark[Griffin](g: Griffin) {}
+func eat[Griffin](g: Griffin) {}
+func scream[Griffin](g: Griffin) {}
+func run[Griffin](g: Griffin) {}
+func swim[Griffin](g: Griffin) {}
+func fly[Griffin](g: Griffin) {}
+
+griffin_instance = Griffin;
+animal_full_suite[Griffin](griffin_instance);
