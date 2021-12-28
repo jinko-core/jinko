@@ -29,3 +29,18 @@ tests:
     args:
       - "tests/ft/generics/valid_call_generic_twice.jk"
     exit_code: 0
+  - name: "Valid use of ducktyping"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_ducktyping.jk"
+    exit_code: 0
+  - name: "Valid multi-use of ducktyping"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_multiple_ducktyping.jk"
+    exit_code: 0
+  - name: "Invalid use of ducktyping"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/invalid_ducktyping.jk"
+    exit_code: 1
