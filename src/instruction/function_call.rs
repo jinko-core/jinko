@@ -1,6 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
+use crate::generics::GenericMap;
 use crate::instruction::{FunctionDec, FunctionKind, TypeId, Var};
 use crate::typechecker::TypeCtx;
 use crate::{
@@ -282,7 +283,7 @@ impl Generic for FunctionCall {
         // caught already in an earlier pass
         let dec = ctx.typechecker.get_function(&self.fn_name).unwrap().clone(); // FIXME: No clone
         let type_map =
-            match generics::create_map(dec.generics(), &self.generics, &mut ctx.typechecker) {
+            match GenericMap::create(dec.generics(), &self.generics, &mut ctx.typechecker) {
                 Err(e) => {
                     ctx.error(e);
                     return;
@@ -291,7 +292,7 @@ impl Generic for FunctionCall {
             };
 
         let mut new_fn =
-            match dec.from_type_map(generics::mangle(dec.name(), &self.generics), ctx, &type_map) {
+            match dec.from_type_map(generics::mangle(dec.name(), &self.generics), &type_map, ctx) {
                 Ok(f) => f,
                 Err(e) => {
                     ctx.error(e);

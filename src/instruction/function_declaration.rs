@@ -52,27 +52,35 @@ impl FunctionDec {
     pub fn from_type_map(
         &self,
         mangled_name: String,
-        _ctx: &mut Context,
         type_map: &GenericMap,
+        ctx: &mut Context,
     ) -> Result<FunctionDec, Error> {
         let mut new_fn = self.clone();
         new_fn.name = mangled_name;
         new_fn.generics = vec![];
+
+        let mut is_err = false;
 
         new_fn
             .args
             .iter_mut()
             .zip(self.args().iter())
             .for_each(|(new_arg, old_generic)| {
-                // FIXME: Can we unwrap here?
-                new_arg.set_type(type_map.get(old_generic.get_type()).unwrap().clone())
+                let new_type = match type_map.get_match(old_generic.get_type()) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        ctx.error(e);
+                        is_err = true;
+                        TypeId::void()
+                    }
+                };
+                new_arg.set_type(new_type);
             });
 
-        // FIXME: Can we unwrap here? Are we sure that we have been typechecked or that
-        // the type exists? If not, we need to return a Result<FunctionDec>
-        new_fn.ty = new_fn
-            .ty
-            .map(|return_ty| type_map.get(&return_ty).unwrap().clone());
+        if let Some(ret_ty) = new_fn.ty {
+            let new_ret_ty = type_map.get_match(&ret_ty)?;
+            new_fn.ty = Some(new_ret_ty);
+        }
 
         // FIXME: We also need to generate a new version of each instruction in the
         // block
@@ -80,7 +88,10 @@ impl FunctionDec {
         //     b.resolve_self(ctx);
         // }
 
-        Ok(new_fn)
+        match is_err {
+            true => Err(Error::new(ErrKind::Generics)),
+            false => Ok(new_fn),
+        }
     }
 
     pub fn generics(&self) -> &Vec<TypeId> {
