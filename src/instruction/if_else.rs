@@ -132,7 +132,19 @@ impl TypeCheck for IfElse {
     }
 }
 
-impl Generic for IfElse {}
+impl Generic for IfElse {
+    fn expand(&self, ctx: &mut Context) {
+        self.condition.expand(ctx);
+        self.if_body.expand(ctx);
+        if let Some(b) = &self.else_body { b.expand(ctx) };
+    }
+
+    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        self.condition.resolve_self(ctx);
+        self.if_body.resolve_self(ctx);
+        if let Some(b) = &mut self.else_body { b.resolve_self(ctx) };
+    }
+}
 
 #[cfg(test)]
 mod tests {
