@@ -1,0 +1,10 @@
+incl generic_fns
+
+type SomeType(inner: int);
+
+func return_some_type() -> SomeType {
+    SomeType(inner: 1)
+}
+
+// FIXME: Needs #459
+return_some_type()
