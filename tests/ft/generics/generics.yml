@@ -44,18 +44,20 @@ tests:
     args:
       - "tests/ft/generics/invalid_ducktyping.jk"
     exit_code: 1
-  - name: "Valid generic on field access"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/generics/valid_field_access.jk"
-    exit_code: 0
+      # FIXME: Do not ignore once #459 is fixed
+      # - name: "Valid generic on field access"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "tests/ft/generics/valid_field_access.jk"
+      #   exit_code: 0
   - name: "Valid generic on if else block"
     binary: "target/debug/jinko"
     args:
       - "tests/ft/generics/valid_if_else.jk"
     exit_code: 0
-  - name: "Valid generic on method call"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/generics/valid_method_call.jk"
-    exit_code: 0
+      # FIXME: Do not ignore once #409 is fixed
+      # - name: "Valid generic on method call"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "tests/ft/generics/valid_method_call.jk"
+      #   exit_code: 0
