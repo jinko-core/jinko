@@ -293,9 +293,13 @@ impl Generic for FunctionCall {
         }
 
         if dec.is_none() {
-            // We can unwrap here since this is a typechecking error and should have been
+            // We can return here since this is a typechecking error and should have been
             // caught already in an earlier pass
-            let dec = ctx.typechecker.get_function(&self.fn_name).unwrap().clone(); // FIXME: No clone
+            let dec = match ctx.typechecker.get_function(&self.fn_name) {
+                Some(dec) => dec.clone(),
+                None => return,
+            };
+
             let type_map =
                 match GenericMap::create(dec.generics(), &self.generics, &mut ctx.typechecker) {
                     Err(e) => {
@@ -343,7 +347,9 @@ impl Generic for FunctionCall {
             .iter_mut()
             .map(|arg| match arg.type_of(ctx) {
                 CheckedType::Resolved(ty) => ty,
-                _ => unreachable!(), // FIXME: No
+                _ => TypeId::void(),
+                // FIXME: Is this the correct behavior? The error
+                // will already have been emitted at this point
             })
             .collect();
 
