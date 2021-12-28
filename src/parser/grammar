@@ -27,7 +27,7 @@ unit = 'if' expr block next [ 'else' next block ]
      | 'true'
      | 'false'
      | "'" CHAR "'"
-     | '"' [^"] '"'
+     | '"' inner_string
      | INT
      | DOUBLE
      | IDENTIFIER next func_type_or_var
@@ -73,3 +73,7 @@ extra = WHITESPACE
       | '/*' [^'*/'] '*/'
       | '//' [^\n] '\n'
       | '#'  [^\n] '\n'
+
+inner_string = '"'
+             | '{' expr '}' string
+             | CHAR string

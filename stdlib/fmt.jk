@@ -1,0 +1,23 @@
+ext func __builtin_fmt_int(value: int) -> string;
+ext func __builtin_fmt_char(value: char) -> string;
+ext func __builtin_fmt_float(value: float) -> string;
+
+func fmt_int(value: int) -> string {
+    value.__builtin_fmt_int()
+}
+
+func fmt_char(value: char) -> string {
+    value.__builtin_fmt_char()
+}
+
+func fmt_float(value: float) -> string {
+    value.__builtin_fmt_float()
+}
+
+func fmt_bool(value: bool) -> string {
+    if value {
+        "true"
+    } else {
+        "false"
+    }
+}

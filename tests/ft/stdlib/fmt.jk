@@ -1,0 +1,2 @@
+ho = "ho";
+s = "hey {15.fmt_int()} {ho} {true.fmt_bool()} {'a'.fmt_char()} {fmt_float(7.8)}"
