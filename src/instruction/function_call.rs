@@ -285,7 +285,14 @@ impl TypeCheck for FunctionCall {
 impl Generic for FunctionCall {
     fn expand(&self, ctx: &mut Context) {
         let generic_name = generics::mangle(&self.fn_name, &self.generics);
-        if ctx.get_function(&generic_name).is_none() {
+        let dec = ctx.typechecker.get_function(&generic_name);
+
+        // FIXME: This is a little weird
+        if self.generics.is_empty() && dec.map_or(false, |f| f.generics().is_empty()) {
+            return;
+        }
+
+        if dec.is_none() {
             // We can unwrap here since this is a typechecking error and should have been
             // caught already in an earlier pass
             let dec = ctx.typechecker.get_function(&self.fn_name).unwrap().clone(); // FIXME: No clone
@@ -297,6 +304,8 @@ impl Generic for FunctionCall {
                     }
                     Ok(m) => m,
                 };
+
+            log!("generic_name: {}", &generic_name);
 
             let mut new_fn = match dec.from_type_map(generic_name, &type_map, ctx) {
                 Ok(f) => f,
@@ -317,6 +326,14 @@ impl Generic for FunctionCall {
     }
 
     fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        let generic_name = generics::mangle(&self.fn_name, &self.generics);
+        let dec = ctx.get_function(&generic_name);
+
+        // FIXME: This is a little weird
+        if self.generics.is_empty() && dec.map_or(false, |f| f.generics().is_empty()) {
+            return;
+        }
+
         // FIXME: We can only have actual types here: Not void, not unknown, nothing
         let resolved_types: Vec<TypeId> = self
             .args
