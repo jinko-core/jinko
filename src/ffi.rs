@@ -9,7 +9,7 @@ use crate::{
 };
 
 use libloading::{Library, Symbol};
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::mem::transmute;
 use std::os::raw::c_char;
 use std::path::{Path, PathBuf};
@@ -120,6 +120,17 @@ pub fn execute(
                         let res = func();
                         return Ok(Some(JkInt::from(res).to_instance()));
                     }
+                    "string" => {
+                        let func = unsafe { transmute::<fn(), fn() -> *const c_char>(**func) };
+                        let res = func();
+                        // FIXME: Do not unwrap here
+                        return Ok(Some(
+                            JkString::from(String::from(unsafe {
+                                CStr::from_ptr(res).to_str().unwrap()
+                            }))
+                            .to_instance(),
+                        ));
+                    }
                     _ => unreachable!(),
                 },
             },
@@ -142,6 +153,22 @@ pub fn execute(
                             let arg = arg.as_ptr();
                             let res = func(arg);
                             return Ok(Some(JkInt::from(res).to_instance()));
+                        }
+                        "string" => {
+                            let func = unsafe {
+                                transmute::<fn(), fn(*const c_char) -> *const c_char>(**func)
+                            };
+                            let arg = JkString::from_instance(&args[0]).0;
+                            let arg = CString::new(arg.as_str()).unwrap();
+                            let arg = arg.as_ptr();
+                            let res = func(arg);
+                            return Ok(Some(
+                                // FIXME: Do not unwrap here
+                                JkString::from(String::from(unsafe {
+                                    CStr::from_ptr(res).to_str().unwrap()
+                                }))
+                                .to_instance(),
+                            ));
                         }
                         _ => unreachable!(),
                     },
@@ -170,6 +197,15 @@ mod tests {
             ext func no_arg() -> int;
             ext func square(v: int) -> int;
             ext func add(lhs: int, rhs: int) -> int;
+            ext func returns_str() -> string;
+            ext func returns_str_from_str(s: string) -> string;
+
+            // FIXME: Do not ignore once we have a better FFI module
+            // add(1, 5);
+            no_arg();
+            square(4);
+            returns_str();
+            returns_str_from_str("jk");
         }
     }
 
