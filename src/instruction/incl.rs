@@ -19,10 +19,11 @@ pub struct Incl {
     alias: Option<String>,
     base: Option<PathBuf>,
     typechecked: bool,
+    instructions: Vec<Box<dyn Instruction>>,
 }
 
 /// Default file that gets included when including a directory in jinko source code
-const DEFAULT_INCL: &str = "/lib.jk";
+const DEFAULT_INCL: &str = "lib.jk";
 
 impl Incl {
     pub fn new(path: String, alias: Option<String>) -> Incl {
@@ -31,46 +32,11 @@ impl Incl {
             alias,
             base: None,
             typechecked: false,
+            instructions: vec![],
         }
     }
 
-    fn format_candidates(&self, base: &Path) -> (PathBuf, PathBuf) {
-        let mut format = PathBuf::from(base);
-        format.push(&self.path);
-
-        // FIXME: No unwrap
-        let format = format.to_str().unwrap().to_string();
-
-        let mut dir_fmt = format.clone();
-        let mut file_fmt = format;
-
-        dir_fmt.push_str(DEFAULT_INCL.to_string().as_str());
-        file_fmt.push_str(".jk");
-
-        (PathBuf::from(dir_fmt), PathBuf::from(file_fmt))
-    }
-
-    fn find_include_path(&self, base: &Path) -> Result<PathBuf, Error> {
-        let (dir_candidate, file_candidate) = self.format_candidates(base);
-
-        let (dir_valid, file_valid) = (dir_candidate.is_file(), file_candidate.is_file());
-
-        match (dir_valid, file_valid) {
-            // We cannot have both <path>/lib.jk and <path>.jk be valid files
-            (true, true) => Err(Error::new(ErrKind::Context).with_msg(format!(
-                "invalid include: {:?} and {:?} are both valid candidates",
-                dir_candidate, file_candidate
-            ))),
-            (false, false) => Err(Error::new(ErrKind::Context).with_msg(format!(
-                "no candidate for include: {:?} and {:?} do not exist",
-                dir_candidate, file_candidate
-            ))),
-            (false, true) => Ok(file_candidate),
-            (true, false) => Ok(dir_candidate),
-        }
-    }
-
-    fn load_instructions(&self, formatted: &Path) -> Result<Vec<Box<dyn Instruction>>, Error> {
+    fn fetch_instructions(&self, formatted: &Path) -> Result<Vec<Box<dyn Instruction>>, Error> {
         log!("final path: {}", &format!("{:?}", formatted));
 
         let input = std::fs::read_to_string(&formatted)?;
@@ -90,78 +56,59 @@ impl Incl {
         }
     }
 
-    /// Parse the code and load it in the Incl's ctx
-    fn inner_load(&self, formatted: &Path) -> Result<Vec<Box<dyn Instruction>>, Error> {
-        self.load_instructions(formatted)
-    }
-
-    /// Try to load code from the current path where the executable has been launched
-    fn load_relative(&self, formatted: &Path) -> Result<Vec<Box<dyn Instruction>>, Error> {
-        self.inner_load(formatted)
-    }
-
-    /// Try to load code from jinko's installation path
-    fn load_jinko_path(&self) -> Result<Vec<Box<dyn Instruction>>, Error> {
-        let home = std::env::var("HOME")?;
-
-        let base = PathBuf::from(format!("{}/.jinko/libs/", home));
-        self.inner_load(&base)
-    }
-
-    /// Load the source code located at self.path
-    ///
-    /// There are two ways to look for a source file: First in the includer's path, and
-    /// if not available in jinko's installation directory.
-    fn load(&self, base: &Path) -> Result<Vec<Box<dyn Instruction>>, (Error, Error)> {
-        // If we can load from the current path, we return early
-        let relative_err = match self.load_relative(base) {
-            Ok(instructions) => return Ok(instructions),
-            Err(e) => e,
-        };
-
-        let jk_path_err = match self.load_jinko_path() {
-            Ok(instructions) => return Ok(instructions),
-            Err(e) => e,
-        };
-
-        Err((relative_err, jk_path_err))
-    }
-
-    /// Format the correct prefix to include content as. This depends on the presence
-    /// of an alias, and also checks for the validity of the prefix
-    fn format_prefix(&self) -> Option<String> {
-        let alias = match self.alias.as_ref() {
-            Some(alias) => alias,
-            // If no alias is given, then return the include path as alias
-            None => self.path.as_str(),
-        };
-
-        match alias {
-            // If the alias is empty, then we're doing a special include from
-            // the context itself. Don't add a leading `::`
-            "" => Some(alias.to_string()),
-            _ => Some(format!("{}::", alias)),
-        }
-    }
-
-    fn get_base(&self, path: Option<&PathBuf>) -> PathBuf {
-        // If the incl block contains a given base, return this instead
-        match &self.base {
-            Some(b) => b.clone(), // FIXME: Remove clone
-            None => match path {
-                // Get the parent directory of the context's source file. We can unwrap
-                // since there's always a base
-                Some(path) => path.parent().unwrap().to_owned(),
-                // The ctx doesn't have an associated source file. Therefore, we
-                // load from where the context was started. This is the case if we're
-                // in dynamic mode for example
-                None => PathBuf::new(),
-            },
-        }
-    }
-
     pub fn set_base(&mut self, path: PathBuf) {
         self.base = Some(path);
+    }
+
+    fn check_base(&self, base: &Path) -> Result<PathBuf, Error> {
+        let (mut dir_candidate, mut file_candidate) = (
+            PathBuf::from(base)
+                .join(self.path.clone())
+                .join(DEFAULT_INCL),
+            PathBuf::from(base).join(self.path.clone()),
+        );
+        dir_candidate.set_extension("jk");
+        file_candidate.set_extension("jk");
+
+        match (dir_candidate.is_file(), file_candidate.is_file()) {
+            // We cannot have both <path>/lib.jk and <path>.jk be valid files
+            (true, true) => Err(Error::new(ErrKind::Context).with_msg(format!(
+                "invalid include: {:?} and {:?} are both valid candidates",
+                dir_candidate, file_candidate
+            ))),
+            (false, false) => Err(Error::new(ErrKind::Context).with_msg(format!(
+                "no candidate for include: {:?} and {:?} do not exist",
+                dir_candidate, file_candidate
+            ))),
+            (false, true) => Ok(file_candidate),
+            (true, false) => Ok(dir_candidate),
+        }
+    }
+
+    fn load_home_library(&self) -> Result<PathBuf, Error> {
+        let home = std::env::var("HOME")?;
+        let home_base = PathBuf::from(format!("{}/.jinko/libs/", home));
+
+        self.check_base(&home_base)
+    }
+
+    fn load_local_library(&self, base: &Path) -> Result<PathBuf, Error> {
+        self.check_base(base)
+    }
+
+    pub fn get_final_path(&self, base: &Path) -> Result<PathBuf, (Error, Error)> {
+        // Check the local path first
+        let local_err = match self.load_local_library(base) {
+            Ok(path) => return Ok(path),
+            Err(e) => e,
+        };
+
+        let home_err = match self.load_home_library() {
+            Ok(path) => return Ok(path),
+            Err(e) => e,
+        };
+
+        Err((local_err, home_err))
     }
 }
 
@@ -188,45 +135,12 @@ impl Instruction for Incl {
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         log!("incl enter: {}", self.print().as_str());
 
-        let base = self.get_base(ctx.path());
-        let _prefix = self.format_prefix()?;
-        let formatted = match self.find_include_path(&base) {
-            Ok(f) => f,
-            Err(e) => {
-                ctx.error(e);
-                return None;
-            }
-        };
-
-        if ctx.is_included(&formatted) {
-            return None;
-        }
-
-        log!("base dir: {}", &format!("{:#?}", base));
-
-        let old_path = ctx.path().cloned();
-
-        let mut content = match self.load(&formatted) {
-            Ok(instructions) => instructions,
-            Err((e1, e2)) => {
-                ctx.error(e1);
-                ctx.error(e2);
-                return None;
-            }
-        };
-
-        // Temporarily change the path of the context
-        ctx.set_path(Some(formatted));
-
-        content.iter_mut().for_each(|instr| {
+        self.instructions.iter().for_each(|instr| {
             // FIXME: Rework prefixing
             // instr.prefix(&prefix);
 
             instr.execute(ctx);
         });
-
-        // Reset the old path before leaving the instruction
-        ctx.set_path(old_path);
 
         None
     }
@@ -235,30 +149,18 @@ impl Instruction for Incl {
 impl TypeCheck for Incl {
     // FIXME: We need to not add the path to the interpreter here
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        // TODO: Once we have proper locations for AST nodes this will no longer be necessary:
-        // We'll be able to desugar an incl block into its list of nodes, and assign each of
-        // them their proper location (path etc) so that we can visit them easily
-        // FIXME: This is a lot of code in common with execute()
-        let base = self.get_base(ctx.path());
-
-        log!("base: {}", base.display());
-
-        let formatted = match self.find_include_path(&base) {
-            Ok(f) => f,
-            Err(e) => {
-                ctx.error(e);
-                return CheckedType::Error;
-            }
+        let base = match ctx.path() {
+            // Get the parent directory of the context's source file. We can unwrap
+            // since there's always a base
+            Some(path) => path.parent().unwrap().to_owned(),
+            // The ctx doesn't have an associated source file. Therefore, we
+            // load from where the context was started. This is the case if we're
+            // in dynamic mode for example
+            None => PathBuf::new(),
         };
 
-        let old_path = ctx.path().cloned();
-
-        if ctx.is_included(&formatted) {
-            return CheckedType::Void;
-        }
-
-        let mut content = match self.load(&formatted) {
-            Ok(instructions) => instructions,
+        let final_path = match self.get_final_path(&base) {
+            Ok(path) => path,
             Err((e1, e2)) => {
                 ctx.error(e1);
                 ctx.error(e2);
@@ -266,13 +168,27 @@ impl TypeCheck for Incl {
             }
         };
 
-        // FIXME: Remove this clone
-        ctx.include(formatted.clone());
+        if ctx.is_included(&final_path) {
+            return CheckedType::Void;
+        }
+
+        let instructions = match self.fetch_instructions(&final_path) {
+            Ok(instructions) => instructions,
+            Err(e) => {
+                ctx.error(e);
+                return CheckedType::Error;
+            }
+        };
+
+        self.instructions = instructions;
+
+        let old_path = ctx.path().cloned();
+        ctx.include(final_path.clone());
 
         // Temporarily change the path of the context
-        ctx.set_path(Some(formatted));
+        ctx.set_path(Some(final_path));
 
-        content.iter_mut().for_each(|instr| {
+        self.instructions.iter_mut().for_each(|instr| {
             instr.type_of(ctx);
         });
 
