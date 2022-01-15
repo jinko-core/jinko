@@ -8,16 +8,20 @@ fn main() -> Result<()> {
     let mut ctx = Context::new();
     let mut input = String::new();
 
+    let mut prompt = "> ";
+
     loop {
         ctx.clear_errors();
-        print!("> ");
+        print!("{}", prompt);
         stdout.flush()?;
 
         input.clear();
         stdin.read_line(&mut input)?;
 
-        ctx.eval(&input);
-
-        print!("{}", input);
+        if ctx.eval(&input).is_err() {
+            prompt = "x ";
+        } else {
+            prompt = "> ";
+        }
     }
 }
