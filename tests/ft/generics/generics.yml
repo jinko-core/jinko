@@ -55,9 +55,8 @@ tests:
     args:
       - "tests/ft/generics/valid_if_else.jk"
     exit_code: 0
-      # FIXME: Do not ignore once #409 is fixed
-      # - name: "Valid generic on method call"
-      #   binary: "target/debug/jinko"
-      #   args:
-      #     - "tests/ft/generics/valid_method_call.jk"
-      #   exit_code: 0
+  - name: "Valid generic on method call"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_method_call.jk"
+    exit_code: 0
