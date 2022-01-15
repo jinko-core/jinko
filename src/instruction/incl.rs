@@ -149,14 +149,17 @@ impl Instruction for Incl {
 impl TypeCheck for Incl {
     // FIXME: We need to not add the path to the interpreter here
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        let base = match ctx.path() {
-            // Get the parent directory of the context's source file. We can unwrap
-            // since there's always a base
-            Some(path) => path.parent().unwrap().to_owned(),
-            // The ctx doesn't have an associated source file. Therefore, we
-            // load from where the context was started. This is the case if we're
-            // in dynamic mode for example
-            None => PathBuf::new(),
+        let base = match &self.base {
+            Some(b) => b.clone(),
+            None => match ctx.path() {
+                // Get the parent directory of the context's source file. We can unwrap
+                // since there's always a base
+                Some(path) => path.parent().unwrap().to_owned(),
+                // The ctx doesn't have an associated source file. Therefore, we
+                // load from where the context was started. This is the case if we're
+                // in dynamic mode for example
+                None => PathBuf::new(),
+            },
         };
 
         let final_path = match self.get_final_path(&base) {
