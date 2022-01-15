@@ -1,4 +1,3 @@
 incl generic_fns
 
-// FIXME: Needs #409
 true.id[bool]()

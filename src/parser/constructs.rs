@@ -121,16 +121,19 @@ fn method_or_field(
     expr: Box<dyn Instruction>,
     id: String,
 ) -> ParseResult<&str, Box<dyn Instruction>> {
-    match Token::left_parenthesis(input) {
-        Ok((input, _)) => {
-            // FIXME: We need to parse generics here too
-            let input = next(input);
-            let (input, args) = args(input)?;
-            // FIXME: Remove this `vec![]`
-            let method_call = MethodCall::new(expr, FunctionCall::new(id, vec![], args));
-            Ok((input, Box::new(method_call)))
-        }
-        _ => Ok((input, Box::new(FieldAccess::new(expr, id)))),
+    if let Ok((input, _)) = Token::left_parenthesis(input) {
+        let input = next(input);
+        let (input, args) = args(input)?;
+        let method_call = MethodCall::new(expr, FunctionCall::new(id, vec![], args));
+        Ok((input, Box::new(method_call)))
+    } else if let Ok((input, _)) = Token::left_bracket(input) {
+        let input = next(input);
+        let (input, args) = args(input)?;
+        let (input, generics) = generic_list(input)?;
+        let method_call = MethodCall::new(expr, FunctionCall::new(id, generics, args));
+        Ok((input, Box::new(method_call)))
+    } else {
+        Ok((input, Box::new(FieldAccess::new(expr, id))))
     }
 }
 
@@ -1320,5 +1323,12 @@ func void() { }"##;
     #[test]
     fn generic_empty_type_decl() {
         assert!(expr("type Generic[T];").is_ok());
+    }
+
+    #[test]
+    fn generic_method_call() {
+        assert!(expr("expr.call[T, U, V](arg0, arg1)").is_ok());
+        assert!(expr("call[W, Y, Z]().call[T, U, V](arg0, arg1)").is_ok());
+        assert!(expr("value.call[primitive]()").is_ok());
     }
 }
