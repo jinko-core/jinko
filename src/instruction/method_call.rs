@@ -1,9 +1,9 @@
 //! A method like call is syntactic sugar over regular function calls. During executions,
 //! they get desugared into a normal function call.
 
+use crate::generics::{self, Generic};
 use crate::instruction::FunctionCall;
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::Generic;
 use crate::{log, Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
@@ -68,19 +68,25 @@ impl TypeCheck for MethodCall {
 }
 
 impl Generic for MethodCall {
-    // FIXME: Avoid recreating the same structure all the time and cache it
     fn expand(&self, ctx: &mut Context) {
         let mut call = self.method.clone();
         call.add_arg_front(self.var.clone());
+
+        log!("generic expanding method call: {}", self.method.name());
 
         call.expand(ctx)
     }
 
     fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        self.method
+            .set_name(generics::mangle(self.method.name(), self.method.generics()));
+
         let mut call = self.method.clone();
         call.add_arg_front(self.var.clone());
 
-        call.resolve_self(ctx)
+        log!("generic resolving method call: {}", self.method.name());
+
+        call.resolve_self(ctx);
     }
 }
 

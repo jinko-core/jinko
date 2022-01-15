@@ -128,8 +128,11 @@ fn method_or_field(
         Ok((input, Box::new(method_call)))
     } else if let Ok((input, _)) = Token::left_bracket(input) {
         let input = next(input);
-        let (input, args) = args(input)?;
         let (input, generics) = generic_list(input)?;
+        let input = next(input);
+        let (input, _) = Token::left_parenthesis(input)?;
+        let input = next(input);
+        let (input, args) = args(input)?;
         let method_call = MethodCall::new(expr, FunctionCall::new(id, generics, args));
         Ok((input, Box::new(method_call)))
     } else {
@@ -1330,5 +1333,6 @@ func void() { }"##;
         assert!(expr("expr.call[T, U, V](arg0, arg1)").is_ok());
         assert!(expr("call[W, Y, Z]().call[T, U, V](arg0, arg1)").is_ok());
         assert!(expr("value.call[primitive]()").is_ok());
+        assert!(expr("value.call  [primitive]   ()").is_ok());
     }
 }

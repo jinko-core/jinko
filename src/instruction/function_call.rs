@@ -155,6 +155,14 @@ impl FunctionCall {
             }
         }
     }
+
+    pub fn generics(&self) -> &Vec<TypeId> {
+        &self.generics
+    }
+
+    pub fn set_name(&mut self, fn_name: String) {
+        self.fn_name = fn_name
+    }
 }
 
 impl Instruction for FunctionCall {
@@ -341,9 +349,6 @@ impl Generic for FunctionCall {
         // FIXME: We can only have actual types here: Not void, not unknown, nothing
         let resolved_types: Vec<TypeId> = self
             .args
-            // FIXME: Should we actually call `type_of` here? Not `cached_type`?
-            // Do we want to perform type resolution for the arguments of the call
-            // or is that an error?
             .iter_mut()
             .map(|arg| match arg.type_of(ctx) {
                 CheckedType::Resolved(ty) => ty,
