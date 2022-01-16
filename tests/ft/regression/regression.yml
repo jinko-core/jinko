@@ -44,3 +44,15 @@ tests:
     args:
       - "tests/ft/regression/464_arg_ty.jk"
     exit_code: 0
+  - name: "Test functions get declared during generics pass #468"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/468.jk"
+    exit_code: 0
+  - name: "Test functions get declared during generics pass and diffd properly #468"
+    binary: "target/debug/jinko"
+    args:
+      - "--test"
+      - "tests/ft/regression/468.jk"
+    stdout: "in test!"
+    exit_code: 0
