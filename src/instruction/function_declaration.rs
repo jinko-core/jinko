@@ -261,6 +261,15 @@ impl Instruction for FunctionDec {
 
 impl TypeCheck for FunctionDec {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME Do not declare test functions in the typechecker? But typecheck
+        // them still? Is this the correct behavior?
+        if self.fn_kind() == FunctionKind::Test || self.fn_kind() == FunctionKind::Mock {
+            return self
+                .block
+                .as_mut()
+                .map_or(CheckedType::Void, |b| b.type_of(ctx));
+        }
+
         // If a declaration contains generic types, there is no point in type-checking
         // it: All the methods or field accesses will, by definition, not exist, since
         // the generic types do not exist yet
