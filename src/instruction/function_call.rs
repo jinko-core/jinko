@@ -308,6 +308,15 @@ impl Generic for FunctionCall {
                 None => return,
             };
 
+            if !self.generics.is_empty() && dec.generics().is_empty() {
+                // FIXME: Format generic list in error too
+                ctx.error(Error::new(ErrKind::Generics).with_msg(format!(
+                    "calling non-generic function with generic arguments: `{}`",
+                    self.name()
+                )));
+                return;
+            }
+
             let type_map =
                 match GenericMap::create(dec.generics(), &self.generics, &mut ctx.typechecker) {
                     Err(e) => {

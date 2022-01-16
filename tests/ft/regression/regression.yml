@@ -56,3 +56,8 @@ tests:
       - "tests/ft/regression/468.jk"
     stdout: "in test!\n"
     exit_code: 0
+  - name: "Forbid calling non-generic fn with generic arguments #462"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/462.jk"
+    exit_code: 1
