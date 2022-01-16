@@ -129,12 +129,6 @@ fn exit(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     std::process::exit(exit_code as i32);
 }
 
-fn fmt_int(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
-    let value = JkInt::from_instance(&args[0].execute(ctx).unwrap()).0;
-
-    Some(JkString::from(value.to_string()).to_instance())
-}
-
 fn fmt_char(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let value = JkChar::from_instance(&args[0].execute(ctx).unwrap()).0;
 
@@ -165,7 +159,6 @@ impl Builtins {
         builtins.add("__builtin_string_is_empty", string_is_empty);
         builtins.add("__builtin_string_equals", string_equals);
         builtins.add("__builtin_ffi_link_with", ffi_link_with);
-        builtins.add("__builtin_fmt_int", fmt_int);
         builtins.add("__builtin_fmt_char", fmt_char);
         builtins.add("__builtin_fmt_float", fmt_float);
         builtins.add("__builtin_arg_get", arg_get);
@@ -258,7 +251,6 @@ mod tests {
     fn t_fmt_builtins_are_valid() {
         jinko! {
             __builtin_fmt_char('a');
-            __builtin_fmt_int(158);
             __builtin_fmt_float(7.4);
         };
     }
