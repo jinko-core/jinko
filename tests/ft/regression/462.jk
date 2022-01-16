@@ -1,0 +1,3 @@
+func id(x: int) -> int { x }
+
+id[int](15); // error
