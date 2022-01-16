@@ -60,13 +60,3 @@ tests:
     args:
       - "tests/ft/generics/valid_method_call.jk"
     exit_code: 0
-  - name: "#464 do not map non-generic return type"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/generics/464_return_ty.jk"
-    exit_code: 0
-  - name: "#464 do not map non-generic arg type"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/generics/464_arg_ty.jk"
-    exit_code: 0
