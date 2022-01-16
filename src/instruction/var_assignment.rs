@@ -172,7 +172,15 @@ impl TypeCheck for VarAssign {
     }
 }
 
-impl Generic for VarAssign {}
+impl Generic for VarAssign {
+    fn expand(&self, ctx: &mut Context) {
+        self.value.expand(ctx)
+    }
+
+    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        self.value.resolve_self(ctx)
+    }
+}
 
 #[cfg(test)]
 mod tests {
