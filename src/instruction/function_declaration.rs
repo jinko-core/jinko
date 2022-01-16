@@ -56,7 +56,7 @@ impl FunctionDec {
         ctx: &mut Context,
     ) -> Result<FunctionDec, Error> {
         let mut new_fn = self.clone();
-        new_fn.name = dbg!(mangled_name);
+        new_fn.name = mangled_name;
         new_fn.generics = vec![];
 
         let mut is_err = false;

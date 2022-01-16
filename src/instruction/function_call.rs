@@ -351,10 +351,10 @@ impl Generic for FunctionCall {
         // all of them. Get a list of indexes or something from the dec and fetch those argument
         // types only
         // FIXME: We can only have actual types here: Not void, not unknown, nothing
-        let resolved_types: Vec<TypeId> = self
+        let _resolved_types: Vec<TypeId> = self
             .args
             .iter_mut()
-            .map(|arg| match dbg!(arg.type_of(ctx)) {
+            .map(|arg| match arg.type_of(ctx) {
                 CheckedType::Resolved(ty) => ty,
                 _ => TypeId::void(),
                 // FIXME: Is this the correct behavior? The error
@@ -362,9 +362,7 @@ impl Generic for FunctionCall {
             })
             .collect();
 
-        dbg!(&resolved_types);
-
-        self.fn_name = generics::mangle(self.name(), &resolved_types);
+        self.fn_name = generics::mangle(self.name(), &self.generics);
     }
 }
 
