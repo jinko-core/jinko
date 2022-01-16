@@ -75,6 +75,7 @@ impl TypeCheck for FieldAccess {
         let instance_ty = self.instance.type_of(ctx);
         let instance_ty_name = match &instance_ty {
             CheckedType::Resolved(ti) => ti.id(),
+            CheckedType::Later => return CheckedType::Later,
             _ => {
                 ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
                     "trying to access field `{}` on statement",
