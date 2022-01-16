@@ -54,5 +54,5 @@ tests:
     args:
       - "--test"
       - "tests/ft/regression/468.jk"
-    stdout: "in test!"
+    stdout: "in test!\n"
     exit_code: 0
