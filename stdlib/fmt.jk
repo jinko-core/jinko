@@ -1,9 +1,59 @@
-ext func __builtin_fmt_int(value: int) -> string;
+incl int
+
 ext func __builtin_fmt_char(value: char) -> string;
 ext func __builtin_fmt_float(value: float) -> string;
 
-func fmt_int(value: int) -> string {
-    value.__builtin_fmt_int()
+// FIXME: This is a DISGUSTING implementation
+func inner_i_to_s(i: int, base: string) -> string {
+    if i == 0 {
+        base
+    } else {
+        if i.modulo(10) == 0 {
+            inner_i_to_s(i / 10, "0".concat(base))
+        } else {
+            if i.modulo(10) == 1 {
+                inner_i_to_s(i / 10, "1".concat(base))
+            } else {
+                if i.modulo(10) == 2 {
+                    inner_i_to_s(i / 10, "2".concat(base))
+                } else {
+                    if i.modulo(10) == 3 {
+                        inner_i_to_s(i / 10, "3".concat(base))
+                    } else {
+                        if i.modulo(10) == 4 {
+                            inner_i_to_s(i / 10, "4".concat(base))
+                        } else {
+                            if i.modulo(10) == 5 {
+                                inner_i_to_s(i / 10, "5".concat(base))
+                            } else {
+                                if i.modulo(10) == 6 {
+                                    inner_i_to_s(i / 10, "6".concat(base))
+                                } else {
+                                    if i.modulo(10) == 7 {
+                                        inner_i_to_s(i / 10, "7".concat(base))
+                                    } else {
+                                        if i.modulo(10) == 8 {
+                                            inner_i_to_s(i / 10, "8".concat(base))
+                                        } else {
+                                            inner_i_to_s(i / 10, "9".concat(base))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+func fmt_int(i: int) -> string {
+    if i == 0 {
+        "0"
+    } else {
+        inner_i_to_s(i, "")
+    }
 }
 
 func fmt_char(value: char) -> string {

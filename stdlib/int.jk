@@ -1,0 +1,3 @@
+func modulo(lhs: int, rhs: int) -> int {
+    lhs - (rhs * (lhs / rhs))
+}
