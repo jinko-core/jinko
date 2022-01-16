@@ -1,0 +1,7 @@
+type SomeType(inner: int);
+
+func return_some_type[T]() -> SomeType {
+    SomeType(inner: 159)
+}
+
+s = return_some_type[int]()
