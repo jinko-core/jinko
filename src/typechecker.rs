@@ -36,7 +36,8 @@ impl Display for CheckedType {
         match self {
             CheckedType::Resolved(ty) => write!(f, "{}", ty),
             CheckedType::Void => write!(f, "{}", "void".purple()),
-            CheckedType::Later | CheckedType::Error => write!(f, "{}", "!!unknown!!".red()),
+            CheckedType::Later => write!(f, "{}", "!!unresolved yet!!".yellow()),
+            CheckedType::Error => write!(f, "{}", "!!unknown!!".red()),
         }
     }
 }
