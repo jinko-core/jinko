@@ -34,3 +34,13 @@ tests:
     args:
       - "tests/ft/regression/284.jk"
     exit_code: 0
+  - name: "Do not map non-generic return type #464"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/464_return_ty.jk"
+    exit_code: 0
+  - name: "Do not map non-generic arg type #464"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/regression/464_arg_ty.jk"
+    exit_code: 0

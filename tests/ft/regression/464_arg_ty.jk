@@ -1,0 +1,11 @@
+type SomeType(inner: int);
+type OtherType;
+
+func return_arg_ty[T](a: SomeType, b: T, c: OtherType) -> T {
+	b
+}
+
+a = SomeType(inner: 15);
+
+// FIXME: This doesn't error out if we don't give all the arguments...
+retval = return_arg_ty[int](a, 159, OtherType)

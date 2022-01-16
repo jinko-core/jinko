@@ -346,8 +346,12 @@ impl Generic for FunctionCall {
             return;
         }
 
+        // FIXME: This doesnt have all the actual types? T (b's type) is missing (464_arg_ty.jk)
+        // So we actually need to only map argument from the dec's arguments which are generic. Not
+        // all of them. Get a list of indexes or something from the dec and fetch those argument
+        // types only
         // FIXME: We can only have actual types here: Not void, not unknown, nothing
-        let resolved_types: Vec<TypeId> = self
+        let _resolved_types: Vec<TypeId> = self
             .args
             .iter_mut()
             .map(|arg| match arg.type_of(ctx) {
@@ -358,7 +362,7 @@ impl Generic for FunctionCall {
             })
             .collect();
 
-        self.fn_name = generics::mangle(self.name(), &resolved_types);
+        self.fn_name = generics::mangle(self.name(), &self.generics);
     }
 }
 

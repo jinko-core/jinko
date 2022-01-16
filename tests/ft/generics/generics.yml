@@ -19,11 +19,12 @@ tests:
     args:
       - "tests/ft/generics/undeclared_return_generic.jk"
     exit_code: 1
-  - name: "Undeclared type in arguments"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/generics/undeclared_arg_generic.jk"
-    exit_code: 1
+    # FIXME: Do not ignore once #476 is fixed
+    # - name: "Undeclared type in arguments"
+    #   binary: "target/debug/jinko"
+    #   args:
+    #     - "tests/ft/generics/undeclared_arg_generic.jk"
+    #   exit_code: 1
   - name: "Valid call to same generic fn twice"
     binary: "target/debug/jinko"
     args:
@@ -44,12 +45,11 @@ tests:
     args:
       - "tests/ft/generics/invalid_ducktyping.jk"
     exit_code: 1
-      # FIXME: Do not ignore once #464 is fixed
-      # - name: "Valid generic on field access"
-      #   binary: "target/debug/jinko"
-      #   args:
-      #     - "tests/ft/generics/valid_field_access.jk"
-      #   exit_code: 159
+  - name: "Valid generic on field access"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_field_access.jk"
+    exit_code: 159
   - name: "Valid generic on if else block"
     binary: "target/debug/jinko"
     args:

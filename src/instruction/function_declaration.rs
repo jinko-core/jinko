@@ -65,6 +65,7 @@ impl FunctionDec {
             .args
             .iter_mut()
             .zip(self.args().iter())
+            .filter(|(_, generic)| self.generics().contains(generic.get_type()))
             .for_each(|(new_arg, old_generic)| {
                 let new_type = match type_map.get_match(old_generic.get_type()) {
                     Ok(t) => t,
@@ -77,9 +78,11 @@ impl FunctionDec {
                 new_arg.set_type(new_type);
             });
 
-        if let Some(ret_ty) = new_fn.ty {
-            let new_ret_ty = type_map.get_match(&ret_ty)?;
-            new_fn.ty = Some(new_ret_ty);
+        if let Some(ret_ty) = &self.ty {
+            if self.generics().contains(ret_ty) {
+                let new_ret_ty = type_map.get_match(ret_ty)?;
+                new_fn.ty = Some(new_ret_ty);
+            }
         }
 
         // FIXME: We also need to generate a new version of each instruction in the
