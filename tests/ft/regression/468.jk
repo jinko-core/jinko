@@ -1,0 +1,2 @@
+func some_f() {}
+test some_f() { println("in test!") }

@@ -1,0 +1,4 @@
+test invalid() {
+	type Inner(i: int);
+	instance = Inner(i: 15.4);
+}

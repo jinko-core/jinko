@@ -101,3 +101,8 @@ tests:
     args:
       - "tests/ft/type_checking/invalid/fmt.jk"
     exit_code: 1
+  - name: "Invalid types in test function"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/type_checking/invalid/test_f.jk"
+    exit_code: 1
