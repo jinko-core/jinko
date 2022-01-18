@@ -121,16 +121,28 @@ impl Instruction for Block {
 
 impl TypeCheck for Block {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        // FIXME: Refactor this iterator. Ugly
+        let mut ret_ty = None;
         let last_type = self
             .instructions
             .iter_mut()
             .map(|inst| inst.type_of(ctx))
+            .map(|ty| {
+                if ty == CheckedType::Later {
+                    ret_ty = Some(CheckedType::Later)
+                }
+
+                ty
+            })
             .last()
             .unwrap_or(CheckedType::Void);
 
-        match &self.is_statement {
-            true => CheckedType::Void,
-            false => last_type,
+        match ret_ty {
+            Some(early_return_ty) => early_return_ty,
+            None => match &self.is_statement {
+                true => CheckedType::Void,
+                false => last_type,
+            },
         }
     }
 
