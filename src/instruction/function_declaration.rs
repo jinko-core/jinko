@@ -320,6 +320,12 @@ impl TypeCheck for FunctionDec {
         if let Some(b) = &mut self.block {
             let block_ty = b.type_of(ctx);
 
+            // If the block's type cannot be determined yet, this is not an
+            // error: We simply have to wait for the next typechecking pass
+            if block_ty == CheckedType::Later {
+                return CheckedType::Later;
+            }
+
             if block_ty != return_ty {
                 ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
                     "invalid type returned in function `{}`: expected type {}, found type {}",

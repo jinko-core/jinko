@@ -15,7 +15,7 @@ pub struct FunctionCall {
     fn_name: String,
     generics: Vec<TypeId>,
     args: Vec<Box<dyn Instruction>>,
-    typechecked: bool,
+    cached_type: Option<CheckedType>,
 }
 
 impl FunctionCall {
@@ -29,7 +29,7 @@ impl FunctionCall {
             fn_name,
             generics,
             args,
-            typechecked: false,
+            cached_type: None,
         }
     }
 
@@ -217,7 +217,9 @@ impl Instruction for FunctionCall {
 
 impl TypeCheck for FunctionCall {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        if !self.generics.is_empty() {
+        log!("typechecking call to {}", self.fn_name);
+
+        if !self.generics.is_empty() && !ctx.is_second_pass() {
             return CheckedType::Later;
         }
 
@@ -235,7 +237,7 @@ impl TypeCheck for FunctionCall {
         };
 
         // If the declaration contains generics but not the call, typecheck later still
-        if !function.generics().is_empty() {
+        if !function.generics().is_empty() && !ctx.is_second_pass() {
             return CheckedType::Later;
         }
 
@@ -279,14 +281,11 @@ impl TypeCheck for FunctionCall {
     }
 
     fn cached_type(&self) -> Option<&CheckedType> {
-        match self.typechecked {
-            true => Some(&CheckedType::Void),
-            false => None,
-        }
+        self.cached_type.as_ref()
     }
 
-    fn set_cached_type(&mut self, _ty: CheckedType) {
-        self.typechecked = true;
+    fn set_cached_type(&mut self, ty: CheckedType) {
+        self.cached_type = Some(ty);
     }
 }
 
@@ -371,7 +370,9 @@ impl Generic for FunctionCall {
             })
             .collect();
 
-        self.fn_name = generics::mangle(self.name(), &self.generics);
+        self.fn_name = generic_name;
+        self.generics = vec![];
+        self.cached_type = None;
     }
 }
 
