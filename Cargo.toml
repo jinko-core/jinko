@@ -15,6 +15,7 @@ repository = "https://github.com/cohenarthur/jinko"
 structopt = "0.3"
 colored = "2.0"
 nom = "7.0"
+nom_locate = "4.0"
 linefeed = { version = "0.6", optional = true }
 downcast-rs = "1.2"
 anyhow = "1.0"

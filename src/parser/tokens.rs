@@ -8,6 +8,7 @@ use nom::{
     character::is_alphanumeric, character::is_digit, combinator::not, combinator::opt,
     combinator::peek, multi::many0, sequence::delimited, sequence::pair,
 };
+use nom_locate::LocatedSpan;
 
 use crate::{parser::ParseResult, ErrKind, Error};
 use nom::Err::Error as NomError;
@@ -23,8 +24,11 @@ pub struct Token;
 impl Token {
     /// Function used to recognize a specific character such as '[' or '>'. A function
     /// calling this is specifically trying to recognize the given character
-    fn specific_char(input: &str, character: char) -> ParseResult<&str, char> {
-        let c = char::<&str, Error>(character)(input)?;
+    fn specific_char(
+        input: LocatedSpan<&str>,
+        character: char,
+    ) -> ParseResult<LocatedSpan<&str>, char> {
+        let c = char::<LocatedSpan<&str>, Error>(character)(input)?;
 
         Ok(c)
     }
@@ -32,10 +36,10 @@ impl Token {
     /// Match a simple token. No rules apply to the characters following it, unlike
     /// specific_token
     fn token<'input>(
-        input: &'input str,
+        input: LocatedSpan<&'input str>,
         token: &'input str,
-    ) -> ParseResult<&'input str, &'input str> {
-        let tok = tag::<&str, &str, Error>(token)(input)?;
+    ) -> ParseResult<LocatedSpan<&'input str>, LocatedSpan<&'input str>> {
+        let tok = tag(token)(input)?;
 
         Ok(tok)
     }
@@ -44,10 +48,10 @@ impl Token {
     /// When a function calls specific_token(_, "token"), that means it's trying to
     /// recognize specifically the word "token".
     fn specific_token<'tok>(
-        input: &'tok str,
+        input: LocatedSpan<&'tok str>,
         token: &'tok str,
-    ) -> ParseResult<&'tok str, &'tok str> {
-        let (input, tag) = tag::<&str, &str, Error>(token)(input)?;
+    ) -> ParseResult<LocatedSpan<&'tok str>, LocatedSpan<&'tok str>> {
+        let (input, tag) = tag(token)(input)?;
 
         if let Some(next_char) = input.chars().next() {
             if next_char.is_alphanumeric() || next_char == '_' {
@@ -59,15 +63,15 @@ impl Token {
         Ok((input, tag))
     }
 
-    pub fn single_quote(input: &str) -> ParseResult<&str, char> {
+    pub fn single_quote(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '\'')
     }
 
-    pub fn double_quote(input: &str) -> ParseResult<&str, char> {
+    pub fn double_quote(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '"')
     }
 
-    pub fn equal(input: &str) -> ParseResult<&str, char> {
+    pub fn equal(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         let (input, token) = Token::specific_char(input, '=')?;
         if !input.is_empty() {
             peek(not(char('=')))(input)?;
@@ -76,204 +80,230 @@ impl Token {
         Ok((input, token))
     }
 
-    pub fn comma(input: &str) -> ParseResult<&str, char> {
+    pub fn comma(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, ',')
     }
 
-    pub fn pipe(input: &str) -> ParseResult<&str, char> {
+    pub fn pipe(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '|')
     }
 
-    pub fn left_curly_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn left_curly_bracket(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '{')
     }
 
-    pub fn right_curly_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn right_curly_bracket(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '}')
     }
 
-    pub fn left_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn left_bracket(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '[')
     }
 
-    pub fn right_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn right_bracket(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, ']')
     }
 
-    pub fn colon(input: &str) -> ParseResult<&str, char> {
+    pub fn colon(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, ':')
     }
 
-    pub fn semicolon(input: &str) -> ParseResult<&str, char> {
+    pub fn semicolon(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, ';')
     }
 
-    pub fn at_sign(input: &str) -> ParseResult<&str, char> {
+    pub fn at_sign(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '@')
     }
 
-    pub fn func_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn func_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "func")
     }
 
-    pub fn ext_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn ext_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "ext")
     }
 
-    pub fn test_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn test_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "test")
     }
 
-    pub fn mock_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn mock_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "mock")
     }
 
-    pub fn loop_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn loop_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "loop")
     }
 
-    pub fn while_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn while_tok(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "while")
     }
 
-    pub fn for_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn for_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "for")
     }
 
-    pub fn in_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn in_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "in")
     }
 
-    pub fn mut_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn mut_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "mut")
     }
 
-    pub fn if_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn if_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "if")
     }
 
-    pub fn else_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn else_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "else")
     }
 
-    pub fn return_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn return_tok(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "return")
     }
 
-    pub fn type_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn type_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "type")
     }
 
-    pub fn incl_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn incl_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "incl")
     }
 
     // Parse the `as` token. Rename it so clippy does not complain
-    pub fn az_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn az_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "as")
     }
 
-    pub fn backslash(input: &str) -> ParseResult<&str, &str> {
+    pub fn backslash(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "\\")
     }
 
-    pub fn add(input: &str) -> ParseResult<&str, &str> {
+    pub fn add(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "+")
     }
 
-    pub fn sub(input: &str) -> ParseResult<&str, &str> {
+    pub fn sub(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "-")
     }
 
-    pub fn mul(input: &str) -> ParseResult<&str, &str> {
+    pub fn mul(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "*")
     }
 
-    pub fn div(input: &str) -> ParseResult<&str, &str> {
+    pub fn div(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "/")
     }
 
-    pub fn left_parenthesis(input: &str) -> ParseResult<&str, &str> {
+    pub fn left_parenthesis(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "(")
     }
 
-    pub fn right_parenthesis(input: &str) -> ParseResult<&str, &str> {
+    pub fn right_parenthesis(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, ")")
     }
 
-    pub fn lt(input: &str) -> ParseResult<&str, &str> {
+    pub fn lt(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "<")
     }
 
-    pub fn gt(input: &str) -> ParseResult<&str, &str> {
+    pub fn gt(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, ">")
     }
 
-    pub fn lt_eq(input: &str) -> ParseResult<&str, &str> {
+    pub fn lt_eq(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "<=")
     }
 
-    pub fn gt_eq(input: &str) -> ParseResult<&str, &str> {
+    pub fn gt_eq(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, ">=")
     }
 
-    pub fn equals(input: &str) -> ParseResult<&str, &str> {
+    pub fn equals(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "==")
     }
 
-    pub fn not_equals(input: &str) -> ParseResult<&str, &str> {
+    pub fn not_equals(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "!=")
     }
 
-    pub fn _left_shift(input: &str) -> ParseResult<&str, &str> {
+    pub fn _left_shift(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "<<")
     }
 
-    pub fn true_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn true_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, t) = Token::specific_token(input, "true")?;
 
         Ok((input, t))
     }
 
-    pub fn false_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn false_tok(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, f) = Token::specific_token(input, "false")?;
 
         Ok((input, f))
     }
 
-    pub fn arrow(input: &str) -> ParseResult<&str, &str> {
+    pub fn arrow(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "->")
     }
 
-    pub fn comment_multi_start(input: &str) -> ParseResult<&str, &str> {
+    pub fn comment_multi_start(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let comment = tag("/*")(input)?;
 
         Ok(comment)
     }
 
-    pub fn comment_multi_end(input: &str) -> ParseResult<&str, &str> {
+    pub fn comment_multi_end(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let comment_end = tag("*/")(input)?;
 
         Ok(comment_end)
     }
 
-    pub fn comment_single(input: &str) -> ParseResult<&str, &str> {
+    pub fn comment_single(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let comment = tag("//")(input)?;
 
         Ok(comment)
     }
 
-    pub fn comment_shebang(input: &str) -> ParseResult<&str, &str> {
+    pub fn comment_shebang(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let comment = tag("#")(input)?;
 
         Ok(comment)
     }
 
-    pub fn dot(input: &str) -> ParseResult<&str, &str> {
+    pub fn dot(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, ".")
     }
 
-    pub fn inner_identifer(input: &str) -> ParseResult<&str, &str> {
+    pub fn inner_identifer(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
         if RESERVED_KEYWORDS.contains(&id) {
@@ -292,20 +322,22 @@ impl Token {
         ))
     }
 
-    pub fn namespace_separator(input: &str) -> ParseResult<&str, &str> {
+    pub fn namespace_separator(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "::")
     }
 
-    pub fn identifier(input: &str) -> ParseResult<&str, String> {
+    pub fn identifier(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
         let (input, first_id) = Token::inner_identifer(input)?;
 
         let (input, namespaced) =
             many0(pair(Token::namespace_separator, Token::inner_identifer))(input)?;
 
-        let mut identifier = String::from(first_id);
+        let mut identifier = first_id.fragment().to_string();
         namespaced.into_iter().for_each(|(sep, nspace)| {
-            identifier.push_str(sep);
-            identifier.push_str(nspace)
+            identifier.push_str(sep.fragment());
+            identifier.push_str(nspace.fragment())
         });
 
         // If a namespace_separator remains, then it means we're in a situation where
@@ -323,20 +355,20 @@ impl Token {
         Ok((input, identifier))
     }
 
-    fn non_neg_num(input: &str) -> ParseResult<&str, &str> {
+    fn non_neg_num(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let num = take_while1(|c| is_digit(c as u8))(input)?;
 
         Ok(num)
     }
 
-    pub fn bool_constant(input: &str) -> ParseResult<&str, bool> {
+    pub fn bool_constant(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, bool> {
         let (input, b) = alt((Token::true_tok, Token::false_tok))(input)?;
 
         // We can unwrap since we recognized valid tokens already
         Ok((input, b.parse::<bool>().unwrap()))
     }
 
-    pub fn float_constant(input: &str) -> ParseResult<&str, f64> {
+    pub fn float_constant(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, f64> {
         let (input, negative_sign) = opt(char('-'))(input)?;
         let (input, whole) = Token::int_constant(input)?;
         let (input, _) = char('.')(input)?;
@@ -354,7 +386,7 @@ impl Token {
         }
     }
 
-    pub fn int_constant(input: &str) -> ParseResult<&str, i64> {
+    pub fn int_constant(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, i64> {
         let (input, negative_sign) = opt(char('-'))(input)?;
         let (input, num) = Token::non_neg_num(input)?;
 
@@ -370,7 +402,7 @@ impl Token {
     }
 
     /// Parse a single character constant and return the character inside the quotes
-    pub fn char_constant(input: &str) -> ParseResult<&str, char> {
+    pub fn char_constant(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         let (input, _) = Token::single_quote(input)?;
         let (input, character) = anychar(input)?;
         let (input, _) = Token::single_quote(input)?;
@@ -381,7 +413,9 @@ impl Token {
     }
 
     /// Parse a string constant and return the characters between the double quotes
-    pub fn string_constant(input: &str) -> ParseResult<&str, &str> {
+    pub fn string_constant(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         // FIXME: This does not allow for string escaping yet
         let string = delimited(Token::double_quote, take_until("\""), Token::double_quote)(input)?;
 
@@ -389,7 +423,9 @@ impl Token {
     }
 
     #[inline(always)]
-    pub fn consume_multi_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_multi_comment(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, _) = Token::comment_multi_start(input)?;
         let (input, content) = take_until("*/")(input)?;
         let (input, _) = Token::comment_multi_end(input)?;
@@ -398,7 +434,9 @@ impl Token {
     }
 
     #[inline(always)]
-    pub fn consume_single_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_single_comment(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, _) = Token::comment_single(input)?;
         let comment = take_while(|c| c != '\n' && c != '\0')(input)?;
 
@@ -406,7 +444,9 @@ impl Token {
     }
 
     #[inline(always)]
-    pub fn consume_shebang_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_shebang_comment(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, _) = Token::comment_shebang(input)?;
         let comment = take_while(|c| c != '\n' && c != '\0')(input)?;
 
@@ -414,7 +454,9 @@ impl Token {
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
-    pub fn consume_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_comment(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         alt((
             Token::consume_shebang_comment,
             Token::consume_single_comment,
