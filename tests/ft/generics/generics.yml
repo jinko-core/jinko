@@ -60,3 +60,8 @@ tests:
     args:
       - "tests/ft/generics/valid_method_call.jk"
     exit_code: 0
+  - name: "Invalid typechecking on function call"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/invalid_typechecking.jk"
+    exit_code: 1
