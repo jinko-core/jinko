@@ -238,12 +238,21 @@ pub trait TypeCheck {
     fn type_of(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         // FIXME: Remove clones
         match self.cached_type() {
-            None => {
-                let new_ty = self.resolve_type(ctx);
-                self.set_cached_type(new_ty.clone());
-
-                new_ty
-            }
+            None => match self.resolve_type(ctx) {
+                CheckedType::Resolved(new_ty) => {
+                    self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
+                    CheckedType::Resolved(new_ty)
+                }
+                CheckedType::Void => {
+                    self.set_cached_type(CheckedType::Void);
+                    CheckedType::Void
+                }
+                CheckedType::Later => match ctx.is_second_pass() {
+                    false => CheckedType::Later,
+                    true => CheckedType::Error,
+                },
+                CheckedType::Error => CheckedType::Error,
+            },
             Some(ty) => ty.clone(),
         }
     }
