@@ -2,12 +2,30 @@ incl generic_fns;
 
 type Griffin;
 
-func bark[Griffin](g: Griffin) {}
-func eat[Griffin](g: Griffin) {}
-func scream[Griffin](g: Griffin) {}
-func run[Griffin](g: Griffin) {}
-func swim[Griffin](g: Griffin) {}
-func fly[Griffin](g: Griffin) {}
+func bark[Griffin](g: Griffin) {
+	println("bark!")
+}
+
+func eat[Griffin](g: Griffin) {
+	println("nom")
+}
+
+func scream[Griffin](g: Griffin) {
+	println("AAAAAAAH")
+}
+
+func run[Griffin](g: Griffin) {
+	println("uf uf uf")
+}
+
+func swim[Griffin](g: Griffin) {
+	println("splish splosh")
+}
+
+func fly[Griffin](g: Griffin) {
+	println("wouuuuuuh")
+}
+
 
 griffin_instance = Griffin;
 animal_full_suite[Griffin](griffin_instance);

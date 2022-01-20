@@ -1,0 +1,9 @@
+func multi_generics[T, U](a: T, b: U, c: int) -> T {
+	a
+}
+
+type At;
+type Bt;
+multi_generics[At, Bt](At, Bt); // error: missing argument
+
+@dump();
