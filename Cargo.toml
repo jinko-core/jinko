@@ -18,13 +18,14 @@ nom = "7.0"
 linefeed = { version = "0.6", optional = true }
 downcast-rs = "1.2"
 anyhow = "1.0"
+libffi = { version = "2.0.0", optional = true }
 libloading = { version = "0.7", optional = true }
 lazy_static = "1.4"
 
 [features]
 default = ["repl", "ffi"]
 repl = ["linefeed"]
-ffi = ["libloading"]
+ffi = ["libloading", "libffi"]
 
 [dev-dependencies]
 libc = "0.2"

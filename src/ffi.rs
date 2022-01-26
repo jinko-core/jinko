@@ -2,13 +2,16 @@
 //! Primitive types are converted to their C counterparts.
 //! FIXME
 
-use crate::instruction::{FunctionCall, FunctionDec};
-use crate::log;
+use crate::instruction::{FunctionCall, FunctionDec, TypeId};
+use crate::{log, JkFloat};
 use crate::{
-    Context, ErrKind, Error, FromObjectInstance, JkInt, JkString, ObjectInstance, ToObjectInstance,
+    Context, ErrKind, Error, FromObjectInstance, JkBool, JkInt, JkString, ObjectInstance,
+    ToObjectInstance,
 };
 
+use libffi::high::{arg, call as ffi_call, types::CType, Arg as FfiArg, CodePtr};
 use libloading::{Library, Symbol};
+
 use std::ffi::CString;
 use std::mem::transmute;
 use std::os::raw::c_char;
@@ -87,6 +90,11 @@ pub fn link_with(ctx: &mut Context, lib_path: PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
+enum FfiJkArg {
+    Int(i64),
+    Float(f64),
+}
+
 pub fn execute(
     dec: &FunctionDec,
     call: &FunctionCall,
@@ -96,61 +104,104 @@ pub fn execute(
     let sym = call.name().as_bytes();
 
     // FIXME: Don't unwrap
-    let args: Vec<ObjectInstance> = call
+    let jk_args: Vec<FfiJkArg> = call
         .args()
         .iter()
         .map(|arg| arg.execute(ctx).unwrap())
+        .zip(
+            dec.args()
+                .iter()
+                .map(|dec_arg| dec_arg.get_type().id().to_owned()),
+        )
+        .map(|(arg_value, arg_ty)| match arg_ty.as_str() {
+            "int" => FfiJkArg::Int(JkInt::from_instance(&arg_value).0),
+            "bool" => FfiJkArg::Int(JkBool::from_instance(&arg_value).0 as i64),
+            "float" => FfiJkArg::Float(JkFloat::from_instance(&arg_value).0),
+            _ => unreachable!(),
+        })
+        .collect();
+
+    let args: Vec<FfiArg> = jk_args
+        .iter()
+        .map(|ffi_jk_arg| match ffi_jk_arg {
+            FfiJkArg::Int(i) => arg(i),
+            FfiJkArg::Float(f) => arg(f),
+        })
         .collect();
 
     for lib in ctx.libs().iter() {
+        // FIXME: Rework this
         let func = unsafe { lib.get::<Symbol<fn()>>(sym) };
         let func = match func {
-            Ok(func) => func,
+            Ok(func) => CodePtr::from_ptr(unsafe { func.into_raw().into_raw() }),
             Err(_) => continue,
         };
-        match call.args().len() {
-            0 => match dec.ty() {
+
+        unsafe {
+            match dec.ty() {
                 None => {
-                    func();
+                    ffi_call::<()>(func, &args);
                     return Ok(None);
                 }
                 Some(ty) => match ty.id() {
                     "int" => {
-                        let func = unsafe { transmute::<fn(), fn() -> i64>(**func) };
-                        let res = func();
-                        return Ok(Some(JkInt::from(res).to_instance()));
+                        return Ok(Some(
+                            JkInt::from(ffi_call::<i64>(func, &args)).to_instance(),
+                        ))
                     }
-                    _ => unreachable!(),
-                },
-            },
-            1 => match dec.args()[0].get_type().id() {
-                "string" => match dec.ty() {
-                    None => {
-                        let func = unsafe { transmute::<fn(), fn(*const c_char)>(**func) };
-                        let arg = JkString::from_instance(&args[0]).0;
-                        let arg = CString::new(arg.as_str()).unwrap();
-                        let arg = arg.as_ptr();
-                        func(arg);
-                        return Ok(None);
+                    "bool" => {
+                        return Ok(Some(
+                            JkBool::from(ffi_call::<i32>(func, &args) != 0).to_instance(),
+                        ))
                     }
-                    Some(ty) => match ty.id() {
-                        "int" => {
-                            let func =
-                                unsafe { transmute::<fn(), fn(*const c_char) -> i64>(**func) };
-                            let arg = JkString::from_instance(&args[0]).0;
-                            let arg = CString::new(arg.as_str()).unwrap();
-                            let arg = arg.as_ptr();
-                            let res = func(arg);
-                            return Ok(Some(JkInt::from(res).to_instance()));
-                        }
-                        _ => unreachable!(),
-                    },
+                    _ => unreachable!("not a valid return type"),
                 },
-                _ => unreachable!(),
-            },
-            _ => unreachable!(),
+            }
         }
     }
+
+    // match call.args().len() {
+    //     0 => match dec.ty() {
+    //         None => {
+    //             func();
+    //             return Ok(None);
+    //         }
+    //         Some(ty) => match ty.id() {
+    //             "int" => {
+    //                 let func = unsafe { transmute::<fn(), fn() -> i64>(**func) };
+    //                 let res = func();
+    //                 return Ok(Some(JkInt::from(res).to_instance()));
+    //             }
+    //             _ => unreachable!(),
+    //         },
+    //     },
+    //     1 => match dec.args()[0].get_type().id() {
+    //         "string" => match dec.ty() {
+    //             None => {
+    //                 let func = unsafe { transmute::<fn(), fn(*const c_char)>(**func) };
+    //                 let arg = JkString::from_instance(&args[0]).0;
+    //                 let arg = CString::new(arg.as_str()).unwrap();
+    //                 let arg = arg.as_ptr();
+    //                 func(arg);
+    //                 return Ok(None);
+    //             }
+    //             Some(ty) => match ty.id() {
+    //                 "int" => {
+    //                     let func =
+    //                         unsafe { transmute::<fn(), fn(*const c_char) -> i64>(**func) };
+    //                     let arg = JkString::from_instance(&args[0]).0;
+    //                     let arg = CString::new(arg.as_str()).unwrap();
+    //                     let arg = arg.as_ptr();
+    //                     let res = func(arg);
+    //                     return Ok(Some(JkInt::from(res).to_instance()));
+    //                 }
+    //                 _ => unreachable!(),
+    //             },
+    //         },
+    //         _ => unreachable!(),
+    //     },
+    //     _ => unreachable!(),
+    // }
 
     Err(Error::new(ErrKind::ExternFunc)
         .with_msg(format!("cannot call external function `{}`", call.name())))
