@@ -2,19 +2,16 @@
 //! Primitive types are converted to their C counterparts.
 //! FIXME
 
-use crate::instruction::{FunctionCall, FunctionDec, TypeId};
-use crate::{log, JkFloat};
+use crate::instruction::{FunctionCall, FunctionDec};
 use crate::{
-    Context, ErrKind, Error, FromObjectInstance, JkBool, JkInt, JkString, ObjectInstance,
-    ToObjectInstance,
+    log, Context, ErrKind, Error, FromObjectInstance, JkBool, JkFloat, JkInt, JkString,
+    ObjectInstance, ToObjectInstance,
 };
 
-use libffi::high::{arg, call as ffi_call, types::CType, Arg as FfiArg, CodePtr};
+use libffi::high::{arg, call as ffi_call, Arg as FfiArg, CodePtr};
 use libloading::{Library, Symbol};
 
-use std::ffi::CString;
-use std::mem::transmute;
-use std::os::raw::c_char;
+use std::ffi::{CStr, CString};
 use std::path::{Path, PathBuf};
 
 fn find_lib(paths: &[PathBuf], lib_path: &Path) -> Result<Library, Error> {
@@ -93,6 +90,8 @@ pub fn link_with(ctx: &mut Context, lib_path: PathBuf) -> Result<(), Error> {
 enum FfiJkArg {
     Int(i64),
     Float(f64),
+    Pointer(*const ()),
+    Error,
 }
 
 pub fn execute(
@@ -103,29 +102,61 @@ pub fn execute(
     log!("ext call: {}", call.name());
     let sym = call.name().as_bytes();
 
-    // FIXME: Don't unwrap
-    let jk_args: Vec<FfiJkArg> = call
+    let mut errors = vec![];
+
+    let jk_args: Vec<ObjectInstance> = call
         .args()
         .iter()
         .map(|arg| arg.execute(ctx).unwrap())
+        .collect();
+
+    // We need pointers for strings to live long enough... So keep them here
+    // for the duration of the function call
+    let mut strings = Vec::new();
+
+    // FIXME: Don't unwrap
+    let ffi_jk_args: Vec<FfiJkArg> = jk_args
+        .iter()
         .zip(
             dec.args()
                 .iter()
                 .map(|dec_arg| dec_arg.get_type().id().to_owned()),
         )
         .map(|(arg_value, arg_ty)| match arg_ty.as_str() {
-            "int" => FfiJkArg::Int(JkInt::from_instance(&arg_value).0),
-            "bool" => FfiJkArg::Int(JkBool::from_instance(&arg_value).0 as i64),
-            "float" => FfiJkArg::Float(JkFloat::from_instance(&arg_value).0),
-            _ => unreachable!(),
+            "int" => FfiJkArg::Int(JkInt::from_instance(arg_value).0),
+            "bool" => FfiJkArg::Int(JkBool::from_instance(arg_value).0 as i64),
+            "float" => FfiJkArg::Float(JkFloat::from_instance(arg_value).0),
+            "string" => {
+                let arg = JkString::from_instance(arg_value).0;
+                let arg = CString::new(arg).unwrap();
+                let res = FfiJkArg::Pointer(arg.as_ptr() as *const ());
+                strings.push(arg);
+                res
+            }
+            _ => {
+                errors.push(Error::new(ErrKind::ExternFunc).with_msg(format!(
+                    "ffi module does not support calls with arguments of type {} yet",
+                    arg_ty
+                )));
+                FfiJkArg::Error
+            }
         })
         .collect();
 
-    let args: Vec<FfiArg> = jk_args
+    if !errors.is_empty() {
+        errors.into_iter().for_each(|e| ctx.error(e));
+        return Err(Error::new(ErrKind::ExternFunc));
+    }
+
+    // At this point, we cannot have errors anymore and will have returned from
+    // the function instead of making the call
+    let args: Vec<FfiArg> = ffi_jk_args
         .iter()
         .map(|ffi_jk_arg| match ffi_jk_arg {
             FfiJkArg::Int(i) => arg(i),
             FfiJkArg::Float(f) => arg(f),
+            FfiJkArg::Pointer(p) => arg(p),
+            _ => unreachable!(),
         })
         .collect();
 
@@ -154,57 +185,36 @@ pub fn execute(
                             JkBool::from(ffi_call::<i32>(func, &args) != 0).to_instance(),
                         ))
                     }
-                    _ => unreachable!("not a valid return type"),
+                    "string" => {
+                        let raw_ptr = ffi_call::<*mut i8>(func, &args);
+                        log!("Pointer: {:p}", raw_ptr);
+                        // FIXME: Do we really want to return an empty string if the ffi
+                        // function returns NULL?
+                        return if raw_ptr.is_null() {
+                            Ok(Some(JkString::from(String::new()).to_instance()))
+                        } else {
+                            Ok(Some(
+                                JkString::from(CStr::from_ptr(raw_ptr).to_str().unwrap())
+                                    .to_instance(),
+                            ))
+                        };
+                    }
+                    _ => {
+                        ctx.error(Error::new(ErrKind::ExternFunc).with_msg(format!(
+                            "ffi module does not support {} as a return type",
+                            ty
+                        )));
+                        return Err(Error::new(ErrKind::ExternFunc));
+                    }
                 },
             }
         }
     }
 
-    // match call.args().len() {
-    //     0 => match dec.ty() {
-    //         None => {
-    //             func();
-    //             return Ok(None);
-    //         }
-    //         Some(ty) => match ty.id() {
-    //             "int" => {
-    //                 let func = unsafe { transmute::<fn(), fn() -> i64>(**func) };
-    //                 let res = func();
-    //                 return Ok(Some(JkInt::from(res).to_instance()));
-    //             }
-    //             _ => unreachable!(),
-    //         },
-    //     },
-    //     1 => match dec.args()[0].get_type().id() {
-    //         "string" => match dec.ty() {
-    //             None => {
-    //                 let func = unsafe { transmute::<fn(), fn(*const c_char)>(**func) };
-    //                 let arg = JkString::from_instance(&args[0]).0;
-    //                 let arg = CString::new(arg.as_str()).unwrap();
-    //                 let arg = arg.as_ptr();
-    //                 func(arg);
-    //                 return Ok(None);
-    //             }
-    //             Some(ty) => match ty.id() {
-    //                 "int" => {
-    //                     let func =
-    //                         unsafe { transmute::<fn(), fn(*const c_char) -> i64>(**func) };
-    //                     let arg = JkString::from_instance(&args[0]).0;
-    //                     let arg = CString::new(arg.as_str()).unwrap();
-    //                     let arg = arg.as_ptr();
-    //                     let res = func(arg);
-    //                     return Ok(Some(JkInt::from(res).to_instance()));
-    //                 }
-    //                 _ => unreachable!(),
-    //             },
-    //         },
-    //         _ => unreachable!(),
-    //     },
-    //     _ => unreachable!(),
-    // }
-
-    Err(Error::new(ErrKind::ExternFunc)
-        .with_msg(format!("cannot call external function `{}`", call.name())))
+    Err(Error::new(ErrKind::ExternFunc).with_msg(format!(
+        "could not find external function `{}`",
+        call.name()
+    )))
 }
 
 #[cfg(test)]
