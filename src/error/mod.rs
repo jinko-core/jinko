@@ -76,6 +76,7 @@ impl ErrKind {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Location {
+    input: String,
     line: usize,
     column: usize,
 }
@@ -88,11 +89,16 @@ impl Location {
     pub fn column(&self) -> usize {
         self.column
     }
+
+    pub fn input(&self) -> &str {
+        self.input.as_str()
+    }
 }
 
 impl From<LocatedSpan<&str>> for Location {
     fn from(span: LocatedSpan<&str>) -> Self {
         Location {
+            input: span.fragment().to_string(),
             line: span.location_line() as usize,
             column: span.get_column(),
         }
@@ -206,7 +212,8 @@ impl Display for Error {
         }
 
         if let Some(loc) = &self.loc {
-            write!(f, "at line {} column {}", loc.line(), loc.column())?;
+            writeln!(f, " at line {} column {}", loc.line(), loc.column())?;
+            write!(f, "input: {}", loc.input())?;
         }
 
         Ok(())
