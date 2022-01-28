@@ -9,20 +9,27 @@ use crate::instruction::{FunctionCall, Instruction, MethodCall};
 use crate::parser::{ParseResult, Token};
 use crate::{ErrKind, Error, JkBool, JkChar, JkFloat, JkInt, JkString};
 
+use nom::bytes::complete::take;
 use nom::sequence::{preceded, terminated};
 use nom::Err::Error as NomError;
+use nom::Slice;
+use nom_locate::LocatedSpan;
 
 pub struct ConstantConstruct;
 
 #[doc(hidden)]
 impl ConstantConstruct {
-    pub(crate) fn char_constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    pub(crate) fn char_constant(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
         let (input, char_value) = Token::char_constant(input)?;
 
         Ok((input, Box::new(JkChar::from(char_value))))
     }
 
-    pub(crate) fn string_constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    pub(crate) fn string_constant(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
         let (input, inner) = preceded(Token::double_quote, ConstantConstruct::inner_string)(input)?;
         let string = inner.unwrap_or_else(|| Box::new(JkString::from("")));
 
@@ -31,7 +38,9 @@ impl ConstantConstruct {
 
     /// inner_string = '"'
     ///              | special string
-    fn inner_string(input: &str) -> ParseResult<&str, Option<Box<dyn Instruction>>> {
+    fn inner_string(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, Option<Box<dyn Instruction>>> {
         if let Ok((input, _)) = Token::double_quote(input) {
             Ok((input, None))
         } else {
@@ -45,7 +54,7 @@ impl ConstantConstruct {
     /// | '{' expr '}'
     /// | '\' CHAR
     /// | CHAR (* anything except "{\ *)
-    fn special(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    fn special(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
         let special: &[_] = &['"', '{', '\\'];
 
         if let Ok((input, _)) = Token::left_curly_bracket(input) {
@@ -54,8 +63,8 @@ impl ConstantConstruct {
             if input.is_empty() {
                 return ConstantConstruct::special(input);
             }
-            let (special, input) = input.split_at(1);
-            let escaped = match special {
+            let (input, special) = take(1usize)(input)?;
+            let escaped = match *special.fragment() {
                 "\"" => "\"",
                 "{" => "{",
                 "}" => "}",
@@ -72,7 +81,10 @@ impl ConstantConstruct {
 
             Ok((input, Box::new(JkString::from(escaped))))
         } else if let Some(index) = input.find(special) {
-            Ok((&input[index..], Box::new(JkString::from(&input[..index]))))
+            Ok((
+                input.slice(index..),
+                Box::new(JkString::from(&input[..index])),
+            ))
         } else {
             Err(NomError(
                 Error::new(ErrKind::Parsing).with_msg(String::from("Undelimited string")),
@@ -93,19 +105,25 @@ impl ConstantConstruct {
         }
     }
 
-    pub(crate) fn float_constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    pub(crate) fn float_constant(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
         let (input, float_value) = Token::float_constant(input)?;
 
         Ok((input, Box::new(JkFloat::from(float_value))))
     }
 
-    pub(crate) fn int_constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    pub(crate) fn int_constant(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
         let (input, int_value) = Token::int_constant(input)?;
 
         Ok((input, Box::new(JkInt::from(int_value))))
     }
 
-    pub(crate) fn bool_constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+    pub(crate) fn bool_constant(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
         let (input, bool_value) = Token::bool_constant(input)?;
 
         Ok((input, Box::new(JkBool::from(bool_value))))
@@ -115,105 +133,106 @@ impl ConstantConstruct {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::span;
 
     #[test]
     fn empty_string() {
-        let input = "\"\"";
+        let input = span!("\"\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         let string = expr.downcast_ref::<JkString>().unwrap();
         assert_eq!(string.0, "");
     }
 
     #[test]
     fn basic_string() {
-        let input = "\"hello\"";
+        let input = span!("\"hello\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         let string = expr.downcast_ref::<JkString>().unwrap();
         assert_eq!(string.0, "hello");
     }
 
     #[test]
     fn formatted_once() {
-        let input = "\"hello {world}\"";
+        let input = span!("\"hello {world}\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn formatted_middle() {
-        let input = "\"hello {world} !\"";
+        let input = span!("\"hello {world} !\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn formatted_start() {
-        let input = "\"{10 + 9} is 21\"";
+        let input = span!("\"{10 + 9} is 21\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn escape_start() {
-        let input = "\"\\neat\"";
+        let input = span!("\"\\neat\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn escape_end() {
-        let input = "\"hello\\n\"";
+        let input = span!("\"hello\\n\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn escape_formatting() {
-        let input = "\"hello \\{world\\}\"";
+        let input = span!("\"hello \\{world\\}\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn formatted_not_delimited() {
-        let input = "\"hello {world}";
+        let input = span!("\"hello {world}");
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }
 
     #[test]
     fn basic_not_delimited() {
-        let input = "\"Rust Transmute Task Force";
+        let input = span!("\"Rust Transmute Task Force");
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }
 
     #[test]
     fn escape_unexpected_end_of_string() {
-        let input = "\"Rust Transmute Task Force\\";
+        let input = span!("\"Rust Transmute Task Force\\");
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }
 
     #[test]
     fn invalid_escape() {
-        let input = "\"Rust Transmute \\a Task Force\"";
+        let input = span!("\"Rust Transmute \\a Task Force\"");
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }

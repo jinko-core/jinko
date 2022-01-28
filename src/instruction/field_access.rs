@@ -129,7 +129,7 @@ mod tests {
     use crate::instance::ToObjectInstance;
     use crate::parser::constructs;
     use crate::JkInt;
-    use crate::{jinko, jinko_fail};
+    use crate::{jinko, jinko_fail, span};
 
     fn setup() -> Context {
         let ctx = jinko! {
@@ -145,7 +145,7 @@ mod tests {
     fn t_valid_field_access() {
         let mut ctx = setup();
 
-        let inst = constructs::expr("b.x").unwrap().1;
+        let inst = constructs::expr(span!("b.x")).unwrap().1;
         let res = match inst.execute(&mut ctx) {
             Some(i) => i,
             None => return assert!(false, "Error when accessing valid field"),
@@ -160,7 +160,9 @@ mod tests {
     fn t_valid_field_access_from_type_instantiation() {
         let mut ctx = setup();
 
-        let inst = constructs::expr("Point ( x : 1, y : 2 ).x").unwrap().1;
+        let inst = constructs::expr(span!("Point ( x : 1, y : 2 ).x"))
+            .unwrap()
+            .1;
         let res = match inst.execute(&mut ctx) {
             Some(i) => i,
             None => unreachable!("Error when accessing valid field"),
@@ -176,18 +178,22 @@ mod tests {
     fn t_valid_multi_field_access() {
         let mut ctx = Context::new();
 
-        let inst = constructs::expr("type Pair1(x: int, y: int)").unwrap().1;
-        inst.execute(&mut ctx).unwrap();
-
-        let inst = constructs::expr("type Pair2(x: Pair1, y: int)").unwrap().1;
-        inst.execute(&mut ctx).unwrap();
-
-        let inst = constructs::expr("p = Pair2 ( x : Pair1 ( x : 1, y : 2), y : 3)")
+        let inst = constructs::expr(span!("type Pair1(x: int, y: int)"))
             .unwrap()
             .1;
         inst.execute(&mut ctx).unwrap();
 
-        let inst = constructs::expr("p.x.y").unwrap().1;
+        let inst = constructs::expr(span!("type Pair2(x: Pair1, y: int)"))
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx).unwrap();
+
+        let inst = constructs::expr(span!("p = Pair2 ( x : Pair1 ( x : 1, y : 2), y : 3)"))
+            .unwrap()
+            .1;
+        inst.execute(&mut ctx).unwrap();
+
+        let inst = constructs::expr(span!("p.x.y")).unwrap().1;
         let res = match inst.execute(&mut ctx) {
             Some(i) => i,
             None => unreachable!("Error when accessing valid multi field"),
@@ -202,10 +208,10 @@ mod tests {
     fn t_field_access_on_void() {
         let mut ctx = setup();
 
-        let inst = constructs::expr("func void() {}").unwrap().1;
+        let inst = constructs::expr(span!("func void() {}")).unwrap().1;
         inst.execute(&mut ctx);
 
-        let inst = constructs::expr("void().field").unwrap().1;
+        let inst = constructs::expr(span!("void().field")).unwrap().1;
         assert!(inst.execute(&mut ctx).is_none());
         assert!(ctx.error_handler.has_errors())
     }
@@ -214,7 +220,7 @@ mod tests {
     fn t_field_access_unknown_field() {
         let mut ctx = setup();
 
-        let inst = constructs::expr("b.not_a_field").unwrap().1;
+        let inst = constructs::expr(span!("b.not_a_field")).unwrap().1;
         assert!(inst.execute(&mut ctx).is_none());
         assert!(ctx.error_handler.has_errors());
     }
@@ -223,10 +229,10 @@ mod tests {
     fn t_field_access_field_on_primitive() {
         let mut ctx = setup();
 
-        let inst = constructs::expr("i = 12").unwrap().1;
+        let inst = constructs::expr(span!("i = 12")).unwrap().1;
         inst.execute(&mut ctx);
 
-        let inst = constructs::expr("i.field_on_primitive").unwrap().1;
+        let inst = constructs::expr(span!("i.field_on_primitive")).unwrap().1;
         assert!(inst.execute(&mut ctx).is_none());
         assert!(ctx.error_handler.has_errors())
     }

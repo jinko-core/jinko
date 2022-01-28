@@ -1,5 +1,5 @@
 use jinko::Context;
-use std::io::{self, BufRead, Result, Write};
+use std::io::{self, Result, Write};
 
 fn main() -> Result<()> {
     let stdin = io::stdin();

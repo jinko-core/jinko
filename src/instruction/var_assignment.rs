@@ -188,7 +188,7 @@ mod tests {
     use crate::parser::constructs;
     use crate::value::{JkInt, JkString};
     use crate::ToObjectInstance;
-    use crate::{jinko, jinko_fail};
+    use crate::{jinko, jinko_fail, span};
 
     #[test]
     fn non_mutable() {
@@ -211,13 +211,13 @@ mod tests {
     #[test]
     fn assign_mutable() {
         let mut i = Context::new();
-        let va_init = constructs::expr("mut a = 13").unwrap().1;
-        let va_0 = constructs::expr("a = 15").unwrap().1;
+        let va_init = constructs::expr(span!("mut a = 13")).unwrap().1;
+        let va_0 = constructs::expr(span!("a = 15")).unwrap().1;
 
         va_init.execute(&mut i);
         va_0.execute(&mut i);
 
-        let va_get = constructs::expr("a").unwrap().1;
+        let va_get = constructs::expr(span!("a")).unwrap().1;
         assert_eq!(
             va_get.execute(&mut i).unwrap(),
             JkInt::from(15).to_instance()
@@ -227,8 +227,8 @@ mod tests {
     #[test]
     fn assign_immutable() {
         let mut i = Context::new();
-        let va_init = constructs::expr("a = 13").unwrap().1;
-        let va_0 = constructs::expr("a = 15").unwrap().1;
+        let va_init = constructs::expr(span!("a = 13")).unwrap().1;
+        let va_0 = constructs::expr(span!("a = 15")).unwrap().1;
 
         va_init.execute(&mut i);
         if va_0.execute(&mut i).is_some() {

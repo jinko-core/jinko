@@ -15,9 +15,10 @@
 
 use nom::Err::Error as NomError;
 use nom::{
-    branch::alt, combinator::opt, multi::many0, sequence::delimited, sequence::pair,
-    sequence::preceded, sequence::terminated,
+    branch::alt, character::complete::multispace0, combinator::opt, multi::many0,
+    sequence::delimited, sequence::pair, sequence::preceded, sequence::terminated,
 };
+use nom_locate::LocatedSpan;
 
 use crate::instruction::{
     BinaryOp, Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl,
@@ -25,10 +26,13 @@ use crate::instruction::{
     TypeInstantiation, Var, VarAssign, VarOrEmptyType,
 };
 use crate::parser::{ConstantConstruct, ParseResult, Token};
+use crate::Error;
 
 /// Parse as many instructions as possible
 /// many_expr = ( expr_semicolon )*
-pub fn many_expr(mut input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
+pub fn many_expr(
+    mut input: LocatedSpan<&str>,
+) -> ParseResult<LocatedSpan<&str>, Vec<Box<dyn Instruction>>> {
     let mut exprs = vec![];
     loop {
         input = next(input);
@@ -44,7 +48,9 @@ pub fn many_expr(mut input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>
 /// Parse an instruction and maybe the semicolon that follows.
 ///
 /// expr_semicolon = expr [ ';' ]
-pub fn expr_semicolon(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+pub fn expr_semicolon(
+    input: LocatedSpan<&str>,
+) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, expr) = expr(input)?;
     let (input, _) = opt(Token::semicolon)(input)?;
 
@@ -52,7 +58,7 @@ pub fn expr_semicolon(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 }
 
 // expr = cmp ( '<' cmp | '>' cmp | '<=' cmp | '>=' cmp | '==' cmp | '!=' cmp)*
-pub fn expr(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+pub fn expr(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (mut input, mut expr) = cmp(input)?;
     while let Ok((new_input, op)) = alt((
         Token::lt_eq,
@@ -65,36 +71,36 @@ pub fn expr(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     {
         let (new_input, rhs) = cmp(new_input)?;
         input = new_input;
-        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op)));
+        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op.fragment())));
     }
     Ok((input, expr))
 }
 
-pub fn cmp(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+pub fn cmp(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (mut input, mut expr) = term(input)?;
     while let Ok((new_input, op)) = alt((Token::add, Token::sub))(input) {
         let (new_input, rhs) = term(new_input)?;
         input = new_input;
-        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op)));
+        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op.fragment())));
     }
     Ok((input, expr))
 }
 
 /// term = factor next ( '*' factor next | '/' factor next )*
-fn term(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn term(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, mut term) = factor(input)?;
     let mut input = next(input);
     while let Ok((new_input, op)) = alt((Token::mul, Token::div))(input) {
         let (new_input, rhs) = factor(new_input)?;
         let new_input = next(new_input);
         input = new_input;
-        term = Box::new(BinaryOp::new(term, rhs, Operator::new(op)));
+        term = Box::new(BinaryOp::new(term, rhs, Operator::new(op.fragment())));
     }
     Ok((input, term))
 }
 
 /// factor = next unit factor_rest
-fn factor(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn factor(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let input = next(input);
     let (input, unit) = unit(input)?;
     factor_rest(input, unit)
@@ -102,7 +108,10 @@ fn factor(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 
 /// factor_rest = '.' IDENTIFIER next method_or_field factor_rest
 ///             | ε
-fn factor_rest(input: &str, expr: Box<dyn Instruction>) -> ParseResult<&str, Box<dyn Instruction>> {
+fn factor_rest(
+    input: LocatedSpan<&str>,
+    expr: Box<dyn Instruction>,
+) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     match Token::dot(input) {
         Ok((input, _)) => {
             let (input, id) = Token::identifier(input)?;
@@ -117,10 +126,10 @@ fn factor_rest(input: &str, expr: Box<dyn Instruction>) -> ParseResult<&str, Box
 /// method_or_field = '(' next args
 ///                 | ε
 fn method_or_field(
-    input: &str,
+    input: LocatedSpan<&str>,
     expr: Box<dyn Instruction>,
     id: String,
-) -> ParseResult<&str, Box<dyn Instruction>> {
+) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_parenthesis(input) {
         let input = next(input);
         let (input, args) = args(input)?;
@@ -141,17 +150,17 @@ fn method_or_field(
 }
 
 /// ```ignore
-/// unit = 'if' expr block next [ 'else' next block ]
+/// unit = '_f' expr block next [ 'else' next block ]
 ///      | 'while' expr block
 ///      | 'loop' next block
-///      | 'for' spaced_identifier 'in' expr block
+///      | 'for' spaced_identifier '_n' expr block
 ///
 ///      | 'func' function_declaration block
 ///      | 'test' function_declaration block
 ///      | 'mock' function_declaration block
 ///
 ///      | 'type' spaced_identifier '(' named_args
-///      | 'incl' spaced_identifier [ 'as' next IDENTIFIER ]
+///      | '_ncl' spaced_identifier [ 'as' next IDENTIFIER ]
 ///      | 'mut' spaced_identifier '=' expr (* mutable variable assigment *)
 ///      | '@' spaced_identifier '(' args
 ///
@@ -169,7 +178,7 @@ fn method_or_field(
 ///
 ///      | IDENTIFIER next func_type_or_var
 /// ```
-fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::if_tok(input) {
         unit_if(input)
     } else if let Ok((input, _)) = Token::while_tok(input) {
@@ -207,7 +216,7 @@ fn unit(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     }
 }
 
-fn unit_if(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_if(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, cond) = expr(input)?;
     let (input, success) = block(input)?;
     let input = next(input);
@@ -220,18 +229,18 @@ fn unit_if(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     }
 }
 
-fn unit_while(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_while(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, (cond, block)) = pair(expr, block)(input)?;
     Ok((input, Box::new(Loop::new(LoopKind::While(cond), block))))
 }
 
-fn unit_loop(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_loop(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let input = next(input);
     let (input, block) = block(input)?;
     Ok((input, Box::new(Loop::new(LoopKind::Loop, block))))
 }
 
-fn unit_for(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_for(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, id) = spaced_identifier(input)?;
     let (input, _) = Token::in_tok(input)?;
     let (input, expr) = expr(input)?;
@@ -240,15 +249,18 @@ fn unit_for(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
     Ok((input, Box::new(Loop::new(LoopKind::For(var, expr), block))))
 }
 
-fn unit_func<'a>(input: &'a str, kind: &str) -> ParseResult<&'a str, Box<dyn Instruction>> {
+fn unit_func<'i>(
+    input: LocatedSpan<&'i str>,
+    kind: LocatedSpan<&'i str>,
+) -> ParseResult<LocatedSpan<&'i str>, Box<dyn Instruction>> {
     let (input, mut function) = func_declaration(input)?;
     let (input, body) = block(input)?;
     function.set_block(body);
-    function.set_kind(FunctionKind::from(kind));
+    function.set_kind(FunctionKind::from(*kind.fragment()));
     Ok((input, Box::new(function)))
 }
 
-fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_incl(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, path) = spaced_identifier(input)?;
     if let Ok((input, _)) = Token::az_tok(input) {
         let (input, alias) = preceded(nom_next, Token::identifier)(input)?;
@@ -259,7 +271,9 @@ fn unit_incl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 }
 
 /// spaced_identifier '(' type_inst_arg (',' type_inst_arg)* ')'
-fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_type_decl(
+    input: LocatedSpan<&str>,
+) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, name) = spaced_identifier(input)?;
     let (input, generics) = maybe_generic_list(input)?;
     let (input, type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
@@ -278,7 +292,7 @@ fn unit_type_decl(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 }
 
 /// spaced_identifier '=' expr
-fn unit_mut_var(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_mut_var(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, symbol) = spaced_identifier(input)?;
     let (input, _) = Token::equal(input)?;
     let (input, value) = expr(input)?;
@@ -287,7 +301,7 @@ fn unit_mut_var(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 }
 
 /// IDENTIFIER next '(' next args
-fn unit_jk_inst(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_jk_inst(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
     let (input, args) = args(next(input))?;
@@ -301,7 +315,7 @@ fn unit_jk_inst(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 }
 
 /// 'func' function_declaration ';'
-fn unit_extern(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_extern(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let input = next(input);
     let (input, mut dec) = delimited(Token::func_tok, func_declaration, Token::semicolon)(input)?;
 
@@ -310,20 +324,20 @@ fn unit_extern(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 }
 
 ///  [ expr ]                      (* Not LL(1) but this entry is subject to change *)
-fn unit_return(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_return(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, expr) = opt(expr)(input)?;
 
     Ok((input, Box::new(Return::new(expr))))
 }
 
-fn unit_block(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+fn unit_block(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let (input, block) = inner_block(next(input))?;
     Ok((input, Box::new(block)))
 }
 
 // FIXME: This does not parse default generic types yet (`func f<T = int>()`)
-fn generic_list(input: &str) -> ParseResult<&str, Vec<TypeId>> {
-    fn whitespace_plus_id(input: &str) -> ParseResult<&str, String> {
+fn generic_list(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<TypeId>> {
+    fn whitespace_plus_id(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
         let input = next(input);
         let (input, id) = Token::identifier(input)?;
         let input = next(input);
@@ -339,7 +353,7 @@ fn generic_list(input: &str) -> ParseResult<&str, Vec<TypeId>> {
     Ok((input, generics.into_iter().map(TypeId::new).collect()))
 }
 
-fn maybe_generic_list(input: &str) -> ParseResult<&str, Vec<TypeId>> {
+fn maybe_generic_list(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<TypeId>> {
     if let Ok((input, _)) = Token::left_bracket(input) {
         Ok(generic_list(input)?)
     } else {
@@ -348,7 +362,7 @@ fn maybe_generic_list(input: &str) -> ParseResult<&str, Vec<TypeId>> {
 }
 
 /// function_declaration = next spaced_identifier [ next '[' spaced_identifier ( ',' spaced_identifier )* ']' ] next '(' next typed_arg next return_type
-fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
+fn func_declaration(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, FunctionDec> {
     let input = next(input);
     let (input, id) = spaced_identifier(input)?;
     let input = next(input);
@@ -367,7 +381,7 @@ fn func_declaration(input: &str) -> ParseResult<&str, FunctionDec> {
 
 /// return_type = '->' spaced_identifier
 ///             | ε
-fn return_type(input: &str) -> ParseResult<&str, Option<TypeId>> {
+fn return_type(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Option<TypeId>> {
     match Token::arrow(input) {
         Ok((input, _)) => {
             let (input, ty) = spaced_identifier(input)?;
@@ -378,7 +392,7 @@ fn return_type(input: &str) -> ParseResult<&str, Option<TypeId>> {
 }
 
 /// block = '{' next inner_block
-pub fn block(input: &str) -> ParseResult<&str, Block> {
+pub fn block(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Block> {
     let (input, _) = Token::left_curly_bracket(input)?;
     let input = next(input);
     inner_block(input)
@@ -387,7 +401,7 @@ pub fn block(input: &str) -> ParseResult<&str, Block> {
 /// inner_block = '}'
 ///             | expr '}'                  (* The only case where block is an expr *)
 ///             | expr ';' next inner_block
-fn inner_block(input: &str) -> ParseResult<&str, Block> {
+fn inner_block(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Block> {
     if let Ok((input, _)) = Token::right_curly_bracket(input) {
         return Ok((input, Block::new()));
     }
@@ -408,7 +422,10 @@ fn inner_block(input: &str) -> ParseResult<&str, Block> {
 /// func_type_or_var = '(' next func_or_type_inst_args
 ///                  | '=' expr                   (* variable assigment *)
 ///                  | ε                          (* variable or empty type instantiation *)
-fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instruction>> {
+fn func_type_or_var(
+    input: LocatedSpan<&str>,
+    id: String,
+) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_bracket(input) {
         generic_func_or_type_inst_args(next(input), id)
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
@@ -424,10 +441,10 @@ fn func_type_or_var(input: &str, id: String) -> ParseResult<&str, Box<dyn Instru
 /// func_or_type_inst_args = IDENTIFIER next ':' expr (',' type_inst_arg )* ')'  (* type_instantiation *)
 ///                  | args                                            (* function_call *)
 fn func_or_type_inst_args(
-    input: &str,
+    input: LocatedSpan<&str>,
     id: String,
     generics: Vec<TypeId>,
-) -> ParseResult<&str, Box<dyn Instruction>> {
+) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     if let Ok((input, first_attr)) =
         terminated(terminated(Token::identifier, nom_next), Token::colon)(input)
     {
@@ -451,9 +468,9 @@ fn func_or_type_inst_args(
 }
 
 fn generic_func_or_type_inst_args(
-    input: &str,
+    input: LocatedSpan<&str>,
     id: String,
-) -> ParseResult<&str, Box<dyn Instruction>> {
+) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     // FIXME: Assign generics to FunctionCall and TypeInstantiation
     let (input, generics) = generic_list(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
@@ -467,7 +484,7 @@ fn generic_func_or_type_inst_args(
 
 /// args = expr ( ',' expr )* ')'
 ///      | ')'
-fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
+fn args(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<Box<dyn Instruction>>> {
     if let Ok((input, _)) = Token::right_parenthesis(input) {
         return Ok((input, vec![]));
     }
@@ -481,7 +498,7 @@ fn args(input: &str) -> ParseResult<&str, Vec<Box<dyn Instruction>>> {
 
 /// typed_args = typed_arg ( ',' typed_arg )* ')'
 ///           | ')'
-fn typed_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
+fn typed_args(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<DecArg>> {
     if let Ok((input, _)) = Token::right_parenthesis(input) {
         return Ok((input, vec![]));
     }
@@ -494,9 +511,9 @@ fn typed_args(input: &str) -> ParseResult<&str, Vec<DecArg>> {
 }
 
 // FIXME: This should not return a String
-fn multi_type(input: &str) -> ParseResult<&str, String> {
+fn multi_type(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
     // FIXME: Remove with #342
-    fn whitespace_plus_id(input: &str) -> ParseResult<&str, String> {
+    fn whitespace_plus_id(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
         delimited(nom_next, Token::identifier, nom_next)(input)
     }
 
@@ -512,7 +529,7 @@ fn multi_type(input: &str) -> ParseResult<&str, String> {
 }
 
 /// typed_arg = spaced_identifier ':' spaced_identifier
-fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
+fn typed_arg(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, DecArg> {
     let (input, id) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
@@ -523,7 +540,7 @@ fn typed_arg(input: &str) -> ParseResult<&str, DecArg> {
 }
 
 /// type_inst_arg = spaced_identifier ':' expr
-fn type_inst_arg(input: &str) -> ParseResult<&str, VarAssign> {
+fn type_inst_arg(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, VarAssign> {
     let (input, id) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
@@ -533,7 +550,7 @@ fn type_inst_arg(input: &str) -> ParseResult<&str, VarAssign> {
     Ok((input, VarAssign::new(false, id, value)))
 }
 
-fn spaced_identifier(input: &str) -> ParseResult<&str, String> {
+fn spaced_identifier(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
     delimited(nom_next, Token::identifier, nom_next)(input)
 }
 
@@ -542,15 +559,16 @@ fn spaced_identifier(input: &str) -> ParseResult<&str, String> {
 ///       | '/*' [^'*/'] '*/'
 ///       | '//' [^\n]   '\n'
 ///       | '#'  [^\n]   '\n'
-pub fn next(input: &str) -> &str {
-    let input = input.trim_start();
+pub fn next(input: LocatedSpan<&str>) -> LocatedSpan<&str> {
+    // FIXME: Do not unwrap
+    let (input, _) = multispace0::<_, Error>(input).unwrap();
     match Token::consume_comment(input) {
         Ok((input, _)) => next(input),
         _ => input,
     }
 }
 
-fn nom_next(input: &str) -> ParseResult<&str, ()> {
+fn nom_next(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, ()> {
     Ok((next(input), ()))
 }
 
@@ -558,7 +576,9 @@ fn nom_next(input: &str) -> ParseResult<&str, ()> {
 /// `0.5`.
 ///
 /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
-pub(crate) fn constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
+pub(crate) fn constant(
+    input: LocatedSpan<&str>,
+) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
     let constant = alt((
         ConstantConstruct::char_constant,
         ConstantConstruct::string_constant,
@@ -573,22 +593,29 @@ pub(crate) fn constant(input: &str) -> ParseResult<&str, Box<dyn Instruction>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::span;
     use crate::{JkFloat, JkInt};
 
     #[test]
     fn consume_whitespace() {
-        assert_eq!(nom_next("   input"), Ok(("input", ())));
-        assert_eq!(nom_next(" \t input"), Ok(("input", ())));
+        assert_eq!(
+            nom_next(span!("   input")).map(|(input, _)| *input.fragment()),
+            Ok("input")
+        );
+        assert_eq!(
+            nom_next(span!(" \t input")).map(|(input, _)| *input.fragment()),
+            Ok("input")
+        );
     }
 
     #[test]
     fn simple_int_sum() {
-        let (input, expr) = expr(" 401 + 809 ").unwrap();
+        let (input, expr) = expr(span!(" 401 + 809 ")).unwrap();
         let operation: &BinaryOp = expr.downcast_ref().unwrap();
         let lhs: &JkInt = operation.lhs().downcast_ref().unwrap();
         let rhs: &JkInt = operation.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(operation.operator(), Operator::Add);
         assert_eq!(lhs.print(), "401");
         assert_eq!(rhs.print(), "809");
@@ -596,12 +623,12 @@ mod tests {
 
     #[test]
     fn simple_float_mul() {
-        let (input, expr) = expr("3.14 * 9.999").unwrap();
+        let (input, expr) = expr(span!("3.14 * 9.999")).unwrap();
         let operation: &BinaryOp = expr.downcast_ref().unwrap();
         let lhs: &JkFloat = operation.lhs().downcast_ref().unwrap();
         let rhs: &JkFloat = operation.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(operation.operator(), Operator::Mul);
         assert_eq!(lhs.print(), "3.14");
         assert_eq!(rhs.print(), "9.999");
@@ -609,7 +636,7 @@ mod tests {
 
     #[test]
     fn chained_sum_sub() {
-        let (input, expr) = expr("239 + 809 - 1004").unwrap();
+        let (input, expr) = expr(span!("239 + 809 - 1004")).unwrap();
         let sub: &BinaryOp = expr.downcast_ref().unwrap();
         let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
 
@@ -617,7 +644,7 @@ mod tests {
         let second: &JkInt = add.rhs().downcast_ref().unwrap();
         let third: &JkInt = sub.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(sub.operator(), Operator::Sub);
         assert_eq!(add.operator(), Operator::Add);
         assert_eq!(first.print(), "239");
@@ -627,7 +654,7 @@ mod tests {
 
     #[test]
     fn math_precedence() {
-        let (input, expr) = expr("5.9 + 128 / 809.1 - 1004").unwrap();
+        let (input, expr) = expr(span!("5.9 + 128 / 809.1 - 1004")).unwrap();
         let sub: &BinaryOp = expr.downcast_ref().unwrap();
         let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
         let div: &BinaryOp = add.rhs().downcast_ref().unwrap();
@@ -637,7 +664,7 @@ mod tests {
         let third: &JkFloat = div.rhs().downcast_ref().unwrap();
         let fourth: &JkInt = sub.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(sub.operator(), Operator::Sub);
         assert_eq!(add.operator(), Operator::Add);
         assert_eq!(div.operator(), Operator::Div);
@@ -649,7 +676,7 @@ mod tests {
 
     #[test]
     fn tricky_math_precedence() {
-        let (input, expr) = expr("5.9 + 128 / 809.1 - 1 * 1.1").unwrap();
+        let (input, expr) = expr(span!("5.9 + 128 / 809.1 - 1 * 1.1")).unwrap();
         let sub: &BinaryOp = expr.downcast_ref().unwrap();
         let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
         let mul: &BinaryOp = sub.rhs().downcast_ref().unwrap();
@@ -661,7 +688,7 @@ mod tests {
         let fourth: &JkInt = mul.lhs().downcast_ref().unwrap();
         let fifth: &JkFloat = mul.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(sub.operator(), Operator::Sub);
         assert_eq!(add.operator(), Operator::Add);
         assert_eq!(mul.operator(), Operator::Mul);
@@ -675,123 +702,123 @@ mod tests {
 
     #[test]
     fn method_call_no_arg() {
-        let (input, expr) = expr("a.call( )").unwrap();
+        let (input, expr) = expr(span!("a.call( )")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn method_call_one_arg() {
-        let (input, expr) = expr("a.call(\"hello\")").unwrap();
+        let (input, expr) = expr(span!("a.call(\"hello\")")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn method_call_many_args() {
-        let (input, expr) = expr("a.call(\"hello\", 1   , variable)").unwrap();
+        let (input, expr) = expr(span!("a.call(\"hello\", 1   , variable)")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn method_call_many() {
-        let (input, expr) = expr("a.call(\"hello\").sub().subsub(1, 20)").unwrap();
+        let (input, expr) = expr(span!("a.call(\"hello\").sub().subsub(1, 20)")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn method_call_on_bool() {
-        let (input, expr) = expr("true.call( )").unwrap();
+        let (input, expr) = expr(span!("true.call( )")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn field_access_single() {
-        let (input, expr) = expr("a.attribute").unwrap();
+        let (input, expr) = expr(span!("a.attribute")).unwrap();
 
         assert!(expr.downcast_ref::<FieldAccess>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn field_access_many() {
-        let (input, expr) = expr("a.attr.sub_attr.subsub").unwrap();
+        let (input, expr) = expr(span!("a.attr.sub_attr.subsub")).unwrap();
 
         assert!(expr.downcast_ref::<FieldAccess>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn field_access_many_newline() {
-        let (input, expr) = expr("a\n.attr\n.sub_attr\n.subsub").unwrap();
+        let (input, expr) = expr(span!("a\n.attr\n.sub_attr\n.subsub")).unwrap();
 
         assert!(expr.downcast_ref::<FieldAccess>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn if_no_else() {
-        let (input, expr) = expr("if 1 + 1 { 10 / 2 }").unwrap();
+        let (input, expr) = expr(span!("if 1 + 1 { 10 / 2 }")).unwrap();
 
         assert!(expr.downcast_ref::<IfElse>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn if_else() {
-        let (input, expr) = expr("if 1 + 1 { 10 / 2 } else { var }").unwrap();
+        let (input, expr) = expr(span!("if 1 + 1 { 10 / 2 } else { var }")).unwrap();
 
         assert!(expr.downcast_ref::<IfElse>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn while_loop() {
-        let (input, expr) = expr("while true { var + 10 }").unwrap();
+        let (input, expr) = expr(span!("while true { var + 10 }")).unwrap();
 
         assert!(expr.downcast_ref::<Loop>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn for_loop() {
-        let (input, expr) = expr("for entry in collection { entry.print() }").unwrap();
+        let (input, expr) = expr(span!("for entry in collection { entry.print() }")).unwrap();
 
         assert!(expr.downcast_ref::<Loop>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn loop_basic() {
-        let (input, expr) = expr("loop { variable.get() + 10 }").unwrap();
+        let (input, expr) = expr(span!("loop { variable.get() + 10 }")).unwrap();
 
         assert!(expr.downcast_ref::<Loop>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn funcion_dec_no_arg() {
-        let (input, expr) = expr("func a ( ) { 1 }").unwrap();
+        let (input, expr) = expr(span!("func a ( ) { 1 }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(func.args().is_empty());
     }
 
     #[test]
     fn funcion_dec_one_arg() {
-        let (input, expr) = expr("func id ( arg: int ) { arg }").unwrap();
+        let (input, expr) = expr(span!("func id ( arg: int ) { arg }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(func.args().len() == 1);
         assert!(func.args()[0].name() == "arg");
         assert!(func.args()[0].get_type().id() == "int");
@@ -799,13 +826,13 @@ mod tests {
 
     #[test]
     fn funcion_dec_many_args() {
-        let (input, expr) = expr(
-            "func concat ( arg1: char , arg2: int,arg3:float, arg4: string) { arg1 + arg2 + arg3 }",
-        )
+        let (input, expr) = expr(span!(
+            "func concat ( arg1: char , arg2: int,arg3:float, arg4: string) { arg1 + arg2 + arg3 }"
+        ))
         .unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(func.args().len() == 4);
         assert!(func.args()[0].name() == "arg1");
         assert!(func.args()[3].name() == "arg4");
@@ -814,10 +841,10 @@ mod tests {
     #[test]
     fn funcion_dec_many_args_with_return() {
         let (input, expr) =
-            expr("func concat ( arg1: char , arg2: int,arg3:float, arg4: string) -> string { arg1 + arg2 + arg3 }").unwrap();
+            expr(span!("func concat ( arg1: char , arg2: int,arg3:float, arg4: string) -> string { arg1 + arg2 + arg3 }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.args().len(), 4);
         assert_eq!(func.ty().unwrap().id(), "string");
         assert_eq!(func.args()[0].name(), "arg1");
@@ -826,255 +853,255 @@ mod tests {
 
     #[test]
     fn funcion_dec_no_arg_with_return() {
-        let (input, expr) = expr("func a ( ) -> int { 1 }").unwrap();
+        let (input, expr) = expr(span!("func a ( ) -> int { 1 }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.ty().unwrap().id(), "int");
         assert!(func.args().is_empty());
     }
 
     #[test]
     fn test_dec_no_arg() {
-        let (input, expr) = expr("test a ( ) { true }").unwrap();
+        let (input, expr) = expr(span!("test a ( ) { true }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.fn_kind(), FunctionKind::Test);
     }
 
     #[test]
     fn mock_dec_one_arg() {
-        let (input, expr) = expr("mock id ( arg: int ) { arg }").unwrap();
+        let (input, expr) = expr(span!("mock id ( arg: int ) { arg }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.fn_kind(), FunctionKind::Mock);
     }
 
     #[test]
     fn block_empty() {
-        let (input, expr) = expr("{ }").unwrap();
+        let (input, expr) = expr(span!("{ }")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Block>().is_some());
     }
 
     #[test]
     fn block_one_inst() {
-        let (input, expr) = expr("{ var }").unwrap();
+        let (input, expr) = expr(span!("{ var }")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Block>().is_some());
     }
 
     #[test]
     fn block_many_inst() {
-        let (input, expr) = expr(
+        let (input, expr) = expr(span!(
             "{
             var = 1 + 1;
             var = var - 2;
             var
-                                 }",
-        )
+                                 }"
+        ))
         .unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Block>().is_some());
     }
 
     #[test]
     fn block_statement() {
-        let (input, expr) = expr(
+        let (input, expr) = expr(span!(
             "{
             var = 1 + 1;
             var = var - 2;
             var;
-                                 }",
-        )
+                                 }"
+        ))
         .unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Block>().is_some());
     }
 
     #[test]
     fn block_missing_closing() {
-        assert!(expr(
+        assert!(expr(span!(
             "{
             var = 1 + 1;
             var = var - 2;
             var
             "
-        )
+        ))
         .is_err())
     }
 
     #[test]
     fn type_dec_one_field() {
-        let (input, expr) = expr("type Num ( val : int )").unwrap();
+        let (input, expr) = expr(span!("type Num ( val : int )")).unwrap();
         let dec = expr.downcast_ref::<TypeDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(dec.name(), "Num");
         assert_eq!(dec.fields().len(), 1);
     }
 
     #[test]
     fn type_dec_multiple_field() {
-        let (input, expr) = expr("type Point( x : int , y: int )").unwrap();
+        let (input, expr) = expr(span!("type Point( x : int , y: int )")).unwrap();
         let dec = expr.downcast_ref::<TypeDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(dec.name(), "Point");
         assert_eq!(dec.fields().len(), 2);
     }
 
     #[test]
     fn type_dec_incomplete() {
-        assert!(expr("type Point( x:int , y: )").is_err());
+        assert!(expr(span!("type Point( x:int , y: )")).is_err());
     }
 
     #[test]
     fn include_simple() {
-        let (input, expr) = expr("incl pair").unwrap();
+        let (input, expr) = expr(span!("incl pair")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Incl>().is_some());
     }
 
     #[test]
     fn include_with_alias() {
-        let (input, expr) = expr("incl numpy as np").unwrap();
+        let (input, expr) = expr(span!("incl numpy as np")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Incl>().is_some());
     }
 
     #[test]
     fn include_with_alias_missing_path() {
-        assert!(expr("incl as uoh").is_err());
+        assert!(expr(span!("incl as uoh")).is_err());
     }
 
     #[test]
     fn var_assignment() {
-        let (input, expr) = expr("var = 'a'").unwrap();
+        let (input, expr) = expr(span!("var = 'a'")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "var");
         assert!(!assign.mutable());
     }
 
     #[test]
     fn var_assigment_tricky() {
-        let (input, expr) = expr("n1=b.call() + 1").unwrap();
+        let (input, expr) = expr(span!("n1=b.call() + 1")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "n1");
         assert!(!assign.mutable());
     }
 
     #[test]
     fn mut_var_assigment() {
-        let (input, expr) = expr("mut var = b.call() + 1").unwrap();
+        let (input, expr) = expr(span!("mut var = b.call() + 1")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "var");
         assert!(assign.mutable());
     }
 
     #[test]
     fn t_comparison_op_valid() {
-        assert!(expr("a <   12 ").is_ok());
-        assert!(expr("some() > 12.1").is_ok());
+        assert!(expr(span!("a <   12 ")).is_ok());
+        assert!(expr(span!("some() > 12.1")).is_ok());
     }
 
     #[test]
     fn t_binary_op_invalid() {
-        let (input, expr) = expr("a ? 12").unwrap();
+        let (input, expr) = expr(span!("a ? 12")).unwrap();
 
         assert!(expr.downcast_ref::<BinaryOp>().is_none());
-        assert_eq!(input, "? 12");
+        assert_eq!(*input.fragment(), "? 12");
     }
 
     #[test]
     fn var_assigment_mut_in_name() {
-        let (input, expr) = expr("mut_var = b.call() + 1").unwrap();
+        let (input, expr) = expr(span!("mut_var = b.call() + 1")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "mut_var");
         assert!(!assign.mutable());
     }
 
     #[test]
     fn mut_var_assigment_mut_in_name() {
-        let (input, expr) = expr("mut mut_var = b.call() + 1").unwrap();
+        let (input, expr) = expr(span!("mut mut_var = b.call() + 1")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "mut_var");
         assert!(assign.mutable());
     }
 
     #[test]
     fn jk_inst_no_arg() {
-        let (input, expr) = expr("@quit ( )").unwrap();
+        let (input, expr) = expr(span!("@quit ( )")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<JkInst>().is_some());
     }
 
     #[test]
     fn jk_inst_arg() {
-        let (input, expr) = expr("@dump ( thing )").unwrap();
+        let (input, expr) = expr(span!("@dump ( thing )")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<JkInst>().is_some());
     }
 
     #[test]
     fn jk_inst_non_existant() {
-        assert!(expr("@crab ( thing )").is_err());
+        assert!(expr(span!("@crab ( thing )")).is_err());
     }
 
     #[test]
     fn extern_no_args() {
-        let (input, expr) = expr("ext func exit () ;").unwrap();
+        let (input, expr) = expr(span!("ext func exit () ;")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<FunctionDec>().is_some());
     }
 
     #[test]
     fn extern_many_args() {
-        let (input, expr) = expr("ext func memcpy(dst: char, src: char, n: int);").unwrap();
+        let (input, expr) = expr(span!("ext func memcpy(dst: char, src: char, n: int);")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<FunctionDec>().is_some());
     }
 
     #[test]
     fn extern_missing_semicolon() {
-        assert!(expr("ext func memcpy(dst: char , n: int) ").is_err());
+        assert!(expr(span!("ext func memcpy(dst: char , n: int) ")).is_err());
     }
 
     #[test]
     fn return_nothing() {
-        let (input, expr) = expr("return").unwrap();
+        let (input, expr) = expr(span!("return")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Return>().is_some());
     }
 
     #[test]
     fn return_sum() {
-        let (input, expr) = expr("return 10 + 9").unwrap();
+        let (input, expr) = expr(span!("return 10 + 9")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Return>().is_some());
     }
 
@@ -1082,257 +1109,276 @@ mod tests {
     #[test]
     #[ignore]
     fn return_malformed() {
-        let (input, expr) = expr("return 10 +").unwrap();
+        let (input, expr) = expr(span!("return 10 +")).unwrap();
 
-        assert_eq!(input, "10 +");
+        assert_eq!(*input.fragment(), "10 +");
         assert!(expr.downcast_ref::<Return>().is_none());
     }
 
     #[test]
     fn function_call_no_arg() {
-        let (input, expr) = expr("call ( )").unwrap();
+        let (input, expr) = expr(span!("call ( )")).unwrap();
         let func = expr.downcast_ref::<FunctionCall>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.name(), "call");
         assert!(func.args().is_empty());
     }
 
     #[test]
     fn function_call_one() {
-        let (input, expr) = expr("id ( 10 )").unwrap();
+        let (input, expr) = expr(span!("id ( 10 )")).unwrap();
         let func = expr.downcast_ref::<FunctionCall>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.name(), "id");
         assert_eq!(func.args().len(), 1);
     }
 
     #[test]
     fn function_call_many() {
-        let (input, expr) = expr("concat( 'h','e', 'l' , 'l', 'o')").unwrap();
+        let (input, expr) = expr(span!("concat( 'h','e', 'l' , 'l', 'o')")).unwrap();
         let func = expr.downcast_ref::<FunctionCall>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.name(), "concat");
         assert_eq!(func.args().len(), 5);
     }
 
     #[test]
     fn function_call_missing_paren() {
-        assert!(expr("concat( 'h','e', 'l' , 'l', 'o'").is_err());
+        assert!(expr(span!("concat( 'h','e', 'l' , 'l', 'o'")).is_err());
     }
 
     #[test]
     fn function_call_double_paren() {
-        assert!(expr("fn((").is_err());
+        assert!(expr(span!("fn((")).is_err());
     }
 
     #[test]
     fn multi_comment_multi_line() {
-        let input = r#"/**
+        let input = span!(
+            r#"/**
     * This function does nothing
     */
-    func void() { }"#;
+    func void() { }"#
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn sing_comment_multi_line() {
-        let input = r#" // Comment
-    func void() { }"#;
+        let input = span!(
+            r#" // Comment
+    func void() { }"#
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn hashtag_comment_multi_line() {
-        let input = r##"# Comment
-func void() { }"##;
+        let input = span!(
+            r##"# Comment
+func void() { }"##
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn multiple_different_comments() {
-        let input = r##"# Comment
+        let input = span!(
+            r##"# Comment
 # Another one 
             /**
                * Some documentation
                */
-    func void() { }"##;
+    func void() { }"##
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn multiple_different_comments_close() {
-        let input = r##"# Comment
+        let input = span!(
+            r##"# Comment
 # Another one 
             /**
                * Some documentation
                *//* Some more */
-    func void() { }"##;
+    func void() { }"##
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn lt_exprs() {
-        assert!(expr("a < b").is_ok())
+        assert!(expr(span!("a < b")).is_ok())
     }
 
     #[test]
     fn gt_exprs() {
-        assert!(expr("a > b").is_ok())
+        assert!(expr(span!("a > b")).is_ok())
     }
 
     #[test]
     fn lte_exprs() {
-        assert!(expr("lhs <= rhs").is_ok())
+        assert!(expr(span!("lhs <= rhs")).is_ok())
     }
 
     #[test]
     fn gte_exprs() {
-        assert!(expr("lhs >= rhs").is_ok())
+        assert!(expr(span!("lhs >= rhs")).is_ok())
     }
 
     #[test]
     fn exprs_equals() {
-        assert!(expr("lhs == rhs").is_ok())
+        assert!(expr(span!("lhs == rhs")).is_ok())
     }
 
     #[test]
     fn exprs_not_equals() {
-        assert!(expr("lhs != rhs").is_ok())
+        assert!(expr(span!("lhs != rhs")).is_ok())
     }
 
     #[test]
     fn expr_with_parenthesis() {
-        assert!(expr("lhs + (rhs - lhs)").is_ok())
+        assert!(expr(span!("lhs + (rhs - lhs)")).is_ok())
     }
 
     #[test]
     fn parentheses() {
-        let (input, expr) = expr("4 * (3 + 5)").unwrap();
+        let (input, expr) = expr(span!("4 * (3 + 5)")).unwrap();
         expr.downcast_ref::<BinaryOp>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn multi_type_2() {
-        assert!(expr("func takes_mt(a: int | string) {}").is_ok())
+        assert!(expr(span!("func takes_mt(a: int | string) {}")).is_ok())
     }
 
     #[test]
     fn multi_type_unclosed() {
-        assert!(expr("func invalid_mt(a: int |) {}").is_err())
+        assert!(expr(span!("func invalid_mt(a: int |) {}")).is_err())
     }
 
     #[test]
     fn multi_type_long() {
-        assert!(expr("func long_mt(a: int | string | float | char | bool) {}").is_ok())
+        assert!(expr(span!(
+            "func long_mt(a: int | string | float | char | bool) {}"
+        ))
+        .is_ok())
     }
 
     #[test]
     fn multi_type_in_type_dec() {
-        assert!(expr("type MultiTy(a: int | string | float | char | bool);").is_ok())
+        assert!(expr(span!(
+            "type MultiTy(a: int | string | float | char | bool);"
+        ))
+        .is_ok())
     }
 
     #[test]
     fn func_dec_one_generic() {
-        assert!(expr("func a[T]() {}").is_ok())
+        assert!(expr(span!("func a[T]() {}")).is_ok())
     }
 
     #[test]
     fn func_dec_multiple_generic() {
-        assert!(expr("func a[T, U, V]() {}").is_ok())
+        assert!(expr(span!("func a[T, U, V]() {}")).is_ok())
     }
 
     #[test]
     fn func_dec_generic_and_whitespace() {
-        assert!(expr("func a[    T]() {}").is_ok());
-        assert!(expr("func a[    T  ]() {}").is_ok());
-        assert!(expr("func a[   T , U    , V]() {}").is_ok())
+        assert!(expr(span!("func a[    T]() {}")).is_ok());
+        assert!(expr(span!("func a[    T  ]() {}")).is_ok());
+        assert!(expr(span!("func a[   T , U    , V]() {}")).is_ok())
     }
 
     #[test]
     fn func_dec_empty_generic_list() {
-        assert!(expr("func a[]() {}").is_err())
+        assert!(expr(span!("func a[]() {}")).is_err())
     }
 
     #[test]
     fn func_dec_no_generic_delimiter() {
-        assert!(expr("func a[T, U() {}").is_err())
+        assert!(expr(span!("func a[T, U() {}")).is_err())
     }
 
     #[test]
     fn func_call_generics_one() {
-        assert!(expr("fn_call[T]()").is_ok());
+        assert!(expr(span!("fn_call[T]()")).is_ok());
     }
 
     #[test]
     fn func_call_generics_multi() {
-        assert!(expr("fn_call[T, U, V]()").is_ok());
+        assert!(expr(span!("fn_call[T, U, V]()")).is_ok());
     }
 
     #[test]
     fn func_call_generics_multi_and_args() {
-        assert!(expr("fn_call[T, U, V](a, b, c)").is_ok());
+        assert!(expr(span!("fn_call[T, U, V](a, b, c)")).is_ok());
     }
 
     #[test]
     fn type_inst_generics_multi_and_args() {
-        assert!(expr("TypeInst[T, U, V](a: 0, b: 1, c: 2)").is_ok());
+        assert!(expr(span!("TypeInst[T, U, V](a: 0, b: 1, c: 2)")).is_ok());
     }
 
     #[test]
     fn empty_type_declaration() {
-        assert!(expr("type CustomType;").is_ok())
+        assert!(expr(span!("type CustomType;")).is_ok())
     }
 
     #[test]
     fn empty_type_instantiation() {
-        assert!(expr("a = CustomType;").is_ok())
+        assert!(expr(span!("a = CustomType;")).is_ok())
     }
 
     #[test]
     fn generic_type_decl() {
-        assert!(expr("type Generic[T](inner: T);").is_ok());
+        assert!(expr(span!("type Generic[T](inner: T);")).is_ok());
     }
 
     #[test]
     fn multi_generic_type_decl() {
-        assert!(expr("type Generic[T, U, V](inner: T, outer: int, something: W);").is_ok());
+        assert!(expr(span!(
+            "type Generic[T, U, V](inner: T, outer: int, something: W);"
+        ))
+        .is_ok());
     }
 
     #[test]
     fn generic_empty_type_decl() {
-        assert!(expr("type Generic[T];").is_ok());
+        assert!(expr(span!("type Generic[T];")).is_ok());
     }
 
     #[test]
     fn generic_method_call() {
-        assert!(expr("expr.call[T, U, V](arg0, arg1)").is_ok());
-        assert!(expr("call[W, Y, Z]().call[T, U, V](arg0, arg1)").is_ok());
-        assert!(expr("value.call[primitive]()").is_ok());
-        assert!(expr("value.call  [primitive]   ()").is_ok());
+        assert!(expr(span!("expr.call[T, U, V](arg0, arg1)")).is_ok());
+        assert!(expr(span!("call[W, Y, Z]().call[T, U, V](arg0, arg1)")).is_ok());
+        assert!(expr(span!("value.call[primitive]()")).is_ok());
+        assert!(expr(span!("value.call  [primitive]   ()")).is_ok());
     }
 }

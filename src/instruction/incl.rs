@@ -3,6 +3,8 @@
 
 use std::path::{Path, PathBuf};
 
+use nom_locate::LocatedSpan;
+
 use crate::{
     log,
     parser::constructs,
@@ -44,7 +46,8 @@ impl Incl {
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty ctx
-        let (remaining_input, instructions) = constructs::many_expr(input.as_str())?;
+        let (remaining_input, instructions) =
+            constructs::many_expr(LocatedSpan::new(input.as_str()))?;
 
         match remaining_input.len() {
             // The remaining input is empty: We parsed the whole file properly

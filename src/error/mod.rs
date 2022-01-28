@@ -5,6 +5,7 @@ use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
 use colored::Colorize;
+use nom_locate::LocatedSpan;
 
 /// The role of the error handler is to keep track of errors and emit them properly
 /// once done
@@ -49,26 +50,6 @@ impl ErrorHandler {
     }
 }
 
-// FIXME: Location should not be in the error part only
-/// Contains indications vis-a-vis the error's location in the source file
-#[derive(Debug, PartialEq, Clone)]
-pub struct ErrSpaceLocation {
-    pub line: usize,
-    pub offset: usize,
-    pub input: &'static str,
-}
-
-// FIXME: Add better API?
-impl ErrSpaceLocation {
-    pub fn new(line: usize, offset: usize, input: &'static str) -> ErrSpaceLocation {
-        ErrSpaceLocation {
-            line,
-            offset,
-            input,
-        }
-    }
-}
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum ErrKind {
@@ -94,10 +75,41 @@ impl ErrKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Location {
+    input: String,
+    line: usize,
+    column: usize,
+}
+
+impl Location {
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    pub fn column(&self) -> usize {
+        self.column
+    }
+
+    pub fn input(&self) -> &str {
+        self.input.as_str()
+    }
+}
+
+impl From<LocatedSpan<&str>> for Location {
+    fn from(span: LocatedSpan<&str>) -> Self {
+        Location {
+            input: span.fragment().to_string(),
+            line: span.location_line() as usize,
+            column: span.get_column(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Error {
     kind: ErrKind,
     msg: Option<String>,
-    loc: Option<ErrSpaceLocation>,
+    loc: Option<Location>,
 }
 
 impl Error {
@@ -130,7 +142,7 @@ impl Error {
         }
     }
 
-    pub fn with_loc(self, loc: ErrSpaceLocation) -> Error {
+    pub fn with_loc(self, loc: Location) -> Error {
         Error {
             loc: Some(loc),
             ..self
@@ -154,8 +166,9 @@ impl From<io::Error> for Error {
 }
 
 /// Nom errors are automatically parsing errors
-impl From<nom::Err<(&str, nom::error::ErrorKind)>> for Error {
-    fn from(e: nom::Err<(&str, nom::error::ErrorKind)>) -> Error {
+impl<'i> From<nom::Err<(LocatedSpan<&'i str>, nom::error::ErrorKind)>> for Error {
+    fn from(e: nom::Err<(LocatedSpan<&'i str>, nom::error::ErrorKind)>) -> Error {
+        // FIXME: Is this correct?
         Error::new(ErrKind::Parsing).with_msg(e.to_string())
     }
 }
@@ -174,19 +187,20 @@ impl From<nom::Err<Error>> for Error {
     }
 }
 
-impl nom::error::ParseError<&str> for Error {
-    fn from_error_kind(input: &str, _: nom::error::ErrorKind) -> Error {
-        Error::new(ErrKind::Parsing).with_msg(String::from(input))
+impl<'i> nom::error::ParseError<LocatedSpan<&'i str>> for Error {
+    fn from_error_kind(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind) -> Error {
+        // FIXME: Add location here
+        Error::new(ErrKind::Parsing).with_loc(span.into())
     }
 
-    fn append(input: &str, _: nom::error::ErrorKind, _other: Error) -> Error {
+    fn append(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind, _other: Error) -> Error {
         // FIXME: Should we accumulate errors this way?
         // let other_msg = match other.msg {
         //     Some(msg) => format!("{}\n", msg),
         //     None => String::new(),
         // };
 
-        Error::new(ErrKind::Parsing).with_msg(String::from(input)) // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
+        Error::new(ErrKind::Parsing).with_loc(span.into()) // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
     }
 }
 
@@ -197,13 +211,18 @@ impl Display for Error {
             write!(f, ": {}", self.msg.as_ref().unwrap())?;
         }
 
+        if let Some(loc) = &self.loc {
+            writeln!(f, " at line {} column {}", loc.line(), loc.column())?;
+            write!(f, "input: {}", loc.input())?;
+        }
+
         Ok(())
     }
 }
 
 #[cfg(feature = "ffi")]
 impl std::convert::From<libloading::Error> for Error {
-    fn from(e: libloading::Error) -> Self {
+    fn from(e: libloading::Error) -> Error {
         Error::new(ErrKind::ExternFunc).with_msg(e.to_string())
     }
 }

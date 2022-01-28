@@ -204,6 +204,7 @@ impl Generic for TypeInstantiation {}
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::span;
 
     #[test]
     fn t_fields_number() {
@@ -331,7 +332,9 @@ mod test {
 
         let mut i = Context::new();
 
-        let instr = constructs::expr("i = int { no_field = 15 }").unwrap().1;
+        let instr = constructs::expr(span!("i = int { no_field = 15 }"))
+            .unwrap()
+            .1;
 
         assert!(instr.execute(&mut i).is_none());
         assert!(i.error_handler.has_errors());

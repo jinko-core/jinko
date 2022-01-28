@@ -8,6 +8,7 @@ use nom::{
     character::is_alphanumeric, character::is_digit, combinator::not, combinator::opt,
     combinator::peek, multi::many0, sequence::delimited, sequence::pair,
 };
+use nom_locate::LocatedSpan;
 
 use crate::{parser::ParseResult, ErrKind, Error};
 use nom::Err::Error as NomError;
@@ -23,8 +24,11 @@ pub struct Token;
 impl Token {
     /// Function used to recognize a specific character such as '[' or '>'. A function
     /// calling this is specifically trying to recognize the given character
-    fn specific_char(input: &str, character: char) -> ParseResult<&str, char> {
-        let c = char::<&str, Error>(character)(input)?;
+    fn specific_char(
+        input: LocatedSpan<&str>,
+        character: char,
+    ) -> ParseResult<LocatedSpan<&str>, char> {
+        let c = char::<LocatedSpan<&str>, Error>(character)(input)?;
 
         Ok(c)
     }
@@ -32,10 +36,10 @@ impl Token {
     /// Match a simple token. No rules apply to the characters following it, unlike
     /// specific_token
     fn token<'input>(
-        input: &'input str,
+        input: LocatedSpan<&'input str>,
         token: &'input str,
-    ) -> ParseResult<&'input str, &'input str> {
-        let tok = tag::<&str, &str, Error>(token)(input)?;
+    ) -> ParseResult<LocatedSpan<&'input str>, LocatedSpan<&'input str>> {
+        let tok = tag(token)(input)?;
 
         Ok(tok)
     }
@@ -44,10 +48,10 @@ impl Token {
     /// When a function calls specific_token(_, "token"), that means it's trying to
     /// recognize specifically the word "token".
     fn specific_token<'tok>(
-        input: &'tok str,
+        input: LocatedSpan<&'tok str>,
         token: &'tok str,
-    ) -> ParseResult<&'tok str, &'tok str> {
-        let (input, tag) = tag::<&str, &str, Error>(token)(input)?;
+    ) -> ParseResult<LocatedSpan<&'tok str>, LocatedSpan<&'tok str>> {
+        let (input, tag) = tag(token)(input)?;
 
         if let Some(next_char) = input.chars().next() {
             if next_char.is_alphanumeric() || next_char == '_' {
@@ -59,15 +63,15 @@ impl Token {
         Ok((input, tag))
     }
 
-    pub fn single_quote(input: &str) -> ParseResult<&str, char> {
+    pub fn single_quote(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '\'')
     }
 
-    pub fn double_quote(input: &str) -> ParseResult<&str, char> {
+    pub fn double_quote(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '"')
     }
 
-    pub fn equal(input: &str) -> ParseResult<&str, char> {
+    pub fn equal(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         let (input, token) = Token::specific_char(input, '=')?;
         if !input.is_empty() {
             peek(not(char('=')))(input)?;
@@ -76,204 +80,230 @@ impl Token {
         Ok((input, token))
     }
 
-    pub fn comma(input: &str) -> ParseResult<&str, char> {
+    pub fn comma(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, ',')
     }
 
-    pub fn pipe(input: &str) -> ParseResult<&str, char> {
+    pub fn pipe(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '|')
     }
 
-    pub fn left_curly_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn left_curly_bracket(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '{')
     }
 
-    pub fn right_curly_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn right_curly_bracket(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '}')
     }
 
-    pub fn left_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn left_bracket(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '[')
     }
 
-    pub fn right_bracket(input: &str) -> ParseResult<&str, char> {
+    pub fn right_bracket(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, ']')
     }
 
-    pub fn colon(input: &str) -> ParseResult<&str, char> {
+    pub fn colon(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, ':')
     }
 
-    pub fn semicolon(input: &str) -> ParseResult<&str, char> {
+    pub fn semicolon(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, ';')
     }
 
-    pub fn at_sign(input: &str) -> ParseResult<&str, char> {
+    pub fn at_sign(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         Token::specific_char(input, '@')
     }
 
-    pub fn func_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn func_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "func")
     }
 
-    pub fn ext_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn ext_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "ext")
     }
 
-    pub fn test_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn test_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "test")
     }
 
-    pub fn mock_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn mock_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "mock")
     }
 
-    pub fn loop_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn loop_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "loop")
     }
 
-    pub fn while_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn while_tok(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "while")
     }
 
-    pub fn for_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn for_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "for")
     }
 
-    pub fn in_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn in_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "in")
     }
 
-    pub fn mut_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn mut_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "mut")
     }
 
-    pub fn if_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn if_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "if")
     }
 
-    pub fn else_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn else_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "else")
     }
 
-    pub fn return_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn return_tok(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "return")
     }
 
-    pub fn type_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn type_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "type")
     }
 
-    pub fn incl_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn incl_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "incl")
     }
 
     // Parse the `as` token. Rename it so clippy does not complain
-    pub fn az_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn az_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "as")
     }
 
-    pub fn backslash(input: &str) -> ParseResult<&str, &str> {
+    pub fn backslash(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "\\")
     }
 
-    pub fn add(input: &str) -> ParseResult<&str, &str> {
+    pub fn add(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "+")
     }
 
-    pub fn sub(input: &str) -> ParseResult<&str, &str> {
+    pub fn sub(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "-")
     }
 
-    pub fn mul(input: &str) -> ParseResult<&str, &str> {
+    pub fn mul(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "*")
     }
 
-    pub fn div(input: &str) -> ParseResult<&str, &str> {
+    pub fn div(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "/")
     }
 
-    pub fn left_parenthesis(input: &str) -> ParseResult<&str, &str> {
+    pub fn left_parenthesis(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "(")
     }
 
-    pub fn right_parenthesis(input: &str) -> ParseResult<&str, &str> {
+    pub fn right_parenthesis(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, ")")
     }
 
-    pub fn lt(input: &str) -> ParseResult<&str, &str> {
+    pub fn lt(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "<")
     }
 
-    pub fn gt(input: &str) -> ParseResult<&str, &str> {
+    pub fn gt(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, ">")
     }
 
-    pub fn lt_eq(input: &str) -> ParseResult<&str, &str> {
+    pub fn lt_eq(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "<=")
     }
 
-    pub fn gt_eq(input: &str) -> ParseResult<&str, &str> {
+    pub fn gt_eq(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, ">=")
     }
 
-    pub fn equals(input: &str) -> ParseResult<&str, &str> {
+    pub fn equals(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "==")
     }
 
-    pub fn not_equals(input: &str) -> ParseResult<&str, &str> {
+    pub fn not_equals(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "!=")
     }
 
-    pub fn _left_shift(input: &str) -> ParseResult<&str, &str> {
+    pub fn _left_shift(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "<<")
     }
 
-    pub fn true_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn true_tok(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, t) = Token::specific_token(input, "true")?;
 
         Ok((input, t))
     }
 
-    pub fn false_tok(input: &str) -> ParseResult<&str, &str> {
+    pub fn false_tok(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, f) = Token::specific_token(input, "false")?;
 
         Ok((input, f))
     }
 
-    pub fn arrow(input: &str) -> ParseResult<&str, &str> {
+    pub fn arrow(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::specific_token(input, "->")
     }
 
-    pub fn comment_multi_start(input: &str) -> ParseResult<&str, &str> {
+    pub fn comment_multi_start(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let comment = tag("/*")(input)?;
 
         Ok(comment)
     }
 
-    pub fn comment_multi_end(input: &str) -> ParseResult<&str, &str> {
+    pub fn comment_multi_end(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let comment_end = tag("*/")(input)?;
 
         Ok(comment_end)
     }
 
-    pub fn comment_single(input: &str) -> ParseResult<&str, &str> {
+    pub fn comment_single(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let comment = tag("//")(input)?;
 
         Ok(comment)
     }
 
-    pub fn comment_shebang(input: &str) -> ParseResult<&str, &str> {
+    pub fn comment_shebang(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let comment = tag("#")(input)?;
 
         Ok(comment)
     }
 
-    pub fn dot(input: &str) -> ParseResult<&str, &str> {
+    pub fn dot(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, ".")
     }
 
-    pub fn inner_identifer(input: &str) -> ParseResult<&str, &str> {
+    pub fn inner_identifer(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, id) = take_while1(|c| is_alphanumeric(c as u8) || c == '_')(input)?;
 
         if RESERVED_KEYWORDS.contains(&id) {
@@ -292,20 +322,22 @@ impl Token {
         ))
     }
 
-    pub fn namespace_separator(input: &str) -> ParseResult<&str, &str> {
+    pub fn namespace_separator(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         Token::token(input, "::")
     }
 
-    pub fn identifier(input: &str) -> ParseResult<&str, String> {
+    pub fn identifier(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
         let (input, first_id) = Token::inner_identifer(input)?;
 
         let (input, namespaced) =
             many0(pair(Token::namespace_separator, Token::inner_identifer))(input)?;
 
-        let mut identifier = String::from(first_id);
+        let mut identifier = first_id.fragment().to_string();
         namespaced.into_iter().for_each(|(sep, nspace)| {
-            identifier.push_str(sep);
-            identifier.push_str(nspace)
+            identifier.push_str(sep.fragment());
+            identifier.push_str(nspace.fragment())
         });
 
         // If a namespace_separator remains, then it means we're in a situation where
@@ -323,20 +355,20 @@ impl Token {
         Ok((input, identifier))
     }
 
-    fn non_neg_num(input: &str) -> ParseResult<&str, &str> {
+    fn non_neg_num(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let num = take_while1(|c| is_digit(c as u8))(input)?;
 
         Ok(num)
     }
 
-    pub fn bool_constant(input: &str) -> ParseResult<&str, bool> {
+    pub fn bool_constant(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, bool> {
         let (input, b) = alt((Token::true_tok, Token::false_tok))(input)?;
 
         // We can unwrap since we recognized valid tokens already
         Ok((input, b.parse::<bool>().unwrap()))
     }
 
-    pub fn float_constant(input: &str) -> ParseResult<&str, f64> {
+    pub fn float_constant(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, f64> {
         let (input, negative_sign) = opt(char('-'))(input)?;
         let (input, whole) = Token::int_constant(input)?;
         let (input, _) = char('.')(input)?;
@@ -354,7 +386,7 @@ impl Token {
         }
     }
 
-    pub fn int_constant(input: &str) -> ParseResult<&str, i64> {
+    pub fn int_constant(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, i64> {
         let (input, negative_sign) = opt(char('-'))(input)?;
         let (input, num) = Token::non_neg_num(input)?;
 
@@ -370,7 +402,7 @@ impl Token {
     }
 
     /// Parse a single character constant and return the character inside the quotes
-    pub fn char_constant(input: &str) -> ParseResult<&str, char> {
+    pub fn char_constant(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, char> {
         let (input, _) = Token::single_quote(input)?;
         let (input, character) = anychar(input)?;
         let (input, _) = Token::single_quote(input)?;
@@ -381,7 +413,9 @@ impl Token {
     }
 
     /// Parse a string constant and return the characters between the double quotes
-    pub fn string_constant(input: &str) -> ParseResult<&str, &str> {
+    pub fn string_constant(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         // FIXME: This does not allow for string escaping yet
         let string = delimited(Token::double_quote, take_until("\""), Token::double_quote)(input)?;
 
@@ -389,7 +423,9 @@ impl Token {
     }
 
     #[inline(always)]
-    pub fn consume_multi_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_multi_comment(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, _) = Token::comment_multi_start(input)?;
         let (input, content) = take_until("*/")(input)?;
         let (input, _) = Token::comment_multi_end(input)?;
@@ -398,7 +434,9 @@ impl Token {
     }
 
     #[inline(always)]
-    pub fn consume_single_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_single_comment(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, _) = Token::comment_single(input)?;
         let comment = take_while(|c| c != '\n' && c != '\0')(input)?;
 
@@ -406,7 +444,9 @@ impl Token {
     }
 
     #[inline(always)]
-    pub fn consume_shebang_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_shebang_comment(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         let (input, _) = Token::comment_shebang(input)?;
         let comment = take_while(|c| c != '\n' && c != '\0')(input)?;
 
@@ -414,7 +454,9 @@ impl Token {
     }
 
     /// Consumes all kinds of comments: Multi-line or single-line
-    pub fn consume_comment(input: &str) -> ParseResult<&str, &str> {
+    pub fn consume_comment(
+        input: LocatedSpan<&str>,
+    ) -> ParseResult<LocatedSpan<&str>, LocatedSpan<&str>> {
         alt((
             Token::consume_shebang_comment,
             Token::consume_single_comment,
@@ -426,11 +468,30 @@ impl Token {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::span;
+
+    macro_rules! frag_first {
+        ($span:expr) => {
+            $span.map(|(s0, s1)| (*s0.fragment(), s1))
+        };
+    }
+
+    macro_rules! frag_tuple {
+        ($span:expr) => {
+            $span.map(|(s0, s1)| (*s0.fragment(), *s1.fragment()))
+        };
+    }
 
     #[test]
     fn t_char_constant_valid() {
-        assert_eq!(Token::char_constant("'a'"), Ok(("", 'a')));
-        assert_eq!(Token::char_constant("'9'"), Ok(("", '9')));
+        assert_eq!(
+            frag_first!(Token::char_constant(span!("'a'"))),
+            Ok(("", 'a'))
+        );
+        assert_eq!(
+            frag_first!(Token::char_constant(span!("'9'"))),
+            Ok(("", '9'))
+        );
 
         // FIXME: Add escaping
     }
@@ -438,16 +499,28 @@ mod tests {
     #[test]
     fn t_char_constant_invalid() {
         // Multiple characters
-        assert!(Token::char_constant("'abc'").is_err());
+        assert!(Token::char_constant(span!("'abc'")).is_err());
     }
 
     #[test]
     fn t_string_constant() {
         // Simple string
-        assert_eq!(Token::string_constant("\"a str\""), Ok(("", "a str")));
-        assert_eq!(Token::string_constant("\"999 89 9\""), Ok(("", "999 89 9")));
-        assert_eq!(Token::string_constant("\"4.01f\""), Ok(("", "4.01f")));
-        assert_eq!(Token::string_constant("\"\""), Ok(("", "")));
+        assert_eq!(
+            frag_tuple!(Token::string_constant(span!("\"a str\""))),
+            Ok(("", "a str"))
+        );
+        assert_eq!(
+            frag_tuple!(Token::string_constant(span!("\"999 89 9\""))),
+            Ok(("", "999 89 9"))
+        );
+        assert_eq!(
+            frag_tuple!(Token::string_constant(span!("\"4.01f\""))),
+            Ok(("", "4.01f"))
+        );
+        assert_eq!(
+            frag_tuple!(Token::string_constant(span!("\"\""))),
+            Ok(("", ""))
+        );
 
         // FIXME: Fix string escaping
     }
@@ -455,110 +528,155 @@ mod tests {
     #[test]
     fn t_string_constant_unclosed_quote() {
         // Simple string
-        assert!(Token::string_constant("\"a str").is_err());
+        assert!(Token::string_constant(span!("\"a str")).is_err());
     }
 
     #[test]
     fn t_int_constant_valid() {
-        assert_eq!(Token::int_constant("12"), Ok(("", 12)));
-        assert_eq!(Token::int_constant("-45"), Ok(("", -45)));
+        assert_eq!(frag_first!(Token::int_constant(span!("12"))), Ok(("", 12)));
+        assert_eq!(
+            frag_first!(Token::int_constant(span!("-45"))),
+            Ok(("", -45))
+        );
     }
 
     #[test]
     fn t_int_constant_invalid() {
-        assert!(Token::int_constant("ff2").is_err());
+        assert!(Token::int_constant(span!("ff2")).is_err());
     }
 
     #[test]
     fn t_float_constant_valid() {
-        assert_eq!(Token::float_constant("12.2"), Ok(("", 12.2f64)));
-        assert_eq!(Token::float_constant("-45.06"), Ok(("", -45.06f64)));
+        assert_eq!(
+            frag_first!(Token::float_constant(span!("12.2"))),
+            Ok(("", 12.2f64))
+        );
+        assert_eq!(
+            frag_first!(Token::float_constant(span!("-45.06"))),
+            Ok(("", -45.06f64))
+        );
     }
 
     #[test]
     fn t_float_constant_invalid() {
-        assert!(Token::float_constant("ff2").is_err());
+        assert!(Token::float_constant(span!("ff2")).is_err());
 
-        assert!(Token::float_constant("12").is_err());
+        assert!(Token::float_constant(span!("12")).is_err());
     }
 
     #[test]
     fn t_id() {
-        assert_eq!(Token::identifier("x"), Ok(("", "x".to_string())));
-        assert_eq!(Token::identifier("x_"), Ok(("", "x_".to_string())));
-        assert_eq!(Token::identifier("x_99"), Ok(("", "x_99".to_string())));
-        assert_eq!(Token::identifier("99x"), Ok(("", "99x".to_string())));
-        assert_eq!(Token::identifier("n99 x"), Ok((" x", "n99".to_string())));
         assert_eq!(
-            Token::identifier("func_ x"),
+            frag_first!(Token::identifier(span!("x"))),
+            Ok(("", "x".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("x_"))),
+            Ok(("", "x_".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("x_99"))),
+            Ok(("", "x_99".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("99x"))),
+            Ok(("", "99x".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("n99 x"))),
+            Ok((" x", "n99".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("func_ x"))),
             Ok((" x", "func_".to_string()))
         );
     }
 
     #[test]
     fn t_id_invalid() {
-        assert!(Token::identifier("99").is_err());
-        assert!(Token::identifier("__99_").is_err());
-        assert!(Token::identifier("func").is_err());
+        assert!(Token::identifier(span!("99")).is_err());
+        assert!(Token::identifier(span!("__99_")).is_err());
+        assert!(Token::identifier(span!("func")).is_err());
     }
 
     #[test]
     fn t_bool_valid() {
-        assert_eq!(Token::bool_constant("true"), Ok(("", true)));
-        assert_eq!(Token::bool_constant("false"), Ok(("", false)));
-        assert_eq!(Token::bool_constant("true a"), Ok((" a", true)));
-        assert_eq!(Token::bool_constant("true; false"), Ok(("; false", true)));
-        assert_eq!(Token::bool_constant("true*false"), Ok(("*false", true)));
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("true"))),
+            Ok(("", true))
+        );
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("false"))),
+            Ok(("", false))
+        );
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("true a"))),
+            Ok((" a", true))
+        );
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("true; false"))),
+            Ok(("; false", true))
+        );
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("true*false"))),
+            Ok(("*false", true))
+        );
     }
 
     #[test]
     fn t_bool_invalid() {
-        assert!(Token::bool_constant("tru").is_err());
-        assert!(Token::bool_constant("tru a").is_err());
-        assert!(Token::bool_constant("trueast").is_err());
+        assert!(Token::bool_constant(span!("tru")).is_err());
+        assert!(Token::bool_constant(span!("tru a")).is_err());
+        assert!(Token::bool_constant(span!("trueast")).is_err());
     }
 
     #[test]
     fn t_multi_comment_valid() {
-        assert!(Token::consume_comment("/* */").is_ok());
-        assert!(Token::consume_comment("/**/").is_ok());
-        assert!(Token::consume_comment("/*            */").is_ok());
-        assert!(Token::consume_comment("/* a bbbb a something   */").is_ok());
+        assert!(Token::consume_comment(span!("/* */")).is_ok());
+        assert!(Token::consume_comment(span!("/**/")).is_ok());
+        assert!(Token::consume_comment(span!("/*            */")).is_ok());
+        assert!(Token::consume_comment(span!("/* a bbbb a something   */")).is_ok());
     }
 
     #[test]
     fn t_single_comment_valid() {
-        assert!(Token::consume_comment("//").is_ok());
-        assert!(Token::consume_comment("//                   ").is_ok());
-        assert!(Token::consume_comment("//          \nhey").is_ok());
-        assert!(Token::consume_comment("//// ").is_ok());
-        assert!(Token::consume_comment("// a bbbb a something  /* hey */").is_ok());
+        assert!(Token::consume_comment(span!("//")).is_ok());
+        assert!(Token::consume_comment(span!("//                   ")).is_ok());
+        assert!(Token::consume_comment(span!("//          \nhey")).is_ok());
+        assert!(Token::consume_comment(span!("//// ")).is_ok());
+        assert!(Token::consume_comment(span!("// a bbbb a something  /* hey */")).is_ok());
     }
 
     #[test]
     fn t_multi_comment_invalid() {
-        assert!(Token::consume_multi_comment("/*").is_err());
+        assert!(Token::consume_multi_comment(span!("/*")).is_err());
     }
 
     #[test]
     fn t_keyword_next_to_curly() {
-        assert_eq!(Token::loop_tok("loop{}"), Ok(("{}", "loop")));
+        assert_eq!(
+            frag_tuple!(Token::loop_tok(span!("loop{}"))),
+            Ok(("{}", "loop"))
+        );
     }
 
     #[test]
     fn t_dot_token() {
-        assert_eq!(Token::dot("."), Ok(("", ".")));
+        assert_eq!(frag_tuple!(Token::dot(span!("."))), Ok(("", ".")));
     }
 
     #[test]
     fn t_identifier_no_namespace() {
-        assert_eq!(Token::identifier("id"), Ok(("", String::from("id"))));
+        assert_eq!(
+            frag_first!(Token::identifier(span!("id"))),
+            Ok(("", String::from("id")))
+        );
     }
 
     #[test]
     fn t_identifier_plus_one_namespace() {
         assert_eq!(
-            Token::identifier("nspace::id"),
+            frag_first!(Token::identifier(span!("nspace::id"))),
             Ok(("", String::from("nspace::id")))
         );
     }
@@ -566,23 +684,23 @@ mod tests {
     #[test]
     fn t_identifier_plus_many_namespace() {
         assert_eq!(
-            Token::identifier("nspace::id::sub"),
+            frag_first!(Token::identifier(span!("nspace::id::sub"))),
             Ok(("", String::from("nspace::id::sub")))
         );
     }
 
     #[test]
     fn t_identifier_invalid_just_sep() {
-        assert!(Token::identifier("::").is_err());
+        assert!(Token::identifier(span!("::")).is_err());
     }
 
     #[test]
     fn t_identifier_invalid_nspace_no_id() {
-        assert!(Token::identifier("nspace::").is_err());
+        assert!(Token::identifier(span!("nspace::")).is_err());
     }
 
     #[test]
     fn t_identifier_invalid_nspace_no_id_multi() {
-        assert!(Token::identifier("nspace::id::sub::").is_err());
+        assert!(Token::identifier(span!("nspace::id::sub::")).is_err());
     }
 }
