@@ -468,11 +468,30 @@ impl Token {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::span;
+
+    macro_rules! frag_first {
+        ($span:expr) => {
+            $span.map(|(s0, s1)| (*s0.fragment(), s1))
+        };
+    }
+
+    macro_rules! frag_tuple {
+        ($span:expr) => {
+            $span.map(|(s0, s1)| (*s0.fragment(), *s1.fragment()))
+        };
+    }
 
     #[test]
     fn t_char_constant_valid() {
-        assert_eq!(Token::char_constant("'a'"), Ok(("", 'a')));
-        assert_eq!(Token::char_constant("'9'"), Ok(("", '9')));
+        assert_eq!(
+            frag_first!(Token::char_constant(span!("'a'"))),
+            Ok(("", 'a'))
+        );
+        assert_eq!(
+            frag_first!(Token::char_constant(span!("'9'"))),
+            Ok(("", '9'))
+        );
 
         // FIXME: Add escaping
     }
@@ -480,16 +499,28 @@ mod tests {
     #[test]
     fn t_char_constant_invalid() {
         // Multiple characters
-        assert!(Token::char_constant("'abc'").is_err());
+        assert!(Token::char_constant(span!("'abc'")).is_err());
     }
 
     #[test]
     fn t_string_constant() {
         // Simple string
-        assert_eq!(Token::string_constant("\"a str\""), Ok(("", "a str")));
-        assert_eq!(Token::string_constant("\"999 89 9\""), Ok(("", "999 89 9")));
-        assert_eq!(Token::string_constant("\"4.01f\""), Ok(("", "4.01f")));
-        assert_eq!(Token::string_constant("\"\""), Ok(("", "")));
+        assert_eq!(
+            frag_tuple!(Token::string_constant(span!("\"a str\""))),
+            Ok(("", "a str"))
+        );
+        assert_eq!(
+            frag_tuple!(Token::string_constant(span!("\"999 89 9\""))),
+            Ok(("", "999 89 9"))
+        );
+        assert_eq!(
+            frag_tuple!(Token::string_constant(span!("\"4.01f\""))),
+            Ok(("", "4.01f"))
+        );
+        assert_eq!(
+            frag_tuple!(Token::string_constant(span!("\"\""))),
+            Ok(("", ""))
+        );
 
         // FIXME: Fix string escaping
     }
@@ -497,110 +528,155 @@ mod tests {
     #[test]
     fn t_string_constant_unclosed_quote() {
         // Simple string
-        assert!(Token::string_constant("\"a str").is_err());
+        assert!(Token::string_constant(span!("\"a str")).is_err());
     }
 
     #[test]
     fn t_int_constant_valid() {
-        assert_eq!(Token::int_constant("12"), Ok(("", 12)));
-        assert_eq!(Token::int_constant("-45"), Ok(("", -45)));
+        assert_eq!(frag_first!(Token::int_constant(span!("12"))), Ok(("", 12)));
+        assert_eq!(
+            frag_first!(Token::int_constant(span!("-45"))),
+            Ok(("", -45))
+        );
     }
 
     #[test]
     fn t_int_constant_invalid() {
-        assert!(Token::int_constant("ff2").is_err());
+        assert!(Token::int_constant(span!("ff2")).is_err());
     }
 
     #[test]
     fn t_float_constant_valid() {
-        assert_eq!(Token::float_constant("12.2"), Ok(("", 12.2f64)));
-        assert_eq!(Token::float_constant("-45.06"), Ok(("", -45.06f64)));
+        assert_eq!(
+            frag_first!(Token::float_constant(span!("12.2"))),
+            Ok(("", 12.2f64))
+        );
+        assert_eq!(
+            frag_first!(Token::float_constant(span!("-45.06"))),
+            Ok(("", -45.06f64))
+        );
     }
 
     #[test]
     fn t_float_constant_invalid() {
-        assert!(Token::float_constant("ff2").is_err());
+        assert!(Token::float_constant(span!("ff2")).is_err());
 
-        assert!(Token::float_constant("12").is_err());
+        assert!(Token::float_constant(span!("12")).is_err());
     }
 
     #[test]
     fn t_id() {
-        assert_eq!(Token::identifier("x"), Ok(("", "x".to_string())));
-        assert_eq!(Token::identifier("x_"), Ok(("", "x_".to_string())));
-        assert_eq!(Token::identifier("x_99"), Ok(("", "x_99".to_string())));
-        assert_eq!(Token::identifier("99x"), Ok(("", "99x".to_string())));
-        assert_eq!(Token::identifier("n99 x"), Ok((" x", "n99".to_string())));
         assert_eq!(
-            Token::identifier("func_ x"),
+            frag_first!(Token::identifier(span!("x"))),
+            Ok(("", "x".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("x_"))),
+            Ok(("", "x_".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("x_99"))),
+            Ok(("", "x_99".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("99x"))),
+            Ok(("", "99x".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("n99 x"))),
+            Ok((" x", "n99".to_string()))
+        );
+        assert_eq!(
+            frag_first!(Token::identifier(span!("func_ x"))),
             Ok((" x", "func_".to_string()))
         );
     }
 
     #[test]
     fn t_id_invalid() {
-        assert!(Token::identifier("99").is_err());
-        assert!(Token::identifier("__99_").is_err());
-        assert!(Token::identifier("func").is_err());
+        assert!(Token::identifier(span!("99")).is_err());
+        assert!(Token::identifier(span!("__99_")).is_err());
+        assert!(Token::identifier(span!("func")).is_err());
     }
 
     #[test]
     fn t_bool_valid() {
-        assert_eq!(Token::bool_constant("true"), Ok(("", true)));
-        assert_eq!(Token::bool_constant("false"), Ok(("", false)));
-        assert_eq!(Token::bool_constant("true a"), Ok((" a", true)));
-        assert_eq!(Token::bool_constant("true; false"), Ok(("; false", true)));
-        assert_eq!(Token::bool_constant("true*false"), Ok(("*false", true)));
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("true"))),
+            Ok(("", true))
+        );
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("false"))),
+            Ok(("", false))
+        );
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("true a"))),
+            Ok((" a", true))
+        );
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("true; false"))),
+            Ok(("; false", true))
+        );
+        assert_eq!(
+            frag_first!(Token::bool_constant(span!("true*false"))),
+            Ok(("*false", true))
+        );
     }
 
     #[test]
     fn t_bool_invalid() {
-        assert!(Token::bool_constant("tru").is_err());
-        assert!(Token::bool_constant("tru a").is_err());
-        assert!(Token::bool_constant("trueast").is_err());
+        assert!(Token::bool_constant(span!("tru")).is_err());
+        assert!(Token::bool_constant(span!("tru a")).is_err());
+        assert!(Token::bool_constant(span!("trueast")).is_err());
     }
 
     #[test]
     fn t_multi_comment_valid() {
-        assert!(Token::consume_comment("/* */").is_ok());
-        assert!(Token::consume_comment("/**/").is_ok());
-        assert!(Token::consume_comment("/*            */").is_ok());
-        assert!(Token::consume_comment("/* a bbbb a something   */").is_ok());
+        assert!(Token::consume_comment(span!("/* */")).is_ok());
+        assert!(Token::consume_comment(span!("/**/")).is_ok());
+        assert!(Token::consume_comment(span!("/*            */")).is_ok());
+        assert!(Token::consume_comment(span!("/* a bbbb a something   */")).is_ok());
     }
 
     #[test]
     fn t_single_comment_valid() {
-        assert!(Token::consume_comment("//").is_ok());
-        assert!(Token::consume_comment("//                   ").is_ok());
-        assert!(Token::consume_comment("//          \nhey").is_ok());
-        assert!(Token::consume_comment("//// ").is_ok());
-        assert!(Token::consume_comment("// a bbbb a something  /* hey */").is_ok());
+        assert!(Token::consume_comment(span!("//")).is_ok());
+        assert!(Token::consume_comment(span!("//                   ")).is_ok());
+        assert!(Token::consume_comment(span!("//          \nhey")).is_ok());
+        assert!(Token::consume_comment(span!("//// ")).is_ok());
+        assert!(Token::consume_comment(span!("// a bbbb a something  /* hey */")).is_ok());
     }
 
     #[test]
     fn t_multi_comment_invalid() {
-        assert!(Token::consume_multi_comment("/*").is_err());
+        assert!(Token::consume_multi_comment(span!("/*")).is_err());
     }
 
     #[test]
     fn t_keyword_next_to_curly() {
-        assert_eq!(Token::loop_tok("loop{}"), Ok(("{}", "loop")));
+        assert_eq!(
+            frag_tuple!(Token::loop_tok(span!("loop{}"))),
+            Ok(("{}", "loop"))
+        );
     }
 
     #[test]
     fn t_dot_token() {
-        assert_eq!(Token::dot("."), Ok(("", ".")));
+        assert_eq!(frag_tuple!(Token::dot(span!("."))), Ok(("", ".")));
     }
 
     #[test]
     fn t_identifier_no_namespace() {
-        assert_eq!(Token::identifier("id"), Ok(("", String::from("id"))));
+        assert_eq!(
+            frag_first!(Token::identifier(span!("id"))),
+            Ok(("", String::from("id")))
+        );
     }
 
     #[test]
     fn t_identifier_plus_one_namespace() {
         assert_eq!(
-            Token::identifier("nspace::id"),
+            frag_first!(Token::identifier(span!("nspace::id"))),
             Ok(("", String::from("nspace::id")))
         );
     }
@@ -608,23 +684,23 @@ mod tests {
     #[test]
     fn t_identifier_plus_many_namespace() {
         assert_eq!(
-            Token::identifier("nspace::id::sub"),
+            frag_first!(Token::identifier(span!("nspace::id::sub"))),
             Ok(("", String::from("nspace::id::sub")))
         );
     }
 
     #[test]
     fn t_identifier_invalid_just_sep() {
-        assert!(Token::identifier("::").is_err());
+        assert!(Token::identifier(span!("::")).is_err());
     }
 
     #[test]
     fn t_identifier_invalid_nspace_no_id() {
-        assert!(Token::identifier("nspace::").is_err());
+        assert!(Token::identifier(span!("nspace::")).is_err());
     }
 
     #[test]
     fn t_identifier_invalid_nspace_no_id_multi() {
-        assert!(Token::identifier("nspace::id::sub::").is_err());
+        assert!(Token::identifier(span!("nspace::id::sub::")).is_err());
     }
 }

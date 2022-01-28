@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn t_execute() {
         let mut ctx = Context::new();
-        let func_dec = constructs::expr("func __first(a: int, b: int) -> int { a }")
+        let func_dec = constructs::expr(span!("func __first(a: int, b: int) -> int { a }"))
             .unwrap()
             .1;
         func_dec.execute(&mut ctx);

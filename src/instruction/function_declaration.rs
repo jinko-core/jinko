@@ -386,6 +386,7 @@ impl From<&str> for FunctionKind {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::span;
     use crate::{instruction::TypeId, jinko, parser::constructs};
 
     #[test]
@@ -428,7 +429,7 @@ mod tests {
             FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")), vec![], vec![]);
         function.set_kind(FunctionKind::Func);
 
-        let block = constructs::block("{ 15 }").unwrap().1;
+        let block = constructs::block(span!("{ 15 }")).unwrap().1;
         function.set_block(block);
 
         let mut ctx = Context::new();
@@ -447,7 +448,7 @@ mod tests {
         );
         function.set_kind(FunctionKind::Func);
 
-        let block = constructs::block("{ 15 }").unwrap().1;
+        let block = constructs::block(span!("{ 15 }")).unwrap().1;
         function.set_block(block);
 
         let mut ctx = Context::new();

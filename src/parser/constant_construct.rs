@@ -133,105 +133,106 @@ impl ConstantConstruct {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::span;
 
     #[test]
     fn empty_string() {
-        let input = "\"\"";
+        let input = span!("\"\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         let string = expr.downcast_ref::<JkString>().unwrap();
         assert_eq!(string.0, "");
     }
 
     #[test]
     fn basic_string() {
-        let input = "\"hello\"";
+        let input = span!("\"hello\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         let string = expr.downcast_ref::<JkString>().unwrap();
         assert_eq!(string.0, "hello");
     }
 
     #[test]
     fn formatted_once() {
-        let input = "\"hello {world}\"";
+        let input = span!("\"hello {world}\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn formatted_middle() {
-        let input = "\"hello {world} !\"";
+        let input = span!("\"hello {world} !\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn formatted_start() {
-        let input = "\"{10 + 9} is 21\"";
+        let input = span!("\"{10 + 9} is 21\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn escape_start() {
-        let input = "\"\\neat\"";
+        let input = span!("\"\\neat\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn escape_end() {
-        let input = "\"hello\\n\"";
+        let input = span!("\"hello\\n\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn escape_formatting() {
-        let input = "\"hello \\{world\\}\"";
+        let input = span!("\"hello \\{world\\}\"");
 
         let (input, expr) = ConstantConstruct::string_constant(input).unwrap();
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<MethodCall>().is_some());
     }
 
     #[test]
     fn formatted_not_delimited() {
-        let input = "\"hello {world}";
+        let input = span!("\"hello {world}");
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }
 
     #[test]
     fn basic_not_delimited() {
-        let input = "\"Rust Transmute Task Force";
+        let input = span!("\"Rust Transmute Task Force");
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }
 
     #[test]
     fn escape_unexpected_end_of_string() {
-        let input = "\"Rust Transmute Task Force\\";
+        let input = span!("\"Rust Transmute Task Force\\");
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }
 
     #[test]
     fn invalid_escape() {
-        let input = "\"Rust Transmute \\a Task Force\"";
+        let input = span!("\"Rust Transmute \\a Task Force\"");
 
         assert!(ConstantConstruct::string_constant(input).is_err());
     }

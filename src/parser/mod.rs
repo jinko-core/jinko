@@ -28,3 +28,11 @@ pub fn parse(ctx: &mut Context, input: &str) -> Result<(), Error> {
 
     Ok(())
 }
+
+#[cfg(test)]
+#[macro_export]
+macro_rules! span {
+    ($s:literal) => {
+        nom_locate::LocatedSpan::new($s)
+    };
+}

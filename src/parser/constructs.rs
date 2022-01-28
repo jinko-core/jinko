@@ -593,22 +593,29 @@ pub(crate) fn constant(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::span;
     use crate::{JkFloat, JkInt};
 
     #[test]
     fn consume_whitespace() {
-        assert_eq!(nom_next("   input"), Ok(("input", ())));
-        assert_eq!(nom_next(" \t input"), Ok(("input", ())));
+        assert_eq!(
+            nom_next(span!("   input")).map(|(input, _)| *input.fragment()),
+            Ok("input")
+        );
+        assert_eq!(
+            nom_next(span!(" \t input")).map(|(input, _)| *input.fragment()),
+            Ok("input")
+        );
     }
 
     #[test]
     fn simple_int_sum() {
-        let (input, expr) = expr(" 401 + 809 ").unwrap();
+        let (input, expr) = expr(span!(" 401 + 809 ")).unwrap();
         let operation: &BinaryOp = expr.downcast_ref().unwrap();
         let lhs: &JkInt = operation.lhs().downcast_ref().unwrap();
         let rhs: &JkInt = operation.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(operation.operator(), Operator::Add);
         assert_eq!(lhs.print(), "401");
         assert_eq!(rhs.print(), "809");
@@ -616,12 +623,12 @@ mod tests {
 
     #[test]
     fn simple_float_mul() {
-        let (input, expr) = expr("3.14 * 9.999").unwrap();
+        let (input, expr) = expr(span!("3.14 * 9.999")).unwrap();
         let operation: &BinaryOp = expr.downcast_ref().unwrap();
         let lhs: &JkFloat = operation.lhs().downcast_ref().unwrap();
         let rhs: &JkFloat = operation.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(operation.operator(), Operator::Mul);
         assert_eq!(lhs.print(), "3.14");
         assert_eq!(rhs.print(), "9.999");
@@ -629,7 +636,7 @@ mod tests {
 
     #[test]
     fn chained_sum_sub() {
-        let (input, expr) = expr("239 + 809 - 1004").unwrap();
+        let (input, expr) = expr(span!("239 + 809 - 1004")).unwrap();
         let sub: &BinaryOp = expr.downcast_ref().unwrap();
         let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
 
@@ -637,7 +644,7 @@ mod tests {
         let second: &JkInt = add.rhs().downcast_ref().unwrap();
         let third: &JkInt = sub.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(sub.operator(), Operator::Sub);
         assert_eq!(add.operator(), Operator::Add);
         assert_eq!(first.print(), "239");
@@ -647,7 +654,7 @@ mod tests {
 
     #[test]
     fn math_precedence() {
-        let (input, expr) = expr("5.9 + 128 / 809.1 - 1004").unwrap();
+        let (input, expr) = expr(span!("5.9 + 128 / 809.1 - 1004")).unwrap();
         let sub: &BinaryOp = expr.downcast_ref().unwrap();
         let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
         let div: &BinaryOp = add.rhs().downcast_ref().unwrap();
@@ -657,7 +664,7 @@ mod tests {
         let third: &JkFloat = div.rhs().downcast_ref().unwrap();
         let fourth: &JkInt = sub.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(sub.operator(), Operator::Sub);
         assert_eq!(add.operator(), Operator::Add);
         assert_eq!(div.operator(), Operator::Div);
@@ -669,7 +676,7 @@ mod tests {
 
     #[test]
     fn tricky_math_precedence() {
-        let (input, expr) = expr("5.9 + 128 / 809.1 - 1 * 1.1").unwrap();
+        let (input, expr) = expr(span!("5.9 + 128 / 809.1 - 1 * 1.1")).unwrap();
         let sub: &BinaryOp = expr.downcast_ref().unwrap();
         let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
         let mul: &BinaryOp = sub.rhs().downcast_ref().unwrap();
@@ -681,7 +688,7 @@ mod tests {
         let fourth: &JkInt = mul.lhs().downcast_ref().unwrap();
         let fifth: &JkFloat = mul.rhs().downcast_ref().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(sub.operator(), Operator::Sub);
         assert_eq!(add.operator(), Operator::Add);
         assert_eq!(mul.operator(), Operator::Mul);
@@ -695,123 +702,123 @@ mod tests {
 
     #[test]
     fn method_call_no_arg() {
-        let (input, expr) = expr("a.call( )").unwrap();
+        let (input, expr) = expr(span!("a.call( )")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn method_call_one_arg() {
-        let (input, expr) = expr("a.call(\"hello\")").unwrap();
+        let (input, expr) = expr(span!("a.call(\"hello\")")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn method_call_many_args() {
-        let (input, expr) = expr("a.call(\"hello\", 1   , variable)").unwrap();
+        let (input, expr) = expr(span!("a.call(\"hello\", 1   , variable)")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn method_call_many() {
-        let (input, expr) = expr("a.call(\"hello\").sub().subsub(1, 20)").unwrap();
+        let (input, expr) = expr(span!("a.call(\"hello\").sub().subsub(1, 20)")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn method_call_on_bool() {
-        let (input, expr) = expr("true.call( )").unwrap();
+        let (input, expr) = expr(span!("true.call( )")).unwrap();
 
         assert!(expr.downcast_ref::<MethodCall>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn field_access_single() {
-        let (input, expr) = expr("a.attribute").unwrap();
+        let (input, expr) = expr(span!("a.attribute")).unwrap();
 
         assert!(expr.downcast_ref::<FieldAccess>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn field_access_many() {
-        let (input, expr) = expr("a.attr.sub_attr.subsub").unwrap();
+        let (input, expr) = expr(span!("a.attr.sub_attr.subsub")).unwrap();
 
         assert!(expr.downcast_ref::<FieldAccess>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn field_access_many_newline() {
-        let (input, expr) = expr("a\n.attr\n.sub_attr\n.subsub").unwrap();
+        let (input, expr) = expr(span!("a\n.attr\n.sub_attr\n.subsub")).unwrap();
 
         assert!(expr.downcast_ref::<FieldAccess>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn if_no_else() {
-        let (input, expr) = expr("if 1 + 1 { 10 / 2 }").unwrap();
+        let (input, expr) = expr(span!("if 1 + 1 { 10 / 2 }")).unwrap();
 
         assert!(expr.downcast_ref::<IfElse>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn if_else() {
-        let (input, expr) = expr("if 1 + 1 { 10 / 2 } else { var }").unwrap();
+        let (input, expr) = expr(span!("if 1 + 1 { 10 / 2 } else { var }")).unwrap();
 
         assert!(expr.downcast_ref::<IfElse>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn while_loop() {
-        let (input, expr) = expr("while true { var + 10 }").unwrap();
+        let (input, expr) = expr(span!("while true { var + 10 }")).unwrap();
 
         assert!(expr.downcast_ref::<Loop>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn for_loop() {
-        let (input, expr) = expr("for entry in collection { entry.print() }").unwrap();
+        let (input, expr) = expr(span!("for entry in collection { entry.print() }")).unwrap();
 
         assert!(expr.downcast_ref::<Loop>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn loop_basic() {
-        let (input, expr) = expr("loop { variable.get() + 10 }").unwrap();
+        let (input, expr) = expr(span!("loop { variable.get() + 10 }")).unwrap();
 
         assert!(expr.downcast_ref::<Loop>().is_some());
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn funcion_dec_no_arg() {
-        let (input, expr) = expr("func a ( ) { 1 }").unwrap();
+        let (input, expr) = expr(span!("func a ( ) { 1 }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(func.args().is_empty());
     }
 
     #[test]
     fn funcion_dec_one_arg() {
-        let (input, expr) = expr("func id ( arg: int ) { arg }").unwrap();
+        let (input, expr) = expr(span!("func id ( arg: int ) { arg }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(func.args().len() == 1);
         assert!(func.args()[0].name() == "arg");
         assert!(func.args()[0].get_type().id() == "int");
@@ -819,13 +826,13 @@ mod tests {
 
     #[test]
     fn funcion_dec_many_args() {
-        let (input, expr) = expr(
-            "func concat ( arg1: char , arg2: int,arg3:float, arg4: string) { arg1 + arg2 + arg3 }",
-        )
+        let (input, expr) = expr(span!(
+            "func concat ( arg1: char , arg2: int,arg3:float, arg4: string) { arg1 + arg2 + arg3 }"
+        ))
         .unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(func.args().len() == 4);
         assert!(func.args()[0].name() == "arg1");
         assert!(func.args()[3].name() == "arg4");
@@ -834,10 +841,10 @@ mod tests {
     #[test]
     fn funcion_dec_many_args_with_return() {
         let (input, expr) =
-            expr("func concat ( arg1: char , arg2: int,arg3:float, arg4: string) -> string { arg1 + arg2 + arg3 }").unwrap();
+            expr(span!("func concat ( arg1: char , arg2: int,arg3:float, arg4: string) -> string { arg1 + arg2 + arg3 }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.args().len(), 4);
         assert_eq!(func.ty().unwrap().id(), "string");
         assert_eq!(func.args()[0].name(), "arg1");
@@ -846,255 +853,255 @@ mod tests {
 
     #[test]
     fn funcion_dec_no_arg_with_return() {
-        let (input, expr) = expr("func a ( ) -> int { 1 }").unwrap();
+        let (input, expr) = expr(span!("func a ( ) -> int { 1 }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.ty().unwrap().id(), "int");
         assert!(func.args().is_empty());
     }
 
     #[test]
     fn test_dec_no_arg() {
-        let (input, expr) = expr("test a ( ) { true }").unwrap();
+        let (input, expr) = expr(span!("test a ( ) { true }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.fn_kind(), FunctionKind::Test);
     }
 
     #[test]
     fn mock_dec_one_arg() {
-        let (input, expr) = expr("mock id ( arg: int ) { arg }").unwrap();
+        let (input, expr) = expr(span!("mock id ( arg: int ) { arg }")).unwrap();
         let func = expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.fn_kind(), FunctionKind::Mock);
     }
 
     #[test]
     fn block_empty() {
-        let (input, expr) = expr("{ }").unwrap();
+        let (input, expr) = expr(span!("{ }")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Block>().is_some());
     }
 
     #[test]
     fn block_one_inst() {
-        let (input, expr) = expr("{ var }").unwrap();
+        let (input, expr) = expr(span!("{ var }")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Block>().is_some());
     }
 
     #[test]
     fn block_many_inst() {
-        let (input, expr) = expr(
+        let (input, expr) = expr(span!(
             "{
             var = 1 + 1;
             var = var - 2;
             var
-                                 }",
-        )
+                                 }"
+        ))
         .unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Block>().is_some());
     }
 
     #[test]
     fn block_statement() {
-        let (input, expr) = expr(
+        let (input, expr) = expr(span!(
             "{
             var = 1 + 1;
             var = var - 2;
             var;
-                                 }",
-        )
+                                 }"
+        ))
         .unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Block>().is_some());
     }
 
     #[test]
     fn block_missing_closing() {
-        assert!(expr(
+        assert!(expr(span!(
             "{
             var = 1 + 1;
             var = var - 2;
             var
             "
-        )
+        ))
         .is_err())
     }
 
     #[test]
     fn type_dec_one_field() {
-        let (input, expr) = expr("type Num ( val : int )").unwrap();
+        let (input, expr) = expr(span!("type Num ( val : int )")).unwrap();
         let dec = expr.downcast_ref::<TypeDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(dec.name(), "Num");
         assert_eq!(dec.fields().len(), 1);
     }
 
     #[test]
     fn type_dec_multiple_field() {
-        let (input, expr) = expr("type Point( x : int , y: int )").unwrap();
+        let (input, expr) = expr(span!("type Point( x : int , y: int )")).unwrap();
         let dec = expr.downcast_ref::<TypeDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(dec.name(), "Point");
         assert_eq!(dec.fields().len(), 2);
     }
 
     #[test]
     fn type_dec_incomplete() {
-        assert!(expr("type Point( x:int , y: )").is_err());
+        assert!(expr(span!("type Point( x:int , y: )")).is_err());
     }
 
     #[test]
     fn include_simple() {
-        let (input, expr) = expr("incl pair").unwrap();
+        let (input, expr) = expr(span!("incl pair")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Incl>().is_some());
     }
 
     #[test]
     fn include_with_alias() {
-        let (input, expr) = expr("incl numpy as np").unwrap();
+        let (input, expr) = expr(span!("incl numpy as np")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Incl>().is_some());
     }
 
     #[test]
     fn include_with_alias_missing_path() {
-        assert!(expr("incl as uoh").is_err());
+        assert!(expr(span!("incl as uoh")).is_err());
     }
 
     #[test]
     fn var_assignment() {
-        let (input, expr) = expr("var = 'a'").unwrap();
+        let (input, expr) = expr(span!("var = 'a'")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "var");
         assert!(!assign.mutable());
     }
 
     #[test]
     fn var_assigment_tricky() {
-        let (input, expr) = expr("n1=b.call() + 1").unwrap();
+        let (input, expr) = expr(span!("n1=b.call() + 1")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "n1");
         assert!(!assign.mutable());
     }
 
     #[test]
     fn mut_var_assigment() {
-        let (input, expr) = expr("mut var = b.call() + 1").unwrap();
+        let (input, expr) = expr(span!("mut var = b.call() + 1")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "var");
         assert!(assign.mutable());
     }
 
     #[test]
     fn t_comparison_op_valid() {
-        assert!(expr("a <   12 ").is_ok());
-        assert!(expr("some() > 12.1").is_ok());
+        assert!(expr(span!("a <   12 ")).is_ok());
+        assert!(expr(span!("some() > 12.1")).is_ok());
     }
 
     #[test]
     fn t_binary_op_invalid() {
-        let (input, expr) = expr("a ? 12").unwrap();
+        let (input, expr) = expr(span!("a ? 12")).unwrap();
 
         assert!(expr.downcast_ref::<BinaryOp>().is_none());
-        assert_eq!(input, "? 12");
+        assert_eq!(*input.fragment(), "? 12");
     }
 
     #[test]
     fn var_assigment_mut_in_name() {
-        let (input, expr) = expr("mut_var = b.call() + 1").unwrap();
+        let (input, expr) = expr(span!("mut_var = b.call() + 1")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "mut_var");
         assert!(!assign.mutable());
     }
 
     #[test]
     fn mut_var_assigment_mut_in_name() {
-        let (input, expr) = expr("mut mut_var = b.call() + 1").unwrap();
+        let (input, expr) = expr(span!("mut mut_var = b.call() + 1")).unwrap();
         let assign = expr.downcast_ref::<VarAssign>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(assign.symbol(), "mut_var");
         assert!(assign.mutable());
     }
 
     #[test]
     fn jk_inst_no_arg() {
-        let (input, expr) = expr("@quit ( )").unwrap();
+        let (input, expr) = expr(span!("@quit ( )")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<JkInst>().is_some());
     }
 
     #[test]
     fn jk_inst_arg() {
-        let (input, expr) = expr("@dump ( thing )").unwrap();
+        let (input, expr) = expr(span!("@dump ( thing )")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<JkInst>().is_some());
     }
 
     #[test]
     fn jk_inst_non_existant() {
-        assert!(expr("@crab ( thing )").is_err());
+        assert!(expr(span!("@crab ( thing )")).is_err());
     }
 
     #[test]
     fn extern_no_args() {
-        let (input, expr) = expr("ext func exit () ;").unwrap();
+        let (input, expr) = expr(span!("ext func exit () ;")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<FunctionDec>().is_some());
     }
 
     #[test]
     fn extern_many_args() {
-        let (input, expr) = expr("ext func memcpy(dst: char, src: char, n: int);").unwrap();
+        let (input, expr) = expr(span!("ext func memcpy(dst: char, src: char, n: int);")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<FunctionDec>().is_some());
     }
 
     #[test]
     fn extern_missing_semicolon() {
-        assert!(expr("ext func memcpy(dst: char , n: int) ").is_err());
+        assert!(expr(span!("ext func memcpy(dst: char , n: int) ")).is_err());
     }
 
     #[test]
     fn return_nothing() {
-        let (input, expr) = expr("return").unwrap();
+        let (input, expr) = expr(span!("return")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Return>().is_some());
     }
 
     #[test]
     fn return_sum() {
-        let (input, expr) = expr("return 10 + 9").unwrap();
+        let (input, expr) = expr(span!("return 10 + 9")).unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert!(expr.downcast_ref::<Return>().is_some());
     }
 
@@ -1102,257 +1109,276 @@ mod tests {
     #[test]
     #[ignore]
     fn return_malformed() {
-        let (input, expr) = expr("return 10 +").unwrap();
+        let (input, expr) = expr(span!("return 10 +")).unwrap();
 
-        assert_eq!(input, "10 +");
+        assert_eq!(*input.fragment(), "10 +");
         assert!(expr.downcast_ref::<Return>().is_none());
     }
 
     #[test]
     fn function_call_no_arg() {
-        let (input, expr) = expr("call ( )").unwrap();
+        let (input, expr) = expr(span!("call ( )")).unwrap();
         let func = expr.downcast_ref::<FunctionCall>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.name(), "call");
         assert!(func.args().is_empty());
     }
 
     #[test]
     fn function_call_one() {
-        let (input, expr) = expr("id ( 10 )").unwrap();
+        let (input, expr) = expr(span!("id ( 10 )")).unwrap();
         let func = expr.downcast_ref::<FunctionCall>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.name(), "id");
         assert_eq!(func.args().len(), 1);
     }
 
     #[test]
     fn function_call_many() {
-        let (input, expr) = expr("concat( 'h','e', 'l' , 'l', 'o')").unwrap();
+        let (input, expr) = expr(span!("concat( 'h','e', 'l' , 'l', 'o')")).unwrap();
         let func = expr.downcast_ref::<FunctionCall>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
         assert_eq!(func.name(), "concat");
         assert_eq!(func.args().len(), 5);
     }
 
     #[test]
     fn function_call_missing_paren() {
-        assert!(expr("concat( 'h','e', 'l' , 'l', 'o'").is_err());
+        assert!(expr(span!("concat( 'h','e', 'l' , 'l', 'o'")).is_err());
     }
 
     #[test]
     fn function_call_double_paren() {
-        assert!(expr("fn((").is_err());
+        assert!(expr(span!("fn((")).is_err());
     }
 
     #[test]
     fn multi_comment_multi_line() {
-        let input = r#"/**
+        let input = span!(
+            r#"/**
     * This function does nothing
     */
-    func void() { }"#;
+    func void() { }"#
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn sing_comment_multi_line() {
-        let input = r#" // Comment
-    func void() { }"#;
+        let input = span!(
+            r#" // Comment
+    func void() { }"#
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn hashtag_comment_multi_line() {
-        let input = r##"# Comment
-func void() { }"##;
+        let input = span!(
+            r##"# Comment
+func void() { }"##
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn multiple_different_comments() {
-        let input = r##"# Comment
+        let input = span!(
+            r##"# Comment
 # Another one 
             /**
                * Some documentation
                */
-    func void() { }"##;
+    func void() { }"##
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn multiple_different_comments_close() {
-        let input = r##"# Comment
+        let input = span!(
+            r##"# Comment
 # Another one 
             /**
                * Some documentation
                *//* Some more */
-    func void() { }"##;
+    func void() { }"##
+        );
 
         let (input, expr) = expr(input).unwrap();
         expr.downcast_ref::<FunctionDec>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn lt_exprs() {
-        assert!(expr("a < b").is_ok())
+        assert!(expr(span!("a < b")).is_ok())
     }
 
     #[test]
     fn gt_exprs() {
-        assert!(expr("a > b").is_ok())
+        assert!(expr(span!("a > b")).is_ok())
     }
 
     #[test]
     fn lte_exprs() {
-        assert!(expr("lhs <= rhs").is_ok())
+        assert!(expr(span!("lhs <= rhs")).is_ok())
     }
 
     #[test]
     fn gte_exprs() {
-        assert!(expr("lhs >= rhs").is_ok())
+        assert!(expr(span!("lhs >= rhs")).is_ok())
     }
 
     #[test]
     fn exprs_equals() {
-        assert!(expr("lhs == rhs").is_ok())
+        assert!(expr(span!("lhs == rhs")).is_ok())
     }
 
     #[test]
     fn exprs_not_equals() {
-        assert!(expr("lhs != rhs").is_ok())
+        assert!(expr(span!("lhs != rhs")).is_ok())
     }
 
     #[test]
     fn expr_with_parenthesis() {
-        assert!(expr("lhs + (rhs - lhs)").is_ok())
+        assert!(expr(span!("lhs + (rhs - lhs)")).is_ok())
     }
 
     #[test]
     fn parentheses() {
-        let (input, expr) = expr("4 * (3 + 5)").unwrap();
+        let (input, expr) = expr(span!("4 * (3 + 5)")).unwrap();
         expr.downcast_ref::<BinaryOp>().unwrap();
 
-        assert_eq!(input, "");
+        assert_eq!(*input.fragment(), "");
     }
 
     #[test]
     fn multi_type_2() {
-        assert!(expr("func takes_mt(a: int | string) {}").is_ok())
+        assert!(expr(span!("func takes_mt(a: int | string) {}")).is_ok())
     }
 
     #[test]
     fn multi_type_unclosed() {
-        assert!(expr("func invalid_mt(a: int |) {}").is_err())
+        assert!(expr(span!("func invalid_mt(a: int |) {}")).is_err())
     }
 
     #[test]
     fn multi_type_long() {
-        assert!(expr("func long_mt(a: int | string | float | char | bool) {}").is_ok())
+        assert!(expr(span!(
+            "func long_mt(a: int | string | float | char | bool) {}"
+        ))
+        .is_ok())
     }
 
     #[test]
     fn multi_type_in_type_dec() {
-        assert!(expr("type MultiTy(a: int | string | float | char | bool);").is_ok())
+        assert!(expr(span!(
+            "type MultiTy(a: int | string | float | char | bool);"
+        ))
+        .is_ok())
     }
 
     #[test]
     fn func_dec_one_generic() {
-        assert!(expr("func a[T]() {}").is_ok())
+        assert!(expr(span!("func a[T]() {}")).is_ok())
     }
 
     #[test]
     fn func_dec_multiple_generic() {
-        assert!(expr("func a[T, U, V]() {}").is_ok())
+        assert!(expr(span!("func a[T, U, V]() {}")).is_ok())
     }
 
     #[test]
     fn func_dec_generic_and_whitespace() {
-        assert!(expr("func a[    T]() {}").is_ok());
-        assert!(expr("func a[    T  ]() {}").is_ok());
-        assert!(expr("func a[   T , U    , V]() {}").is_ok())
+        assert!(expr(span!("func a[    T]() {}")).is_ok());
+        assert!(expr(span!("func a[    T  ]() {}")).is_ok());
+        assert!(expr(span!("func a[   T , U    , V]() {}")).is_ok())
     }
 
     #[test]
     fn func_dec_empty_generic_list() {
-        assert!(expr("func a[]() {}").is_err())
+        assert!(expr(span!("func a[]() {}")).is_err())
     }
 
     #[test]
     fn func_dec_no_generic_delimiter() {
-        assert!(expr("func a[T, U() {}").is_err())
+        assert!(expr(span!("func a[T, U() {}")).is_err())
     }
 
     #[test]
     fn func_call_generics_one() {
-        assert!(expr("fn_call[T]()").is_ok());
+        assert!(expr(span!("fn_call[T]()")).is_ok());
     }
 
     #[test]
     fn func_call_generics_multi() {
-        assert!(expr("fn_call[T, U, V]()").is_ok());
+        assert!(expr(span!("fn_call[T, U, V]()")).is_ok());
     }
 
     #[test]
     fn func_call_generics_multi_and_args() {
-        assert!(expr("fn_call[T, U, V](a, b, c)").is_ok());
+        assert!(expr(span!("fn_call[T, U, V](a, b, c)")).is_ok());
     }
 
     #[test]
     fn type_inst_generics_multi_and_args() {
-        assert!(expr("TypeInst[T, U, V](a: 0, b: 1, c: 2)").is_ok());
+        assert!(expr(span!("TypeInst[T, U, V](a: 0, b: 1, c: 2)")).is_ok());
     }
 
     #[test]
     fn empty_type_declaration() {
-        assert!(expr("type CustomType;").is_ok())
+        assert!(expr(span!("type CustomType;")).is_ok())
     }
 
     #[test]
     fn empty_type_instantiation() {
-        assert!(expr("a = CustomType;").is_ok())
+        assert!(expr(span!("a = CustomType;")).is_ok())
     }
 
     #[test]
     fn generic_type_decl() {
-        assert!(expr("type Generic[T](inner: T);").is_ok());
+        assert!(expr(span!("type Generic[T](inner: T);")).is_ok());
     }
 
     #[test]
     fn multi_generic_type_decl() {
-        assert!(expr("type Generic[T, U, V](inner: T, outer: int, something: W);").is_ok());
+        assert!(expr(span!(
+            "type Generic[T, U, V](inner: T, outer: int, something: W);"
+        ))
+        .is_ok());
     }
 
     #[test]
     fn generic_empty_type_decl() {
-        assert!(expr("type Generic[T];").is_ok());
+        assert!(expr(span!("type Generic[T];")).is_ok());
     }
 
     #[test]
     fn generic_method_call() {
-        assert!(expr("expr.call[T, U, V](arg0, arg1)").is_ok());
-        assert!(expr("call[W, Y, Z]().call[T, U, V](arg0, arg1)").is_ok());
-        assert!(expr("value.call[primitive]()").is_ok());
-        assert!(expr("value.call  [primitive]   ()").is_ok());
+        assert!(expr(span!("expr.call[T, U, V](arg0, arg1)")).is_ok());
+        assert!(expr(span!("call[W, Y, Z]().call[T, U, V](arg0, arg1)")).is_ok());
+        assert!(expr(span!("value.call[primitive]()")).is_ok());
+        assert!(expr(span!("value.call  [primitive]   ()")).is_ok());
     }
 }

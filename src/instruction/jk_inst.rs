@@ -92,12 +92,12 @@ impl Generic for JkInst {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::jinko;
     use crate::parser::constructs;
+    use crate::{jinko, span};
 
     #[test]
     fn t_invalid_jkinst() {
-        let expr = constructs::expr("tamer()").unwrap().1;
+        let expr = constructs::expr(span!("tamer()")).unwrap().1;
         let inst = JkInst::from_function_call(expr.downcast_ref().unwrap());
 
         assert!(inst.is_err(), "tamer is not a valid ctx directive")
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn t_valid_inst_no_args() {
-        let expr = constructs::expr("dump()").unwrap().1;
+        let expr = constructs::expr(span!("dump()")).unwrap().1;
         let inst = JkInst::from_function_call(expr.downcast_ref().unwrap());
 
         assert!(inst.is_ok(), "dump is a valid ctx directive")
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn t_valid_inst_with_args() {
-        let expr = constructs::expr("ir(fn)").unwrap().1;
+        let expr = constructs::expr(span!("ir(fn)")).unwrap().1;
         let inst = JkInst::from_function_call(expr.downcast_ref().unwrap());
 
         assert!(

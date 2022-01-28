@@ -380,7 +380,7 @@ impl Generic for FunctionCall {
 mod tests {
     use super::*;
     use crate::parser::constructs;
-    use crate::{jinko, jinko_fail};
+    use crate::{jinko, jinko_fail, span};
 
     #[test]
     fn t_pretty_print_empty() {
@@ -425,10 +425,10 @@ mod tests {
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = constructs::expr("func __second(f: int, s: int) -> int { s }")
+        let func_dec = constructs::expr(span!("func __second(f: int, s: int) -> int { s }"))
             .unwrap()
             .1;
-        let func_call = constructs::expr("__second(1, 2)").unwrap().1;
+        let func_call = constructs::expr(span!("__second(1, 2)")).unwrap().1;
 
         func_dec.execute(&mut i);
 
@@ -444,10 +444,10 @@ mod tests {
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = constructs::expr("func add(a: int, b: int) -> int { a + b }")
+        let func_dec = constructs::expr(span!("func add(a: int, b: int) -> int { a + b }"))
             .unwrap()
             .1;
-        let func_call = constructs::expr("add(1, 2)").unwrap().1;
+        let func_call = constructs::expr(span!("add(1, 2)")).unwrap().1;
 
         func_dec.execute(&mut i);
 
@@ -463,10 +463,10 @@ mod tests {
         use crate::ToObjectInstance;
 
         let mut i = Context::new();
-        let func_dec = constructs::expr("func one() -> int { one = 1; one }")
+        let func_dec = constructs::expr(span!("func one() -> int { one = 1; one }"))
             .unwrap()
             .1;
-        let func_call = constructs::expr("one()").unwrap().1;
+        let func_call = constructs::expr(span!("one()")).unwrap().1;
 
         func_dec.execute(&mut i);
 

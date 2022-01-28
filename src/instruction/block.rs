@@ -173,7 +173,7 @@ mod tests {
     use super::*;
     use crate::instruction::{Var, VarAssign};
     use crate::value::JkInt;
-    use crate::{jinko, jinko_fail};
+    use crate::{jinko, jinko_fail, span};
 
     #[test]
     fn empty() {
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     #[ignore]
     fn block_no_last_tychk() {
-        let mut b = crate::parser::constructs::expr("{ 12; 15; a = 14; }")
+        let mut b = crate::parser::constructs::expr(span!("{ 12; 15; a = 14; }"))
             .unwrap()
             .1;
 
