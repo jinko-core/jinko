@@ -1,0 +1,8 @@
+// FIXME: This should be replaced by the `!` operator once it is implemented
+func not(b: bool) -> bool {
+	if b {
+		false
+	} else {
+		true
+	}
+}
