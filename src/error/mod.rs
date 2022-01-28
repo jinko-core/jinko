@@ -117,7 +117,11 @@ impl Error {
         let kind_str = self.kind.as_str();
 
         eprintln!("Error type: {}", kind_str.red());
-        eprintln!(" ===> {}", file.to_string_lossy().green());
+        eprint!(" ====> {}", file.display());
+        if let Some(loc) = &self.loc {
+            eprintln!(":{}:{}", loc.line(), loc.column());
+            // eprintln!("on input: {}", loc.input());
+        }
 
         // FIXME: Is the formatting correct?
         eprintln!("    |");
@@ -142,11 +146,9 @@ impl Error {
         }
     }
 
-    pub fn with_loc(self, loc: Location) -> Error {
-        Error {
-            loc: Some(loc),
-            ..self
-        }
+    // FIXME: Should this really take an Option<Location>?
+    pub fn with_loc(self, loc: Option<Location>) -> Error {
+        Error { loc, ..self }
     }
 
     pub fn exit(&self) {
@@ -190,7 +192,7 @@ impl From<nom::Err<Error>> for Error {
 impl<'i> nom::error::ParseError<LocatedSpan<&'i str>> for Error {
     fn from_error_kind(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind) -> Error {
         // FIXME: Add location here
-        Error::new(ErrKind::Parsing).with_loc(span.into())
+        Error::new(ErrKind::Parsing).with_loc(Some(span.into()))
     }
 
     fn append(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind, _other: Error) -> Error {
@@ -200,7 +202,7 @@ impl<'i> nom::error::ParseError<LocatedSpan<&'i str>> for Error {
         //     None => String::new(),
         // };
 
-        Error::new(ErrKind::Parsing).with_loc(span.into()) // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
+        Error::new(ErrKind::Parsing).with_loc(Some(span.into())) // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
     }
 }
 
