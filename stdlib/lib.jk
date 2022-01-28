@@ -1,5 +1,8 @@
-incl pair
+incl bool
+incl int
 incl string
+
+incl pair
 incl maybe
 incl range
 incl iter
