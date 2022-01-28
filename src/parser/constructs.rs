@@ -18,7 +18,7 @@ use nom::{
     branch::alt, character::complete::multispace0, combinator::opt, multi::many0,
     sequence::delimited, sequence::pair, sequence::preceded, sequence::terminated,
 };
-use nom_locate::LocatedSpan;
+use nom_locate::{position, LocatedSpan};
 
 use crate::instruction::{
     BinaryOp, Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl,
@@ -253,8 +253,10 @@ fn unit_func<'i>(
     input: LocatedSpan<&'i str>,
     kind: LocatedSpan<&'i str>,
 ) -> ParseResult<LocatedSpan<&'i str>, Box<dyn Instruction>> {
+    let (input, position) = position(input)?;
     let (input, mut function) = func_declaration(input)?;
     let (input, body) = block(input)?;
+    function.set_location(position.into());
     function.set_block(body);
     function.set_kind(FunctionKind::from(*kind.fragment()));
     Ok((input, Box::new(function)))

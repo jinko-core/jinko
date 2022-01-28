@@ -1,6 +1,7 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use crate::error::Location;
 use crate::generics::GenericMap;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
 use crate::typechecker::{CheckedType, TypeCtx};
@@ -27,6 +28,7 @@ pub struct FunctionDec {
     args: Vec<DecArg>,
     block: Option<Block>,
     typechecked: bool,
+    location: Option<Location>,
 }
 
 impl FunctionDec {
@@ -45,6 +47,7 @@ impl FunctionDec {
             args,
             block: None,
             typechecked: false,
+            location: None,
         }
     }
 
@@ -107,6 +110,10 @@ impl FunctionDec {
         self.block = Some(block)
     }
 
+    pub fn set_location(&mut self, loc: Location) {
+        self.location = Some(loc)
+    }
+
     /// Add an instruction to the function declaration, in order. This is mostly useful
     /// when adding instructions to the entry point of the context, since parsing
     /// directly gives a block to the function
@@ -116,16 +123,22 @@ impl FunctionDec {
                 b.add_instruction(instruction);
                 Ok(())
             }
-            None => Err(Error::new(ErrKind::Context).with_msg(format!(
+            None => Err(Error::new(ErrKind::Context)
+                .with_msg(format!(
                 "function {} has no instruction block. It might be an extern function or an error",
                 self.name
-            ))),
+            ))
+                .with_loc(self.loc())),
         }
     }
 
     /// Return a reference to the function's name
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn loc(&self) -> Option<Location> {
+        self.location.clone()
     }
 
     /// Return a reference to the function's return type
@@ -201,7 +214,8 @@ impl Instruction for FunctionDec {
             }
             FunctionKind::Mock | FunctionKind::Unknown => ctx.error(
                 Error::new(ErrKind::Context)
-                    .with_msg(format!("unknown type for function {}", self.name())),
+                    .with_msg(format!("unknown type for function {}", self.name()))
+                    .with_loc(self.loc()),
             ),
         }
 
@@ -327,12 +341,16 @@ impl TypeCheck for FunctionDec {
             }
 
             if block_ty != return_ty {
-                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                ctx.error(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
                     "invalid type returned in function `{}`: expected type {}, found type {}",
                     self.name(),
                     return_ty,
                     block_ty
-                )));
+                ))
+                        .with_loc(self.loc()),
+                );
 
                 ctx.scope_exit();
 
