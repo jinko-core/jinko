@@ -1,11 +1,11 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::error::Location;
 use crate::generics::GenericMap;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::Generic;
+use crate::SpanTuple;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
@@ -28,7 +28,7 @@ pub struct FunctionDec {
     args: Vec<DecArg>,
     block: Option<Block>,
     typechecked: bool,
-    location: Option<Location>,
+    location: Option<SpanTuple>,
 }
 
 impl FunctionDec {
@@ -110,7 +110,7 @@ impl FunctionDec {
         self.block = Some(block)
     }
 
-    pub fn set_location(&mut self, loc: Location) {
+    pub fn set_location(&mut self, loc: SpanTuple) {
         self.location = Some(loc)
     }
 
@@ -137,7 +137,7 @@ impl FunctionDec {
         &self.name
     }
 
-    pub fn loc(&self) -> Option<Location> {
+    pub fn loc(&self) -> Option<SpanTuple> {
         self.location.clone()
     }
 
