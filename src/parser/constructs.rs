@@ -27,7 +27,7 @@ use crate::instruction::{
 };
 use crate::parser::{ConstantConstruct, ParseResult, Token};
 use crate::Error;
-use crate::SpanTuple;
+use crate::{Location, SpanTuple};
 
 /// Parse as many instructions as possible
 /// many_expr = ( expr_semicolon )*
@@ -180,6 +180,7 @@ fn method_or_field(
 ///      | IDENTIFIER next func_type_or_var
 /// ```
 fn unit(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+    let (input, start_loc) = position(input)?;
     if let Ok((input, _)) = Token::if_tok(input) {
         unit_if(input)
     } else if let Ok((input, _)) = Token::while_tok(input) {
@@ -191,7 +192,7 @@ fn unit(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Inst
     } else if let Ok((input, kind)) =
         alt((Token::func_tok, Token::test_tok, Token::mock_tok))(input)
     {
-        unit_func(input, kind)
+        unit_func(input, kind, start_loc.into())
     } else if let Ok((input, _)) = Token::incl_tok(input) {
         unit_incl(input)
     } else if let Ok((input, _)) = Token::type_tok(input) {
@@ -253,8 +254,8 @@ fn unit_for(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn 
 fn unit_func<'i>(
     input: LocatedSpan<&'i str>,
     kind: LocatedSpan<&'i str>,
+    start_loc: Location,
 ) -> ParseResult<LocatedSpan<&'i str>, Box<dyn Instruction>> {
-    let (input, start_loc) = position(input)?;
     let (input, mut function) = func_declaration(input)?;
     let (input, body) = block(input)?;
     let (input, end_loc) = position(input)?;
