@@ -37,7 +37,7 @@ pub struct Context {
     pub debug_mode: bool,
 
     /// Source code currently being interpreted by the context
-    pub code: String,
+    pub code: Option<String>,
 
     /// Entry point to the context, the "main" function
     pub entry_point: FunctionDec,
@@ -92,7 +92,7 @@ impl Context {
     pub fn new() -> Context {
         let mut ctx = Context {
             debug_mode: false,
-            code: String::new(), // FIXME: Is this the correct behavior?
+            code: None,
             entry_point: Self::new_entry(),
             path: None,
             args: Vec::new(),
@@ -133,7 +133,7 @@ impl Context {
 
     /// Set the source code that the context should refer to
     pub fn set_code(&mut self, code: String) {
-        self.code = code
+        self.code = Some(code)
     }
 
     /// Get a reference to a context's source path
@@ -161,7 +161,7 @@ impl Context {
 
     /// Emit all the errors currently kept in the context and remove them
     pub fn emit_errors(&mut self) {
-        self.error_handler.emit(&self.code);
+        self.error_handler.emit(self.code.as_deref());
     }
 
     /// Clear all the errors currently kept in the context and remove them

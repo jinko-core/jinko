@@ -20,7 +20,7 @@ pub struct ErrorHandler {
 
 impl ErrorHandler {
     /// Emit all the errors contained in a handler
-    pub fn emit(&self, input: &str) {
+    pub fn emit(&self, input: Option<&str>) {
         self.errors.iter().for_each(|e| e.emit(input, &self.file));
     }
 
@@ -85,37 +85,45 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn emit(&self, input: &str, file: &Path) {
+    fn emit_full_loc(&self, input: &str, file: &Path, loc: &SpanTuple) {
+        eprintln!();
+        if loc.start().line() > 4 {
+            let before_start = Location::new(max(loc.start().line() - 3, 1), loc.start().column());
+            let before_ctx = SpanTuple::new(before_start, loc.start().clone());
+            before_ctx.emit('|', input);
+        }
+
+        loc.emit("x".yellow(), input);
+
+        let after_end = Location::new(loc.end().line() + 3, loc.end().column());
+        let after_ctx = SpanTuple::new(loc.end().clone(), after_end);
+        after_ctx.emit('|', input);
+        eprintln!();
+
+        if let Some(msg) = &self.msg {
+            eprintln!(
+                "{}:{}:{}: {}",
+                file.display().to_string().yellow(),
+                loc.start().line(),
+                loc.start().column(),
+                msg
+            )
+        }
+
+        eprintln!();
+    }
+
+    pub fn emit(&self, input: Option<&str>, file: &Path) {
         let kind_str = self.kind.as_str();
 
         eprintln!("{}: {}", "error_type".yellow(), kind_str);
-        if let Some(loc) = &self.loc {
-            eprintln!();
-            if loc.start().line() > 4 {
-                let before_start =
-                    Location::new(max(loc.start().line() - 3, 1), loc.start().column());
-                let before_ctx = SpanTuple::new(before_start, loc.start().clone());
-                before_ctx.emit('|', input);
+        if let Some(input) = input {
+            if let Some(loc) = &self.loc {
+                self.emit_full_loc(input, file, loc);
             }
-
-            loc.emit("x".yellow(), input);
-
-            let after_end = Location::new(loc.end().line() + 3, loc.end().column());
-            let after_ctx = SpanTuple::new(loc.end().clone(), after_end);
-            after_ctx.emit('|', input);
-            eprintln!();
-
-            if let Some(msg) = &self.msg {
-                eprintln!(
-                    "{}:{}:{}: {}",
-                    file.display().to_string().yellow(),
-                    loc.start().line(),
-                    loc.start().column(),
-                    msg
-                )
-            }
+        } else if let Some(msg) = &self.msg {
+            eprintln!("{}: {}", file.display().to_string().yellow(), msg)
         }
-        eprintln!();
     }
 
     pub fn new(kind: ErrKind) -> Error {
