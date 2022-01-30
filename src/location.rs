@@ -8,6 +8,7 @@
 
 use nom_locate::LocatedSpan;
 
+use std::cmp::max;
 use std::fmt::Display;
 use std::num::NonZeroUsize;
 
@@ -60,6 +61,41 @@ impl SpanTuple {
 
     pub fn end(&self) -> &Location {
         &self.end
+    }
+
+    /// Amount of lines to use when creating before and after context for a
+    /// [`SpanTuple`]
+    const CONTEXT_LINES: usize = 3;
+
+    /// Create a span context from a given range of text. This returns two new
+    /// [`SpanTuple`]s, which wrap around the original one in order to add context.
+    /// The before context is created by substracting the line number, if possible,
+    /// and the after context by adding to the line number.
+    /// You can then display both of these [`SpanTuple`]s as you would normally.
+    /// Since the before context depends on whether or not enough lines are
+    /// available before `self`, it will sometimes not be possible to create
+    /// one. An after context is always given, as checking whether or not there
+    /// are enough lines in the input is a very costly operation and unecessary:
+    /// if there aren't enough lines, they will all be skipped during the emission
+    /// and nothing will be printed.
+    pub fn generate_context(&self) -> (Option<SpanTuple>, SpanTuple) {
+        let before_ctx = if self.start().line() > SpanTuple::CONTEXT_LINES + 1 {
+            let before_start = Location::new(
+                max(self.start().line() - SpanTuple::CONTEXT_LINES, 1),
+                self.start().column(),
+            );
+            Some(SpanTuple::new(before_start, self.start().clone()))
+        } else {
+            None
+        };
+
+        let after_end = Location::new(
+            self.end().line() + SpanTuple::CONTEXT_LINES,
+            self.end().column(),
+        );
+        let after_ctx = SpanTuple::new(self.end().clone(), after_end);
+
+        (before_ctx, after_ctx)
     }
 
     /// Write the content in the range included by the [`SpanTuple`]. This

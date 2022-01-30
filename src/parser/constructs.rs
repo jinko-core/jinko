@@ -260,7 +260,7 @@ fn unit_func<'i>(
     let (input, mut function) = func_declaration(input)?;
     let (input, body) = block(input)?;
     let (input, end_loc) = position(input)?;
-    function.set_location(SpanTuple::new(start_loc.into(), end_loc.into()));
+    function.set_location(SpanTuple::new(start_loc, end_loc.into()));
     function.set_block(body);
     function.set_kind(FunctionKind::from(*kind.fragment()));
     Ok((input, Box::new(function)))
