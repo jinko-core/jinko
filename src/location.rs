@@ -68,11 +68,18 @@ impl SpanTuple {
     /// struct's [`to_string`] method, which is only for testing
     /// purposes and contains extra allocations.
     pub fn emit(&self, input: &str) {
-        todo!()
+        // FIXME: As the API and behavior is still young, use self.to_string()
+        // for now. This is quite slow, but since emitting an error is already
+        // slow, we'll allow it. This NEEDS to be removed at some point once
+        // we are sure than the algorithm for emitting spans is stable
+        eprintln!("{}", self.to_string(input))
     }
 
-    #[cfg(test)]
-    pub(crate) fn to_string(&self, input: &str) -> String {
+    fn format_line(&self, line_number: usize, line: &str) -> String {
+        format!("{:5} | {}", self.start.line() + line_number, line)
+    }
+
+    fn to_string(&self, input: &str) -> String {
         let mut result = String::new();
 
         if self.start.line() > self.end.line() {
@@ -85,24 +92,28 @@ impl SpanTuple {
 
         for (i, line) in input.lines().skip(self.start.line() - 1).enumerate() {
             if self.start.line() == self.end.line() {
-                result.push_str(&line[self.start.column() - 1..self.end.column()]);
+                result.push_str(
+                    &self.format_line(i, &line[self.start.column() - 1..self.end.column()]),
+                );
                 break;
             }
             // Four possible cases: First line, for which we need to skip
             // start.column characters
             else if i == 0 {
-                result.push_str(&line[(self.start.column() - 1)..]);
+                result.push_str(&self.format_line(i, &line[(self.start.column() - 1)..]));
             }
             // Last line, for which we only push up to end.column characters
             else if self.start.line() + i == self.end.line() {
-                result.push_str(&line[..self.end.column()]);
+                result.push_str(&self.format_line(i, &line[..self.end.column() - 1]));
                 break;
             } else if self.start.line() == self.end.line() {
-                result.push_str(&line[self.start.column()..self.end.column() + 1]);
+                result.push_str(
+                    &self.format_line(i, &line[self.start.column()..self.end.column() + 1]),
+                );
             }
             // Any other line, which gets pushed entirely into the string
             else {
-                result.push_str(line);
+                result.push_str(&self.format_line(i, line));
             }
 
             result.push('\n');
