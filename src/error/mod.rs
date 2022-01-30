@@ -75,41 +75,10 @@ impl ErrKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Location {
-    input: String,
-    line: usize,
-    column: usize,
-}
-
-impl Location {
-    pub fn line(&self) -> usize {
-        self.line
-    }
-
-    pub fn column(&self) -> usize {
-        self.column
-    }
-
-    pub fn input(&self) -> &str {
-        self.input.as_str()
-    }
-}
-
-impl From<LocatedSpan<&str>> for Location {
-    fn from(span: LocatedSpan<&str>) -> Self {
-        Location {
-            input: span.fragment().to_string(),
-            line: span.location_line() as usize,
-            column: span.get_column(),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub struct Error {
     kind: ErrKind,
     msg: Option<String>,
-    loc: Option<Location>,
+    loc: Option<SpanTuple>,
 }
 
 impl Error {
@@ -119,7 +88,7 @@ impl Error {
         eprintln!("Error type: {}", kind_str.red());
         eprint!(" ====> {}", file.display());
         if let Some(loc) = &self.loc {
-            eprintln!(":{}:{}", loc.line(), loc.column());
+            eprintln!(":{}:{}", loc.start().line(), loc.start().column());
             // eprintln!("on input: {}", loc.input());
         }
 
@@ -147,7 +116,7 @@ impl Error {
     }
 
     // FIXME: Should this really take an Option<Location>?
-    pub fn with_loc(self, loc: Option<Location>) -> Error {
+    pub fn with_loc(self, loc: Option<SpanTuple>) -> Error {
         Error { loc, ..self }
     }
 
@@ -159,6 +128,8 @@ impl Error {
 
 use std::convert::From;
 use std::io;
+
+use crate::SpanTuple;
 
 /// I/O errors keep their messages
 impl From<io::Error> for Error {
@@ -192,7 +163,7 @@ impl From<nom::Err<Error>> for Error {
 impl<'i> nom::error::ParseError<LocatedSpan<&'i str>> for Error {
     fn from_error_kind(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind) -> Error {
         // FIXME: Add location here
-        Error::new(ErrKind::Parsing).with_loc(Some(span.into()))
+        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(span.into(), span.into())))
     }
 
     fn append(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind, _other: Error) -> Error {
@@ -202,7 +173,8 @@ impl<'i> nom::error::ParseError<LocatedSpan<&'i str>> for Error {
         //     None => String::new(),
         // };
 
-        Error::new(ErrKind::Parsing).with_loc(Some(span.into())) // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
+        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(span.into(), span.into())))
+        // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
     }
 }
 
@@ -214,8 +186,12 @@ impl Display for Error {
         }
 
         if let Some(loc) = &self.loc {
-            writeln!(f, " at line {} column {}", loc.line(), loc.column())?;
-            write!(f, "input: {}", loc.input())?;
+            writeln!(
+                f,
+                " at line {} column {}",
+                loc.start().line(),
+                loc.start().column()
+            )?;
         }
 
         Ok(())
