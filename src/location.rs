@@ -137,7 +137,7 @@ impl SpanTuple {
                 result.push_str(&self.format_line(
                     separator,
                     i,
-                    &line[self.start.column() - 1..self.end.column()],
+                    &line[self.start.column() - 1..self.end.column() - 1],
                 ));
                 break;
             }
