@@ -176,26 +176,26 @@ func is_some[T](m: Maybe[T]) -> bool {
         let e = Location::new(1, 6);
         let span = SpanTuple::new(s, e);
 
-        assert_eq!(span.to_string(CODE), "pe N");
+        assert_eq!(span.to_string(&'>', CODE), "    1 > pe N");
     }
 
     #[test]
     fn multi_line_span() {
         let s = Location::new(1, 1);
-        let e = Location::new(9, 1);
+        let e = Location::new(9, 2);
         let span = SpanTuple::new(s, e);
 
         assert_eq!(
-            span.to_string(CODE),
-            r#"type Nothing;
-type Maybe[T](T | Nothing);
-
-func map[T, U](m: Maybe[T], fn: func(T) -> U) -> Maybe[U] {
-    switch m {
-        n: Nothing => Nothing,
-        t: T => fn(t)
-    }
-}"#
+            span.to_string(&'>', CODE),
+            r#"    1 > type Nothing;
+    2 > type Maybe[T](T | Nothing);
+    3 > 
+    4 > func map[T, U](m: Maybe[T], fn: func(T) -> U) -> Maybe[U] {
+    5 >     switch m {
+    6 >         n: Nothing => Nothing,
+    7 >         t: T => fn(t)
+    8 >     }
+    9 > }"#
         );
     }
 
@@ -205,7 +205,7 @@ func map[T, U](m: Maybe[T], fn: func(T) -> U) -> Maybe[U] {
         let e = Location::new(1, 1);
         let span = SpanTuple::new(s, e);
 
-        assert!(span.to_string(CODE).is_empty());
+        assert!(span.to_string(&' ', CODE).is_empty());
     }
 
     #[test]
