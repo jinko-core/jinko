@@ -1,11 +1,14 @@
 //! The Error module contains helpful wrapper around possible errors in jinko. They
 //! are used by the context as well as the parser.
 
+use std::cmp::max;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
 use colored::Colorize;
 use nom_locate::LocatedSpan;
+
+use crate::{Location, SpanTuple};
 
 /// The role of the error handler is to keep track of errors and emit them properly
 /// once done
@@ -88,12 +91,29 @@ impl Error {
         eprintln!("{}: {}", "error_type".yellow(), kind_str);
         if let Some(loc) = &self.loc {
             eprintln!();
-            loc.emit(input);
-            eprintln!();
-        }
+            if loc.start().line() > 4 {
+                let before_start =
+                    Location::new(max(loc.start().line() - 3, 1), loc.start().column());
+                let before_ctx = SpanTuple::new(before_start, loc.start().clone());
+                before_ctx.emit('|', input);
+            }
 
-        if let Some(msg) = &self.msg {
-            eprintln!("{}:{}", file.display().to_string().yellow(), msg)
+            loc.emit("x".yellow(), input);
+
+            let after_end = Location::new(loc.end().line() + 3, loc.end().column());
+            let after_ctx = SpanTuple::new(loc.end().clone(), after_end);
+            after_ctx.emit('|', input);
+            eprintln!();
+
+            if let Some(msg) = &self.msg {
+                eprintln!(
+                    "{}:{}:{}: {}",
+                    file.display().to_string().yellow(),
+                    loc.start().line(),
+                    loc.start().column(),
+                    msg
+                )
+            }
         }
         eprintln!();
     }
@@ -126,8 +146,6 @@ impl Error {
 
 use std::convert::From;
 use std::io;
-
-use crate::SpanTuple;
 
 /// I/O errors keep their messages
 impl From<io::Error> for Error {
