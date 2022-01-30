@@ -52,11 +52,12 @@ tests:
     exit_code: 0
 
   # Invalid
-  - name: "Invalid Function typechecking"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/type_checking/invalid/func.jk"
-    exit_code: 1
+  # FIXME: Do not ignore once #496 is fixed
+  # - name: "Invalid Function typechecking"
+  #   binary: "target/debug/jinko"
+  #   args:
+  #     - "tests/ft/type_checking/invalid/func.jk"
+  #   exit_code: 1
   - name: "Invalid Variable typechecking"
     binary: "target/debug/jinko"
     args:
