@@ -12,12 +12,18 @@ use std::cmp::max;
 use std::fmt::Display;
 use std::num::NonZeroUsize;
 
+#[derive(Debug, PartialEq, Clone)]
+enum Column {
+    EndOfLine,
+    Precise(NonZeroUsize),
+}
+
 /// Base type for the location of jinko instructions, generated during parsing
 /// phase.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Location {
     line: NonZeroUsize,
-    column: NonZeroUsize,
+    column: Column,
 }
 
 impl Location {
@@ -25,7 +31,15 @@ impl Location {
         Location {
             // If we ever create a location with zero as a line or column, panic
             line: NonZeroUsize::new(line).unwrap(),
-            column: NonZeroUsize::new(column).unwrap(),
+            column: Column::Precise(NonZeroUsize::new(column).unwrap()),
+        }
+    }
+
+    pub fn whole_line(line: usize) -> Location {
+        Location {
+            // If we ever create a location with zero as a line, panic
+            line: NonZeroUsize::new(line).unwrap(),
+            column: Column::EndOfLine,
         }
     }
 
@@ -34,7 +48,12 @@ impl Location {
     }
 
     pub fn column(&self) -> usize {
-        self.column.get()
+        match self.column {
+            Column::Precise(nz) => nz.get(),
+            // When accessing a location which represents a whole line, we can
+            // simply say that it starts at the first character: Thus, return 1
+            Column::EndOfLine => 1usize,
+        }
     }
 }
 
@@ -80,19 +99,14 @@ impl SpanTuple {
     /// and nothing will be printed.
     pub fn generate_context(&self) -> (Option<SpanTuple>, SpanTuple) {
         let before_ctx = if self.start().line() > SpanTuple::CONTEXT_LINES + 1 {
-            let before_start = Location::new(
-                max(self.start().line() - SpanTuple::CONTEXT_LINES, 1),
-                self.start().column(),
-            );
+            let before_start =
+                Location::whole_line(max(self.start().line() - SpanTuple::CONTEXT_LINES, 1));
             Some(SpanTuple::new(before_start, self.start().clone()))
         } else {
             None
         };
 
-        let after_end = Location::new(
-            self.end().line() + SpanTuple::CONTEXT_LINES,
-            self.end().column(),
-        );
+        let after_end = Location::whole_line(self.end().line() + SpanTuple::CONTEXT_LINES);
         let after_ctx = SpanTuple::new(self.end().clone(), after_end);
 
         (before_ctx, after_ctx)
@@ -133,33 +147,30 @@ impl SpanTuple {
         }
 
         for (i, line) in input.lines().skip(self.start.line() - 1).enumerate() {
+            let start_col = match self.start.column {
+                Column::EndOfLine => 1,
+                Column::Precise(nz) => nz.get(),
+            };
+            let end_col = match self.end.column {
+                Column::EndOfLine => line.len(),
+                Column::Precise(nz) => nz.get(),
+            };
+
             if self.start.line() == self.end.line() {
-                result.push_str(&self.format_line(
-                    separator,
-                    i,
-                    &line[self.start.column() - 1..self.end.column() - 1],
-                ));
+                result.push_str(&self.format_line(separator, i, &line[start_col - 1..end_col]));
                 break;
             }
             // Four possible cases: First line, for which we need to skip
             // start.column characters
             else if i == 0 {
-                result.push_str(&self.format_line(
-                    separator,
-                    i,
-                    &line[(self.start.column() - 1)..],
-                ));
+                result.push_str(&self.format_line(separator, i, &line[(start_col - 1)..]));
             }
             // Last line, for which we only push up to end.column characters
             else if self.start.line() + i == self.end.line() {
-                result.push_str(&self.format_line(separator, i, &line[..self.end.column() - 1]));
+                result.push_str(&self.format_line(separator, i, &line[..end_col - 1]));
                 break;
             } else if self.start.line() == self.end.line() {
-                result.push_str(&self.format_line(
-                    separator,
-                    i,
-                    &line[self.start.column()..self.end.column() + 1],
-                ));
+                result.push_str(&self.format_line(separator, i, &line[start_col..end_col]));
             }
             // Any other line, which gets pushed entirely into the string
             else {
