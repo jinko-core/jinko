@@ -39,7 +39,6 @@ impl ErrorHandler {
         self.errors.clear()
     }
 
-    // FIXME: Remove this once location is implemented
     /// Set the file that should be used by the error handler. This function should be
     /// removed once locations are kept properly in the different instructions
     pub fn set_path(&mut self, file: PathBuf) {
@@ -183,7 +182,8 @@ impl From<nom::Err<Error>> for Error {
 
 impl<'i> nom::error::ParseError<LocatedSpan<&'i str>> for Error {
     fn from_error_kind(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind) -> Error {
-        // FIXME: Add location here
+        // FIXME: Add better location here in order to print whole line and
+        // display specific hint about parse error
         Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(span.into(), span.into())))
     }
 
