@@ -1,14 +1,13 @@
 //! The Error module contains helpful wrapper around possible errors in jinko. They
 //! are used by the context as well as the parser.
 
-use std::cmp::max;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
 use colored::Colorize;
 use nom_locate::LocatedSpan;
 
-use crate::{Location, SpanTuple};
+use crate::SpanTuple;
 
 /// The role of the error handler is to keep track of errors and emit them properly
 /// once done
@@ -86,18 +85,16 @@ pub struct Error {
 
 impl Error {
     fn emit_full_loc(&self, input: &str, file: &Path, loc: &SpanTuple) {
+        let (before_ctx, after_ctx) = loc.generate_context();
+
         eprintln!();
-        if loc.start().line() > 4 {
-            let before_start = Location::new(max(loc.start().line() - 3, 1), loc.start().column());
-            let before_ctx = SpanTuple::new(before_start, loc.start().clone());
-            before_ctx.emit('|', input);
-        }
 
+        if let Some(ctx) = before_ctx {
+            ctx.emit('|', input)
+        };
         loc.emit("x".yellow(), input);
-
-        let after_end = Location::new(loc.end().line() + 3, loc.end().column());
-        let after_ctx = SpanTuple::new(loc.end().clone(), after_end);
         after_ctx.emit('|', input);
+
         eprintln!();
 
         if let Some(msg) = &self.msg {
