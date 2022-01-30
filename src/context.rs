@@ -36,6 +36,9 @@ pub struct Context {
     /// Is the context in debugging mode or not
     pub debug_mode: bool,
 
+    /// Source code currently being interpreted by the context
+    pub code: String,
+
     /// Entry point to the context, the "main" function
     pub entry_point: FunctionDec,
 
@@ -89,6 +92,7 @@ impl Context {
     pub fn new() -> Context {
         let mut ctx = Context {
             debug_mode: false,
+            code: String::new(), // FIXME: Is this the correct behavior?
             entry_point: Self::new_entry(),
             path: None,
             args: Vec::new(),
@@ -127,6 +131,11 @@ impl Context {
         self.args = args;
     }
 
+    /// Set the source code that the context should refer to
+    pub fn set_code(&mut self, code: String) {
+        self.code = code
+    }
+
     /// Get a reference to a context's source path
     pub fn set_path(&mut self, path: Option<PathBuf>) {
         // FIXME: Remove that clone...
@@ -152,7 +161,7 @@ impl Context {
 
     /// Emit all the errors currently kept in the context and remove them
     pub fn emit_errors(&mut self) {
-        self.error_handler.emit();
+        self.error_handler.emit(&self.code);
     }
 
     /// Clear all the errors currently kept in the context and remove them

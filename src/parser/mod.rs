@@ -19,6 +19,7 @@ pub type ParseResult<T, I> = nom::IResult<T, I, Error>;
 pub fn parse(ctx: &mut Context, input: &str) -> Result<(), Error> {
     // FIXME: Keep input in context here
     log!("parsing file: {:?}", ctx.path());
+    ctx.set_code(input.to_string());
     let entry_block = ctx.entry_point.block_mut().unwrap();
     let input = LocatedSpan::new(input);
 

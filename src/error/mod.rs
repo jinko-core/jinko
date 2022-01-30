@@ -17,8 +17,8 @@ pub struct ErrorHandler {
 
 impl ErrorHandler {
     /// Emit all the errors contained in a handler
-    pub fn emit(&self) {
-        self.errors.iter().for_each(|e| e.emit(&self.file));
+    pub fn emit(&self, input: &str) {
+        self.errors.iter().for_each(|e| e.emit(input, &self.file));
     }
 
     /// Add a new error to the handler
@@ -82,22 +82,20 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn emit(&self, file: &Path) {
+    pub fn emit(&self, input: &str, file: &Path) {
         let kind_str = self.kind.as_str();
 
-        eprintln!("Error type: {}", kind_str.red());
-        eprint!(" ====> {}", file.display());
+        eprintln!("{}: {}", "error_type".yellow(), kind_str);
         if let Some(loc) = &self.loc {
-            eprintln!(":{}:{}", loc.start().line(), loc.start().column());
-            // eprintln!("on input: {}", loc.input());
+            eprintln!();
+            loc.emit(input);
+            eprintln!();
         }
 
-        // FIXME: Is the formatting correct?
-        eprintln!("    |");
-        for line in self.msg.as_deref().unwrap_or("").lines() {
-            eprintln!("    | {}", line);
+        if let Some(msg) = &self.msg {
+            eprintln!("{}:{}", file.display().to_string().yellow(), msg)
         }
-        eprintln!("    |");
+        eprintln!();
     }
 
     pub fn new(kind: ErrKind) -> Error {
