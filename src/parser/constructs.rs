@@ -28,6 +28,7 @@ use crate::instruction::{
 use crate::parser::{ConstantConstruct, ParseResult, Token};
 use crate::typechecker::TypeId;
 use crate::Error;
+use crate::SpanTuple;
 
 /// Parse as many instructions as possible
 /// many_expr = ( expr_semicolon )*
@@ -254,10 +255,11 @@ fn unit_func<'i>(
     input: LocatedSpan<&'i str>,
     kind: LocatedSpan<&'i str>,
 ) -> ParseResult<LocatedSpan<&'i str>, Box<dyn Instruction>> {
-    let (input, position) = position(input)?;
+    let (input, start_loc) = position(input)?;
     let (input, mut function) = func_declaration(input)?;
     let (input, body) = block(input)?;
-    function.set_location(position.into());
+    let (input, end_loc) = position(input)?;
+    function.set_location(SpanTuple::new(start_loc.into(), end_loc.into()));
     function.set_block(body);
     function.set_kind(FunctionKind::from(*kind.fragment()));
     Ok((input, Box::new(function)))
