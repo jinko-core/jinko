@@ -5,8 +5,8 @@ use crate::generics::GenericMap;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::Generic;
-use crate::SpanTuple;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
+use crate::{Location, SpanTuple};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -111,6 +111,12 @@ impl FunctionDec {
     }
 
     pub fn set_location(&mut self, loc: SpanTuple) {
+        let end = loc.end().clone();
+        // FIXME: This is a hack since we cannot get an accurate location from the
+        // function's block yet. Remove this once all instructions have proper
+        // locations
+        let new_end = Location::new(end.line(), end.column() - 1);
+        let loc = SpanTuple::new(loc.start().clone(), new_end);
         self.location = Some(loc)
     }
 

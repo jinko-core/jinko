@@ -12,6 +12,8 @@ use std::cmp::max;
 use std::fmt::Display;
 use std::num::NonZeroUsize;
 
+use crate::log;
+
 #[derive(Debug, PartialEq, Clone)]
 enum Column {
     EndOfLine,
@@ -101,13 +103,15 @@ impl SpanTuple {
         let before_ctx = if self.start().line() > SpanTuple::CONTEXT_LINES + 1 {
             let before_start =
                 Location::whole_line(max(self.start().line() - SpanTuple::CONTEXT_LINES, 1));
-            Some(SpanTuple::new(before_start, self.start().clone()))
+            let before_end = Location::whole_line(self.start().line() - 1);
+            Some(SpanTuple::new(before_start, before_end))
         } else {
             None
         };
 
+        let after_start = Location::whole_line(self.end().line() + 1);
         let after_end = Location::whole_line(self.end().line() + SpanTuple::CONTEXT_LINES);
-        let after_ctx = SpanTuple::new(self.end().clone(), after_end);
+        let after_ctx = SpanTuple::new(after_start, after_end);
 
         (before_ctx, after_ctx)
     }
@@ -136,6 +140,7 @@ impl SpanTuple {
     }
 
     fn to_string<T: Display>(&self, separator: &T, input: &str) -> String {
+        log!("span: {:?}", &self);
         let mut result = String::new();
 
         if self.start.line() > self.end.line() {
@@ -167,7 +172,7 @@ impl SpanTuple {
             }
             // Last line, for which we only push up to end.column characters
             else if self.start.line() + i == self.end.line() {
-                result.push_str(&self.format_line(separator, i, &line[..end_col - 1]));
+                result.push_str(&self.format_line(separator, i, &line[..end_col]));
                 break;
             } else if self.start.line() == self.end.line() {
                 result.push_str(&self.format_line(separator, i, &line[start_col..end_col]));
@@ -229,7 +234,7 @@ func is_some[T](m: Maybe[T]) -> bool {
     #[test]
     fn multi_line_span() {
         let s = Location::new(1, 1);
-        let e = Location::new(9, 2);
+        let e = Location::new(9, 1);
         let span = SpanTuple::new(s, e);
 
         assert_eq!(
