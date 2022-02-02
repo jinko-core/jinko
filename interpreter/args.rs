@@ -19,7 +19,10 @@ pub struct Args {
     #[structopt(long = "test")]
     test: bool,
 
-    #[structopt(long = "check")]
+    #[structopt(
+        long = "check",
+        help = "Analyze and check jinko source code without executing it"
+    )]
     check: bool,
 
     #[structopt(short, long)]
