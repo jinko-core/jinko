@@ -105,6 +105,13 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
     ctx.emit_errors();
     ctx.clear_errors();
 
+    if args.check() {
+        ctx.check()?;
+        ctx.emit_errors();
+
+        return Ok((None, ctx));
+    }
+
     match args.test() {
         false => match args.interactive() {
             #[cfg(feature = "repl")]

@@ -19,6 +19,9 @@ pub struct Args {
     #[structopt(long = "test")]
     test: bool,
 
+    #[structopt(long = "check")]
+    check: bool,
+
     #[structopt(short, long)]
     debug: bool,
 
@@ -66,6 +69,11 @@ impl Args {
     /// Is the interpreter launched in test mode
     pub fn test(&self) -> bool {
         self.test
+    }
+
+    /// Is the interpreter launched in checking mode
+    pub fn check(&self) -> bool {
+        self.check
     }
 
     /// Arguments given to the program
