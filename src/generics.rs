@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use crate::instruction::TypeId;
+use crate::typechecker::TypeId;
 use crate::{log, ErrKind, Error};
 use crate::{Context, TypeCtx};
 
@@ -99,7 +99,7 @@ pub trait Generic {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruction::TypeId;
+    use crate::typechecker::TypeId;
 
     macro_rules! ty {
         ($str:literal) => {

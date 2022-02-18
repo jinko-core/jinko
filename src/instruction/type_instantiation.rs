@@ -1,13 +1,11 @@
 //! TypeInstantiations are used when instantiating a type. The argument list is given to the
 //! type on execution.
 
-use super::{
-    Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, TypeId, VarAssign,
-};
+use super::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, VarAssign};
 use crate::instance::Name;
 use crate::typechecker::TypeCtx;
 use crate::Generic;
-use crate::{typechecker::CheckedType, TypeCheck};
+use crate::{typechecker::CheckedType, TypeCheck, TypeId};
 
 use std::rc::Rc;
 
@@ -208,7 +206,8 @@ mod test {
 
     #[test]
     fn t_fields_number() {
-        use super::super::{DecArg, TypeId};
+        use super::super::DecArg;
+        use crate::typechecker::TypeId;
         use crate::value::JkInt;
 
         let mut ctx = Context::new();
@@ -259,7 +258,8 @@ mod test {
 
     #[test]
     fn t_returned_instance() {
-        use super::super::{DecArg, TypeId};
+        use super::super::DecArg;
+        use crate::typechecker::TypeId;
         use crate::value::{JkInt, JkString};
 
         const TYPE_NAME: &str = "Type_Name";

@@ -16,9 +16,9 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
-use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, TypeId, Var};
+use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
 use crate::parser;
-use crate::typechecker::{TypeCheck, TypeCtx};
+use crate::typechecker::{TypeCheck, TypeCtx, TypeId};
 use crate::ObjectInstance;
 use crate::{Builtins, CheckedType, Generic};
 
@@ -105,7 +105,7 @@ impl Context {
         ctx.scope_enter();
 
         // Add all primitive types as empty types without fields
-        crate::instruction::PRIMITIVE_TYPES
+        crate::typechecker::PRIMITIVE_TYPES
             .iter()
             .for_each(|ty_name| ctx.add_type(TypeDec::from(*ty_name)).unwrap());
 

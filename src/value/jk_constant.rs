@@ -1,5 +1,5 @@
-use crate::instruction::{InstrKind, Instruction, Operator, TypeId};
-use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
+use crate::instruction::{InstrKind, Instruction, Operator};
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 use crate::{
     log, Context, Error, FromObjectInstance, Generic, JkString, ObjectInstance, ToObjectInstance,
     Value,

@@ -1,6 +1,7 @@
 use crate::{
-    instruction::{TypeId, TypeInstantiation, Var},
+    instruction::{TypeInstantiation, Var},
     CheckedType, Context, Generic, InstrKind, Instruction, ObjectInstance, TypeCheck, TypeCtx,
+    TypeId,
 };
 
 #[derive(Clone, PartialEq)]

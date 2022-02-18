@@ -16,8 +16,8 @@
 //! ```
 
 use crate::instance::FromObjectInstance;
-use crate::instruction::{Block, InstrKind, Instruction, TypeId};
-use crate::typechecker::TypeCtx;
+use crate::instruction::{Block, InstrKind, Instruction};
+use crate::typechecker::{TypeCtx, TypeId};
 use crate::value::JkBool;
 use crate::Generic;
 use crate::{log, ErrKind, Error};

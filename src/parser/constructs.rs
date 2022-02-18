@@ -22,10 +22,11 @@ use nom_locate::LocatedSpan;
 
 use crate::instruction::{
     BinaryOp, Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl,
-    Instruction, JkInst, Loop, LoopKind, MethodCall, Operator, Return, TypeDec, TypeId,
-    TypeInstantiation, Var, VarAssign, VarOrEmptyType,
+    Instruction, JkInst, Loop, LoopKind, MethodCall, Operator, Return, TypeDec, TypeInstantiation,
+    Var, VarAssign, VarOrEmptyType,
 };
 use crate::parser::{ConstantConstruct, ParseResult, Token};
+use crate::typechecker::TypeId;
 use crate::Error;
 
 /// Parse as many instructions as possible

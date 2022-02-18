@@ -6,9 +6,9 @@
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
 use crate::{
-    instruction::{Operator, TypeId},
+    instruction::Operator,
     log,
-    typechecker::{CheckedType, TypeCtx},
+    typechecker::{CheckedType, TypeCtx, TypeId},
     Context, ErrKind, Error, FromObjectInstance, Generic, InstrKind, Instruction, JkFloat, JkInt,
     ObjectInstance, TypeCheck, Value,
 };

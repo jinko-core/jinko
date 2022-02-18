@@ -2,8 +2,8 @@
 //! a name, a list of required arguments as well as an associated code block
 
 use crate::generics::GenericMap;
-use crate::instruction::{Block, DecArg, InstrKind, Instruction, TypeId};
-use crate::typechecker::{CheckedType, TypeCtx};
+use crate::instruction::{Block, DecArg, InstrKind, Instruction};
+use crate::typechecker::{CheckedType, TypeCtx, TypeId};
 use crate::Generic;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
 
@@ -387,7 +387,7 @@ impl From<&str> for FunctionKind {
 mod tests {
     use super::*;
     use crate::span;
-    use crate::{instruction::TypeId, jinko, parser::constructs};
+    use crate::{jinko, parser::constructs, typechecker::TypeId};
 
     #[test]
     fn simple_no_arg() {
