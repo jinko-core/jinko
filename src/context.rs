@@ -286,10 +286,7 @@ impl Context {
         }
     }
 
-    pub fn execute(&mut self) -> Result<Option<ObjectInstance>, Error> {
-        // The entry point always has a block
-        let mut ep = self.entry_point.block().unwrap().clone();
-
+    fn inner_check(&mut self, ep: &mut Block) -> Result<(), Error> {
         self.scope_enter();
 
         ep.type_of(&mut self.typechecker);
@@ -301,11 +298,23 @@ impl Context {
         self.error_handler
             .append(&mut self.typechecker.error_handler);
         self.emit_errors();
-        self.included.clear();
 
-        if self.has_errors() {
-            return Err(Error::new(ErrKind::TypeChecker));
-        };
+        match self.error_handler.has_errors() {
+            true => Err(Error::new(ErrKind::Context)),
+            false => Ok(()),
+        }
+    }
+
+    pub fn check(&mut self) -> Result<(), Error> {
+        // The entry point always has a block
+        let mut ep = self.entry_point.block().unwrap().clone();
+        self.inner_check(&mut ep)
+    }
+
+    pub fn execute(&mut self) -> Result<Option<ObjectInstance>, Error> {
+        // The entry point always has a block
+        let mut ep = self.entry_point.block().unwrap().clone();
+        self.inner_check(&mut ep)?;
 
         let res = ep
             .instructions()

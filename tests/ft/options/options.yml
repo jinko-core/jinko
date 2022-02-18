@@ -1,0 +1,26 @@
+tests:
+  - name: "Test --no-std"
+    binary: "target/debug/jinko"
+    args:
+      - "--no-std"
+      - "tests/ft/stdlib/range/advance.jk"
+    exit_code: 1
+  - name: "Test --check"
+    binary: "target/debug/jinko"
+    args:
+      - "--check"
+      - "tests/ft/options/display_str.jk"
+    exit_code: 0
+    stdout: ""
+    stderr: ""
+  - name: "Test --check does not affect exit code when returning integer"
+    binary: "target/debug/jinko"
+    args:
+      - "--check"
+      - "tests/ft/options/return_2.jk"
+    exit_code: 0
+  - name: "Test without --check"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/options/return_2.jk"
+    exit_code: 2
