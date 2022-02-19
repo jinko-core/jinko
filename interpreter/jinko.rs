@@ -97,7 +97,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
         ctx.init_stdlib()?;
     }
 
-    jinko::parse(&mut ctx, &input)?;
+    jinko::parse(&mut ctx, &input, Some(file))?;
 
     ctx.set_path(Some(file.to_owned()));
     ctx.set_args(args.project_args());

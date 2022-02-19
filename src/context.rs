@@ -161,7 +161,7 @@ impl Context {
 
     /// Emit all the errors currently kept in the context and remove them
     pub fn emit_errors(&mut self) {
-        self.error_handler.emit(self.code.as_deref());
+        self.error_handler.emit();
     }
 
     /// Clear all the errors currently kept in the context and remove them
@@ -343,7 +343,7 @@ impl Context {
     pub fn eval(&mut self, input: &str) -> Result<Option<ObjectInstance>, Error> {
         self.entry_point = Context::new_entry();
 
-        parser::parse(self, input)?;
+        parser::parse(self, input, None)?;
 
         self.execute()
     }

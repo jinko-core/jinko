@@ -24,6 +24,6 @@ pub use indent::Indent;
 pub use instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 pub use instruction::{InstrKind, Instruction};
 pub use location::{Location, SpanTuple};
-pub use parser::{constructs, parse};
+pub use parser::{constructs, parse, ParseInput};
 pub use typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 pub use value::{JkBool, JkChar, JkConstant, JkFloat, JkInt, JkString, Value};
