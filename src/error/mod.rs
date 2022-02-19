@@ -108,10 +108,10 @@ impl Error {
         }
 
         if let Some(ctx) = before_ctx {
-            ctx.emit('|')
+            ctx.emit('|', '_')
         };
-        loc.emit("x".yellow());
-        after_ctx.emit('|');
+        loc.emit("x".yellow(), "-".purple());
+        after_ctx.emit('|', '_');
     }
 
     pub fn emit(&self) {

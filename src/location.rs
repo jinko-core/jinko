@@ -133,12 +133,12 @@ impl SpanTuple {
     /// `end.line()` and `end.column()`. The "algorithm" is repeated in this
     /// struct's [`to_string`] method, which is only for testing
     /// purposes and contains extra allocations.
-    pub fn emit<T: Display>(&self, separator: T) {
+    pub fn emit<T1: Display, T2: Display>(&self, separator: T1, repetitor: T2) {
         // FIXME: As the API and behavior is still young, use self.to_string()
         // for now. This is quite slow, but since emitting an error is already
         // slow, we'll allow it. This NEEDS to be removed at some point once
         // we are sure than the algorithm for emitting spans is stable
-        eprintln!("{}", self.to_string(&separator))
+        eprintln!("{}", self.to_string(&separator, &repetitor))
     }
 
     fn format_line<T: Display>(&self, separator: &T, line_number: usize, line: &str) -> String {
@@ -150,7 +150,12 @@ impl SpanTuple {
         )
     }
 
-    fn from_path<T: Display>(&self, separator: &T, path: &Path) -> String {
+    fn from_path<T1: Display, T2: Display>(
+        &self,
+        separator: &T1,
+        repetitor: &T2,
+        path: &Path,
+    ) -> String {
         let mut result = String::new();
 
         // If the file has been removed between parsing and emitting errors...
@@ -176,7 +181,20 @@ impl SpanTuple {
             };
 
             if self.start.line() == self.end.line() {
-                result.push_str(&self.format_line(separator, i, &line[start_col - 1..end_col]));
+                result.push_str(&self.format_line(separator, i, line));
+                result.push('\n');
+
+                let mut underline = String::new();
+                if start_col != 1 {
+                    for _ in 0..start_col - 1 {
+                        underline.push(' ');
+                    }
+                }
+                for _ in start_col..end_col {
+                    underline = format!("{}{}", underline, repetitor);
+                }
+
+                result.push_str(&self.format_line(&' ', i, &underline));
                 break;
             }
             // Four possible cases: First line, for which we need to skip
@@ -202,10 +220,10 @@ impl SpanTuple {
         result
     }
 
-    fn to_string<T: Display>(&self, separator: &T) -> String {
+    fn to_string<T1: Display, T2: Display>(&self, separator: &T1, repetitor: &T2) -> String {
         log!("span: {:?}", &self);
         match &self.path {
-            Some(path) => self.from_path(separator, path),
+            Some(path) => self.from_path(separator, repetitor, path),
             None => String::new(), // FIXME: Do we want to return an empty string if there is no path?
         }
     }
@@ -225,7 +243,11 @@ mod tests {
             e,
         );
 
-        assert_eq!(span.to_string(&'>'), "    1 > pe N");
+        assert_eq!(
+            span.to_string(&'>', &'-'),
+            r#"    1 > type Nothing;
+    1     ---"#
+        );
     }
 
     #[test]
@@ -239,7 +261,7 @@ mod tests {
         );
 
         assert_eq!(
-            span.to_string(&'>'),
+            span.to_string(&'>', &'_'),
             r#"    1 > type Nothing;
     2 > type Maybe[T](T | Nothing);
     3 > 
@@ -262,7 +284,7 @@ mod tests {
             e,
         );
 
-        assert!(span.to_string(&' ').is_empty());
+        assert!(span.to_string(&' ', &' ').is_empty());
     }
 
     #[test]
