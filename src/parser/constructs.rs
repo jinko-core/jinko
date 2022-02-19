@@ -211,7 +211,7 @@ fn unit(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     } else {
         let (input, id) = Token::identifier(input)?;
         let input = next(input);
-        func_type_or_var(input, id)
+        func_type_or_var(input, id, start_loc.into())
     }
 }
 
@@ -302,12 +302,19 @@ fn unit_mut_var(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instructio
 
 /// IDENTIFIER next '(' next args
 fn unit_jk_inst(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, start_loc) = position(input)?;
     let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
     let (input, args) = args(next(input))?;
+    let (input, end_loc) = position(input)?;
 
     // A jk_inst will never contain generics
-    let call = FunctionCall::new(name, vec![], args);
+    let mut call = FunctionCall::new(name, vec![], args);
+    call.set_location(SpanTuple::new(
+        input.extra,
+        start_loc.into(),
+        end_loc.into(),
+    ));
     match JkInst::from_function_call(&call) {
         Ok(inst) => Ok((input, Box::new(inst))),
         Err(err) => Err(NomError(err)),
@@ -425,11 +432,12 @@ fn inner_block(input: ParseInput) -> ParseResult<ParseInput, Block> {
 fn func_type_or_var(
     input: ParseInput,
     id: String,
+    start_loc: Location,
 ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_bracket(input) {
-        generic_func_or_type_inst_args(next(input), id)
+        generic_func_or_type_inst_args(next(input), id, start_loc)
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
-        func_or_type_inst_args(next(input), id, vec![])
+        func_or_type_inst_args(next(input), id, vec![], start_loc)
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
@@ -444,6 +452,7 @@ fn func_or_type_inst_args(
     input: ParseInput,
     id: String,
     generics: Vec<TypeId>,
+    start_loc: Location,
 ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     if let Ok((input, first_attr)) =
         terminated(terminated(Token::identifier, nom_next), Token::colon)(input)
@@ -461,7 +470,9 @@ fn func_or_type_inst_args(
         Ok((input, Box::new(type_inst)))
     } else {
         let (input, args) = args(input)?;
-        let func_call = FunctionCall::new(id, generics, args);
+        let (input, end_loc) = position(input)?;
+        let mut func_call = FunctionCall::new(id, generics, args);
+        func_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
 
         Ok((input, Box::new(func_call)))
     }
@@ -470,12 +481,13 @@ fn func_or_type_inst_args(
 fn generic_func_or_type_inst_args(
     input: ParseInput,
     id: String,
+    start_loc: Location,
 ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     // FIXME: Assign generics to FunctionCall and TypeInstantiation
     let (input, generics) = generic_list(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
 
-    func_or_type_inst_args(next(input), id, generics)
+    func_or_type_inst_args(next(input), id, generics, start_loc)
 }
 
 ///
