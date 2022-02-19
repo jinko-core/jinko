@@ -178,28 +178,41 @@ impl TypeCheck for Incl {
             return CheckedType::Void;
         }
 
-        let instructions = match self.fetch_instructions(&final_path) {
+        let mut include_ctx = Context::new();
+
+        self.instructions = match self.fetch_instructions(&final_path) {
             Ok(instructions) => instructions,
             Err(e) => {
-                ctx.error(e);
+                include_ctx.error(e);
                 return CheckedType::Error;
             }
         };
 
-        self.instructions = instructions;
-
         let old_path = ctx.path().cloned();
         ctx.include(final_path.clone());
 
-        // Temporarily change the path of the context
-        ctx.set_path(Some(final_path));
+        include_ctx.set_path(Some(final_path.clone()));
+        // FIXME: Use this?
+        let _ = self
+            .instructions
+            .iter_mut()
+            .map(|instr| include_ctx.type_check(instr.as_mut()));
+        include_ctx.emit_errors();
 
+        ctx.set_path(Some(final_path));
         self.instructions.iter_mut().for_each(|instr| {
             instr.type_of(ctx);
         });
-
         // Reset the old path before leaving the instruction
         ctx.set_path(old_path);
+
+        // self.instructions = instructions;
+
+        // let old_path = ctx.path().cloned();
+        // ctx.include(final_path.clone());
+
+        // // Temporarily change the path of the context
+        // ctx.set_path(Some(final_path));
 
         CheckedType::Void
     }
