@@ -1,0 +1,15 @@
+site_name: jinko docs
+repo_url: https://github.com/jinko-core/jinko
+theme:
+  name: material
+  palette:
+    primary: light green
+    accent: deep purple
+
+# Code blocks
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
