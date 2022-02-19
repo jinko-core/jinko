@@ -86,11 +86,15 @@ impl FunctionCall {
             let mut instance = match call_arg.execute_expression(ctx) {
                 Some(i) => i,
                 None => {
-                    ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                        "trying to map statement to function argument: {} -> {}",
-                        call_arg.print(),
-                        func_arg
-                    )));
+                    ctx.error(
+                        Error::new(ErrKind::Context)
+                            .with_msg(format!(
+                                "trying to map statement to function argument: {} -> {}",
+                                call_arg.print(),
+                                func_arg
+                            ))
+                            .with_loc(func_arg.location().cloned()),
+                    );
                     return;
                 }
             };
@@ -102,7 +106,8 @@ impl FunctionCall {
                 None => {
                     ctx.error(
                         Error::new(ErrKind::Context)
-                            .with_msg(format!("type not found: {}", func_arg.get_type().id())),
+                            .with_msg(format!("type not found: {}", func_arg.get_type().id()))
+                            .with_loc(func_arg.location().cloned()),
                     );
                     return;
                 }
@@ -289,10 +294,14 @@ impl TypeCheck for FunctionCall {
         ) {
             let expected_ty = CheckedType::Resolved(dec_arg.get_type().clone());
             if expected_ty != given_ty {
-                errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "invalid type used for function argument: expected `{}`, got `{}`",
-                    expected_ty, given_ty
-                )));
+                errors.push(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "invalid type used for function argument: expected `{}`, got `{}`",
+                            expected_ty, given_ty
+                        ))
+                        .with_loc(dec_arg.location().cloned()),
+                );
             }
 
             args.push((String::from(dec_arg.name()), expected_ty.clone()));

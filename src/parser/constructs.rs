@@ -542,13 +542,22 @@ fn multi_type(input: ParseInput) -> ParseResult<ParseInput, String> {
 
 /// typed_arg = spaced_identifier ':' spaced_identifier
 fn typed_arg(input: ParseInput) -> ParseResult<ParseInput, DecArg> {
+    let (input, start_loc) = position(input)?;
     let (input, id) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
     let (input, types) = multi_type(input)?;
     let input = next(input);
+    let (input, end_loc) = position(input)?;
 
-    Ok((input, DecArg::new(id, TypeId::new(types))))
+    let mut dec_arg = DecArg::new(id, TypeId::new(types));
+    dec_arg.set_location(SpanTuple::new(
+        input.extra,
+        start_loc.into(),
+        end_loc.into(),
+    ));
+
+    Ok((input, dec_arg))
 }
 
 /// type_inst_arg = spaced_identifier ':' expr

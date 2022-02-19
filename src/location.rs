@@ -199,7 +199,7 @@ impl SpanTuple {
             }
             // Four possible cases: First line, for which we need to skip
             // start.column characters
-            else if i == 0 {
+            if i == 0 {
                 result.push_str(&self.format_line(separator, i, &line[(start_col - 1)..]));
             }
             // Last line, for which we only push up to end.column characters
