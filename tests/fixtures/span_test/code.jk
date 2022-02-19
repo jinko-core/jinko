@@ -1,0 +1,27 @@
+type Nothing;
+type Maybe[T](T | Nothing);
+
+func map[T, U](m: Maybe[T], fn: func(T) -> U) -> Maybe[U] {
+    switch m {
+        n: Nothing => Nothing,
+        t: T => fn(t)
+    }
+}
+
+func into[T, E](m: Maybe[T], err_fn: fn() -> E) -> Result[T, E] {
+    switch m {
+        n: Nothing => Err(err_fn),
+        t: T => Ok(t),
+    }
+}
+
+func is_nothing[T](m: Maybe[T]) -> bool {
+    switch m {
+        n: Nothing => true,
+        _ => false
+    }
+}
+
+func is_some[T](m: Maybe[T]) -> bool {
+    m.is_nothing().not()
+}

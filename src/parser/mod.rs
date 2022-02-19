@@ -37,6 +37,6 @@ pub fn parse(ctx: &mut Context, input: &str, file_path: Option<&Path>) -> Result
 #[macro_export]
 macro_rules! span {
     ($s:literal) => {
-        nom_locate::LocatedSpan::new($s)
+        nom_locate::LocatedSpan::new_extra($s, None)
     };
 }

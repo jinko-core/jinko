@@ -215,52 +215,31 @@ impl SpanTuple {
 mod tests {
     use super::*;
 
-    const CODE: &str = r#"type Nothing;
-type Maybe[T](T | Nothing);
-
-func map[T, U](m: Maybe[T], fn: func(T) -> U) -> Maybe[U] {
-    switch m {
-        n: Nothing => Nothing,
-        t: T => fn(t)
-    }
-}
-
-func into[T, E](m: Maybe[T], err_fn: fn() -> E) -> Result[T, E] {
-    switch m {
-        n: Nothing => Err(err_fn),
-        t: T => Ok(t),
-    }
-}
-
-func is_nothing[T](m: Maybe[T]) -> bool {
-    switch m {
-        n: Nothing => true,
-        _ => false
-    }
-}
-
-func is_some[T](m: Maybe[T]) -> bool {
-    m.is_nothing().not()
-}
-        "#;
-
     #[test]
     fn span_same_line() {
         let s = Location::new(1, 3);
         let e = Location::new(1, 6);
-        let span = SpanTuple::new(s, e);
+        let span = SpanTuple::new(
+            Some(PathBuf::from("tests/fixtures/span_test/code.jk")),
+            s,
+            e,
+        );
 
-        assert_eq!(span.to_string(&'>', CODE), "    1 > pe N");
+        assert_eq!(span.to_string(&'>'), "    1 > pe N");
     }
 
     #[test]
     fn multi_line_span() {
         let s = Location::new(1, 1);
         let e = Location::new(9, 1);
-        let span = SpanTuple::new(s, e);
+        let span = SpanTuple::new(
+            Some(PathBuf::from("tests/fixtures/span_test/code.jk")),
+            s,
+            e,
+        );
 
         assert_eq!(
-            span.to_string(&'>', CODE),
+            span.to_string(&'>'),
             r#"    1 > type Nothing;
     2 > type Maybe[T](T | Nothing);
     3 > 
@@ -277,9 +256,13 @@ func is_some[T](m: Maybe[T]) -> bool {
     fn span_reversed_prints_nothing() {
         let s = Location::new(9, 1);
         let e = Location::new(1, 1);
-        let span = SpanTuple::new(s, e);
+        let span = SpanTuple::new(
+            Some(PathBuf::from("tests/fixtures/span_test/code.jk")),
+            s,
+            e,
+        );
 
-        assert!(span.to_string(&' ', CODE).is_empty());
+        assert!(span.to_string(&' ').is_empty());
     }
 
     #[test]
