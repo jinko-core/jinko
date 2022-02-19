@@ -1,8 +1,8 @@
-use super::{DecArg, InstrKind, Instruction, TypeId};
+use super::{DecArg, InstrKind, Instruction};
 
 use crate::{
     log,
-    typechecker::{CheckedType, TypeCtx},
+    typechecker::{CheckedType, TypeCtx, TypeId},
     Context, Generic, ObjectInstance, TypeCheck,
 };
 

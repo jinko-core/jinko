@@ -2,11 +2,11 @@
 //! function on execution.
 
 use crate::generics::GenericMap;
-use crate::instruction::{FunctionDec, FunctionKind, TypeId, Var};
-use crate::typechecker::TypeCtx;
+use crate::instruction::{FunctionDec, FunctionKind, Var};
+use crate::typechecker::{CheckedType, TypeCtx, TypeId};
 use crate::{
-    generics, log, typechecker::CheckedType, Context, ErrKind, Error, Generic, InstrKind,
-    Instruction, ObjectInstance, TypeCheck,
+    generics, log, Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance,
+    TypeCheck,
 };
 use std::rc::Rc;
 

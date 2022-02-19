@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
-use crate::instruction::TypeId;
+use crate::typechecker::TypeId;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {

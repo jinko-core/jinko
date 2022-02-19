@@ -2,11 +2,10 @@
 //! need to get its type checked multiple times, then it can implement the [`CachedTypeCheck`]
 //! trait on top of it.
 
-use crate::{
-    error::ErrorHandler,
-    instruction::{FunctionDec, TypeId},
-    Error, ScopeMap,
-};
+mod type_id;
+pub use type_id::{TypeId, PRIMITIVE_TYPES};
+
+use crate::{error::ErrorHandler, instruction::FunctionDec, Error, ScopeMap};
 use colored::Colorize;
 use std::{
     collections::HashSet,
