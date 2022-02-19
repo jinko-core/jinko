@@ -19,7 +19,13 @@ pub struct ErrorHandler {
 impl ErrorHandler {
     /// Emit all the errors contained in a handler
     pub fn emit(&self) {
-        self.errors.iter().for_each(|e| e.emit());
+        if let Some(first_err) = self.errors.first() {
+            first_err.emit();
+        }
+        self.errors.iter().for_each(|e| {
+            eprintln!("----------------------------------------------------------------");
+            e.emit()
+        });
     }
 
     /// Add a new error to the handler
@@ -85,36 +91,30 @@ impl Error {
     fn emit_full_loc(&self, loc: &SpanTuple) {
         let (before_ctx, after_ctx) = loc.generate_context();
 
-        eprintln!();
-
-        if let Some(ctx) = before_ctx {
-            ctx.emit('|')
-        };
-        loc.emit("x".yellow());
-        after_ctx.emit('|');
-
-        eprintln!();
-
-        // FIXME: Factor this with else in `emit`
         if let Some(msg) = &self.msg {
             if let Some(path) = loc.path() {
+                let kind_str = self.kind.as_str();
+
+                eprintln!("{}: {}", "error type".black().on_yellow(), kind_str);
                 eprintln!(
                     "{}:{}:{}: {}",
                     path.display().to_string().yellow(),
                     loc.start().line(),
                     loc.start().column(),
                     msg
-                )
+                );
+                eprintln!();
             }
         }
 
-        eprintln!();
+        if let Some(ctx) = before_ctx {
+            ctx.emit('|')
+        };
+        loc.emit("x".yellow());
+        after_ctx.emit('|');
     }
 
     pub fn emit(&self) {
-        let kind_str = self.kind.as_str();
-
-        eprintln!("{}: {}", "error_type".yellow(), kind_str);
         if let Some(loc) = &self.loc {
             self.emit_full_loc(loc);
         } else if let Some(msg) = &self.msg {
