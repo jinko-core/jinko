@@ -2,10 +2,11 @@
 //! are used by the context as well as the parser.
 
 use std::fmt::{Display, Formatter};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use colored::Colorize;
-use nom_locate::LocatedSpan;
+
+use crate::{ParseInput, SpanTuple};
 
 /// The role of the error handler is to keep track of errors and emit them properly
 /// once done
@@ -18,7 +19,7 @@ pub struct ErrorHandler {
 impl ErrorHandler {
     /// Emit all the errors contained in a handler
     pub fn emit(&self) {
-        self.errors.iter().for_each(|e| e.emit(&self.file));
+        self.errors.iter().for_each(|e| e.emit());
     }
 
     /// Add a new error to the handler
@@ -37,7 +38,6 @@ impl ErrorHandler {
         self.errors.clear()
     }
 
-    // FIXME: Remove this once location is implemented
     /// Set the file that should be used by the error handler. This function should be
     /// removed once locations are kept properly in the different instructions
     pub fn set_path(&mut self, file: PathBuf) {
@@ -75,56 +75,51 @@ impl ErrKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Location {
-    input: String,
-    line: usize,
-    column: usize,
-}
-
-impl Location {
-    pub fn line(&self) -> usize {
-        self.line
-    }
-
-    pub fn column(&self) -> usize {
-        self.column
-    }
-
-    pub fn input(&self) -> &str {
-        self.input.as_str()
-    }
-}
-
-impl From<LocatedSpan<&str>> for Location {
-    fn from(span: LocatedSpan<&str>) -> Self {
-        Location {
-            input: span.fragment().to_string(),
-            line: span.location_line() as usize,
-            column: span.get_column(),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub struct Error {
     kind: ErrKind,
     msg: Option<String>,
-    loc: Option<Location>,
+    loc: Option<SpanTuple>,
 }
 
 impl Error {
-    pub fn emit(&self, file: &Path) {
+    fn emit_full_loc(&self, loc: &SpanTuple) {
+        let (before_ctx, after_ctx) = loc.generate_context();
+
+        eprintln!();
+
+        if let Some(ctx) = before_ctx {
+            ctx.emit('|')
+        };
+        loc.emit("x".yellow());
+        after_ctx.emit('|');
+
+        eprintln!();
+
+        // FIXME: Factor this with else in `emit`
+        if let Some(msg) = &self.msg {
+            if let Some(path) = loc.path() {
+                eprintln!(
+                    "{}:{}:{}: {}",
+                    path.display().to_string().yellow(),
+                    loc.start().line(),
+                    loc.start().column(),
+                    msg
+                )
+            }
+        }
+
+        eprintln!();
+    }
+
+    pub fn emit(&self) {
         let kind_str = self.kind.as_str();
 
-        eprintln!("Error type: {}", kind_str.red());
-        eprintln!(" ===> {}", file.to_string_lossy().green());
-
-        // FIXME: Is the formatting correct?
-        eprintln!("    |");
-        for line in self.msg.as_deref().unwrap_or("").lines() {
-            eprintln!("    | {}", line);
+        eprintln!("{}: {}", "error_type".yellow(), kind_str);
+        if let Some(loc) = &self.loc {
+            self.emit_full_loc(loc);
+        } else if let Some(msg) = &self.msg {
+            eprintln!("{}", msg)
         }
-        eprintln!("    |");
     }
 
     pub fn new(kind: ErrKind) -> Error {
@@ -142,11 +137,9 @@ impl Error {
         }
     }
 
-    pub fn with_loc(self, loc: Location) -> Error {
-        Error {
-            loc: Some(loc),
-            ..self
-        }
+    // FIXME: Should this really take an Option<Location>?
+    pub fn with_loc(self, loc: Option<SpanTuple>) -> Error {
+        Error { loc, ..self }
     }
 
     pub fn exit(&self) {
@@ -166,8 +159,8 @@ impl From<io::Error> for Error {
 }
 
 /// Nom errors are automatically parsing errors
-impl<'i> From<nom::Err<(LocatedSpan<&'i str>, nom::error::ErrorKind)>> for Error {
-    fn from(e: nom::Err<(LocatedSpan<&'i str>, nom::error::ErrorKind)>) -> Error {
+impl<'i> From<nom::Err<(ParseInput<'i>, nom::error::ErrorKind)>> for Error {
+    fn from(e: nom::Err<(ParseInput<'i>, nom::error::ErrorKind)>) -> Error {
         // FIXME: Is this correct?
         Error::new(ErrKind::Parsing).with_msg(e.to_string())
     }
@@ -187,20 +180,30 @@ impl From<nom::Err<Error>> for Error {
     }
 }
 
-impl<'i> nom::error::ParseError<LocatedSpan<&'i str>> for Error {
-    fn from_error_kind(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind) -> Error {
-        // FIXME: Add location here
-        Error::new(ErrKind::Parsing).with_loc(span.into())
+impl<'i> nom::error::ParseError<ParseInput<'i>> for Error {
+    fn from_error_kind(span: ParseInput<'i>, _: nom::error::ErrorKind) -> Error {
+        // FIXME: Add better location here in order to print whole line and
+        // display specific hint about parse error
+        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(
+            span.extra,
+            span.into(),
+            span.into(),
+        )))
     }
 
-    fn append(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind, _other: Error) -> Error {
+    fn append(span: ParseInput<'i>, _: nom::error::ErrorKind, _other: Error) -> Error {
         // FIXME: Should we accumulate errors this way?
         // let other_msg = match other.msg {
         //     Some(msg) => format!("{}\n", msg),
         //     None => String::new(),
         // };
 
-        Error::new(ErrKind::Parsing).with_loc(span.into()) // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
+        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(
+            span.extra,
+            span.into(),
+            span.into(),
+        )))
+        // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
     }
 }
 
@@ -212,8 +215,12 @@ impl Display for Error {
         }
 
         if let Some(loc) = &self.loc {
-            writeln!(f, " at line {} column {}", loc.line(), loc.column())?;
-            write!(f, "input: {}", loc.input())?;
+            writeln!(
+                f,
+                " at line {} column {}",
+                loc.start().line(),
+                loc.start().column()
+            )?;
         }
 
         Ok(())

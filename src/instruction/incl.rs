@@ -47,7 +47,7 @@ impl Incl {
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty ctx
         let (remaining_input, instructions) =
-            constructs::many_expr(LocatedSpan::new(input.as_str()))?;
+            constructs::many_expr(LocatedSpan::new_extra(input.as_str(), Some(formatted)))?;
 
         match remaining_input.len() {
             // The remaining input is empty: We parsed the whole file properly

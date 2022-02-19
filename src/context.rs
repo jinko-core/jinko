@@ -36,6 +36,9 @@ pub struct Context {
     /// Is the context in debugging mode or not
     pub debug_mode: bool,
 
+    /// Source code currently being interpreted by the context
+    pub code: Option<String>,
+
     /// Entry point to the context, the "main" function
     pub entry_point: FunctionDec,
 
@@ -89,6 +92,7 @@ impl Context {
     pub fn new() -> Context {
         let mut ctx = Context {
             debug_mode: false,
+            code: None,
             entry_point: Self::new_entry(),
             path: None,
             args: Vec::new(),
@@ -125,6 +129,11 @@ impl Context {
     /// Set the arguments to give to the program
     pub fn set_args(&mut self, args: Vec<String>) {
         self.args = args;
+    }
+
+    /// Set the source code that the context should refer to
+    pub fn set_code(&mut self, code: String) {
+        self.code = Some(code)
     }
 
     /// Get a reference to a context's source path
@@ -334,7 +343,7 @@ impl Context {
     pub fn eval(&mut self, input: &str) -> Result<Option<ObjectInstance>, Error> {
         self.entry_point = Context::new_entry();
 
-        parser::parse(self, input)?;
+        parser::parse(self, input, None)?;
 
         self.execute()
     }

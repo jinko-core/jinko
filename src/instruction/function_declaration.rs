@@ -6,6 +6,7 @@ use crate::instruction::{Block, DecArg, InstrKind, Instruction};
 use crate::typechecker::{CheckedType, TypeCtx, TypeId};
 use crate::Generic;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
+use crate::{Location, SpanTuple};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
@@ -27,6 +28,7 @@ pub struct FunctionDec {
     args: Vec<DecArg>,
     block: Option<Block>,
     typechecked: bool,
+    location: Option<SpanTuple>,
 }
 
 impl FunctionDec {
@@ -45,6 +47,7 @@ impl FunctionDec {
             args,
             block: None,
             typechecked: false,
+            location: None,
         }
     }
 
@@ -107,6 +110,16 @@ impl FunctionDec {
         self.block = Some(block)
     }
 
+    pub fn set_location(&mut self, loc: SpanTuple) {
+        let end = loc.end().clone();
+        // FIXME: This is a hack since we cannot get an accurate location from the
+        // function's block yet. Remove this once all instructions have proper
+        // locations
+        let new_end = Location::new(end.line(), end.column() - 1);
+        let loc = SpanTuple::new(loc.path().clone(), loc.start().clone(), new_end);
+        self.location = Some(loc)
+    }
+
     /// Add an instruction to the function declaration, in order. This is mostly useful
     /// when adding instructions to the entry point of the context, since parsing
     /// directly gives a block to the function
@@ -116,16 +129,22 @@ impl FunctionDec {
                 b.add_instruction(instruction);
                 Ok(())
             }
-            None => Err(Error::new(ErrKind::Context).with_msg(format!(
+            None => Err(Error::new(ErrKind::Context)
+                .with_msg(format!(
                 "function {} has no instruction block. It might be an extern function or an error",
                 self.name
-            ))),
+            ))
+                .with_loc(self.loc())),
         }
     }
 
     /// Return a reference to the function's name
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn loc(&self) -> Option<SpanTuple> {
+        self.location.clone()
     }
 
     /// Return a reference to the function's return type
@@ -201,7 +220,8 @@ impl Instruction for FunctionDec {
             }
             FunctionKind::Mock | FunctionKind::Unknown => ctx.error(
                 Error::new(ErrKind::Context)
-                    .with_msg(format!("unknown type for function {}", self.name())),
+                    .with_msg(format!("unknown type for function {}", self.name()))
+                    .with_loc(self.loc()),
             ),
         }
 
@@ -327,12 +347,16 @@ impl TypeCheck for FunctionDec {
             }
 
             if block_ty != return_ty {
-                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                ctx.error(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
                     "invalid type returned in function `{}`: expected type {}, found type {}",
                     self.name(),
                     return_ty,
                     block_ty
-                )));
+                ))
+                        .with_loc(self.loc()),
+                );
 
                 ctx.scope_exit();
 

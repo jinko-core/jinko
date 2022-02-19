@@ -6,30 +6,29 @@
 
 use super::constructs::expr;
 use crate::instruction::{FunctionCall, Instruction, MethodCall};
-use crate::parser::{ParseResult, Token};
+use crate::parser::{ParseInput, ParseResult, Token};
 use crate::{ErrKind, Error, JkBool, JkChar, JkFloat, JkInt, JkString};
 
 use nom::bytes::complete::take;
 use nom::sequence::{preceded, terminated};
 use nom::Err::Error as NomError;
 use nom::Slice;
-use nom_locate::LocatedSpan;
 
 pub struct ConstantConstruct;
 
 #[doc(hidden)]
 impl ConstantConstruct {
     pub(crate) fn char_constant(
-        input: LocatedSpan<&str>,
-    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+        input: ParseInput,
+    ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
         let (input, char_value) = Token::char_constant(input)?;
 
         Ok((input, Box::new(JkChar::from(char_value))))
     }
 
     pub(crate) fn string_constant(
-        input: LocatedSpan<&str>,
-    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+        input: ParseInput,
+    ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
         let (input, inner) = preceded(Token::double_quote, ConstantConstruct::inner_string)(input)?;
         let string = inner.unwrap_or_else(|| Box::new(JkString::from("")));
 
@@ -38,9 +37,7 @@ impl ConstantConstruct {
 
     /// inner_string = '"'
     ///              | special string
-    fn inner_string(
-        input: LocatedSpan<&str>,
-    ) -> ParseResult<LocatedSpan<&str>, Option<Box<dyn Instruction>>> {
+    fn inner_string(input: ParseInput) -> ParseResult<ParseInput, Option<Box<dyn Instruction>>> {
         if let Ok((input, _)) = Token::double_quote(input) {
             Ok((input, None))
         } else {
@@ -54,7 +51,7 @@ impl ConstantConstruct {
     /// | '{' expr '}'
     /// | '\' CHAR
     /// | CHAR (* anything except "{\ *)
-    fn special(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+    fn special(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
         let special: &[_] = &['"', '{', '\\'];
 
         if let Ok((input, _)) = Token::left_curly_bracket(input) {
@@ -106,24 +103,22 @@ impl ConstantConstruct {
     }
 
     pub(crate) fn float_constant(
-        input: LocatedSpan<&str>,
-    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+        input: ParseInput,
+    ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
         let (input, float_value) = Token::float_constant(input)?;
 
         Ok((input, Box::new(JkFloat::from(float_value))))
     }
 
-    pub(crate) fn int_constant(
-        input: LocatedSpan<&str>,
-    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+    pub(crate) fn int_constant(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
         let (input, int_value) = Token::int_constant(input)?;
 
         Ok((input, Box::new(JkInt::from(int_value))))
     }
 
     pub(crate) fn bool_constant(
-        input: LocatedSpan<&str>,
-    ) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+        input: ParseInput,
+    ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
         let (input, bool_value) = Token::bool_constant(input)?;
 
         Ok((input, Box::new(JkBool::from(bool_value))))
