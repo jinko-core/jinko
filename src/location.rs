@@ -10,7 +10,9 @@ use nom_locate::LocatedSpan;
 
 use std::cmp::max;
 use std::fmt::Display;
+use std::fs;
 use std::num::NonZeroUsize;
+use std::path::{Path, PathBuf};
 
 use crate::log;
 
@@ -59,21 +61,26 @@ impl Location {
     }
 }
 
-impl<T: nom::AsBytes> From<LocatedSpan<T>> for Location {
-    fn from(span: LocatedSpan<T>) -> Location {
+impl<T: nom::AsBytes, X> From<LocatedSpan<T, X>> for Location {
+    fn from(span: LocatedSpan<T, X>) -> Location {
         Location::new(span.location_line() as usize, span.get_column())
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SpanTuple {
+    path: Option<PathBuf>,
     start: Location,
     end: Location,
 }
 
 impl SpanTuple {
-    pub fn new(start: Location, end: Location) -> SpanTuple {
-        SpanTuple { start, end }
+    pub fn new<T: Into<PathBuf>>(path: Option<T>, start: Location, end: Location) -> SpanTuple {
+        SpanTuple {
+            path: path.map(|p| p.into()),
+            start,
+            end,
+        }
     }
 
     pub fn start(&self) -> &Location {
@@ -82,6 +89,10 @@ impl SpanTuple {
 
     pub fn end(&self) -> &Location {
         &self.end
+    }
+
+    pub fn path(&self) -> &Option<PathBuf> {
+        &self.path
     }
 
     /// Amount of lines to use when creating before and after context for a
@@ -104,14 +115,14 @@ impl SpanTuple {
             let before_start =
                 Location::whole_line(max(self.start().line() - SpanTuple::CONTEXT_LINES, 1));
             let before_end = Location::whole_line(self.start().line() - 1);
-            Some(SpanTuple::new(before_start, before_end))
+            Some(SpanTuple::new(self.path.clone(), before_start, before_end))
         } else {
             None
         };
 
         let after_start = Location::whole_line(self.end().line() + 1);
         let after_end = Location::whole_line(self.end().line() + SpanTuple::CONTEXT_LINES);
-        let after_ctx = SpanTuple::new(after_start, after_end);
+        let after_ctx = SpanTuple::new(self.path.clone(), after_start, after_end);
 
         (before_ctx, after_ctx)
     }
@@ -122,12 +133,12 @@ impl SpanTuple {
     /// `end.line()` and `end.column()`. The "algorithm" is repeated in this
     /// struct's [`to_string`] method, which is only for testing
     /// purposes and contains extra allocations.
-    pub fn emit<T: Display>(&self, separator: T, input: &str) {
+    pub fn emit<T: Display>(&self, separator: T) {
         // FIXME: As the API and behavior is still young, use self.to_string()
         // for now. This is quite slow, but since emitting an error is already
         // slow, we'll allow it. This NEEDS to be removed at some point once
         // we are sure than the algorithm for emitting spans is stable
-        eprintln!("{}", self.to_string(&separator, input))
+        eprintln!("{}", self.to_string(&separator))
     }
 
     fn format_line<T: Display>(&self, separator: &T, line_number: usize, line: &str) -> String {
@@ -139,9 +150,12 @@ impl SpanTuple {
         )
     }
 
-    fn to_string<T: Display>(&self, separator: &T, input: &str) -> String {
-        log!("span: {:?}", &self);
+    fn from_path<T: Display>(&self, separator: &T, path: &Path) -> String {
         let mut result = String::new();
+
+        // If the file has been removed between parsing and emitting errors...
+        // We're in trouble
+        let input = fs::read_to_string(path).unwrap();
 
         if self.start.line() > self.end.line() {
             return result;
@@ -186,6 +200,14 @@ impl SpanTuple {
         }
 
         result
+    }
+
+    fn to_string<T: Display>(&self, separator: &T) -> String {
+        log!("span: {:?}", &self);
+        match &self.path {
+            Some(path) => self.from_path(separator, path),
+            None => String::new(), // FIXME: Do we want to return an empty string if there is no path?
+        }
     }
 }
 

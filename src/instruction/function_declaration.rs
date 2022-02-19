@@ -116,7 +116,7 @@ impl FunctionDec {
         // function's block yet. Remove this once all instructions have proper
         // locations
         let new_end = Location::new(end.line(), end.column() - 1);
-        let loc = SpanTuple::new(loc.start().clone(), new_end);
+        let loc = SpanTuple::new(loc.path().clone(), loc.start().clone(), new_end);
         self.location = Some(loc)
     }
 

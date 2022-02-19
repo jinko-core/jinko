@@ -2,12 +2,11 @@
 //! are used by the context as well as the parser.
 
 use std::fmt::{Display, Formatter};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use colored::Colorize;
-use nom_locate::LocatedSpan;
 
-use crate::SpanTuple;
+use crate::{ParseInput, SpanTuple};
 
 /// The role of the error handler is to keep track of errors and emit them properly
 /// once done
@@ -19,8 +18,8 @@ pub struct ErrorHandler {
 
 impl ErrorHandler {
     /// Emit all the errors contained in a handler
-    pub fn emit(&self, input: Option<&str>) {
-        self.errors.iter().for_each(|e| e.emit(input, &self.file));
+    pub fn emit(&self) {
+        self.errors.iter().for_each(|e| e.emit());
     }
 
     /// Add a new error to the handler
@@ -83,42 +82,43 @@ pub struct Error {
 }
 
 impl Error {
-    fn emit_full_loc(&self, input: &str, file: &Path, loc: &SpanTuple) {
+    fn emit_full_loc(&self, loc: &SpanTuple) {
         let (before_ctx, after_ctx) = loc.generate_context();
 
         eprintln!();
 
         if let Some(ctx) = before_ctx {
-            ctx.emit('|', input)
+            ctx.emit('|')
         };
-        loc.emit("x".yellow(), input);
-        after_ctx.emit('|', input);
+        loc.emit("x".yellow());
+        after_ctx.emit('|');
 
         eprintln!();
 
+        // FIXME: Factor this with else in `emit`
         if let Some(msg) = &self.msg {
-            eprintln!(
-                "{}:{}:{}: {}",
-                file.display().to_string().yellow(),
-                loc.start().line(),
-                loc.start().column(),
-                msg
-            )
+            if let Some(path) = loc.path() {
+                eprintln!(
+                    "{}:{}:{}: {}",
+                    path.display().to_string().yellow(),
+                    loc.start().line(),
+                    loc.start().column(),
+                    msg
+                )
+            }
         }
 
         eprintln!();
     }
 
-    pub fn emit(&self, input: Option<&str>, file: &Path) {
+    pub fn emit(&self) {
         let kind_str = self.kind.as_str();
 
         eprintln!("{}: {}", "error_type".yellow(), kind_str);
-        if let Some(input) = input {
-            if let Some(loc) = &self.loc {
-                self.emit_full_loc(input, file, loc);
-            }
+        if let Some(loc) = &self.loc {
+            self.emit_full_loc(loc);
         } else if let Some(msg) = &self.msg {
-            eprintln!("{}: {}", file.display().to_string().yellow(), msg)
+            eprintln!("{}", msg)
         }
     }
 
@@ -159,8 +159,8 @@ impl From<io::Error> for Error {
 }
 
 /// Nom errors are automatically parsing errors
-impl<'i> From<nom::Err<(LocatedSpan<&'i str>, nom::error::ErrorKind)>> for Error {
-    fn from(e: nom::Err<(LocatedSpan<&'i str>, nom::error::ErrorKind)>) -> Error {
+impl<'i> From<nom::Err<(ParseInput<'i>, nom::error::ErrorKind)>> for Error {
+    fn from(e: nom::Err<(ParseInput<'i>, nom::error::ErrorKind)>) -> Error {
         // FIXME: Is this correct?
         Error::new(ErrKind::Parsing).with_msg(e.to_string())
     }
@@ -180,21 +180,29 @@ impl From<nom::Err<Error>> for Error {
     }
 }
 
-impl<'i> nom::error::ParseError<LocatedSpan<&'i str>> for Error {
-    fn from_error_kind(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind) -> Error {
+impl<'i> nom::error::ParseError<ParseInput<'i>> for Error {
+    fn from_error_kind(span: ParseInput<'i>, _: nom::error::ErrorKind) -> Error {
         // FIXME: Add better location here in order to print whole line and
         // display specific hint about parse error
-        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(span.into(), span.into())))
+        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(
+            span.extra,
+            span.into(),
+            span.into(),
+        )))
     }
 
-    fn append(span: LocatedSpan<&'i str>, _: nom::error::ErrorKind, _other: Error) -> Error {
+    fn append(span: ParseInput<'i>, _: nom::error::ErrorKind, _other: Error) -> Error {
         // FIXME: Should we accumulate errors this way?
         // let other_msg = match other.msg {
         //     Some(msg) => format!("{}\n", msg),
         //     None => String::new(),
         // };
 
-        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(span.into(), span.into())))
+        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(
+            span.extra,
+            span.into(),
+            span.into(),
+        )))
         // /* FIXME  */ with_msg(format!("{}{}", other_msg, input))
     }
 }
