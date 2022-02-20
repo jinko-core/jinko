@@ -5,8 +5,8 @@
 
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::Generic;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
+use crate::{Generic, SpanTuple};
 
 /// The potential ctx instructions
 #[derive(Clone, Debug, PartialEq)]
@@ -20,6 +20,7 @@ pub enum JkInstKind {
 pub struct JkInst {
     kind: JkInstKind,
     _args: Vec<Box<dyn Instruction>>,
+    location: Option<SpanTuple>,
 }
 
 impl JkInst {
@@ -38,9 +39,10 @@ impl JkInst {
             }
         };
 
-        Ok(Self {
+        Ok(JkInst {
             kind,
             _args: fc.args().clone(),
+            location: fc.location().cloned(),
         })
     }
 }
@@ -72,6 +74,10 @@ impl Instruction for JkInst {
         // JinkInsts cannot return anything. They simply act directly from the context,
         // on the context.
         None
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 
