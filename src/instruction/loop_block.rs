@@ -11,7 +11,7 @@ use crate::{log, Context, FromObjectInstance, JkBool, ObjectInstance, TypeCheck}
 /// at all
 #[derive(Clone)]
 pub enum LoopKind {
-    For(Var, Box<dyn Instruction>),
+    For(Box<Var>, Box<dyn Instruction>),
     While(Box<dyn Instruction>),
     Loop,
 }
@@ -234,7 +234,7 @@ mod tests {
     fn pretty_print_for() {
         let r = Box::new(FunctionCall::new("iter".to_owned(), vec![], vec![]));
         let b = Block::new();
-        let l = Loop::new(LoopKind::For(Var::new("i".to_owned()), r), b);
+        let l = Loop::new(LoopKind::For(Box::new(Var::new("i".to_owned())), r), b);
 
         assert_eq!(l.print().as_str(), "for i in iter() {\n}\n")
     }
