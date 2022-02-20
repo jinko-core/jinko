@@ -493,12 +493,14 @@ fn func_or_type_inst_args(
         let (input, first_attr_val) = expr(input)?;
         let (input, attrs) = many0(preceded(Token::comma, type_inst_arg))(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
+        let (input, end_loc) = position(input)?;
 
         let mut type_inst = TypeInstantiation::new(TypeId::new(id));
         type_inst.add_field(VarAssign::new(false, first_attr, first_attr_val));
         attrs.into_iter().for_each(|attr| type_inst.add_field(attr));
 
         type_inst.set_generics(generics);
+        type_inst.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
 
         Ok((input, Box::new(type_inst)))
     } else {
