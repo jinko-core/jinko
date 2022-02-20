@@ -19,9 +19,9 @@ use crate::instance::FromObjectInstance;
 use crate::instruction::{Block, InstrKind, Instruction};
 use crate::typechecker::{TypeCtx, TypeId};
 use crate::value::JkBool;
-use crate::Generic;
 use crate::{log, ErrKind, Error};
 use crate::{typechecker::CheckedType, Context, ObjectInstance, TypeCheck};
+use crate::{Generic, SpanTuple};
 
 #[derive(Clone)]
 pub struct IfElse {
@@ -29,6 +29,7 @@ pub struct IfElse {
     if_body: Block,
     else_body: Option<Block>,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl IfElse {
@@ -43,7 +44,12 @@ impl IfElse {
             if_body,
             else_body,
             cached_type: None,
+            location: None,
         }
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -80,6 +86,10 @@ impl Instruction for IfElse {
                 None => None,
             }
         }
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 
@@ -119,7 +129,7 @@ impl TypeCheck for IfElse {
                                 "incompatible types for `if` and `else` block: {} and {}",
                                 if_ty, else_ty,
                             ))
-                            .with_loc(self.if_body.location().cloned()),
+                            .with_loc(self.location.clone()),
                     );
                     CheckedType::Error
                 } else {
@@ -133,7 +143,7 @@ impl TypeCheck for IfElse {
                             "`if` block has a return type ({}) but no else block to match it",
                             if_ty
                         ))
-                        .with_loc(self.if_body.location().cloned()),
+                        .with_loc(self.location.clone()),
                 );
                 CheckedType::Error
             }
