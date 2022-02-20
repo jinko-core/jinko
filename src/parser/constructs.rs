@@ -274,7 +274,10 @@ fn unit_for(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> 
     let (input, block) = block(input)?;
     let mut var = Var::new(id);
     var.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
-    Ok((input, Box::new(Loop::new(LoopKind::For(var, expr), block))))
+    Ok((
+        input,
+        Box::new(Loop::new(LoopKind::For(Box::new(var), expr), block)),
+    ))
 }
 
 fn unit_func<'i>(
