@@ -13,6 +13,8 @@ use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, Typ
 pub struct Var {
     name: String,
     mutable: bool,
+    // FIXME: Do not keep the instance here directly, keep a reference to it
+    // in the garbage collector
     instance: ObjectInstance,
     cached_type: Option<CheckedType>,
     location: Option<SpanTuple>,
