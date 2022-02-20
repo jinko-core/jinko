@@ -4,17 +4,20 @@
 //! or it's not.
 
 use crate::instruction::TypeDec;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::Generic;
+use crate::{log, SpanTuple};
 use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck};
 
 #[derive(Clone)]
 pub struct Var {
     name: String,
     mutable: bool,
+    // FIXME: Do not keep the instance here directly, keep a reference to it
+    // in the garbage collector
     instance: ObjectInstance,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl Var {
@@ -25,6 +28,7 @@ impl Var {
             mutable: false,
             instance: ObjectInstance::empty(),
             cached_type: None,
+            location: None,
         }
     }
 
@@ -55,6 +59,10 @@ impl Var {
 
     pub fn set_type(&mut self, ty: TypeDec) {
         self.instance.set_ty(CheckedType::Resolved(ty.into()))
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -88,6 +96,10 @@ impl Instruction for Var {
         log!("var: {}", var.print());
 
         Some(var.instance())
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 

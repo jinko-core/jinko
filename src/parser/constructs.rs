@@ -267,12 +267,17 @@ fn unit_loop(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>>
 }
 
 fn unit_for(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, (id, _)) = spaced_identifier(input)?;
+    let (input, (id, start_loc)) = spaced_identifier(input)?;
+    let (input, end_loc) = position(input)?;
     let (input, _) = Token::in_tok(input)?;
     let (input, expr) = expr(input)?;
     let (input, block) = block(input)?;
-    let var = Var::new(id);
-    Ok((input, Box::new(Loop::new(LoopKind::For(var, expr), block))))
+    let mut var = Var::new(id);
+    var.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    Ok((
+        input,
+        Box::new(Loop::new(LoopKind::For(Box::new(var), expr), block)),
+    ))
 }
 
 fn unit_func<'i>(
@@ -320,11 +325,15 @@ fn unit_type_decl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruct
 
 /// spaced_identifier '=' expr
 fn unit_mut_var(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, (symbol, _)) = spaced_identifier(input)?;
+    let (input, (symbol, start_loc)) = spaced_identifier(input)?;
     let (input, _) = Token::equal(input)?;
     let (input, value) = expr(input)?;
+    let (input, end_loc) = position(input)?;
 
-    Ok((input, Box::new(VarAssign::new(true, symbol, value))))
+    let mut assignment = VarAssign::new(true, symbol, value);
+    assignment.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(assignment)))
 }
 
 /// IDENTIFIER next '(' next args
@@ -486,7 +495,10 @@ fn func_type_or_var(
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
     } else {
-        Ok((input, Box::new(VarOrEmptyType::new(id))))
+        let (input, end_loc) = position(input)?;
+        let mut var_or_et = VarOrEmptyType::new(id);
+        var_or_et.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        Ok((input, Box::new(var_or_et)))
     }
 }
 
