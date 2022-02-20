@@ -277,6 +277,10 @@ impl Instruction for FunctionDec {
             None => format!("{} {{}}", base),
         }
     }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
+    }
 }
 
 impl TypeCheck for FunctionDec {
