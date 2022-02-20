@@ -218,7 +218,7 @@ fn unit(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     {
         unit_func(input, kind, start_loc.into())
     } else if let Ok((input, _)) = Token::incl_tok(input) {
-        unit_incl(input)
+        unit_incl(input, start_loc.into())
     } else if let Ok((input, _)) = Token::type_tok(input) {
         unit_type_decl(input)
     } else if let Ok((input, _)) = Token::mut_tok(input) {
@@ -294,13 +294,22 @@ fn unit_func<'i>(
     Ok((input, Box::new(function)))
 }
 
-fn unit_incl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, (path, _)) = spaced_identifier(input)?;
+fn unit_incl(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, (path, id_loc)) = spaced_identifier(input)?;
     if let Ok((input, _)) = Token::az_tok(input) {
         let (input, alias) = preceded(nom_next, Token::identifier)(input)?;
-        Ok((input, Box::new(Incl::new(path, Some(alias)))))
+        let (input, end_loc) = position(input)?;
+        let mut inclusion = Incl::new(path, Some(alias));
+        inclusion.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        Ok((input, Box::new(inclusion)))
     } else {
-        Ok((input, Box::new(Incl::new(path, None))))
+        let end_loc = Location::new(id_loc.line(), id_loc.column() + path.len());
+        let mut inclusion = Incl::new(path, None);
+        inclusion.set_location(SpanTuple::new(input.extra, start_loc, end_loc));
+        Ok((input, Box::new(inclusion)))
     }
 }
 
