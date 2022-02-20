@@ -177,7 +177,11 @@ fn method_or_field(
         method_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
         Ok((input, Box::new(method_call)))
     } else {
-        Ok((input, Box::new(FieldAccess::new(expr, id))))
+        let (input, end_loc) = position(input)?;
+        let mut f_a = FieldAccess::new(expr, id);
+        f_a.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+        Ok((input, Box::new(f_a)))
     }
 }
 
