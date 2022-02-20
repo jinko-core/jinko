@@ -93,10 +93,14 @@ impl TypeCheck for IfElse {
         }
 
         if cond_ty != bool_checkedtype {
-            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                "if condition should be a boolean, not a `{}`",
-                cond_ty
-            )));
+            ctx.error(
+                Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "if condition should be a boolean, not a `{}`",
+                        cond_ty
+                    ))
+                    .with_loc(self.condition.location().cloned()),
+            );
         }
 
         let if_ty = self.if_body.type_of(ctx);
@@ -109,20 +113,28 @@ impl TypeCheck for IfElse {
             (CheckedType::Void, None) => CheckedType::Void,
             (if_ty, Some(else_ty)) => {
                 if if_ty != else_ty {
-                    ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                        "incompatible types for `if` and `else` block: {} and {}",
-                        if_ty, else_ty,
-                    )));
+                    ctx.error(
+                        Error::new(ErrKind::TypeChecker)
+                            .with_msg(format!(
+                                "incompatible types for `if` and `else` block: {} and {}",
+                                if_ty, else_ty,
+                            ))
+                            .with_loc(self.if_body.location().cloned()),
+                    );
                     CheckedType::Error
                 } else {
                     if_ty
                 }
             }
             (if_ty, None) => {
-                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "`if` block has a return type ({}) but no else block to match it",
-                    if_ty
-                )));
+                ctx.error(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "`if` block has a return type ({}) but no else block to match it",
+                            if_ty
+                        ))
+                        .with_loc(self.if_body.location().cloned()),
+                );
                 CheckedType::Error
             }
         }

@@ -177,7 +177,15 @@ impl SpanTuple {
         for (i, line) in input.lines().skip(self.start.line() - 1).enumerate() {
             let start_col = match self.start.column {
                 Column::EndOfLine => 1,
-                Column::Precise(nz) => nz.get(),
+                Column::Precise(nz) => {
+                    // If we're gonna be printing multiple lines, print the whole
+                    // start line
+                    if self.start.line() < self.end.line() {
+                        1
+                    } else {
+                        nz.get()
+                    }
+                }
             };
             let end_col = match self.end.column {
                 Column::EndOfLine => line.len(),
