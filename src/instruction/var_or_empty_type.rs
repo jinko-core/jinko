@@ -1,7 +1,7 @@
 use crate::{
     instruction::{TypeInstantiation, Var},
-    CheckedType, Context, Generic, InstrKind, Instruction, ObjectInstance, TypeCheck, TypeCtx,
-    TypeId,
+    CheckedType, Context, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
+    TypeCtx, TypeId,
 };
 
 #[derive(Clone, PartialEq)]
@@ -18,6 +18,7 @@ pub struct VarOrEmptyType {
     // FIXME: We can probably avoid keeping a `cached_type` and a `kind`. Only one
     // is enough. Refactor later
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl VarOrEmptyType {
@@ -26,6 +27,7 @@ impl VarOrEmptyType {
             kind: Kind::Unknown,
             symbol,
             cached_type: None,
+            location: None,
         }
     }
 
@@ -41,6 +43,10 @@ impl VarOrEmptyType {
         }
 
         Kind::Unknown
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -65,6 +71,10 @@ impl Instruction for VarOrEmptyType {
                 var_inst.execute(ctx)
             }
         }
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 
