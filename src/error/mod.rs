@@ -123,7 +123,7 @@ impl Error {
             eprintln!();
 
             if let Some(loc) = &self.loc {
-                loc.emit("+".green(), "^".green());
+                loc.emit("|".green(), "^".green());
             }
         }
     }
