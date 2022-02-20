@@ -1,8 +1,8 @@
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 use crate::{
-    log, Context, Error, FromObjectInstance, Generic, JkString, ObjectInstance, ToObjectInstance,
-    Value,
+    log, Context, Error, FromObjectInstance, Generic, JkString, ObjectInstance, SpanTuple,
+    ToObjectInstance, Value,
 };
 
 use std::convert::TryFrom;
@@ -11,11 +11,15 @@ use std::convert::TryFrom;
 /// A JkConstant represents a primitive type in Jinko. It is used in order to
 /// implement integers, floating point numbers, characters, booleans and strings, as
 /// well as raw byte values later for custom types.
-pub struct JkConstant<T: Clone>(pub(crate) T, CheckedType);
+pub struct JkConstant<T: Clone>(pub(crate) T, CheckedType, Option<SpanTuple>);
 
 impl<T: Clone> JkConstant<T> {
     pub fn rust_value(&self) -> T {
         self.0.clone()
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.2 = Some(location)
     }
 }
 
@@ -95,7 +99,7 @@ macro_rules! jk_primitive {
 
         impl From<bool> for JkConstant<bool> {
             fn from(value: bool) -> JkConstant<bool> {
-                JkConstant(value, CheckedType::Resolved(TypeId::from("bool")))
+                JkConstant(value, CheckedType::Resolved(TypeId::from("bool")), None)
             }
         }
 
@@ -114,6 +118,10 @@ macro_rules! jk_primitive {
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
                 Some(self.to_instance())
+            }
+
+            fn location(&self) -> Option<&SpanTuple> {
+                self.2.as_ref()
             }
         }
 
@@ -161,7 +169,7 @@ macro_rules! jk_primitive {
 
         impl From<char> for JkConstant<char> {
             fn from(value: char) -> JkConstant<char> {
-                JkConstant(value, CheckedType::Resolved(TypeId::from("char")))
+                JkConstant(value, CheckedType::Resolved(TypeId::from("char")), None)
             }
         }
 
@@ -180,6 +188,10 @@ macro_rules! jk_primitive {
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
                 Some(self.to_instance())
+            }
+
+            fn location(&self) -> Option<&SpanTuple> {
+                self.2.as_ref()
             }
         }
 
@@ -239,6 +251,10 @@ macro_rules! jk_primitive {
                 // copy paste our four basic implementations for jinko's primitive types...
                 Some(self.to_instance())
             }
+
+            fn location(&self) -> Option<&SpanTuple> {
+                self.2.as_ref()
+            }
         }
 
         impl TypeCheck for JkConstant<$t> {
@@ -257,7 +273,7 @@ macro_rules! jk_primitive {
 
         impl From<$t> for JkConstant<$t> {
             fn from(rust_value: $t) -> Self {
-                JkConstant(rust_value, CheckedType::Resolved(TypeId::from($s)))
+                JkConstant(rust_value, CheckedType::Resolved(TypeId::from($s)), None)
             }
         }
     };
@@ -335,6 +351,10 @@ impl Instruction for JkString {
 
         Some(self.to_instance())
     }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.2.as_ref()
+    }
 }
 
 impl TypeCheck for JkString {
@@ -353,13 +373,17 @@ impl Generic for JkString {}
 
 impl From<&str> for JkConstant<String> {
     fn from(s: &str) -> Self {
-        JkConstant(s.to_string(), CheckedType::Resolved(TypeId::from("string")))
+        JkConstant(
+            s.to_string(),
+            CheckedType::Resolved(TypeId::from("string")),
+            None,
+        )
     }
 }
 
 impl From<String> for JkConstant<String> {
     fn from(s: String) -> Self {
-        JkConstant(s, CheckedType::Resolved(TypeId::from("string")))
+        JkConstant(s, CheckedType::Resolved(TypeId::from("string")), None)
     }
 }
 
