@@ -220,7 +220,7 @@ fn unit(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     } else if let Ok((input, _)) = Token::incl_tok(input) {
         unit_incl(input)
     } else if let Ok((input, _)) = Token::type_tok(input) {
-        unit_type_decl(input)
+        unit_type_decl(input, start_loc.into())
     } else if let Ok((input, _)) = Token::mut_tok(input) {
         unit_mut_var(input)
     } else if let Ok((input, _)) = Token::at_sign(input) {
@@ -300,10 +300,13 @@ fn unit_incl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>>
 }
 
 /// spaced_identifier '(' type_inst_arg (',' type_inst_arg)* ')'
-fn unit_type_decl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+fn unit_type_decl(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, (name, _)) = spaced_identifier(input)?;
     let (input, generics) = maybe_generic_list(input)?;
-    let (input, type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
+    let (input, mut type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
         let (input, first_arg) = typed_arg(input)?;
         let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
@@ -314,6 +317,9 @@ fn unit_type_decl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruct
     } else {
         (input, TypeDec::new(name, generics, vec![]))
     };
+    let (input, end_loc) = position(input)?;
+
+    type_dec.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
 
     Ok((input, Box::new(type_dec)))
 }
