@@ -18,22 +18,21 @@ use nom::{
     branch::alt, character::complete::multispace0, combinator::opt, multi::many0,
     sequence::delimited, sequence::pair, sequence::preceded, sequence::terminated,
 };
-use nom_locate::LocatedSpan;
+use nom_locate::position;
 
 use crate::instruction::{
     BinaryOp, Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl,
     Instruction, JkInst, Loop, LoopKind, MethodCall, Operator, Return, TypeDec, TypeInstantiation,
     Var, VarAssign, VarOrEmptyType,
 };
-use crate::parser::{ConstantConstruct, ParseResult, Token};
+use crate::parser::{ConstantConstruct, ParseInput, ParseResult, Token};
 use crate::typechecker::TypeId;
 use crate::Error;
+use crate::{Location, SpanTuple};
 
 /// Parse as many instructions as possible
 /// many_expr = ( expr_semicolon )*
-pub fn many_expr(
-    mut input: LocatedSpan<&str>,
-) -> ParseResult<LocatedSpan<&str>, Vec<Box<dyn Instruction>>> {
+pub fn many_expr(mut input: ParseInput) -> ParseResult<ParseInput, Vec<Box<dyn Instruction>>> {
     let mut exprs = vec![];
     loop {
         input = next(input);
@@ -49,9 +48,7 @@ pub fn many_expr(
 /// Parse an instruction and maybe the semicolon that follows.
 ///
 /// expr_semicolon = expr [ ';' ]
-pub fn expr_semicolon(
-    input: LocatedSpan<&str>,
-) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+pub fn expr_semicolon(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, expr) = expr(input)?;
     let (input, _) = opt(Token::semicolon)(input)?;
 
@@ -59,7 +56,9 @@ pub fn expr_semicolon(
 }
 
 // expr = cmp ( '<' cmp | '>' cmp | '<=' cmp | '>=' cmp | '==' cmp | '!=' cmp)*
-pub fn expr(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+pub fn expr(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, start_loc) = position(input)?;
     let (mut input, mut expr) = cmp(input)?;
     while let Ok((new_input, op)) = alt((
         Token::lt_eq,
@@ -71,54 +70,81 @@ pub fn expr(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn 
     ))(input)
     {
         let (new_input, rhs) = cmp(new_input)?;
+        let (new_input, end_loc) = position(new_input)?;
         input = new_input;
-        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op.fragment())));
+        let mut b_op = BinaryOp::new(expr, rhs, Operator::new(op.fragment()));
+        b_op.set_location(SpanTuple::new(
+            input.extra,
+            start_loc.into(),
+            end_loc.into(),
+        ));
+        expr = Box::new(b_op);
     }
     Ok((input, expr))
 }
 
-pub fn cmp(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+pub fn cmp(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, start_loc) = position(input)?;
     let (mut input, mut expr) = term(input)?;
     while let Ok((new_input, op)) = alt((Token::add, Token::sub))(input) {
         let (new_input, rhs) = term(new_input)?;
+        let (new_input, end_loc) = position(new_input)?;
         input = new_input;
-        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op.fragment())));
+        let mut b_op = BinaryOp::new(expr, rhs, Operator::new(op.fragment()));
+        b_op.set_location(SpanTuple::new(
+            input.extra,
+            start_loc.into(),
+            end_loc.into(),
+        ));
+        expr = Box::new(b_op);
     }
     Ok((input, expr))
 }
 
 /// term = factor next ( '*' factor next | '/' factor next )*
-fn term(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+fn term(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, start_loc) = position(input)?;
     let (input, mut term) = factor(input)?;
     let mut input = next(input);
     while let Ok((new_input, op)) = alt((Token::mul, Token::div))(input) {
         let (new_input, rhs) = factor(new_input)?;
+        let (new_input, end_loc) = position(new_input)?;
         let new_input = next(new_input);
         input = new_input;
-        term = Box::new(BinaryOp::new(term, rhs, Operator::new(op.fragment())));
+        let mut b_op = BinaryOp::new(term, rhs, Operator::new(op.fragment()));
+        b_op.set_location(SpanTuple::new(
+            input.extra,
+            start_loc.into(),
+            end_loc.into(),
+        ));
+        term = Box::new(b_op);
     }
     Ok((input, term))
 }
 
 /// factor = next unit factor_rest
-fn factor(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+fn factor(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let input = next(input);
+    let (input, start_loc) = position(input)?;
     let (input, unit) = unit(input)?;
-    factor_rest(input, unit)
+    factor_rest(input, unit, start_loc.into())
 }
 
 /// factor_rest = '.' IDENTIFIER next method_or_field factor_rest
 ///             | ε
 fn factor_rest(
-    input: LocatedSpan<&str>,
+    input: ParseInput,
     expr: Box<dyn Instruction>,
-) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     match Token::dot(input) {
         Ok((input, _)) => {
             let (input, id) = Token::identifier(input)?;
             let input = next(input);
-            let (input, expr) = method_or_field(input, expr, id)?;
-            factor_rest(input, expr)
+            let (input, expr) = method_or_field(input, expr, id, start_loc.clone())?;
+            factor_rest(input, expr, start_loc)
         }
         _ => Ok((input, expr)),
     }
@@ -127,14 +153,17 @@ fn factor_rest(
 /// method_or_field = '(' next args
 ///                 | ε
 fn method_or_field(
-    input: LocatedSpan<&str>,
+    input: ParseInput,
     expr: Box<dyn Instruction>,
     id: String,
-) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_parenthesis(input) {
         let input = next(input);
         let (input, args) = args(input)?;
-        let method_call = MethodCall::new(expr, FunctionCall::new(id, vec![], args));
+        let (input, end_loc) = position(input)?;
+        let mut method_call = MethodCall::new(expr, FunctionCall::new(id, vec![], args));
+        method_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
         Ok((input, Box::new(method_call)))
     } else if let Ok((input, _)) = Token::left_bracket(input) {
         let input = next(input);
@@ -143,10 +172,16 @@ fn method_or_field(
         let (input, _) = Token::left_parenthesis(input)?;
         let input = next(input);
         let (input, args) = args(input)?;
-        let method_call = MethodCall::new(expr, FunctionCall::new(id, generics, args));
+        let (input, end_loc) = position(input)?;
+        let mut method_call = MethodCall::new(expr, FunctionCall::new(id, generics, args));
+        method_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
         Ok((input, Box::new(method_call)))
     } else {
-        Ok((input, Box::new(FieldAccess::new(expr, id))))
+        let (input, end_loc) = position(input)?;
+        let mut f_a = FieldAccess::new(expr, id);
+        f_a.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+        Ok((input, Box::new(f_a)))
     }
 }
 
@@ -179,33 +214,34 @@ fn method_or_field(
 ///
 ///      | IDENTIFIER next func_type_or_var
 /// ```
-fn unit(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+fn unit(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, start_loc) = position(input)?;
     if let Ok((input, _)) = Token::if_tok(input) {
-        unit_if(input)
+        unit_if(input, start_loc.into())
     } else if let Ok((input, _)) = Token::while_tok(input) {
-        unit_while(input)
+        unit_while(input, start_loc.into())
     } else if let Ok((input, _)) = Token::loop_tok(input) {
-        unit_loop(input)
+        unit_loop(input, start_loc.into())
     } else if let Ok((input, _)) = Token::for_tok(input) {
-        unit_for(input)
+        unit_for(input, start_loc.into())
     } else if let Ok((input, kind)) =
         alt((Token::func_tok, Token::test_tok, Token::mock_tok))(input)
     {
-        unit_func(input, kind)
+        unit_func(input, kind, start_loc.into())
     } else if let Ok((input, _)) = Token::incl_tok(input) {
-        unit_incl(input)
+        unit_incl(input, start_loc.into())
     } else if let Ok((input, _)) = Token::type_tok(input) {
-        unit_type_decl(input)
+        unit_type_decl(input, start_loc.into())
     } else if let Ok((input, _)) = Token::mut_tok(input) {
         unit_mut_var(input)
     } else if let Ok((input, _)) = Token::at_sign(input) {
-        unit_jk_inst(input)
+        unit_jk_inst(input, start_loc.into())
     } else if let Ok((input, _)) = Token::ext_tok(input) {
         unit_extern(input)
     } else if let Ok((input, _)) = Token::return_tok(input) {
-        unit_return(input)
+        unit_return(input, start_loc.into())
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
-        unit_block(input)
+        unit_block(input, start_loc.into())
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
         terminated(expr, Token::right_parenthesis)(input)
     } else if let Ok(res) = constant(input) {
@@ -213,71 +249,122 @@ fn unit(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Inst
     } else {
         let (input, id) = Token::identifier(input)?;
         let input = next(input);
-        func_type_or_var(input, id)
+        func_type_or_var(input, id, start_loc.into())
     }
 }
 
-fn unit_if(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+fn unit_if(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, cond) = expr(input)?;
     let (input, success) = block(input)?;
     let input = next(input);
     if let Ok((input, _)) = Token::else_tok(input) {
         let input = next(input);
         let (input, else_body) = block(input)?;
-        Ok((input, Box::new(IfElse::new(cond, success, Some(else_body)))))
+        let (input, end_loc) = position(input)?;
+        let if_end_loc = if let Some(else_loc) = else_body.location() {
+            // FIXME: Remove this, ugly hack
+            Location::new(else_loc.end().line(), else_loc.end().column() - 1)
+        } else {
+            end_loc.into()
+        };
+
+        let mut if_else = IfElse::new(cond, success, Some(else_body));
+
+        if_else.set_location(SpanTuple::new(input.extra, start_loc, if_end_loc));
+        Ok((input, Box::new(if_else)))
     } else {
-        Ok((input, Box::new(IfElse::new(cond, success, None))))
+        let (input, end_loc) = position(input)?;
+        let mut if_else = IfElse::new(cond, success, None);
+        if_else.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        Ok((input, Box::new(if_else)))
     }
 }
 
-fn unit_while(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+fn unit_while(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, (cond, block)) = pair(expr, block)(input)?;
-    Ok((input, Box::new(Loop::new(LoopKind::While(cond), block))))
+    let (input, end_loc) = position(input)?;
+    let mut while_loop = Loop::new(LoopKind::While(cond), block);
+    while_loop.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(while_loop)))
 }
 
-fn unit_loop(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+fn unit_loop(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let input = next(input);
     let (input, block) = block(input)?;
-    Ok((input, Box::new(Loop::new(LoopKind::Loop, block))))
+    let (input, end_loc) = position(input)?;
+    let mut loop_loop = Loop::new(LoopKind::Loop, block);
+    loop_loop.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(loop_loop)))
 }
 
-fn unit_for(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
-    let (input, id) = spaced_identifier(input)?;
+fn unit_for(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, (id, _)) = spaced_identifier(input)?;
     let (input, _) = Token::in_tok(input)?;
     let (input, expr) = expr(input)?;
     let (input, block) = block(input)?;
+    let (input, end_loc) = position(input)?;
     let var = Var::new(id);
-    Ok((input, Box::new(Loop::new(LoopKind::For(var, expr), block))))
+    let mut for_loop = Loop::new(LoopKind::For(Box::new(var), expr), block);
+    for_loop.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(for_loop)))
 }
 
 fn unit_func<'i>(
-    input: LocatedSpan<&'i str>,
-    kind: LocatedSpan<&'i str>,
-) -> ParseResult<LocatedSpan<&'i str>, Box<dyn Instruction>> {
+    input: ParseInput<'i>,
+    kind: ParseInput<'i>,
+    start_loc: Location,
+) -> ParseResult<ParseInput<'i>, Box<dyn Instruction>> {
     let (input, mut function) = func_declaration(input)?;
     let (input, body) = block(input)?;
+    let (input, end_loc) = position(input)?;
+    function.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
     function.set_block(body);
     function.set_kind(FunctionKind::from(*kind.fragment()));
     Ok((input, Box::new(function)))
 }
 
-fn unit_incl(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
-    let (input, path) = spaced_identifier(input)?;
+fn unit_incl(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, (path, id_loc)) = spaced_identifier(input)?;
     if let Ok((input, _)) = Token::az_tok(input) {
         let (input, alias) = preceded(nom_next, Token::identifier)(input)?;
-        Ok((input, Box::new(Incl::new(path, Some(alias)))))
+        let (input, end_loc) = position(input)?;
+        let mut inclusion = Incl::new(path, Some(alias));
+        inclusion.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        Ok((input, Box::new(inclusion)))
     } else {
-        Ok((input, Box::new(Incl::new(path, None))))
+        let end_loc = Location::new(id_loc.line(), id_loc.column() + path.len());
+        let mut inclusion = Incl::new(path, None);
+        inclusion.set_location(SpanTuple::new(input.extra, start_loc, end_loc));
+        Ok((input, Box::new(inclusion)))
     }
 }
 
 /// spaced_identifier '(' type_inst_arg (',' type_inst_arg)* ')'
 fn unit_type_decl(
-    input: LocatedSpan<&str>,
-) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
-    let (input, name) = spaced_identifier(input)?;
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, (name, _)) = spaced_identifier(input)?;
     let (input, generics) = maybe_generic_list(input)?;
-    let (input, type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
+    let (input, mut type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
         let (input, first_arg) = typed_arg(input)?;
         let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
@@ -288,27 +375,39 @@ fn unit_type_decl(
     } else {
         (input, TypeDec::new(name, generics, vec![]))
     };
+    let (input, end_loc) = position(input)?;
+
+    type_dec.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
 
     Ok((input, Box::new(type_dec)))
 }
 
 /// spaced_identifier '=' expr
-fn unit_mut_var(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
-    let (input, symbol) = spaced_identifier(input)?;
+fn unit_mut_var(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, (symbol, start_loc)) = spaced_identifier(input)?;
     let (input, _) = Token::equal(input)?;
     let (input, value) = expr(input)?;
+    let (input, end_loc) = position(input)?;
 
-    Ok((input, Box::new(VarAssign::new(true, symbol, value))))
+    let mut assignment = VarAssign::new(true, symbol, value);
+    assignment.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(assignment)))
 }
 
 /// IDENTIFIER next '(' next args
-fn unit_jk_inst(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+fn unit_jk_inst(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
     let (input, args) = args(next(input))?;
+    let (input, end_loc) = position(input)?;
 
     // A jk_inst will never contain generics
-    let call = FunctionCall::new(name, vec![], args);
+    let mut call = FunctionCall::new(name, vec![], args);
+    call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
     match JkInst::from_function_call(&call) {
         Ok(inst) => Ok((input, Box::new(inst))),
         Err(err) => Err(NomError(err)),
@@ -316,7 +415,7 @@ fn unit_jk_inst(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<
 }
 
 /// 'func' function_declaration ';'
-fn unit_extern(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+fn unit_extern(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let input = next(input);
     let (input, mut dec) = delimited(Token::func_tok, func_declaration, Token::semicolon)(input)?;
 
@@ -325,20 +424,34 @@ fn unit_extern(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<d
 }
 
 ///  [ expr ]                      (* Not LL(1) but this entry is subject to change *)
-fn unit_return(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+fn unit_return(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, expr) = opt(expr)(input)?;
+    let (input, end_loc) = position(input)?;
 
-    Ok((input, Box::new(Return::new(expr))))
+    let mut ret = Return::new(expr);
+    ret.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(ret)))
 }
 
-fn unit_block(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
-    let (input, block) = inner_block(next(input))?;
+fn unit_block(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, mut block) = inner_block(next(input))?;
+    let (input, end_loc) = position(input)?;
+
+    block.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
     Ok((input, Box::new(block)))
 }
 
 // FIXME: This does not parse default generic types yet (`func f<T = int>()`)
-fn generic_list(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<TypeId>> {
-    fn whitespace_plus_id(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
+fn generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
+    fn whitespace_plus_id(input: ParseInput) -> ParseResult<ParseInput, String> {
         let input = next(input);
         let (input, id) = Token::identifier(input)?;
         let input = next(input);
@@ -354,7 +467,7 @@ fn generic_list(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<
     Ok((input, generics.into_iter().map(TypeId::new).collect()))
 }
 
-fn maybe_generic_list(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<TypeId>> {
+fn maybe_generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
     if let Ok((input, _)) = Token::left_bracket(input) {
         Ok(generic_list(input)?)
     } else {
@@ -363,9 +476,9 @@ fn maybe_generic_list(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>
 }
 
 /// function_declaration = next spaced_identifier [ next '[' spaced_identifier ( ',' spaced_identifier )* ']' ] next '(' next typed_arg next return_type
-fn func_declaration(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, FunctionDec> {
+fn func_declaration(input: ParseInput) -> ParseResult<ParseInput, FunctionDec> {
     let input = next(input);
-    let (input, id) = spaced_identifier(input)?;
+    let (input, (id, _)) = spaced_identifier(input)?;
     let input = next(input);
 
     let (input, generics) = maybe_generic_list(input)?;
@@ -382,10 +495,10 @@ fn func_declaration(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, 
 
 /// return_type = '->' spaced_identifier
 ///             | ε
-fn return_type(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Option<TypeId>> {
+fn return_type(input: ParseInput) -> ParseResult<ParseInput, Option<TypeId>> {
     match Token::arrow(input) {
         Ok((input, _)) => {
-            let (input, ty) = spaced_identifier(input)?;
+            let (input, (ty, _)) = spaced_identifier(input)?;
             Ok((input, Some(TypeId::from(ty.as_str()))))
         }
         _ => Ok((input, None)),
@@ -393,16 +506,26 @@ fn return_type(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Optio
 }
 
 /// block = '{' next inner_block
-pub fn block(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Block> {
+pub fn block(input: ParseInput) -> ParseResult<ParseInput, Block> {
+    let (input, start_loc) = position(input)?;
     let (input, _) = Token::left_curly_bracket(input)?;
     let input = next(input);
-    inner_block(input)
+    let (input, mut block) = inner_block(input)?;
+    let (input, end_loc) = position(input)?;
+
+    block.set_location(SpanTuple::new(
+        input.extra,
+        start_loc.into(),
+        end_loc.into(),
+    ));
+
+    Ok((input, block))
 }
 
 /// inner_block = '}'
 ///             | expr '}'                  (* The only case where block is an expr *)
 ///             | expr ';' next inner_block
-fn inner_block(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Block> {
+fn inner_block(input: ParseInput) -> ParseResult<ParseInput, Block> {
     if let Ok((input, _)) = Token::right_curly_bracket(input) {
         return Ok((input, Block::new()));
     }
@@ -424,59 +547,69 @@ fn inner_block(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Block
 ///                  | '=' expr                   (* variable assigment *)
 ///                  | ε                          (* variable or empty type instantiation *)
 fn func_type_or_var(
-    input: LocatedSpan<&str>,
+    input: ParseInput,
     id: String,
-) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_bracket(input) {
-        generic_func_or_type_inst_args(next(input), id)
+        generic_func_or_type_inst_args(next(input), id, start_loc)
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
-        func_or_type_inst_args(next(input), id, vec![])
+        func_or_type_inst_args(next(input), id, vec![], start_loc)
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
         Ok((input, Box::new(VarAssign::new(false, id, value))))
     } else {
-        Ok((input, Box::new(VarOrEmptyType::new(id))))
+        let (input, end_loc) = position(input)?;
+        let mut var_or_et = VarOrEmptyType::new(id);
+        var_or_et.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        Ok((input, Box::new(var_or_et)))
     }
 }
 
 /// func_or_type_inst_args = IDENTIFIER next ':' expr (',' type_inst_arg )* ')'  (* type_instantiation *)
 ///                  | args                                            (* function_call *)
 fn func_or_type_inst_args(
-    input: LocatedSpan<&str>,
+    input: ParseInput,
     id: String,
     generics: Vec<TypeId>,
-) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     if let Ok((input, first_attr)) =
         terminated(terminated(Token::identifier, nom_next), Token::colon)(input)
     {
         let (input, first_attr_val) = expr(input)?;
         let (input, attrs) = many0(preceded(Token::comma, type_inst_arg))(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
+        let (input, end_loc) = position(input)?;
 
         let mut type_inst = TypeInstantiation::new(TypeId::new(id));
         type_inst.add_field(VarAssign::new(false, first_attr, first_attr_val));
         attrs.into_iter().for_each(|attr| type_inst.add_field(attr));
 
         type_inst.set_generics(generics);
+        type_inst.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
 
         Ok((input, Box::new(type_inst)))
     } else {
         let (input, args) = args(input)?;
-        let func_call = FunctionCall::new(id, generics, args);
+        let (input, end_loc) = position(input)?;
+        let mut func_call = FunctionCall::new(id, generics, args);
+        func_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
 
         Ok((input, Box::new(func_call)))
     }
 }
 
 fn generic_func_or_type_inst_args(
-    input: LocatedSpan<&str>,
+    input: ParseInput,
     id: String,
-) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     // FIXME: Assign generics to FunctionCall and TypeInstantiation
     let (input, generics) = generic_list(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
 
-    func_or_type_inst_args(next(input), id, generics)
+    func_or_type_inst_args(next(input), id, generics, start_loc)
 }
 
 ///
@@ -485,7 +618,7 @@ fn generic_func_or_type_inst_args(
 
 /// args = expr ( ',' expr )* ')'
 ///      | ')'
-fn args(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<Box<dyn Instruction>>> {
+fn args(input: ParseInput) -> ParseResult<ParseInput, Vec<Box<dyn Instruction>>> {
     if let Ok((input, _)) = Token::right_parenthesis(input) {
         return Ok((input, vec![]));
     }
@@ -499,7 +632,7 @@ fn args(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<Box<dyn 
 
 /// typed_args = typed_arg ( ',' typed_arg )* ')'
 ///           | ')'
-fn typed_args(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<DecArg>> {
+fn typed_args(input: ParseInput) -> ParseResult<ParseInput, Vec<DecArg>> {
     if let Ok((input, _)) = Token::right_parenthesis(input) {
         return Ok((input, vec![]));
     }
@@ -512,9 +645,9 @@ fn typed_args(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Vec<De
 }
 
 // FIXME: This should not return a String
-fn multi_type(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
+fn multi_type(input: ParseInput) -> ParseResult<ParseInput, String> {
     // FIXME: Remove with #342
-    fn whitespace_plus_id(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
+    fn whitespace_plus_id(input: ParseInput) -> ParseResult<ParseInput, String> {
         delimited(nom_next, Token::identifier, nom_next)(input)
     }
 
@@ -530,19 +663,23 @@ fn multi_type(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String
 }
 
 /// typed_arg = spaced_identifier ':' spaced_identifier
-fn typed_arg(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, DecArg> {
-    let (input, id) = spaced_identifier(input)?;
+fn typed_arg(input: ParseInput) -> ParseResult<ParseInput, DecArg> {
+    let (input, (id, start_loc)) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
     let (input, types) = multi_type(input)?;
     let input = next(input);
+    let (input, end_loc) = position(input)?;
 
-    Ok((input, DecArg::new(id, TypeId::new(types))))
+    let mut dec_arg = DecArg::new(id, TypeId::new(types));
+    dec_arg.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, dec_arg))
 }
 
 /// type_inst_arg = spaced_identifier ':' expr
-fn type_inst_arg(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, VarAssign> {
-    let (input, id) = spaced_identifier(input)?;
+fn type_inst_arg(input: ParseInput) -> ParseResult<ParseInput, VarAssign> {
+    let (input, (id, _)) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
     let (input, value) = expr(input)?;
@@ -551,8 +688,13 @@ fn type_inst_arg(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, Var
     Ok((input, VarAssign::new(false, id, value)))
 }
 
-fn spaced_identifier(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, String> {
-    delimited(nom_next, Token::identifier, nom_next)(input)
+fn spaced_identifier(input: ParseInput) -> ParseResult<ParseInput, (String, Location)> {
+    let input = next(input);
+    let (input, loc) = position(input)?;
+    let (input, id) = Token::identifier(input)?;
+    let input = next(input);
+
+    Ok((input, (id, loc.into())))
 }
 
 /// next = extra*
@@ -560,7 +702,7 @@ fn spaced_identifier(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>,
 ///       | '/*' [^'*/'] '*/'
 ///       | '//' [^\n]   '\n'
 ///       | '#'  [^\n]   '\n'
-pub fn next(input: LocatedSpan<&str>) -> LocatedSpan<&str> {
+pub fn next(input: ParseInput) -> ParseInput {
     // FIXME: Do not unwrap
     let (input, _) = multispace0::<_, Error>(input).unwrap();
     match Token::consume_comment(input) {
@@ -569,7 +711,7 @@ pub fn next(input: LocatedSpan<&str>) -> LocatedSpan<&str> {
     }
 }
 
-fn nom_next(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, ()> {
+fn nom_next(input: ParseInput) -> ParseResult<ParseInput, ()> {
     Ok((next(input), ()))
 }
 
@@ -577,9 +719,7 @@ fn nom_next(input: LocatedSpan<&str>) -> ParseResult<LocatedSpan<&str>, ()> {
 /// `0.5`.
 ///
 /// `'<any_char>' | "<any_char>*" | <num>? | <num>?.<num>?`
-pub(crate) fn constant(
-    input: LocatedSpan<&str>,
-) -> ParseResult<LocatedSpan<&str>, Box<dyn Instruction>> {
+pub(crate) fn constant(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let constant = alt((
         ConstantConstruct::char_constant,
         ConstantConstruct::string_constant,

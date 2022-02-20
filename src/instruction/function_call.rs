@@ -6,7 +6,7 @@ use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::typechecker::{CheckedType, TypeCtx, TypeId};
 use crate::{
     generics, log, Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance,
-    TypeCheck,
+    SpanTuple, TypeCheck,
 };
 use std::rc::Rc;
 
@@ -16,6 +16,7 @@ pub struct FunctionCall {
     generics: Vec<TypeId>,
     args: Vec<Box<dyn Instruction>>,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl FunctionCall {
@@ -30,6 +31,7 @@ impl FunctionCall {
             generics,
             args,
             cached_type: None,
+            location: None,
         }
     }
 
@@ -53,6 +55,11 @@ impl FunctionCall {
         &self.args
     }
 
+    /// Set the location of a function call
+    pub fn set_location(&mut self, loc: SpanTuple) {
+        self.location = Some(loc)
+    }
+
     /// Get the corresponding declaration from a context
     fn get_declaration(&self, ctx: &mut Context) -> Result<Rc<FunctionDec>, Error> {
         match ctx.get_function(self.name()) {
@@ -60,7 +67,8 @@ impl FunctionCall {
             Some(f) => Ok(f.clone()),
             // FIXME: Fix Location and input
             None => Err(Error::new(ErrKind::Context)
-                .with_msg(format!("cannot find function {}", self.name()))),
+                .with_msg(format!("cannot find function {}", self.name()))
+                .with_loc(self.location.clone())),
         }
     }
 
@@ -78,11 +86,15 @@ impl FunctionCall {
             let mut instance = match call_arg.execute_expression(ctx) {
                 Some(i) => i,
                 None => {
-                    ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                        "trying to map statement to function argument: {} -> {}",
-                        call_arg.print(),
-                        func_arg
-                    )));
+                    ctx.error(
+                        Error::new(ErrKind::Context)
+                            .with_msg(format!(
+                                "trying to map statement to function argument: {} -> {}",
+                                call_arg.print(),
+                                func_arg
+                            ))
+                            .with_loc(func_arg.location().cloned()),
+                    );
                     return;
                 }
             };
@@ -94,7 +106,8 @@ impl FunctionCall {
                 None => {
                     ctx.error(
                         Error::new(ErrKind::Context)
-                            .with_msg(format!("type not found: {}", func_arg.get_type().id())),
+                            .with_msg(format!("type not found: {}", func_arg.get_type().id()))
+                            .with_loc(func_arg.location().cloned()),
                     );
                     return;
                 }
@@ -147,10 +160,14 @@ impl FunctionCall {
 
             #[cfg(not(feature = "ffi"))]
             {
-                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
+                ctx.error(
+                    Error::new(ErrKind::Context)
+                        .with_msg(format!(
                     "jinko is not compiled with FFI support. Cannot call `{}` external function",
                     dec.name()
-                )));
+                ))
+                        .with_loc(self.location.clone()),
+                );
                 None
             }
         }
@@ -213,6 +230,10 @@ impl Instruction for FunctionCall {
 
         ret_val
     }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
+    }
 }
 
 impl TypeCheck for FunctionCall {
@@ -228,10 +249,14 @@ impl TypeCheck for FunctionCall {
             Some(f) => f.clone(), // FIXME: Remove this clone...
             // FIXME: This does not account for functions declared later in the code
             None => {
-                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "function `{}` was not declared in this scope",
-                    self.name()
-                )));
+                ctx.error(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "function `{}` was not declared in this scope",
+                            self.name()
+                        ))
+                        .with_loc(self.location.clone()),
+                );
                 return CheckedType::Error;
             }
         };
@@ -249,26 +274,37 @@ impl TypeCheck for FunctionCall {
         let mut args = vec![];
 
         if self.args().len() != args_type.len() {
-            errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                "wrong number of arguments \
+            errors.push(
+                Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "wrong number of arguments \
                     for call to function `{}`: expected {}, got {}",
-                self.name(),
-                args_type.len(),
-                self.args().len()
-            )));
+                        self.name(),
+                        args_type.len(),
+                        self.args().len()
+                    ))
+                    .with_loc(self.location.clone()),
+            );
         }
 
-        for (dec_arg, given_ty) in args_type.iter().zip(
-            self.args
-                .iter()
-                .map(|given_arg| given_arg.clone().type_of(ctx)),
-        ) {
+        for (dec_arg, given_arg) in args_type.iter().zip(self.args.iter()) {
+            // FIXME: Remove clone
+            let given_ty = given_arg.clone().type_of(ctx);
             let expected_ty = CheckedType::Resolved(dec_arg.get_type().clone());
             if expected_ty != given_ty {
-                errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "invalid type used for function argument: expected `{}`, got `{}`",
-                    expected_ty, given_ty
-                )));
+                errors.push(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "invalid type used for function argument: expected `{}`, got `{}`",
+                            expected_ty, given_ty
+                        ))
+                        .with_loc(given_arg.location().cloned())
+                        .with_hint(
+                            Error::hint()
+                                .with_msg(String::from("argument declared here"))
+                                .with_loc(dec_arg.location().cloned()),
+                        ),
+                );
             }
 
             args.push((String::from(dec_arg.name()), expected_ty.clone()));
@@ -309,10 +345,14 @@ impl Generic for FunctionCall {
 
             if !self.generics.is_empty() && dec.generics().is_empty() {
                 // FIXME: Format generic list in error too
-                ctx.error(Error::new(ErrKind::Generics).with_msg(format!(
-                    "calling non-generic function with generic arguments: `{}`",
-                    self.name()
-                )));
+                ctx.error(
+                    Error::new(ErrKind::Generics)
+                        .with_msg(format!(
+                            "calling non-generic function with generic arguments: `{}`",
+                            self.name()
+                        ))
+                        .with_loc(self.location.clone()),
+                );
                 return;
             }
 

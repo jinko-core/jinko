@@ -3,7 +3,7 @@
 #[macro_export]
 macro_rules! jk_parse {
     ($ctx:expr, $($tokens:tt)*) => {
-        $crate::parse($ctx, stringify!($($tokens)*)).unwrap()
+        $crate::parse($ctx, stringify!($($tokens)*), None).unwrap()
     }
 }
 
@@ -50,7 +50,7 @@ macro_rules! jk_execute {
             let mut ctx = $crate::Context::new();
             ctx.init_stdlib().unwrap();
 
-            $crate::parse(&mut ctx, stringify!($($tokens)*)).unwrap();
+            $crate::parse(&mut ctx, stringify!($($tokens)*), None).unwrap();
 
             ctx.execute().unwrap()
         }

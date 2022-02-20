@@ -9,7 +9,7 @@ use crate::{
     log,
     parser::constructs,
     typechecker::{CheckedType, TypeCtx},
-    Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance, TypeCheck,
+    Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
 };
 
 /// An `Incl` is constituted of a path, an optional alias and contains a context.
@@ -22,6 +22,7 @@ pub struct Incl {
     base: Option<PathBuf>,
     typechecked: bool,
     instructions: Vec<Box<dyn Instruction>>,
+    location: Option<SpanTuple>,
 }
 
 /// Default file that gets included when including a directory in jinko source code
@@ -35,6 +36,7 @@ impl Incl {
             base: None,
             typechecked: false,
             instructions: vec![],
+            location: None,
         }
     }
 
@@ -47,20 +49,26 @@ impl Incl {
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty ctx
         let (remaining_input, instructions) =
-            constructs::many_expr(LocatedSpan::new(input.as_str()))?;
+            constructs::many_expr(LocatedSpan::new_extra(input.as_str(), Some(formatted)))?;
 
         match remaining_input.len() {
             // The remaining input is empty: We parsed the whole file properly
             0 => Ok(instructions),
-            _ => Err(Error::new(ErrKind::Parsing).with_msg(format!(
-                "error when parsing included file: {:?},\non the following input:\n{}",
-                formatted, remaining_input
-            ))),
+            _ => Err(Error::new(ErrKind::Parsing)
+                .with_msg(format!(
+                    "error when parsing included file: {:?},\non the following input:\n{}",
+                    formatted, remaining_input
+                ))
+                .with_loc(self.location.clone())),
         }
     }
 
     pub fn set_base(&mut self, path: PathBuf) {
         self.base = Some(path);
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 
     fn check_base(&self, base: &Path) -> Result<PathBuf, Error> {
@@ -75,14 +83,18 @@ impl Incl {
 
         match (dir_candidate.is_file(), file_candidate.is_file()) {
             // We cannot have both <path>/lib.jk and <path>.jk be valid files
-            (true, true) => Err(Error::new(ErrKind::Context).with_msg(format!(
-                "invalid include: {:?} and {:?} are both valid candidates",
-                dir_candidate, file_candidate
-            ))),
-            (false, false) => Err(Error::new(ErrKind::Context).with_msg(format!(
-                "no candidate for include: {:?} and {:?} do not exist",
-                dir_candidate, file_candidate
-            ))),
+            (true, true) => Err(Error::new(ErrKind::Context)
+                .with_msg(format!(
+                    "invalid include: {:?} and {:?} are both valid candidates",
+                    dir_candidate, file_candidate
+                ))
+                .with_loc(self.location.clone())),
+            (false, false) => Err(Error::new(ErrKind::Context)
+                .with_msg(format!(
+                    "no candidate for include: {:?} and {:?} do not exist",
+                    dir_candidate, file_candidate
+                ))
+                .with_loc(self.location.clone())),
             (false, true) => Ok(file_candidate),
             (true, false) => Ok(dir_candidate),
         }
@@ -146,6 +158,10 @@ impl Instruction for Incl {
         });
 
         None
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 

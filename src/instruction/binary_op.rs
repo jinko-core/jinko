@@ -10,7 +10,7 @@ use crate::{
     log,
     typechecker::{CheckedType, TypeCtx, TypeId},
     Context, ErrKind, Error, FromObjectInstance, Generic, InstrKind, Instruction, JkFloat, JkInt,
-    ObjectInstance, TypeCheck, Value,
+    ObjectInstance, SpanTuple, TypeCheck, Value,
 };
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
@@ -21,6 +21,7 @@ pub struct BinaryOp {
     rhs: Box<dyn Instruction>,
     op: Operator,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl BinaryOp {
@@ -31,6 +32,7 @@ impl BinaryOp {
             rhs,
             op,
             cached_type: None,
+            location: None,
         }
     }
 
@@ -65,6 +67,10 @@ impl BinaryOp {
             }
             Some(v) => Some(v),
         }
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -123,6 +129,10 @@ impl Instruction for BinaryOp {
 
         Some(return_value)
     }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
+    }
 }
 
 impl TypeCheck for BinaryOp {
@@ -131,12 +141,16 @@ impl TypeCheck for BinaryOp {
         let r_type = self.rhs.type_of(ctx);
 
         if l_type != r_type {
-            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                "trying to do binary operation on invalid types: {} {} {}",
-                l_type,
-                self.op.as_str(),
-                r_type,
-            )));
+            ctx.error(
+                Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "trying to do binary operation on invalid types: {} {} {}",
+                        l_type,
+                        self.op.as_str(),
+                        r_type,
+                    ))
+                    .with_loc(self.location.clone()),
+            );
             return CheckedType::Error;
         }
 
@@ -221,7 +235,7 @@ mod tests {
 
     fn assert_bool(input: &str, value: bool) {
         use crate::JkBool;
-        let input = LocatedSpan::new(input);
+        let input = LocatedSpan::new_extra(input, None);
 
         let boxed_output = crate::parser::constructs::expr(input).unwrap().1;
         let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
@@ -289,10 +303,12 @@ mod tests {
     macro_rules! binop_assert {
         ($expr:expr) => {{
             let mut ctx = Context::new();
-            let expr =
-                crate::parser::constructs::expr(nom_locate::LocatedSpan::new(stringify!($expr)))
-                    .unwrap()
-                    .1;
+            let expr = crate::parser::constructs::expr(nom_locate::LocatedSpan::new_extra(
+                stringify!($expr),
+                None,
+            ))
+            .unwrap()
+            .1;
 
             assert_eq!(
                 expr.execute(&mut ctx).unwrap(),

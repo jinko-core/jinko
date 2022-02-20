@@ -4,7 +4,7 @@
 use crate::{
     log,
     typechecker::{CheckedType, TypeCtx},
-    Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance, TypeCheck,
+    Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
 };
 
 #[derive(Clone)]
@@ -12,6 +12,7 @@ pub struct FieldAccess {
     instance: Box<dyn Instruction>,
     field_name: String,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl FieldAccess {
@@ -21,6 +22,7 @@ impl FieldAccess {
             instance,
             field_name,
             cached_type: None,
+            location: None,
         }
     }
 
@@ -28,10 +30,14 @@ impl FieldAccess {
     fn get_field_instance(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         let calling_instance = match self.instance.execute(ctx) {
             None => {
-                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                    "instance `{}` is a statement and cannot be accessed",
-                    self.instance.print()
-                )));
+                ctx.error(
+                    Error::new(ErrKind::Context)
+                        .with_msg(format!(
+                            "instance `{}` is a statement and cannot be accessed",
+                            self.instance.print()
+                        ))
+                        .with_loc(self.instance.location().cloned()),
+                );
                 return None;
             }
             Some(i) => i,
@@ -45,6 +51,10 @@ impl FieldAccess {
         };
 
         Some(field_instance)
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -68,6 +78,10 @@ impl Instruction for FieldAccess {
 
         field_instance
     }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
+    }
 }
 
 impl TypeCheck for FieldAccess {
@@ -77,10 +91,14 @@ impl TypeCheck for FieldAccess {
             CheckedType::Resolved(ti) => ti.id(),
             CheckedType::Later => return CheckedType::Later,
             _ => {
-                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "trying to access field `{}` on statement",
-                    self.field_name
-                )));
+                ctx.error(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "trying to access field `{}` on statement",
+                            self.field_name
+                        ))
+                        .with_loc(self.instance.location().cloned()),
+                );
                 return CheckedType::Error;
             }
         };
@@ -95,10 +113,14 @@ impl TypeCheck for FieldAccess {
         {
             Some((_, field_ty)) => field_ty.clone(),
             None => {
-                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "trying to access field `{}` on instance of type `{}`",
-                    self.field_name, instance_ty
-                )));
+                ctx.error(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "trying to access field `{}` on instance of type `{}`",
+                            self.field_name, instance_ty
+                        ))
+                        .with_loc(self.location.clone()),
+                );
                 CheckedType::Error
             }
         }

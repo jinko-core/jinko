@@ -10,6 +10,7 @@
 //! ```
 
 use crate::instruction::{InstrKind, Instruction};
+use crate::SpanTuple;
 use crate::{
     typechecker::{CheckedType, TypeCtx},
     Context, Generic, ObjectInstance, TypeCheck,
@@ -19,6 +20,7 @@ use crate::{
 pub struct Return {
     value: Option<Box<dyn Instruction>>,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl Return {
@@ -27,7 +29,12 @@ impl Return {
         Return {
             value,
             cached_type: None,
+            location: None,
         }
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -53,6 +60,10 @@ impl Instruction for Return {
             Some(val) => val.execute(ctx),
             None => None,
         }
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 
