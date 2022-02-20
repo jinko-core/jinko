@@ -7,12 +7,13 @@
 use super::constructs::expr;
 use crate::instruction::{FunctionCall, Instruction, MethodCall};
 use crate::parser::{ParseInput, ParseResult, Token};
-use crate::{ErrKind, Error, JkBool, JkChar, JkFloat, JkInt, JkString};
+use crate::{ErrKind, Error, JkBool, JkChar, JkFloat, JkInt, JkString, Location, SpanTuple};
 
 use nom::bytes::complete::take;
-use nom::sequence::{preceded, terminated};
+use nom::sequence::terminated;
 use nom::Err::Error as NomError;
 use nom::Slice;
+use nom_locate::position;
 
 pub struct ConstantConstruct;
 
@@ -29,20 +30,34 @@ impl ConstantConstruct {
     pub(crate) fn string_constant(
         input: ParseInput,
     ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-        let (input, inner) = preceded(Token::double_quote, ConstantConstruct::inner_string)(input)?;
-        let string = inner.unwrap_or_else(|| Box::new(JkString::from("")));
+        let (input, start_loc) = position(input)?;
+        let (input, _) = Token::double_quote(input)?;
+        let (input, inner) = ConstantConstruct::inner_string(input, start_loc.into())?;
+        let (input, end_loc) = position(input)?;
+        let string = inner.unwrap_or_else(|| {
+            let mut s = JkString::from("");
+            s.set_location(SpanTuple::new(
+                input.extra,
+                start_loc.into(),
+                end_loc.into(),
+            ));
+            Box::new(s)
+        });
 
         Ok((input, string))
     }
 
     /// inner_string = '"'
     ///              | special string
-    fn inner_string(input: ParseInput) -> ParseResult<ParseInput, Option<Box<dyn Instruction>>> {
+    fn inner_string(
+        input: ParseInput,
+        start_loc: Location,
+    ) -> ParseResult<ParseInput, Option<Box<dyn Instruction>>> {
         if let Ok((input, _)) = Token::double_quote(input) {
             Ok((input, None))
         } else {
-            let (input, special) = ConstantConstruct::special(input)?;
-            let (input, next) = ConstantConstruct::inner_string(input)?;
+            let (input, special) = ConstantConstruct::special(input, start_loc.clone())?;
+            let (input, next) = ConstantConstruct::inner_string(input, start_loc)?;
 
             Ok((input, Some(ConstantConstruct::concat(special, next))))
         }
@@ -51,14 +66,17 @@ impl ConstantConstruct {
     /// | '{' expr '}'
     /// | '\' CHAR
     /// | CHAR (* anything except "{\ *)
-    fn special(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-        let special: &[_] = &['"', '{', '\\'];
+    fn special(
+        input: ParseInput,
+        start_loc: Location,
+    ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+        let special = &['"', '{', '\\'];
 
         if let Ok((input, _)) = Token::left_curly_bracket(input) {
             terminated(expr, Token::right_curly_bracket)(input)
         } else if let Ok((input, _)) = Token::backslash(input) {
             if input.is_empty() {
-                return ConstantConstruct::special(input);
+                return ConstantConstruct::special(input, start_loc);
             }
             let (input, special) = take(1usize)(input)?;
             let escaped = match *special.fragment() {
@@ -76,12 +94,15 @@ impl ConstantConstruct {
                 }
             };
 
-            Ok((input, Box::new(JkString::from(escaped))))
+            let (input, end_loc) = position(input)?;
+            let mut string = JkString::from(escaped);
+            string.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+            Ok((input, Box::new(string)))
         } else if let Some(index) = input.find(special) {
-            Ok((
-                input.slice(index..),
-                Box::new(JkString::from(&input[..index])),
-            ))
+            let (input, end_loc) = position(input)?;
+            let mut string = JkString::from(&input[..index]);
+            string.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+            Ok((input.slice(index..), Box::new(string)))
         } else {
             Err(NomError(
                 Error::new(ErrKind::Parsing).with_msg(String::from("Undelimited string")),
