@@ -127,8 +127,9 @@ fn term(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
 /// factor = next unit factor_rest
 fn factor(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let input = next(input);
+    let (input, start_loc) = position(input)?;
     let (input, unit) = unit(input)?;
-    factor_rest(input, unit)
+    factor_rest(input, unit, start_loc.into())
 }
 
 /// factor_rest = '.' IDENTIFIER next method_or_field factor_rest
@@ -136,13 +137,14 @@ fn factor(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
 fn factor_rest(
     input: ParseInput,
     expr: Box<dyn Instruction>,
+    start_loc: Location,
 ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     match Token::dot(input) {
         Ok((input, _)) => {
             let (input, id) = Token::identifier(input)?;
             let input = next(input);
-            let (input, expr) = method_or_field(input, expr, id)?;
-            factor_rest(input, expr)
+            let (input, expr) = method_or_field(input, expr, id, start_loc.clone())?;
+            factor_rest(input, expr, start_loc)
         }
         _ => Ok((input, expr)),
     }
@@ -154,11 +156,14 @@ fn method_or_field(
     input: ParseInput,
     expr: Box<dyn Instruction>,
     id: String,
+    start_loc: Location,
 ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::left_parenthesis(input) {
         let input = next(input);
         let (input, args) = args(input)?;
-        let method_call = MethodCall::new(expr, FunctionCall::new(id, vec![], args));
+        let (input, end_loc) = position(input)?;
+        let mut method_call = MethodCall::new(expr, FunctionCall::new(id, vec![], args));
+        method_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
         Ok((input, Box::new(method_call)))
     } else if let Ok((input, _)) = Token::left_bracket(input) {
         let input = next(input);
@@ -167,7 +172,9 @@ fn method_or_field(
         let (input, _) = Token::left_parenthesis(input)?;
         let input = next(input);
         let (input, args) = args(input)?;
-        let method_call = MethodCall::new(expr, FunctionCall::new(id, generics, args));
+        let (input, end_loc) = position(input)?;
+        let mut method_call = MethodCall::new(expr, FunctionCall::new(id, generics, args));
+        method_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
         Ok((input, Box::new(method_call)))
     } else {
         Ok((input, Box::new(FieldAccess::new(expr, id))))
