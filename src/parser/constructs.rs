@@ -230,7 +230,7 @@ fn unit(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     } else if let Ok((input, _)) = Token::return_tok(input) {
         unit_return(input)
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
-        unit_block(input)
+        unit_block(input, start_loc.into())
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
         terminated(expr, Token::right_parenthesis)(input)
     } else if let Ok(res) = constant(input) {
@@ -364,8 +364,15 @@ fn unit_return(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction
     Ok((input, Box::new(Return::new(expr))))
 }
 
-fn unit_block(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, block) = inner_block(next(input))?;
+fn unit_block(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, mut block) = inner_block(next(input))?;
+    let (input, end_loc) = position(input)?;
+
+    block.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
     Ok((input, Box::new(block)))
 }
 
@@ -427,9 +434,19 @@ fn return_type(input: ParseInput) -> ParseResult<ParseInput, Option<TypeId>> {
 
 /// block = '{' next inner_block
 pub fn block(input: ParseInput) -> ParseResult<ParseInput, Block> {
+    let (input, start_loc) = position(input)?;
     let (input, _) = Token::left_curly_bracket(input)?;
     let input = next(input);
-    inner_block(input)
+    let (input, mut block) = inner_block(input)?;
+    let (input, end_loc) = position(input)?;
+
+    block.set_location(SpanTuple::new(
+        input.extra,
+        start_loc.into(),
+        end_loc.into(),
+    ));
+
+    Ok((input, block))
 }
 
 /// inner_block = '}'

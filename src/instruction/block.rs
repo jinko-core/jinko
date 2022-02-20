@@ -20,7 +20,7 @@
 use crate::{
     log,
     typechecker::{CheckedType, TypeCtx},
-    Context, Generic, InstrKind, Instruction, ObjectInstance, TypeCheck,
+    Context, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
 };
 
 #[derive(Clone, Default)]
@@ -28,6 +28,7 @@ pub struct Block {
     instructions: Vec<Box<dyn Instruction>>,
     is_statement: bool,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl Block {
@@ -38,6 +39,7 @@ impl Block {
             instructions: Vec::new(),
             is_statement: true,
             cached_type: None,
+            location: None,
         }
     }
 
@@ -74,6 +76,11 @@ impl Block {
     /// Set block is_statement to given value
     pub fn set_statement(&mut self, is_statement: bool) {
         self.is_statement = is_statement;
+    }
+
+    /// Set block's location
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -116,6 +123,10 @@ impl Instruction for Block {
             false => ret_val.flatten(),
             true => None,
         }
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 
