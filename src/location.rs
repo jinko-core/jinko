@@ -190,10 +190,15 @@ impl SpanTuple {
 
                 let mut underline = String::new();
                 if start_col != 1 {
-                    for _ in 0..start_col - 1 {
-                        underline.push(' ');
+                    for user_char in line[0..start_col - 1].chars() {
+                        if user_char.is_whitespace() {
+                            underline.push(user_char);
+                        } else {
+                            underline.push(' ');
+                        }
                     }
                 }
+
                 for _ in start_col..end_col {
                     underline = format!("{}{}", underline, repetitor);
                 }
