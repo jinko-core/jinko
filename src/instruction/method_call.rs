@@ -4,13 +4,14 @@
 use crate::generics::{self, Generic};
 use crate::instruction::FunctionCall;
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{log, Context, InstrKind, Instruction, ObjectInstance, TypeCheck};
+use crate::{log, Context, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck};
 
 #[derive(Clone)]
 pub struct MethodCall {
     var: Box<dyn Instruction>,
     method: FunctionCall,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl MethodCall {
@@ -20,7 +21,12 @@ impl MethodCall {
             var,
             method,
             cached_type: None,
+            location: None,
         }
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -39,6 +45,9 @@ impl Instruction for MethodCall {
 
         // FIXME: No clone here
         let mut call = self.method.clone();
+        if let Some(loc) = &self.location {
+            call.set_location(loc.clone())
+        };
 
         call.add_arg_front(self.var.clone());
 
@@ -48,12 +57,19 @@ impl Instruction for MethodCall {
 
         call.execute(ctx)
     }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
+    }
 }
 
 impl TypeCheck for MethodCall {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let mut call = self.method.clone();
         call.add_arg_front(self.var.clone());
+        if let Some(loc) = &self.location {
+            call.set_location(loc.clone())
+        };
 
         call.type_of(ctx)
     }
@@ -71,6 +87,9 @@ impl Generic for MethodCall {
     fn expand(&self, ctx: &mut Context) {
         let mut call = self.method.clone();
         call.add_arg_front(self.var.clone());
+        if let Some(loc) = &self.location {
+            call.set_location(loc.clone())
+        };
 
         log!("generic expanding method call: {}", self.method.name());
 
@@ -83,6 +102,9 @@ impl Generic for MethodCall {
 
         let mut call = self.method.clone();
         call.add_arg_front(self.var.clone());
+        if let Some(loc) = &self.location {
+            call.set_location(loc.clone())
+        };
 
         log!("generic resolving method call: {}", self.method.name());
 
