@@ -22,7 +22,7 @@ impl ErrorHandler {
         if let Some(first_err) = self.errors.first() {
             first_err.emit();
         }
-        self.errors.iter().for_each(|e| {
+        self.errors.iter().skip(1).for_each(|e| {
             eprintln!("----------------------------------------------------------------");
             e.emit()
         });
