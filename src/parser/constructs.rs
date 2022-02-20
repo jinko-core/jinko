@@ -57,6 +57,8 @@ pub fn expr_semicolon(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Inst
 
 // expr = cmp ( '<' cmp | '>' cmp | '<=' cmp | '>=' cmp | '==' cmp | '!=' cmp)*
 pub fn expr(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, start_loc) = position(input)?;
     let (mut input, mut expr) = cmp(input)?;
     while let Ok((new_input, op)) = alt((
         Token::lt_eq,
@@ -68,31 +70,56 @@ pub fn expr(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> 
     ))(input)
     {
         let (new_input, rhs) = cmp(new_input)?;
+        let (new_input, end_loc) = position(new_input)?;
         input = new_input;
-        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op.fragment())));
+        let mut b_op = BinaryOp::new(expr, rhs, Operator::new(op.fragment()));
+        b_op.set_location(SpanTuple::new(
+            input.extra,
+            start_loc.into(),
+            end_loc.into(),
+        ));
+        expr = Box::new(b_op);
     }
     Ok((input, expr))
 }
 
 pub fn cmp(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, start_loc) = position(input)?;
     let (mut input, mut expr) = term(input)?;
     while let Ok((new_input, op)) = alt((Token::add, Token::sub))(input) {
         let (new_input, rhs) = term(new_input)?;
+        let (new_input, end_loc) = position(new_input)?;
         input = new_input;
-        expr = Box::new(BinaryOp::new(expr, rhs, Operator::new(op.fragment())));
+        let mut b_op = BinaryOp::new(expr, rhs, Operator::new(op.fragment()));
+        b_op.set_location(SpanTuple::new(
+            input.extra,
+            start_loc.into(),
+            end_loc.into(),
+        ));
+        expr = Box::new(b_op);
     }
     Ok((input, expr))
 }
 
 /// term = factor next ( '*' factor next | '/' factor next )*
 fn term(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let input = next(input);
+    let (input, start_loc) = position(input)?;
     let (input, mut term) = factor(input)?;
     let mut input = next(input);
     while let Ok((new_input, op)) = alt((Token::mul, Token::div))(input) {
         let (new_input, rhs) = factor(new_input)?;
+        let (new_input, end_loc) = position(new_input)?;
         let new_input = next(new_input);
         input = new_input;
-        term = Box::new(BinaryOp::new(term, rhs, Operator::new(op.fragment())));
+        let mut b_op = BinaryOp::new(term, rhs, Operator::new(op.fragment()));
+        b_op.set_location(SpanTuple::new(
+            input.extra,
+            start_loc.into(),
+            end_loc.into(),
+        ));
+        term = Box::new(b_op);
     }
     Ok((input, term))
 }
