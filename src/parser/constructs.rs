@@ -240,7 +240,7 @@ fn unit_loop(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>>
 }
 
 fn unit_for(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, id) = spaced_identifier(input)?;
+    let (input, (id, _)) = spaced_identifier(input)?;
     let (input, _) = Token::in_tok(input)?;
     let (input, expr) = expr(input)?;
     let (input, block) = block(input)?;
@@ -263,7 +263,7 @@ fn unit_func<'i>(
 }
 
 fn unit_incl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, path) = spaced_identifier(input)?;
+    let (input, (path, _)) = spaced_identifier(input)?;
     if let Ok((input, _)) = Token::az_tok(input) {
         let (input, alias) = preceded(nom_next, Token::identifier)(input)?;
         Ok((input, Box::new(Incl::new(path, Some(alias)))))
@@ -274,7 +274,7 @@ fn unit_incl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>>
 
 /// spaced_identifier '(' type_inst_arg (',' type_inst_arg)* ')'
 fn unit_type_decl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, name) = spaced_identifier(input)?;
+    let (input, (name, _)) = spaced_identifier(input)?;
     let (input, generics) = maybe_generic_list(input)?;
     let (input, type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
         let (input, first_arg) = typed_arg(input)?;
@@ -293,7 +293,7 @@ fn unit_type_decl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruct
 
 /// spaced_identifier '=' expr
 fn unit_mut_var(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, symbol) = spaced_identifier(input)?;
+    let (input, (symbol, _)) = spaced_identifier(input)?;
     let (input, _) = Token::equal(input)?;
     let (input, value) = expr(input)?;
 
@@ -371,7 +371,7 @@ fn maybe_generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>>
 /// function_declaration = next spaced_identifier [ next '[' spaced_identifier ( ',' spaced_identifier )* ']' ] next '(' next typed_arg next return_type
 fn func_declaration(input: ParseInput) -> ParseResult<ParseInput, FunctionDec> {
     let input = next(input);
-    let (input, id) = spaced_identifier(input)?;
+    let (input, (id, _)) = spaced_identifier(input)?;
     let input = next(input);
 
     let (input, generics) = maybe_generic_list(input)?;
@@ -391,7 +391,7 @@ fn func_declaration(input: ParseInput) -> ParseResult<ParseInput, FunctionDec> {
 fn return_type(input: ParseInput) -> ParseResult<ParseInput, Option<TypeId>> {
     match Token::arrow(input) {
         Ok((input, _)) => {
-            let (input, ty) = spaced_identifier(input)?;
+            let (input, (ty, _)) = spaced_identifier(input)?;
             Ok((input, Some(TypeId::from(ty.as_str()))))
         }
         _ => Ok((input, None)),
@@ -542,18 +542,22 @@ fn multi_type(input: ParseInput) -> ParseResult<ParseInput, String> {
 
 /// typed_arg = spaced_identifier ':' spaced_identifier
 fn typed_arg(input: ParseInput) -> ParseResult<ParseInput, DecArg> {
-    let (input, id) = spaced_identifier(input)?;
+    let (input, (id, start_loc)) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
     let (input, types) = multi_type(input)?;
     let input = next(input);
+    let (input, end_loc) = position(input)?;
 
-    Ok((input, DecArg::new(id, TypeId::new(types))))
+    let mut dec_arg = DecArg::new(id, TypeId::new(types));
+    dec_arg.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, dec_arg))
 }
 
 /// type_inst_arg = spaced_identifier ':' expr
 fn type_inst_arg(input: ParseInput) -> ParseResult<ParseInput, VarAssign> {
-    let (input, id) = spaced_identifier(input)?;
+    let (input, (id, _)) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
     let (input, value) = expr(input)?;
@@ -562,8 +566,13 @@ fn type_inst_arg(input: ParseInput) -> ParseResult<ParseInput, VarAssign> {
     Ok((input, VarAssign::new(false, id, value)))
 }
 
-fn spaced_identifier(input: ParseInput) -> ParseResult<ParseInput, String> {
-    delimited(nom_next, Token::identifier, nom_next)(input)
+fn spaced_identifier(input: ParseInput) -> ParseResult<ParseInput, (String, Location)> {
+    let input = next(input);
+    let (input, loc) = position(input)?;
+    let (input, id) = Token::identifier(input)?;
+    let input = next(input);
+
+    Ok((input, (id, loc.into())))
 }
 
 /// next = extra*

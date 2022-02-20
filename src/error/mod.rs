@@ -22,7 +22,7 @@ impl ErrorHandler {
         if let Some(first_err) = self.errors.first() {
             first_err.emit();
         }
-        self.errors.iter().for_each(|e| {
+        self.errors.iter().skip(1).for_each(|e| {
             eprintln!("----------------------------------------------------------------");
             e.emit()
         });
@@ -110,7 +110,7 @@ impl Error {
         if let Some(ctx) = before_ctx {
             ctx.emit('|', '_')
         };
-        loc.emit("x".yellow(), "-".purple());
+        loc.emit(">".red().bold(), "-".purple());
         after_ctx.emit('|', '_');
     }
 

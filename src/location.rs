@@ -150,6 +150,10 @@ impl SpanTuple {
         )
     }
 
+    fn format_free_line<T: Display>(&self, separator: &T, line: &str) -> String {
+        format!("      {} {}", separator, line)
+    }
+
     fn from_path<T1: Display, T2: Display>(
         &self,
         separator: &T1,
@@ -194,12 +198,12 @@ impl SpanTuple {
                     underline = format!("{}{}", underline, repetitor);
                 }
 
-                result.push_str(&self.format_line(&' ', i, &underline));
+                result.push_str(&self.format_free_line(&' ', &underline));
                 break;
             }
             // Four possible cases: First line, for which we need to skip
             // start.column characters
-            else if i == 0 {
+            if i == 0 {
                 result.push_str(&self.format_line(separator, i, &line[(start_col - 1)..]));
             }
             // Last line, for which we only push up to end.column characters
@@ -246,7 +250,7 @@ mod tests {
         assert_eq!(
             span.to_string(&'>', &'-'),
             r#"    1 > type Nothing;
-    1     ---"#
+          ---"#
         );
     }
 

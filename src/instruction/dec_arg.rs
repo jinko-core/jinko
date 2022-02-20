@@ -1,17 +1,22 @@
 use std::fmt::{Display, Formatter, Result};
 
-use crate::typechecker::TypeId;
+use crate::{typechecker::TypeId, SpanTuple};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {
     name: String,
     ty: TypeId,
+    location: Option<SpanTuple>,
 }
 
 impl DecArg {
     /// Create a new function declaration argument with a name and a type
     pub fn new(name: String, ty: TypeId) -> DecArg {
-        DecArg { name, ty }
+        DecArg {
+            name,
+            ty,
+            location: None,
+        }
     }
 
     /// Return a reference to the argument's name
@@ -24,9 +29,19 @@ impl DecArg {
         &self.ty
     }
 
+    /// Get a reference to the argument's location
+    pub fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
+    }
+
     /// Set the type of the argument
     pub fn set_type(&mut self, ty: TypeId) {
         self.ty = ty
+    }
+
+    /// Set the location of the argument
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
