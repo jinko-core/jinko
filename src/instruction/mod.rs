@@ -2,7 +2,7 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
-use crate::{Context, ErrKind, Error, Generic, ObjectInstance, TypeCheck};
+use crate::{Context, ErrKind, Error, Generic, ObjectInstance, SpanTuple, TypeCheck};
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};
@@ -117,6 +117,12 @@ pub trait Instruction: InstructionClone + Downcast + TypeCheck + Generic {
 
     /// Pretty-print the instruction to valid jinko code
     fn print(&self) -> String;
+
+    /// Fetch a reference to this instruction's location
+    fn location(&self) -> Option<&SpanTuple> {
+        // FIXME: Remove default implementation
+        None
+    }
 }
 
 impl_downcast!(Instruction);
