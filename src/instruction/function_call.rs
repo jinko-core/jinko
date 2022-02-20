@@ -287,11 +287,9 @@ impl TypeCheck for FunctionCall {
             );
         }
 
-        for (dec_arg, given_ty) in args_type.iter().zip(
-            self.args
-                .iter()
-                .map(|given_arg| given_arg.clone().type_of(ctx)),
-        ) {
+        for (dec_arg, given_arg) in args_type.iter().zip(self.args.iter()) {
+            // FIXME: Remove clone
+            let given_ty = given_arg.clone().type_of(ctx);
             let expected_ty = CheckedType::Resolved(dec_arg.get_type().clone());
             if expected_ty != given_ty {
                 errors.push(
@@ -300,7 +298,7 @@ impl TypeCheck for FunctionCall {
                             "invalid type used for function argument: expected `{}`, got `{}`",
                             expected_ty, given_ty
                         ))
-                        .with_loc(dec_arg.location().cloned())
+                        .with_loc(given_arg.location().cloned())
                         .with_hint(
                             Error::hint()
                                 .with_msg(String::from("argument declared here"))
