@@ -3,8 +3,8 @@
 
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::Generic;
 use crate::{log, Context, FromObjectInstance, JkBool, ObjectInstance, TypeCheck};
+use crate::{Generic, SpanTuple};
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
@@ -23,6 +23,7 @@ pub struct Loop {
     kind: LoopKind,
     block: Block,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl Loop {
@@ -31,7 +32,12 @@ impl Loop {
             kind,
             block,
             cached_type: None,
+            location: None,
         }
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -196,6 +202,10 @@ impl Instruction for Loop {
 
         // FIXME: Add logic. Right now they only return on error, not the actual value
         None
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 
