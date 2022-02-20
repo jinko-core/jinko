@@ -219,11 +219,11 @@ fn unit(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     if let Ok((input, _)) = Token::if_tok(input) {
         unit_if(input)
     } else if let Ok((input, _)) = Token::while_tok(input) {
-        unit_while(input)
+        unit_while(input, start_loc.into())
     } else if let Ok((input, _)) = Token::loop_tok(input) {
-        unit_loop(input)
+        unit_loop(input, start_loc.into())
     } else if let Ok((input, _)) = Token::for_tok(input) {
-        unit_for(input)
+        unit_for(input, start_loc.into())
     } else if let Ok((input, kind)) =
         alt((Token::func_tok, Token::test_tok, Token::mock_tok))(input)
     {
@@ -266,29 +266,45 @@ fn unit_if(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     }
 }
 
-fn unit_while(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+fn unit_while(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, (cond, block)) = pair(expr, block)(input)?;
-    Ok((input, Box::new(Loop::new(LoopKind::While(cond), block))))
+    let (input, end_loc) = position(input)?;
+    let mut while_loop = Loop::new(LoopKind::While(cond), block);
+    while_loop.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(while_loop)))
 }
 
-fn unit_loop(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+fn unit_loop(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let input = next(input);
     let (input, block) = block(input)?;
-    Ok((input, Box::new(Loop::new(LoopKind::Loop, block))))
+    let (input, end_loc) = position(input)?;
+    let mut loop_loop = Loop::new(LoopKind::Loop, block);
+    loop_loop.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(loop_loop)))
 }
 
-fn unit_for(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, (id, start_loc)) = spaced_identifier(input)?;
-    let (input, end_loc) = position(input)?;
+fn unit_for(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, (id, _)) = spaced_identifier(input)?;
     let (input, _) = Token::in_tok(input)?;
     let (input, expr) = expr(input)?;
     let (input, block) = block(input)?;
-    let mut var = Var::new(id);
-    var.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
-    Ok((
-        input,
-        Box::new(Loop::new(LoopKind::For(Box::new(var), expr), block)),
-    ))
+    let (input, end_loc) = position(input)?;
+    let var = Var::new(id);
+    let mut for_loop = Loop::new(LoopKind::For(Box::new(var), expr), block);
+    for_loop.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(for_loop)))
 }
 
 fn unit_func<'i>(
