@@ -300,7 +300,12 @@ impl TypeCheck for FunctionCall {
                             "invalid type used for function argument: expected `{}`, got `{}`",
                             expected_ty, given_ty
                         ))
-                        .with_loc(dec_arg.location().cloned()),
+                        .with_loc(dec_arg.location().cloned())
+                        .with_hint(
+                            Error::hint()
+                                .with_msg(String::from("argument declared here"))
+                                .with_loc(dec_arg.location().cloned()),
+                        ),
                 );
             }
 

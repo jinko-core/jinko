@@ -59,6 +59,7 @@ impl ErrorHandler {
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum ErrKind {
+    Hint,
     Parsing,
     Context,
     TypeChecker,
@@ -70,6 +71,7 @@ pub enum ErrKind {
 impl ErrKind {
     pub fn as_str(&self) -> &'static str {
         match self {
+            ErrKind::Hint => "Hint",
             ErrKind::Parsing => "Parsing",
             ErrKind::Context => "Interpreter",
             ErrKind::TypeChecker => "Typechecker",
@@ -85,6 +87,7 @@ pub struct Error {
     kind: ErrKind,
     msg: Option<String>,
     loc: Option<SpanTuple>,
+    hints: Vec<Error>,
 }
 
 impl Error {
@@ -114,12 +117,27 @@ impl Error {
         after_ctx.emit('|', '_');
     }
 
+    fn emit_hint(&self) {
+        if let Some(msg) = &self.msg {
+            eprintln!("{}: {}", "hint".black().on_green(), msg);
+            eprintln!();
+
+            if let Some(loc) = &self.loc {
+                loc.emit("|".green(), "^".green());
+            }
+        }
+    }
+
     pub fn emit(&self) {
         if let Some(loc) = &self.loc {
             self.emit_full_loc(loc);
         } else if let Some(msg) = &self.msg {
             eprintln!("{}", msg)
         }
+
+        eprintln!("----------------------------------------------------------------");
+
+        self.hints.iter().for_each(|hint| hint.emit_hint());
     }
 
     pub fn new(kind: ErrKind) -> Error {
@@ -127,7 +145,12 @@ impl Error {
             kind,
             msg: None,
             loc: None,
+            hints: vec![],
         }
+    }
+
+    pub fn hint() -> Error {
+        Error::new(ErrKind::Hint)
     }
 
     pub fn with_msg(self, msg: String) -> Error {
@@ -140,6 +163,17 @@ impl Error {
     // FIXME: Should this really take an Option<Location>?
     pub fn with_loc(self, loc: Option<SpanTuple>) -> Error {
         Error { loc, ..self }
+    }
+
+    // Add a hint to emit alongside the error
+    pub fn with_hint(self, hint: Error) -> Error {
+        let mut new_hints = self.hints;
+        new_hints.push(hint);
+
+        Error {
+            hints: new_hints,
+            ..self
+        }
     }
 
     pub fn exit(&self) {
