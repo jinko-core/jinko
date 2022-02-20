@@ -235,11 +235,11 @@ fn unit(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     } else if let Ok((input, _)) = Token::mut_tok(input) {
         unit_mut_var(input)
     } else if let Ok((input, _)) = Token::at_sign(input) {
-        unit_jk_inst(input)
+        unit_jk_inst(input, start_loc.into())
     } else if let Ok((input, _)) = Token::ext_tok(input) {
         unit_extern(input)
     } else if let Ok((input, _)) = Token::return_tok(input) {
-        unit_return(input)
+        unit_return(input, start_loc.into())
     } else if let Ok((input, _)) = Token::left_curly_bracket(input) {
         unit_block(input, start_loc.into())
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
@@ -363,8 +363,10 @@ fn unit_mut_var(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instructio
 }
 
 /// IDENTIFIER next '(' next args
-fn unit_jk_inst(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, start_loc) = position(input)?;
+fn unit_jk_inst(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
     let (input, _) = Token::left_parenthesis(input)?;
     let (input, args) = args(next(input))?;
@@ -372,11 +374,7 @@ fn unit_jk_inst(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instructio
 
     // A jk_inst will never contain generics
     let mut call = FunctionCall::new(name, vec![], args);
-    call.set_location(SpanTuple::new(
-        input.extra,
-        start_loc.into(),
-        end_loc.into(),
-    ));
+    call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
     match JkInst::from_function_call(&call) {
         Ok(inst) => Ok((input, Box::new(inst))),
         Err(err) => Err(NomError(err)),
@@ -393,10 +391,17 @@ fn unit_extern(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction
 }
 
 ///  [ expr ]                      (* Not LL(1) but this entry is subject to change *)
-fn unit_return(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+fn unit_return(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, expr) = opt(expr)(input)?;
+    let (input, end_loc) = position(input)?;
 
-    Ok((input, Box::new(Return::new(expr))))
+    let mut ret = Return::new(expr);
+    ret.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(ret)))
 }
 
 fn unit_block(
