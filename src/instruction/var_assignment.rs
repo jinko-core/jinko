@@ -2,8 +2,8 @@
 
 use crate::instruction::{InstrKind, Var};
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::Generic;
 use crate::{log, Context, ErrKind, Error, Instruction, ObjectInstance, TypeCheck};
+use crate::{Generic, SpanTuple};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -15,6 +15,7 @@ pub struct VarAssign {
 
     value: Box<dyn Instruction>,
     typechecked: bool,
+    location: Option<SpanTuple>,
 }
 
 impl VarAssign {
@@ -24,6 +25,7 @@ impl VarAssign {
             symbol,
             value,
             typechecked: false,
+            location: None,
         }
     }
 
@@ -45,6 +47,10 @@ impl VarAssign {
     /// Get a mutable reference to the value used to initialize the variable
     pub fn value_mut(&mut self) -> &mut dyn Instruction {
         &mut *self.value
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -84,11 +90,15 @@ impl Instruction for VarAssign {
             (false, false) => {
                 // The variable already exists. So we need to error out if it isn't
                 // mutable
-                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                    "trying to assign value to non mutable variable `{}`: `{}`",
-                    var.name(),
-                    self.value.print()
-                )));
+                ctx.error(
+                    Error::new(ErrKind::Context)
+                        .with_msg(format!(
+                            "trying to assign value to non mutable variable `{}`: `{}`",
+                            var.name(),
+                            self.value.print()
+                        ))
+                        .with_loc(self.location.clone()),
+                );
                 return None;
             }
             (true, _) | (_, true) => var.set_instance(self.value.execute_expression(ctx)?),
@@ -100,6 +110,10 @@ impl Instruction for VarAssign {
 
         // A variable assignment is always a statement
         None
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 
@@ -120,7 +134,11 @@ impl TypeCheck for VarAssign {
                         "trying to redefine already defined variable: {}",
                         self.symbol()
                     );
-                    ctx.error(Error::new(ErrKind::TypeChecker).with_msg(err_msg));
+                    ctx.error(
+                        Error::new(ErrKind::TypeChecker)
+                            .with_msg(err_msg)
+                            .with_loc(self.location.clone()),
+                    );
                     return CheckedType::Error;
                 }
 
@@ -141,19 +159,27 @@ impl TypeCheck for VarAssign {
         // FIXME: We resolve the value twice
         let value_ty = self.value.type_of(ctx);
         if value_ty == CheckedType::Void {
-            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                "trying to assign statement `{}` to variable `{}`",
-                self.value().print(),
-                self.symbol
-            )));
+            ctx.error(
+                Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "trying to assign statement `{}` to variable `{}`",
+                        self.value().print(),
+                        self.symbol
+                    ))
+                    .with_loc(self.location.clone()),
+            );
             return CheckedType::Error;
         }
 
         if var_ty != value_ty {
-            ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                "trying to assign value of types `{}` to variable of type `{}`",
-                value_ty, var_ty
-            )));
+            ctx.error(
+                Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "trying to assign value of types `{}` to variable of type `{}`",
+                        value_ty, var_ty
+                    ))
+                    .with_loc(self.location.clone()),
+            );
             return CheckedType::Error;
         }
 

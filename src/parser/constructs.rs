@@ -325,11 +325,15 @@ fn unit_type_decl(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruct
 
 /// spaced_identifier '=' expr
 fn unit_mut_var(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
-    let (input, (symbol, _)) = spaced_identifier(input)?;
+    let (input, (symbol, start_loc)) = spaced_identifier(input)?;
     let (input, _) = Token::equal(input)?;
     let (input, value) = expr(input)?;
+    let (input, end_loc) = position(input)?;
 
-    Ok((input, Box::new(VarAssign::new(true, symbol, value))))
+    let mut assignment = VarAssign::new(true, symbol, value);
+    assignment.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+
+    Ok((input, Box::new(assignment)))
 }
 
 /// IDENTIFIER next '(' next args
