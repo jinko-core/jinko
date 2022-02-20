@@ -110,7 +110,7 @@ impl Error {
         if let Some(ctx) = before_ctx {
             ctx.emit('|', '_')
         };
-        loc.emit("x".yellow(), "-".purple());
+        loc.emit(">".red().bold(), "-".purple());
         after_ctx.emit('|', '_');
     }
 
