@@ -217,7 +217,7 @@ fn method_or_field(
 fn unit(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, start_loc) = position(input)?;
     if let Ok((input, _)) = Token::if_tok(input) {
-        unit_if(input)
+        unit_if(input, start_loc.into())
     } else if let Ok((input, _)) = Token::while_tok(input) {
         unit_while(input, start_loc.into())
     } else if let Ok((input, _)) = Token::loop_tok(input) {
@@ -253,16 +253,33 @@ fn unit(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     }
 }
 
-fn unit_if(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+fn unit_if(
+    input: ParseInput,
+    start_loc: Location,
+) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, cond) = expr(input)?;
     let (input, success) = block(input)?;
     let input = next(input);
     if let Ok((input, _)) = Token::else_tok(input) {
         let input = next(input);
         let (input, else_body) = block(input)?;
-        Ok((input, Box::new(IfElse::new(cond, success, Some(else_body)))))
+        let (input, end_loc) = position(input)?;
+        let if_end_loc = if let Some(else_loc) = else_body.location() {
+            // FIXME: Remove this, ugly hack
+            Location::new(else_loc.end().line(), else_loc.end().column() - 1)
+        } else {
+            end_loc.into()
+        };
+
+        let mut if_else = IfElse::new(cond, success, Some(else_body));
+
+        if_else.set_location(SpanTuple::new(input.extra, start_loc, if_end_loc));
+        Ok((input, Box::new(if_else)))
     } else {
-        Ok((input, Box::new(IfElse::new(cond, success, None))))
+        let (input, end_loc) = position(input)?;
+        let mut if_else = IfElse::new(cond, success, None);
+        if_else.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        Ok((input, Box::new(if_else)))
     }
 }
 
