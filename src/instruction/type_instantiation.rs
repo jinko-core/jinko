@@ -4,8 +4,8 @@
 use super::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, VarAssign};
 use crate::instance::Name;
 use crate::typechecker::TypeCtx;
-use crate::Generic;
 use crate::{typechecker::CheckedType, TypeCheck, TypeId};
+use crate::{Generic, SpanTuple};
 
 use std::rc::Rc;
 
@@ -15,6 +15,7 @@ pub struct TypeInstantiation {
     generics: Vec<TypeId>,
     fields: Vec<VarAssign>,
     cached_type: Option<CheckedType>,
+    location: Option<SpanTuple>,
 }
 
 impl TypeInstantiation {
@@ -25,6 +26,7 @@ impl TypeInstantiation {
             generics: vec![],
             fields: vec![],
             cached_type: None,
+            location: None,
         }
     }
 
@@ -52,7 +54,8 @@ impl TypeInstantiation {
             None => {
                 ctx.error(
                     Error::new(ErrKind::Context)
-                        .with_msg(format!("Cannot find type {}", self.name().id())),
+                        .with_msg(format!("Cannot find type {}", self.name().id()))
+                        .with_loc(self.location.clone()),
                 );
                 None
             }
@@ -70,6 +73,7 @@ impl TypeInstantiation {
                 type_dec.fields().len(),
                 self.fields().len()
             ))),
+            // FIXME: Add hint with typedec here
         }
     }
 
@@ -87,6 +91,10 @@ impl TypeInstantiation {
 
     pub fn set_generics(&mut self, generics: Vec<TypeId>) {
         self.generics = generics
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -155,11 +163,15 @@ impl TypeCheck for TypeInstantiation {
         let (_, fields_ty) = match ctx.get_custom_type(self.type_name.id()) {
             Some(ty) => ty,
             None => {
-                ctx.error(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "use of undeclared type `{}`",
-                    // FIXME: Remove this clone, not useful
-                    CheckedType::Resolved(self.type_name.clone())
-                )));
+                ctx.error(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "use of undeclared type `{}`",
+                            // FIXME: Remove this clone, not useful
+                            CheckedType::Resolved(self.type_name.clone())
+                        ))
+                        .with_loc(self.location.clone()),
+                );
                 return CheckedType::Error;
             }
         };
@@ -167,23 +179,23 @@ impl TypeCheck for TypeInstantiation {
         let fields_ty = fields_ty.clone();
 
         let mut errors = vec![];
-        for ((_, field_ty), value_ty) in fields_ty.iter().zip(
-            self.fields
-                .iter_mut()
-                .map(|var_assign| var_assign.value_mut().type_of(ctx)),
-        ) {
+        for ((_, field_ty), var_assign) in fields_ty.iter().zip(self.fields.iter_mut()) {
+            let value_ty = var_assign.value_mut().type_of(ctx);
             if field_ty != &value_ty {
-                errors.push(Error::new(ErrKind::TypeChecker).with_msg(format!(
-                    "trying to assign value of type `{}` to field of type `{}`",
-                    value_ty, field_ty
-                )));
+                errors.push(
+                    Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "trying to assign value of type `{}` to field of type `{}`",
+                            value_ty, field_ty
+                        ))
+                        .with_loc(var_assign.location().cloned()),
+                );
+                // FIXME: Add hint for typedec argument later
             }
         }
 
         // Propagate all errors at once in the context
-        for err in errors.drain(..) {
-            ctx.error(err);
-        }
+        errors.into_iter().for_each(|err| ctx.error(err));
 
         CheckedType::Resolved(self.type_name.clone())
     }

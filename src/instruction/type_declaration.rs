@@ -3,7 +3,7 @@ use super::{DecArg, InstrKind, Instruction};
 use crate::{
     log,
     typechecker::{CheckedType, TypeCtx, TypeId},
-    Context, Generic, ObjectInstance, TypeCheck,
+    Context, Generic, ObjectInstance, SpanTuple, TypeCheck,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -12,6 +12,7 @@ pub struct TypeDec {
     generics: Vec<TypeId>,
     fields: Vec<DecArg>,
     typechecked: bool,
+    location: Option<SpanTuple>,
 }
 
 impl TypeDec {
@@ -22,6 +23,7 @@ impl TypeDec {
             generics,
             fields,
             typechecked: false,
+            location: None,
         }
     }
 
@@ -33,6 +35,10 @@ impl TypeDec {
     /// Get a reference to the type's fields
     pub fn fields(&self) -> &Vec<DecArg> {
         &self.fields
+    }
+
+    pub fn set_location(&mut self, location: SpanTuple) {
+        self.location = Some(location)
     }
 }
 
@@ -86,6 +92,10 @@ impl Instruction for TypeDec {
         }
 
         base
+    }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
     }
 }
 
@@ -146,6 +156,7 @@ impl From<String> for TypeDec {
             generics: vec![],
             fields: vec![],
             typechecked: false,
+            location: None,
         }
     }
 }
