@@ -225,6 +225,10 @@ impl Instruction for FunctionCall {
 
         ret_val
     }
+
+    fn location(&self) -> Option<&SpanTuple> {
+        self.location.as_ref()
+    }
 }
 
 impl TypeCheck for FunctionCall {
