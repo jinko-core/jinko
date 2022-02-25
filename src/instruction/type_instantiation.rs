@@ -214,7 +214,7 @@ impl Generic for TypeInstantiation {}
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::span;
+    use crate::{span, symbol::Symbol};
 
     #[test]
     fn t_fields_number() {
@@ -287,7 +287,7 @@ mod test {
 
         t.execute(&mut ctx);
 
-        let mut t_inst = TypeInstantiation::new(TypeId::new(TYPE_NAME.to_string()));
+        let mut t_inst = TypeInstantiation::new(TypeId::new(Symbol::from(TYPE_NAME.to_string())));
         t_inst.add_field(VarAssign::new(
             false,
             "a".to_string(),

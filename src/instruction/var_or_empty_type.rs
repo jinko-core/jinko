@@ -1,5 +1,6 @@
 use crate::{
     instruction::{TypeInstantiation, Var},
+    symbol::Symbol,
     CheckedType, Context, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
     TypeCtx, TypeId,
 };
@@ -60,7 +61,7 @@ impl Instruction for VarOrEmptyType {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        let symbol_type_id = TypeId::new(self.symbol.clone());
+        let symbol_type_id = TypeId::new(Symbol::from(self.symbol.clone()));
         match ctx.get_type(&symbol_type_id) {
             Some(_) => {
                 let ty_inst = TypeInstantiation::new(symbol_type_id);
@@ -88,7 +89,9 @@ impl TypeCheck for VarOrEmptyType {
 
         match kind {
             Kind::Unknown => CheckedType::Error,
-            Kind::EmptyTypeInst => CheckedType::Resolved(TypeId::new(self.symbol.clone())),
+            Kind::EmptyTypeInst => {
+                CheckedType::Resolved(TypeId::new(Symbol::from(self.symbol.clone())))
+            }
             Kind::VarAccess => ctx.get_var(&self.symbol).unwrap().to_owned(),
         }
     }

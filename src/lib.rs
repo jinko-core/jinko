@@ -12,6 +12,7 @@ pub mod instruction;
 pub mod location;
 pub mod log;
 pub mod parser;
+pub mod symbol;
 pub mod typechecker;
 mod utils;
 mod value;
