@@ -1522,4 +1522,9 @@ func void() { }"##
         assert!(expr(span!("value.call[primitive]()")).is_ok());
         assert!(expr(span!("value.call  [primitive]   ()")).is_ok());
     }
+
+    #[test]
+    fn generic_func_arg_533() {
+        assert!(expr(span!("ext func __builtin_vec_len[T](vec: Vec[T]);")).is_ok());
+    }
 }
