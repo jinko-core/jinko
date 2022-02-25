@@ -331,6 +331,7 @@ fn unit_func<'i>(
     start_loc: Location,
 ) -> ParseResult<ParseInput<'i>, Box<dyn Instruction>> {
     let (input, mut function) = func_declaration(input)?;
+    let input = next(input);
     let (input, body) = block(input)?;
     let (input, end_loc) = position(input)?;
     function.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
@@ -1630,5 +1631,10 @@ func void() { }"##
     #[test]
     fn generic_func_arg_533() {
         assert!(expr(span!("ext func __builtin_vec_len[T](vec: Vec[T]);")).is_ok());
+    }
+
+    #[test]
+    fn complex_function_declaration() {
+        assert!(expr(span!("func f_to_f[F1, F2](f1: func[F1](A) -> B, f2: func[F2](B) -> func(A) -> B, p: string) -> func[F1, F2](F1, F2, string) -> Pair[A, B] { /* todo :) */ }")).is_ok());
     }
 }
