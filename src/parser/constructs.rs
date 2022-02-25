@@ -555,13 +555,13 @@ fn func_declaration(input: ParseInput) -> ParseResult<ParseInput, FunctionDec> {
     Ok((input, function))
 }
 
-/// return_type = '->' spaced_identifier
+/// return_type = '->' type_id
 ///             | ε
 fn return_type(input: ParseInput) -> ParseResult<ParseInput, Option<TypeId>> {
     match Token::arrow(input) {
         Ok((input, _)) => {
-            let (input, (ty, _)) = spaced_identifier(input)?;
-            Ok((input, Some(TypeId::from(ty.as_str()))))
+            let (input, ty_id) = type_id(input)?;
+            Ok((input, Some(ty_id)))
         }
         _ => Ok((input, None)),
     }
@@ -1615,6 +1615,16 @@ func void() { }"##
     fn type_id_functor_return_type() {
         assert!(type_id(span!("func() -> A")).is_ok());
         assert!(type_id(span!("func[T, U, V](A, B) -> A")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_generic_return_type() {
+        assert!(type_id(span!("func[T, U, V](A, B) -> A[T]")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_functor_return_type() {
+        assert!(type_id(span!("func[T, U, V](A, B) -> func(T) -> A[T]")).is_ok());
     }
 
     #[test]
