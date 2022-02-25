@@ -209,6 +209,8 @@ impl Instruction for FunctionDec {
 
         match self.fn_kind() {
             FunctionKind::Func | FunctionKind::Ext => {
+                // FIXME: This error will have gotten caught at typechecking:
+                // We should unwrap for perf
                 if let Err(e) = ctx.add_function(self.clone()) {
                     ctx.error(e);
                 }
