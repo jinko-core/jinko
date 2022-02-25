@@ -707,16 +707,16 @@ fn typed_args(input: ParseInput) -> ParseResult<ParseInput, Vec<DecArg>> {
 }
 
 // FIXME: This should not return a String
-fn multi_type(input: ParseInput) -> ParseResult<ParseInput, String> {
+fn multi_type(input: ParseInput) -> ParseResult<ParseInput, TypeId> {
     // FIXME: Remove with #342
-    fn whitespace_plus_id(input: ParseInput) -> ParseResult<ParseInput, String> {
-        delimited(nom_next, Token::identifier, nom_next)(input)
+    fn whitespace_plus_type_id(input: ParseInput) -> ParseResult<ParseInput, TypeId> {
+        delimited(nom_next, type_id, nom_next)(input)
     }
 
     // FIXME: We want to allow generic types here later on
-    let (input, first_type) = whitespace_plus_id(input)?;
+    let (input, first_type) = whitespace_plus_type_id(input)?;
 
-    let (input, mut types) = many0(preceded(Token::pipe, whitespace_plus_id))(input)?;
+    let (input, mut types) = many0(preceded(Token::pipe, whitespace_plus_type_id))(input)?;
 
     // FIXME: Remove clone once we have a proper MultiType struct to return
     types.insert(0, first_type.clone());
@@ -733,7 +733,7 @@ fn typed_arg(input: ParseInput) -> ParseResult<ParseInput, DecArg> {
     let input = next(input);
     let (input, end_loc) = position(input)?;
 
-    let mut dec_arg = DecArg::new(id, TypeId::new(Symbol::from(types)));
+    let mut dec_arg = DecArg::new(id, types);
     dec_arg.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
 
     Ok((input, dec_arg))
