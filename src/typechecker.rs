@@ -152,11 +152,13 @@ impl TypeCtx {
 
     /// Declare a newly-created function's type
     pub fn declare_function(&mut self, name: String, function: FunctionDec) -> Result<(), Error> {
+        let loc = function.loc();
         self.types.add_function(name, function).or_else(|e| {
             if self.is_second_pass {
                 Ok(())
             } else {
-                Err(e)
+                // FIXME: Add hint here about previous declaration
+                Err(e.with_loc(loc))
             }
         })
     }
