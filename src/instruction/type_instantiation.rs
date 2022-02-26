@@ -77,18 +77,6 @@ impl TypeInstantiation {
         }
     }
 
-    /// Check if the type we're currently instantiating is a primitive type or not
-    // FIXME: Remove later, as it should not be needed once typechecking is implemented
-    fn check_primitive(&self) -> Result<(), Error> {
-        match self.type_name.is_primitive() {
-            true => Err(Error::new(ErrKind::Context).with_msg(format!(
-                "cannot instantiate primitive type `{}`",
-                self.type_name.id()
-            ))),
-            false => Ok(()),
-        }
-    }
-
     pub fn set_generics(&mut self, generics: Vec<TypeId>) {
         self.generics = generics
     }
@@ -120,11 +108,6 @@ impl Instruction for TypeInstantiation {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        if let Err(e) = self.check_primitive() {
-            ctx.error(e);
-            return None;
-        }
-
         let type_dec = self.get_declaration(ctx)?;
 
         if let Err(e) = self.check_fields_count(&type_dec) {
@@ -214,7 +197,7 @@ impl Generic for TypeInstantiation {}
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{span, symbol::Symbol};
+    use crate::{jinko_fail, span, symbol::Symbol};
 
     #[test]
     fn t_fields_number() {
@@ -340,15 +323,8 @@ mod test {
 
     #[test]
     fn t_instantiate_primitive() {
-        use crate::parser::constructs;
-
-        let mut i = Context::new();
-
-        let instr = constructs::expr(span!("i = int { no_field = 15 }"))
-            .unwrap()
-            .1;
-
-        assert!(instr.execute(&mut i).is_none());
-        assert!(i.error_handler.has_errors());
+        jinko_fail! {
+            i = int(no_fields: 15);
+        };
     }
 }
