@@ -99,11 +99,12 @@ pub trait Generic {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::symbol::Symbol;
     use crate::typechecker::TypeId;
 
     macro_rules! ty {
         ($str:literal) => {
-            TypeId::new(String::from($str))
+            TypeId::new(Symbol::from(String::from($str)))
         };
     }
 

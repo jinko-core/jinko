@@ -26,6 +26,7 @@ use crate::instruction::{
     Var, VarAssign, VarOrEmptyType,
 };
 use crate::parser::{ConstantConstruct, ParseInput, ParseResult, Token};
+use crate::symbol::Symbol;
 use crate::typechecker::TypeId;
 use crate::Error;
 use crate::{Location, SpanTuple};
@@ -330,6 +331,7 @@ fn unit_func<'i>(
     start_loc: Location,
 ) -> ParseResult<ParseInput<'i>, Box<dyn Instruction>> {
     let (input, mut function) = func_declaration(input)?;
+    let input = next(input);
     let (input, body) = block(input)?;
     let (input, end_loc) = position(input)?;
     function.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
@@ -354,6 +356,61 @@ fn unit_incl(
         let mut inclusion = Incl::new(path, None);
         inclusion.set_location(SpanTuple::new(input.extra, start_loc, end_loc));
         Ok((input, Box::new(inclusion)))
+    }
+}
+
+fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeId> {
+    fn arg_types(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
+        if let Ok((input, _)) = Token::right_parenthesis(input) {
+            return Ok((input, vec![]));
+        }
+
+        let (input, first_arg) = type_id(input)?;
+        let (input, mut args) = many0(preceded(Token::comma, type_id))(input)?;
+        let (input, _) = Token::right_parenthesis(input)?;
+
+        args.insert(0, first_arg);
+
+        Ok((input, args))
+    }
+
+    fn return_type(input: ParseInput) -> ParseResult<ParseInput, TypeId> {
+        let input = next(input);
+        let (input, _) = Token::arrow(input)?;
+        let input = next(input);
+        type_id(input)
+    }
+
+    let input = next(input);
+    if let Ok((input, _)) = Token::func_tok(input) {
+        let ty_id = TypeId::functor();
+
+        let (input, generics) = maybe_generic_list(input)?;
+        let (input, _) = Token::left_parenthesis(input)?;
+        let (input, args) = arg_types(input)?;
+        let (input, ty_id) = match opt(return_type)(input)? {
+            (input, Some(ret_ty)) => (input, ty_id.with_return_type(ret_ty)),
+            (input, None) => (input, ty_id),
+        };
+
+        let ty_id = args
+            .into_iter()
+            .fold(ty_id, |ty_id, arg| ty_id.with_arg(arg));
+        let ty_id = generics
+            .into_iter()
+            .fold(ty_id, |ty_id, arg| ty_id.with_generic(arg));
+
+        Ok((input, ty_id))
+    } else {
+        let (input, (id, _)) = spaced_identifier(input)?;
+        let ty_id = TypeId::new(Symbol::from(id));
+
+        let (input, generics) = maybe_generic_list(input)?;
+        let ty_id = generics
+            .into_iter()
+            .fold(ty_id, |ty_id, arg| ty_id.with_generic(arg));
+
+        Ok((input, ty_id))
     }
 }
 
@@ -464,7 +521,13 @@ fn generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
     let (input, _) = Token::right_bracket(input)?;
 
     generics.insert(0, first_type);
-    Ok((input, generics.into_iter().map(TypeId::new).collect()))
+    Ok((
+        input,
+        generics
+            .into_iter()
+            .map(|name| TypeId::new(Symbol::from(name)))
+            .collect(),
+    ))
 }
 
 fn maybe_generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
@@ -493,13 +556,13 @@ fn func_declaration(input: ParseInput) -> ParseResult<ParseInput, FunctionDec> {
     Ok((input, function))
 }
 
-/// return_type = '->' spaced_identifier
+/// return_type = '->' type_id
 ///             | ε
 fn return_type(input: ParseInput) -> ParseResult<ParseInput, Option<TypeId>> {
     match Token::arrow(input) {
         Ok((input, _)) => {
-            let (input, (ty, _)) = spaced_identifier(input)?;
-            Ok((input, Some(TypeId::from(ty.as_str()))))
+            let (input, ty_id) = type_id(input)?;
+            Ok((input, Some(ty_id)))
         }
         _ => Ok((input, None)),
     }
@@ -582,7 +645,7 @@ fn func_or_type_inst_args(
         let (input, _) = Token::right_parenthesis(input)?;
         let (input, end_loc) = position(input)?;
 
-        let mut type_inst = TypeInstantiation::new(TypeId::new(id));
+        let mut type_inst = TypeInstantiation::new(TypeId::new(Symbol::from(id)));
         type_inst.add_field(VarAssign::new(false, first_attr, first_attr_val));
         attrs.into_iter().for_each(|attr| type_inst.add_field(attr));
 
@@ -645,16 +708,16 @@ fn typed_args(input: ParseInput) -> ParseResult<ParseInput, Vec<DecArg>> {
 }
 
 // FIXME: This should not return a String
-fn multi_type(input: ParseInput) -> ParseResult<ParseInput, String> {
+fn multi_type(input: ParseInput) -> ParseResult<ParseInput, TypeId> {
     // FIXME: Remove with #342
-    fn whitespace_plus_id(input: ParseInput) -> ParseResult<ParseInput, String> {
-        delimited(nom_next, Token::identifier, nom_next)(input)
+    fn whitespace_plus_type_id(input: ParseInput) -> ParseResult<ParseInput, TypeId> {
+        delimited(nom_next, type_id, nom_next)(input)
     }
 
     // FIXME: We want to allow generic types here later on
-    let (input, first_type) = whitespace_plus_id(input)?;
+    let (input, first_type) = whitespace_plus_type_id(input)?;
 
-    let (input, mut types) = many0(preceded(Token::pipe, whitespace_plus_id))(input)?;
+    let (input, mut types) = many0(preceded(Token::pipe, whitespace_plus_type_id))(input)?;
 
     // FIXME: Remove clone once we have a proper MultiType struct to return
     types.insert(0, first_type.clone());
@@ -671,7 +734,7 @@ fn typed_arg(input: ParseInput) -> ParseResult<ParseInput, DecArg> {
     let input = next(input);
     let (input, end_loc) = position(input)?;
 
-    let mut dec_arg = DecArg::new(id, TypeId::new(types));
+    let mut dec_arg = DecArg::new(id, types);
     dec_arg.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
 
     Ok((input, dec_arg))
@@ -1521,5 +1584,57 @@ func void() { }"##
         assert!(expr(span!("call[W, Y, Z]().call[T, U, V](arg0, arg1)")).is_ok());
         assert!(expr(span!("value.call[primitive]()")).is_ok());
         assert!(expr(span!("value.call  [primitive]   ()")).is_ok());
+    }
+
+    #[test]
+    fn type_id_simple() {
+        assert!(type_id(span!("int")).is_ok());
+        assert!(type_id(span!("Custom")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_without_args() {
+        assert!(type_id(span!("func")).is_err());
+    }
+
+    #[test]
+    fn type_id_generic() {
+        assert!(type_id(span!("Vec[T]")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor() {
+        assert!(type_id(span!("func(int, string)")).is_ok());
+    }
+
+    #[test]
+    fn type_id_generic_functor() {
+        assert!(type_id(span!("func[T, U, V](int, string)")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_return_type() {
+        assert!(type_id(span!("func() -> A")).is_ok());
+        assert!(type_id(span!("func[T, U, V](A, B) -> A")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_generic_return_type() {
+        assert!(type_id(span!("func[T, U, V](A, B) -> A[T]")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_functor_return_type() {
+        assert!(type_id(span!("func[T, U, V](A, B) -> func(T) -> A[T]")).is_ok());
+    }
+
+    #[test]
+    fn generic_func_arg_533() {
+        assert!(expr(span!("ext func __builtin_vec_len[T](vec: Vec[T]);")).is_ok());
+    }
+
+    #[test]
+    fn complex_function_declaration() {
+        assert!(expr(span!("func f_to_f[F1, F2](f1: func[F1](A) -> B, f2: func[F2](B) -> func(A) -> B, p: string) -> func[F1, F2](F1, F2, string) -> Pair[A, B] { /* todo :) */ }")).is_ok());
     }
 }
