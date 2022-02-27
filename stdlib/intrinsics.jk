@@ -1,5 +1,5 @@
 /* built-in interpreter directives */
 
-ext func size_of[T](value: T);
+ext func size_of[T](value: T) -> int;
 ext func type_of[T](value: T) -> string;
 ext func deinitialize[T](value: T);
