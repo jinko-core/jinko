@@ -196,8 +196,8 @@ fn method_or_field(
 ///      | 'test' function_declaration block
 ///      | 'mock' function_declaration block
 ///
-///      | 'type' spaced_identifier '(' named_args
-///      | '_ncl' spaced_identifier [ 'as' next IDENTIFIER ]
+///      | 'type' type_id '(' named_args
+///      | 'incl' spaced_identifier [ 'as' next IDENTIFIER ]
 ///      | 'mut' spaced_identifier '=' expr (* mutable variable assigment *)
 ///      | '@' spaced_identifier '(' args
 ///
@@ -414,11 +414,12 @@ fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeId> {
     }
 }
 
-/// spaced_identifier '(' type_inst_arg (',' type_inst_arg)* ')'
+/// type_id '(' type_inst_arg (',' type_inst_arg)* ')'
 fn unit_type_decl(
     input: ParseInput,
     start_loc: Location,
 ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    // FIXME: This needs to use TypeIds
     let (input, (name, _)) = spaced_identifier(input)?;
     let (input, generics) = maybe_generic_list(input)?;
     let (input, mut type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
@@ -508,26 +509,20 @@ fn unit_block(
 
 // FIXME: This does not parse default generic types yet (`func f<T = int>()`)
 fn generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
-    fn whitespace_plus_id(input: ParseInput) -> ParseResult<ParseInput, String> {
+    fn whitespace_plus_type_id(input: ParseInput) -> ParseResult<ParseInput, TypeId> {
         let input = next(input);
-        let (input, id) = Token::identifier(input)?;
+        let (input, id) = type_id(input)?;
         let input = next(input);
 
         Ok((input, id))
     }
 
-    let (input, first_type) = whitespace_plus_id(input)?;
-    let (input, mut generics) = many0(preceded(Token::comma, whitespace_plus_id))(input)?;
+    let (input, first_type) = whitespace_plus_type_id(input)?;
+    let (input, mut generics) = many0(preceded(Token::comma, whitespace_plus_type_id))(input)?;
     let (input, _) = Token::right_bracket(input)?;
 
     generics.insert(0, first_type);
-    Ok((
-        input,
-        generics
-            .into_iter()
-            .map(|name| TypeId::new(Symbol::from(name)))
-            .collect(),
-    ))
+    Ok((input, generics))
 }
 
 fn maybe_generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
@@ -1636,5 +1631,10 @@ func void() { }"##
     #[test]
     fn complex_function_declaration() {
         assert!(expr(span!("func f_to_f[F1, F2](f1: func[F1](A) -> B, f2: func[F2](B) -> func(A) -> B, p: string) -> func[F1, F2](F1, F2, string) -> Pair[A, B] { /* todo :) */ }")).is_ok());
+    }
+
+    #[test]
+    fn nested_generic_type() {
+        assert!(expr(span!("a = Pair[Pair[int], int](a: 15, b: 14)")).is_ok());
     }
 }
