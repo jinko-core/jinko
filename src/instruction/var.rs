@@ -104,6 +104,10 @@ impl Instruction for Var {
 }
 
 impl TypeCheck for Var {
+    fn type_log(&self) -> String {
+        self.name.to_string()
+    }
+
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         match ctx.get_var(self.name()) {
             Some(var_ty) => var_ty.clone(),

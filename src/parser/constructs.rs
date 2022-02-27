@@ -665,6 +665,7 @@ fn generic_func_or_type_inst_args(
 ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     // FIXME: Assign generics to FunctionCall and TypeInstantiation
     let (input, generics) = generic_list(input)?;
+    let input = next(input);
     let (input, _) = Token::left_parenthesis(input)?;
 
     func_or_type_inst_args(next(input), id, generics, start_loc)
@@ -1636,5 +1637,11 @@ func void() { }"##
     #[test]
     fn nested_generic_type() {
         assert!(expr(span!("a = Pair[Pair[int], int](a: 15, b: 14)")).is_ok());
+    }
+
+    #[test]
+    fn assign_call_to_generic_fn() {
+        assert!(expr(span!("int_size = size_of[int](15)")).is_ok());
+        assert!(expr(span!("int_size = size_of [int] (15)")).is_ok());
     }
 }

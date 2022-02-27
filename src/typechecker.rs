@@ -8,7 +8,7 @@ pub use type_id::{TypeId, PRIMITIVE_TYPES};
 use crate::{
     error::ErrorHandler,
     instruction::{FunctionDec, TypeDec},
-    Error, ScopeMap,
+    log, Error, ScopeMap,
 };
 use colored::Colorize;
 use std::{
@@ -254,25 +254,37 @@ pub trait TypeCheck {
     /// Access the cached type of an instruction
     fn cached_type(&self) -> Option<&CheckedType>;
 
+    fn type_log(&self) -> String {
+        String::new()
+    }
+
     /// Access the cached type of an instruction or perform the type resolution process.
     /// This avoid typechecking an entire instruction a second time and allows the
     /// context to just access it. This is useful for passes such as generic expansion.
     fn type_of(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        log!("type_of value {}", self.type_log());
+
         // FIXME: Remove clones
         match self.cached_type() {
-            None => match self.resolve_type(ctx) {
-                CheckedType::Resolved(new_ty) => {
-                    self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
-                    CheckedType::Resolved(new_ty)
+            None => {
+                log!("no cached type");
+                match self.resolve_type(ctx) {
+                    CheckedType::Resolved(new_ty) => {
+                        self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
+                        CheckedType::Resolved(new_ty)
+                    }
+                    CheckedType::Void => {
+                        self.set_cached_type(CheckedType::Void);
+                        CheckedType::Void
+                    }
+                    CheckedType::Error => CheckedType::Error,
+                    CheckedType::Later => CheckedType::Later,
                 }
-                CheckedType::Void => {
-                    self.set_cached_type(CheckedType::Void);
-                    CheckedType::Void
-                }
-                CheckedType::Error => CheckedType::Error,
-                CheckedType::Later => CheckedType::Later,
-            },
-            Some(ty) => ty.clone(),
+            }
+            Some(ty) => {
+                log!("cached type!: {}", ty);
+                ty.clone()
+            }
         }
     }
 }

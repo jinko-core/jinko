@@ -197,7 +197,7 @@ impl Generic for TypeInstantiation {}
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{jinko_fail, span, symbol::Symbol};
+    use crate::{jinko_fail, symbol::Symbol};
 
     #[test]
     fn t_fields_number() {
