@@ -20,7 +20,7 @@
 use crate::{
     log,
     typechecker::{CheckedType, TypeCtx},
-    Context, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
+    Context, Error, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
 };
 
 #[derive(Clone, Default)]
@@ -132,28 +132,16 @@ impl Instruction for Block {
 
 impl TypeCheck for Block {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        // FIXME: Refactor this iterator. Ugly
-        let mut ret_ty = None;
         let last_type = self
             .instructions
             .iter_mut()
             .map(|inst| inst.type_of(ctx))
-            .map(|ty| {
-                if ty == CheckedType::Later {
-                    ret_ty = Some(CheckedType::Later)
-                }
-
-                ty
-            })
             .last()
             .unwrap_or(CheckedType::Void);
 
-        match ret_ty {
-            Some(early_return_ty) => early_return_ty,
-            None => match &self.is_statement {
-                true => CheckedType::Void,
-                false => last_type,
-            },
+        match &self.is_statement {
+            true => CheckedType::Void,
+            false => last_type,
         }
     }
 
@@ -167,8 +155,14 @@ impl TypeCheck for Block {
 }
 
 impl Generic for Block {
-    fn expand(&self, ctx: &mut Context) {
-        self.instructions.iter().for_each(|inst| inst.expand(ctx))
+    fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
+        self.instructions.iter().for_each(|inst| {
+            if let Err(e) = inst.expand(ctx) {
+                ctx.error(e)
+            }
+        });
+
+        Ok(())
     }
 
     fn resolve_self(&mut self, ctx: &mut TypeCtx) {

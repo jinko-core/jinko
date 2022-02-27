@@ -88,12 +88,14 @@ pub trait Generic {
     /// Expand all generics contained in the current instruction, or its sub-instructions.
     /// For example, a [`Block`] is responsible for expanding the generics of all the
     /// functions defined within itself.
-    fn expand(&self, _ctx: &mut Context) {}
+    fn expand(&self, _ctx: &mut Context) -> Result<(), Error> {
+        Ok(())
+    }
 
     /// Mutate an instruction in order to resolve to the proper, expanded generic instruction.
     /// For example, a call to the function `f[T]` should now be replaced by a call to
     /// the function `generics::mangle("f", GenericMap { TypeId "T" })` // FIXME: Fix doc
-    fn resolve_self(&mut self, _ctx: &mut TypeCtx) {}
+    fn resolve_self(&mut self, _ctx: &mut Context) {}
 }
 
 #[cfg(test)]

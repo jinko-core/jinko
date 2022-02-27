@@ -119,21 +119,19 @@ impl Instruction for VarAssign {
 
 impl TypeCheck for VarAssign {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        let second_pass = ctx.is_second_pass();
         let var_ty = match ctx.get_var(&self.symbol) {
             // FIXME: Remove clone?
             Some(checked_ty) => {
                 // If `self` is mutable, then it means that we are creating the variable
                 // for the first time. However, we entered the match arm because the variable
                 // is already present in the context. Error out appropriately.
-                // In the second pass of the typechecker however, this is an appropriate
-                // behavior... Which is a bit annoying to handle.
-                // TODO: Think about removing the call to `is_second_pass()`
-                if self.mutable() && !second_pass {
+                if self.mutable() {
                     let err_msg = format!(
                         "trying to redefine already defined variable: {}",
                         self.symbol()
                     );
+
+                    // FIXME: Add hint here about previous definition
                     ctx.error(
                         Error::new(ErrKind::TypeChecker)
                             .with_msg(err_msg)
@@ -199,7 +197,7 @@ impl TypeCheck for VarAssign {
 }
 
 impl Generic for VarAssign {
-    fn expand(&self, ctx: &mut Context) {
+    fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
         self.value.expand(ctx)
     }
 

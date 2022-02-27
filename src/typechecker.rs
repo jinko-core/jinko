@@ -19,9 +19,10 @@ use std::{
 #[derive(Clone, PartialEq, Debug)]
 pub enum CheckedType {
     Resolved(TypeId),
+    // Should we remove this for Resolved(TypeId::void())?
     Void,
-    Later,
     Error,
+    Later,
 }
 
 impl Default for CheckedType {
@@ -35,8 +36,9 @@ impl Display for CheckedType {
         match self {
             CheckedType::Resolved(ty) => write!(f, "{}", ty),
             CheckedType::Void => write!(f, "{}", "void".purple()),
-            CheckedType::Later => write!(f, "{}", "!!unresolved yet!!".yellow()),
             CheckedType::Error => write!(f, "{}", "!!unknown!!".red()),
+            // This should never happen
+            CheckedType::Later => write!(f, "{}", "!!unresolved!!".red().underline()),
         }
     }
 }
@@ -61,13 +63,6 @@ pub struct TypeCtx {
     /// For functions, we keep a vector of argument types as well as the return type.
     /// Custom types need to keep a type for themselves, as well as types for all their fields
     types: ScopeMap<CheckedType, FunctionDec, CustomTypeType>,
-    /// Is the type context executing its second pass or not. The second pass of the typechecking
-    /// process is to resolve generic calls and make sure that the functions called on the
-    /// expanded types are actually present. Plus, this also allows us to call/instantiate
-    /// functions/types defined after the call/instantiation.
-    /// At this stage, we do not emit "already defined" errors, as they will all have been
-    /// emitted by the first pass already.
-    is_second_pass: bool,
     // FIXME: Remove both of these fields...
     /// Path from which the typechecking context was instantiated
     path: Option<PathBuf>,
@@ -81,7 +76,6 @@ impl TypeCtx {
         let mut ctx = TypeCtx {
             error_handler: ErrorHandler::default(),
             types: ScopeMap::new(),
-            is_second_pass: false,
             path: None,
             included: HashSet::new(),
         };
@@ -106,14 +100,6 @@ impl TypeCtx {
         declare_primitive!(string);
 
         ctx
-    }
-
-    pub fn start_second_pass(&mut self) {
-        self.is_second_pass = true
-    }
-
-    pub fn is_second_pass(&self) -> bool {
-        self.is_second_pass
     }
 
     // FIXME: Remove these three functions
@@ -145,22 +131,24 @@ impl TypeCtx {
 
     /// Declare a newly-created variable's type
     pub fn declare_var(&mut self, name: String, ty: CheckedType) -> Result<(), Error> {
-        self.types
-            .add_variable(name, ty)
-            .or_else(|e| if self.is_second_pass { Ok(()) } else { Err(e) })
+        // FIXME: Add hint here too
+        self.types.add_variable(name, ty)
     }
 
     /// Declare a newly-created function's type
     pub fn declare_function(&mut self, name: String, function: FunctionDec) -> Result<(), Error> {
-        let loc = function.loc();
-        self.types.add_function(name, function).or_else(|e| {
-            if self.is_second_pass {
-                Ok(())
-            } else {
-                // FIXME: Add hint here about previous declaration
-                Err(e.with_loc(loc))
+        // FIXME: Remove clone here
+        match self.types.add_function(name.clone(), function) {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                let previous_dec = self.types.get_function(&name).unwrap();
+                Err(err.with_hint(
+                    Error::new(crate::ErrKind::Hint)
+                        .with_msg(String::from("previous declaration here"))
+                        .with_loc(previous_dec.loc()),
+                ))
             }
-        })
+        }
     }
 
     /// Declare a newly-created custom type
@@ -172,7 +160,7 @@ impl TypeCtx {
     ) -> Result<(), Error> {
         self.types
             .add_type(name, CustomTypeType { self_ty, fields_ty })
-            .or_else(|e| if self.is_second_pass { Ok(()) } else { Err(e) })
+        // FIXME: Add hint here too
     }
 
     /// Access a previously declared variable's type
@@ -248,11 +236,8 @@ pub trait TypeCheck {
                     self.set_cached_type(CheckedType::Void);
                     CheckedType::Void
                 }
-                CheckedType::Later => match ctx.is_second_pass() {
-                    false => CheckedType::Later,
-                    true => CheckedType::Error,
-                },
                 CheckedType::Error => CheckedType::Error,
+                CheckedType::Later => CheckedType::Later,
             },
             Some(ty) => ty.clone(),
         }

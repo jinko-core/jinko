@@ -89,8 +89,7 @@ impl TypeCheck for FieldAccess {
         let instance_ty = self.instance.type_of(ctx);
         let instance_ty_name = match &instance_ty {
             CheckedType::Resolved(ti) => ti.id(),
-            CheckedType::Later => return CheckedType::Later,
-            _ => {
+            CheckedType::Void => {
                 ctx.error(
                     Error::new(ErrKind::TypeChecker)
                         .with_msg(format!(
@@ -101,6 +100,7 @@ impl TypeCheck for FieldAccess {
                 );
                 return CheckedType::Error;
             }
+            _ => return CheckedType::Error,
         };
 
         // We can unwrap here since the type that was resolved from the instance HAS
@@ -136,7 +136,7 @@ impl TypeCheck for FieldAccess {
 }
 
 impl Generic for FieldAccess {
-    fn expand(&self, ctx: &mut Context) {
+    fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
         self.instance.expand(ctx)
     }
 

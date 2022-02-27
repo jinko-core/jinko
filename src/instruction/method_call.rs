@@ -4,7 +4,7 @@
 use crate::generics::{self, Generic};
 use crate::instruction::FunctionCall;
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{log, Context, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck};
+use crate::{log, Context, Error, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -84,7 +84,7 @@ impl TypeCheck for MethodCall {
 }
 
 impl Generic for MethodCall {
-    fn expand(&self, ctx: &mut Context) {
+    fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
         let mut call = self.method.clone();
         call.add_arg_front(self.var.clone());
         if let Some(loc) = &self.location {

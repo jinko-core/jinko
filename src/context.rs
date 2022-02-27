@@ -298,17 +298,20 @@ impl Context {
     fn inner_check(&mut self, ep: &mut Block) -> Result<(), Error> {
         self.scope_enter();
 
+        let mut is_err = false;
+
         ep.type_of(&mut self.typechecker);
-        ep.expand(self);
+        if ep.expand(self).is_err() {
+            is_err = true;
+        }
+
         ep.resolve_self(&mut self.typechecker);
-        self.typechecker.start_second_pass();
-        ep.type_of(&mut self.typechecker);
 
         self.error_handler
             .append(&mut self.typechecker.error_handler);
         self.emit_errors();
 
-        match self.error_handler.has_errors() {
+        match self.error_handler.has_errors() || is_err {
             true => Err(Error::new(ErrKind::Context)),
             false => Ok(()),
         }

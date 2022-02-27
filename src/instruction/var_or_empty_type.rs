@@ -100,8 +100,7 @@ impl TypeCheck for VarOrEmptyType {
         match ty {
             CheckedType::Void => self.kind = Kind::VarAccess,
             CheckedType::Resolved(_) => self.kind = Kind::EmptyTypeInst,
-            // FIXME: Is Later truly an error here?
-            CheckedType::Later | CheckedType::Error => self.kind = Kind::Unknown,
+            CheckedType::Error | CheckedType::Later => self.kind = Kind::Unknown,
         }
         self.cached_type = Some(ty);
     }

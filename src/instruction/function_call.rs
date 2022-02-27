@@ -240,9 +240,10 @@ impl TypeCheck for FunctionCall {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         log!("typechecking call to {}", self.fn_name);
 
-        if !self.generics.is_empty() && !ctx.is_second_pass() {
-            return CheckedType::Later;
-        }
+        // FIXME: Expand generic here instead of resolving later
+        // if !self.generics.is_empty() && !ctx.is_second_pass() {
+        //     return CheckedType::Later;
+        // }
 
         // FIXME: This function is very large and should be refactored
         let function = match ctx.get_function(self.name()) {
@@ -261,8 +262,9 @@ impl TypeCheck for FunctionCall {
             }
         };
 
-        // If the declaration contains generics but not the call, typecheck later still
-        if !function.generics().is_empty() && !ctx.is_second_pass() {
+        if !function.generics().is_empty() || !self.generics.is_empty() {
+            // If there are generics, do not type check the call: We will do
+            // this during the generic expansion pass.
             return CheckedType::Later;
         }
 
@@ -326,71 +328,75 @@ impl TypeCheck for FunctionCall {
 }
 
 impl Generic for FunctionCall {
-    fn expand(&self, ctx: &mut Context) {
+    fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
         let generic_name = generics::mangle(&self.fn_name, &self.generics);
-        let dec = ctx.typechecker.get_function(&generic_name);
+        log!(
+            "expanding function call for {} to {}",
+            self.fn_name,
+            &generic_name
+        );
 
-        // FIXME: This is a little weird
-        if self.generics.is_empty() && dec.map_or(false, |f| f.generics().is_empty()) {
-            return;
+        // If we can't get a declaration at this point, this is an error! It
+        // should have been caught during typechecking so we can just return
+        let dec = match ctx.typechecker.get_function(&generic_name) {
+            Some(dec) => dec.clone(),
+            None => return Err(Error::new(ErrKind::Generics)),
+        };
+
+        if self.generics.is_empty() && dec.generics().is_empty() {
+            return Ok(());
         }
 
-        if dec.is_none() {
-            // We can return here since this is a typechecking error and should have been
-            // caught already in an earlier pass
-            let dec = match ctx.typechecker.get_function(&self.fn_name) {
-                Some(dec) => dec.clone(),
-                None => return,
-            };
+        if !self.generics.is_empty() && dec.generics().is_empty() {
+            // FIXME: Format generic list in error too
+            ctx.error(
+                Error::new(ErrKind::Generics)
+                    .with_msg(format!(
+                        "calling non-generic function with generic arguments: `{}`",
+                        self.name()
+                    ))
+                    .with_loc(self.location.clone()),
+            );
+            return Err(Error::new(ErrKind::Generics));
+        }
 
-            if !self.generics.is_empty() && dec.generics().is_empty() {
-                // FIXME: Format generic list in error too
-                ctx.error(
-                    Error::new(ErrKind::Generics)
-                        .with_msg(format!(
-                            "calling non-generic function with generic arguments: `{}`",
-                            self.name()
-                        ))
-                        .with_loc(self.location.clone()),
-                );
-                return;
-            }
-
-            let type_map =
-                match GenericMap::create(dec.generics(), &self.generics, &mut ctx.typechecker) {
-                    Err(e) => {
-                        ctx.error(e);
-                        return;
-                    }
-                    Ok(m) => m,
-                };
-
-            log!("generic_name: {}", &generic_name);
-
-            let mut new_fn = match dec.from_type_map(generic_name, &type_map, ctx) {
-                Ok(f) => f,
+        let type_map =
+            match GenericMap::create(dec.generics(), &self.generics, &mut ctx.typechecker) {
                 Err(e) => {
                     ctx.error(e);
-                    return;
+                    return Err(Error::new(ErrKind::Generics));
                 }
+                Ok(m) => m,
             };
 
-            if let Err(e) = ctx.type_check(&mut new_fn) {
-                // FIXME: This should probably be a generic error instead
-                // FIXME: The name is also mangled and shouldn't be
-                ctx.error(e);
-            } else {
-                ctx.add_function(new_fn).unwrap();
+        let mut new_fn = match dec.from_type_map(generic_name, &type_map, ctx) {
+            Ok(f) => f,
+            Err(e) => {
+                ctx.error(e.clone());
+                return Err(e);
             }
+        };
+
+        if let Err(e) = ctx.type_check(&mut new_fn) {
+            // FIXME: This should probably be a generic error instead
+            // FIXME: The name is also mangled and shouldn't be
+            ctx.error(e);
+        } else {
+            ctx.add_function(new_fn).unwrap();
         }
+
+        Ok(())
     }
 
-    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+    fn resolve_self(&mut self, ctx: &mut Context) {
         let generic_name = generics::mangle(&self.fn_name, &self.generics);
-        let dec = ctx.get_function(&generic_name);
+        log!("resolving call from {} to {}", self.fn_name, &generic_name);
+
+        // FIXME: Should we unwrap here?
+        let dec = ctx.get_function(&generic_name).unwrap().clone();
 
         // FIXME: This is a little weird
-        if self.generics.is_empty() && dec.map_or(false, |f| f.generics().is_empty()) {
+        if self.generics.is_empty() && dec.generics().is_empty() {
             return;
         }
 
@@ -412,7 +418,10 @@ impl Generic for FunctionCall {
 
         self.fn_name = generic_name;
         self.generics = vec![];
-        self.cached_type = None;
+        match dec.ty() {
+            Some(ty) => self.set_cached_type(CheckedType::Resolved(ty.clone())),
+            None => self.set_cached_type(CheckedType::Void),
+        }
     }
 }
 
