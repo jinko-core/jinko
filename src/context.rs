@@ -50,7 +50,7 @@ pub struct Context {
     args: Vec<String>,
 
     /// Contains the scopes of the context, in which are variables and functions
-    scope_map: ScopeMap<Var, Rc<FunctionDec>, Rc<TypeDec>>,
+    scope_map: ScopeMap,
 
     /// Contains the functions shipping with the interpreter
     builtins: Builtins,
@@ -397,7 +397,7 @@ impl Context {
 }
 
 /// Printer for the context's usage of the ScopeMap
-impl<V: Instruction, F: Instruction, T: Instruction> Display for ScopeMap<V, Rc<F>, Rc<T>> {
+impl Display for ScopeMap {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         for stack in self.scopes() {
             writeln!(f, "{}", stack)?;
@@ -407,7 +407,7 @@ impl<V: Instruction, F: Instruction, T: Instruction> Display for ScopeMap<V, Rc<
     }
 }
 
-impl<V: Instruction, F: Instruction, T: Instruction> Display for Scope<V, Rc<F>, Rc<T>> {
+impl Display for Scope {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         for ty in self.types.values() {
             writeln!(f, "{}", ty.print())?;

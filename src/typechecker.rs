@@ -60,7 +60,7 @@ pub struct TypeCtx {
     /// map: Variables, Functions and Types.
     /// For functions, we keep a vector of argument types as well as the return type.
     /// Custom types need to keep a type for themselves, as well as types for all their fields
-    types: ScopeMap<CheckedType, FunctionDec, CustomTypeType>,
+    types: ScopeMap,
     /// Is the type context executing its second pass or not. The second pass of the typechecking
     /// process is to resolve generic calls and make sure that the functions called on the
     /// expanded types are actually present. Plus, this also allows us to call/instantiate

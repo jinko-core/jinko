@@ -1,11 +1,12 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use crate::canonicalize::Canonicalize;
 use crate::generics::GenericMap;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction};
 use crate::typechecker::{CheckedType, TypeCtx, TypeId};
-use crate::Generic;
 use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
+use crate::{Generic, ScopeMap};
 use crate::{Location, SpanTuple};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
@@ -410,6 +411,22 @@ impl From<&str> for FunctionKind {
             "ext" => FunctionKind::Ext,
             _ => FunctionKind::Unknown,
         }
+    }
+}
+
+impl Canonicalize for FunctionDec {
+    fn set_name(&mut self, name: String) {
+        self.name = name
+    }
+
+    fn current_name(&self) -> &str {
+        self.name()
+    }
+
+    fn build_scope_map(&self, scope_map: ScopeMap, current_path: &str) -> ScopeMap {
+        scope_map.add_function(self.canonicalize(current_path));
+
+        scope_map
     }
 }
 

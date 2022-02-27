@@ -1,6 +1,7 @@
 // FIXME: Make crate attribute `#![warn(missing_docs)]`
 
 pub mod builtins;
+pub mod canonicalize;
 mod context;
 mod error;
 #[cfg(feature = "ffi")]

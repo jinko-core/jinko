@@ -4,41 +4,42 @@
 //! scope. If the specified name cannot be found, it searches the other scopes, defined
 //! before the current one, until it finds the correct component.
 
-use std::collections::{HashMap, LinkedList};
-
+use crate::instruction::{FunctionDec, TypeDec, Var};
 use crate::{ErrKind, Error};
+
+use std::collections::{HashMap, LinkedList};
 
 /// A scope contains a set of available variables, functions and types
 #[derive(Clone)]
-pub struct Scope<V, F, T> {
-    pub(crate) variables: HashMap<String, V>,
-    pub(crate) functions: HashMap<String, F>,
-    pub(crate) types: HashMap<String, T>,
+pub struct Scope {
+    pub(crate) variables: HashMap<String, Var>,
+    pub(crate) functions: HashMap<String, FunctionDec>,
+    pub(crate) types: HashMap<String, TypeDec>,
 }
 
-impl<V, F, T> Scope<V, F, T> {
+impl Scope {
     /// Get a reference on a variable from the scope map if is has been inserted already
-    pub fn get_variable(&self, name: &str) -> Option<&V> {
+    pub fn get_variable(&self, name: &str) -> Option<&Var> {
         self.variables.get(name)
     }
 
     /// Get a mutable reference on a variable from the scope map if it has been inserted already
-    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut V> {
+    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut Var> {
         self.variables.get_mut(name)
     }
 
     /// Get a reference on a function from the scope map if is has been inserted already
-    pub fn get_function(&self, name: &str) -> Option<&F> {
+    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
         self.functions.get(name)
     }
 
     /// Get a reference on a type from the scope map if is has been inserted already
-    pub fn get_type(&self, name: &str) -> Option<&T> {
+    pub fn get_type(&self, name: &str) -> Option<&TypeDec> {
         self.types.get(name)
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
+    pub fn add_variable(&mut self, name: String, var: Var) -> Result<(), Error> {
         match self.get_variable(&name) {
             Some(_) => Err(Error::new(ErrKind::Context)
                 .with_msg(format!("variable already declared: {}", name))),
@@ -64,7 +65,7 @@ impl<V, F, T> Scope<V, F, T> {
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
+    pub fn add_function(&mut self, name: String, func: FunctionDec) -> Result<(), Error> {
         match self.get_function(&name) {
             Some(_) => Err(Error::new(ErrKind::Context)
                 .with_msg(format!("function already declared: {}", name))),
@@ -76,7 +77,7 @@ impl<V, F, T> Scope<V, F, T> {
     }
 
     /// Add a type to the most recently created scope, if it doesn't already exist
-    pub fn add_type(&mut self, name: String, type_dec: T) -> Result<(), Error> {
+    pub fn add_type(self, name: String, type_dec: TypeDec) -> Result<(), Error> {
         match self.get_type(&name) {
             Some(_) => {
                 Err(Error::new(ErrKind::Context)
@@ -90,9 +91,9 @@ impl<V, F, T> Scope<V, F, T> {
     }
 }
 
-impl<V, F, T> Default for Scope<V, F, T> {
-    /// Create a new empty Scope
-    fn default() -> Scope<V, F, T> {
+impl Default for Scope {
+    /// Create a new empty [`ScopeMap`]
+    fn default() -> Scope {
         Scope {
             variables: HashMap::new(),
             functions: HashMap::new(),
@@ -107,20 +108,20 @@ pub type ScopeStack<T> = LinkedList<T>;
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
 #[derive(Clone, Default)]
-pub struct ScopeMap<V, F, T> {
-    scopes: ScopeStack<Scope<V, F, T>>,
+pub struct ScopeMap {
+    scopes: ScopeStack<Scope>,
 }
 
-impl<V, F, T> ScopeMap<V, F, T> {
+impl ScopeMap {
     /// Create a new empty scope map, at depth 0
-    pub fn new() -> ScopeMap<V, F, T> {
+    pub fn new() -> ScopeMap {
         ScopeMap {
             scopes: ScopeStack::new(),
         }
     }
 
     /// Get a reference on the scopes inside a ScopeMap
-    pub fn scopes(&self) -> &ScopeStack<Scope<V, F, T>> {
+    pub fn scopes(&self) -> &ScopeStack<Scope> {
         &self.scopes
     }
 
@@ -137,7 +138,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Maybe get a variable in any available scopes
-    pub fn get_variable(&self, name: &str) -> Option<&V> {
+    pub fn get_variable(&self, name: &str) -> Option<&Var> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_variable(name) {
@@ -149,7 +150,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
         None
     }
 
-    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut V> {
+    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut Var> {
         for scope in self.scopes.iter_mut() {
             match scope.get_variable_mut(name) {
                 Some(v) => return Some(v),
@@ -161,7 +162,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Maybe get a function in any available scopes
-    pub fn get_function(&self, name: &str) -> Option<&F> {
+    pub fn get_function(&self, name: &str) -> Option<&FunctionDec> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_function(name) {
@@ -174,7 +175,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Maybe get a type in any available scopes
-    pub fn get_type(&self, name: &str) -> Option<&T> {
+    pub fn get_type(&self, name: &str) -> Option<&TypeDec> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
             match scope.get_type(name) {
@@ -187,7 +188,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Add a variable to the current scope if it hasn't been added before
-    pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
+    pub fn add_variable(&mut self, name: String, var: Var) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(name, var),
             None => Err(Error::new(ErrKind::Context)
@@ -205,7 +206,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Add a function to the current scope if it hasn't been added before
-    pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
+    pub fn add_function(&mut self, name: String, func: FunctionDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(name, func),
             None => Err(Error::new(ErrKind::Context)
@@ -214,7 +215,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Add a type to the current scope if it hasn't been added before
-    pub fn add_type(&mut self, name: String, custom_type: T) -> Result<(), Error> {
+    pub fn add_type(&mut self, name: String, custom_type: TypeDec) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_type(name, custom_type),
             None => Err(Error::new(ErrKind::Context)
@@ -234,7 +235,7 @@ mod tests {
         };
     }
 
-    fn new_scopemap() -> ScopeMap<Var, (), ()> {
+    fn new_scopemap() -> ScopeMap {
         ScopeMap::new()
     }
 
@@ -301,11 +302,5 @@ mod tests {
         s.scope_exit();
 
         assert!(s.get_variable("a").is_none());
-    }
-
-    #[test]
-    fn t_scope_of_anything() {
-        let _ = Scope::<i32, i32, String>::default();
-        let _ = Scope::<(), (), ()>::default();
     }
 }
