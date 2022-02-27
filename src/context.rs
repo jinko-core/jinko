@@ -17,9 +17,9 @@ use std::rc::Rc;
 
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
-use crate::parser;
 use crate::typechecker::{SpecializedNode, TypeCheck, TypeCtx, TypeId};
 use crate::ObjectInstance;
+use crate::{log, parser};
 use crate::{Builtins, CheckedType};
 
 /// Type the context uses for keys
@@ -297,6 +297,8 @@ impl Context {
 
     fn inner_check(&mut self, ep: &mut Block) -> Result<(), Error> {
         self.scope_enter();
+
+        log!("starting first pass of typechecking");
 
         ep.type_of(&mut self.typechecker);
 

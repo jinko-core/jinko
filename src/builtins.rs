@@ -6,7 +6,9 @@ use std::path::PathBuf;
 #[cfg(feature = "ffi")]
 use crate::ffi;
 use crate::instance::{FromObjectInstance, ToObjectInstance};
-use crate::{Context, Instruction, JkBool, JkChar, JkFloat, JkInt, JkString, ObjectInstance};
+use crate::{
+    generics, log, Context, Instruction, JkBool, JkChar, JkFloat, JkInt, JkString, ObjectInstance,
+};
 
 type Args = Vec<Box<dyn Instruction>>;
 type BuiltinFn = fn(&mut Context, Args) -> Option<ObjectInstance>;
@@ -141,6 +143,23 @@ fn fmt_float(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     Some(JkString::from(value.to_string()).to_instance())
 }
 
+fn size_of(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let instance = args[0].execute(ctx).unwrap();
+
+    log!("called size_of");
+
+    Some(JkInt::from(instance.size() as i64).to_instance())
+}
+
+fn type_of(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    let instance = args[0].execute(ctx).unwrap();
+    let instance_ty = instance.ty().to_string();
+
+    log!("called type_of");
+
+    Some(JkString::from(instance_ty).to_instance())
+}
+
 impl Builtins {
     fn add(&mut self, name: &'static str, builtin_fn: BuiltinFn) {
         self.functions.insert(String::from(name), builtin_fn);
@@ -164,16 +183,24 @@ impl Builtins {
         builtins.add("__builtin_arg_get", arg_get);
         builtins.add("__builtin_arg_amount", arg_amount);
         builtins.add("__builtin_exit", exit);
+        builtins.add("size_of", size_of);
+        builtins.add("type_of", type_of);
 
         builtins
     }
 
     pub fn contains(&self, name: &str) -> bool {
+        // We can demangle builtins to dispatch to our single, non generic
+        // implementation.
+        let name = generics::original_name(name);
+
+        log!("checking if builtin is present: {}", name);
+
         self.functions.contains_key(name)
     }
 
     pub fn get(&self, builtin: &str) -> Option<&BuiltinFn> {
-        self.functions.get(builtin)
+        self.functions.get(generics::original_name(builtin))
     }
 }
 
