@@ -19,7 +19,7 @@ func inner_grow[T](v: Vec[T], value: T) -> Vec[T] {
 	Vec(raw_pointer: new_pointer, len: v.len + 1, size: new_size)
 }
 
-func add[T](v: Vec[T], value: T) -> Vec[T] {
+func push[T](v: Vec[T], value: T) -> Vec[T] {
 	if v.size == 0 {
 		inner_init(value)
 	} else {
@@ -33,7 +33,7 @@ func add[T](v: Vec[T], value: T) -> Vec[T] {
 // }
 
 test vec_init() {
-	v = Vec[int](raw_pointer: 0, len: 0, size: 0).add(15).add(14);
+	v = Vec[int](raw_pointer: 0, len: 0, size: 0).push(15).push(14);
 
 	// v.deinitialize();
 }
