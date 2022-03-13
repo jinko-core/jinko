@@ -168,15 +168,11 @@ impl TypeCtx {
     }
 
     /// Add a new generated node to the context
-    pub fn add_specialized_node(&mut self, node: SpecializedNode) {
-        if let Err(e) = match &node {
-            SpecializedNode::Func(f) => self.declare_function(f.name().to_owned(), f.clone()),
-            SpecializedNode::Type(_t) => {
-                todo!()
-            }
-        } {
-            self.error(e);
-        }
+    pub fn add_specialized_node(&mut self, mut node: SpecializedNode) {
+        match &mut node {
+            SpecializedNode::Func(f) => f.type_of(self),
+            SpecializedNode::Type(t) => t.type_of(self),
+        };
 
         self.generated.push(node)
     }

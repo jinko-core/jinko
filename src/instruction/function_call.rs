@@ -195,31 +195,23 @@ impl FunctionCall {
             }
         };
         let specialized_name = generics::mangle(function.name(), self.generics());
+        log!("specialized name {}", specialized_name);
+        if ctx.get_function(&specialized_name).is_none() {
+            // FIXME: Remove this clone once we have proper symbols
+            let specialized_fn =
+                match function.from_type_map(specialized_name.clone(), &type_map, ctx) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        ctx.error(e.with_loc(self.location.clone()));
+                        return CheckedType::Error;
+                    }
+                };
 
-        // FIXME: Remove this clone once we have proper symbols
-        let specialized_fn = match function.from_type_map(specialized_name.clone(), &type_map, ctx)
-        {
-            Ok(f) => f,
-            Err(e) => {
-                ctx.error(e.with_loc(self.location.clone()));
-                return CheckedType::Error;
-            }
-        };
+            ctx.add_specialized_node(SpecializedNode::Func(specialized_fn));
+        }
 
         self.fn_name = specialized_name;
         self.generics = vec![];
-        ctx.add_specialized_node(SpecializedNode::Func(specialized_fn));
-
-        // let _resolved_types: Vec<TypeId> = self
-        //     .args
-        //     .iter_mut()
-        //     .map(|arg| match arg.type_of(ctx) {
-        //         CheckedType::Resolved(ty) => ty,
-        //         _ => TypeId::void(),
-        //         // FIXME: Is this the correct behavior? The error
-        //         // will already have been emitted at this point
-        //     })
-        //     .collect();
 
         // Recursively resolve the type of self now that we changed the
         // function to call

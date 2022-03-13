@@ -43,19 +43,9 @@ impl Instruction for MethodCall {
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         log!("method call enter: {}", &self.print());
 
-        // FIXME: No clone here
-        let mut call = self.method.clone();
-        if let Some(loc) = &self.location {
-            call.set_location(loc.clone())
-        };
-
-        call.add_arg_front(self.var.clone());
-
-        log!("desugaring to: {}", &call.print());
-
         log!("method call exit: {}", &self.print());
 
-        call.execute(ctx)
+        self.method.execute(ctx)
     }
 
     fn location(&self) -> Option<&SpanTuple> {
