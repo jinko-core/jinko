@@ -20,7 +20,7 @@ use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec,
 use crate::parser;
 use crate::typechecker::{SpecializedNode, TypeCheck, TypeCtx, TypeId};
 use crate::ObjectInstance;
-use crate::{Builtins, CheckedType, Generic};
+use crate::{Builtins, CheckedType};
 
 /// Type the context uses for keys
 type CtxKey = String;
@@ -298,13 +298,7 @@ impl Context {
     fn inner_check(&mut self, ep: &mut Block) -> Result<(), Error> {
         self.scope_enter();
 
-        let mut is_err = false;
-
         ep.type_of(&mut self.typechecker);
-        // if ep.expand(self).is_err() {
-        //     is_err = true;
-        // }
-        // ep.resolve_self(&mut self.typechecker);
 
         self.error_handler
             .append(&mut self.typechecker.error_handler);
@@ -320,7 +314,7 @@ impl Context {
             }
         });
 
-        match self.error_handler.has_errors() || is_err {
+        match self.error_handler.has_errors() {
             true => Err(Error::new(ErrKind::Context)),
             false => Ok(()),
         }
