@@ -120,16 +120,18 @@ mod tests {
     #[test]
     fn t_execute() {
         let mut ctx = Context::new();
-        let func_dec = constructs::expr(span!("func __first(a: int, b: int) -> int { a }"))
+        let mut func_dec = constructs::expr(span!("func __first(a: int, b: int) -> int { a }"))
             .unwrap()
             .1;
+        ctx.type_check(&mut *func_dec).unwrap();
         func_dec.execute(&mut ctx);
 
         let var1 = Box::new(JkInt::from(1));
         let var2 = Box::new(JkInt::from(2));
         let method = FunctionCall::new("__first".to_owned(), vec![], vec![var2]);
 
-        let mc = MethodCall::new(var1, method);
+        let mut mc = MethodCall::new(var1, method);
+        ctx.type_check(&mut mc).unwrap();
 
         assert_eq!(mc.execute(&mut ctx).unwrap(), JkInt::from(1).to_instance());
     }
