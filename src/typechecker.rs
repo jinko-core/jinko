@@ -5,7 +5,11 @@
 mod type_id;
 pub use type_id::{TypeId, PRIMITIVE_TYPES};
 
-use crate::{error::ErrorHandler, instruction::FunctionDec, Error, ScopeMap};
+use crate::{
+    error::ErrorHandler,
+    instruction::{FunctionDec, TypeDec},
+    log, Error, ScopeMap,
+};
 use colored::Colorize;
 use std::{
     collections::HashSet,
@@ -48,6 +52,13 @@ struct CustomTypeType {
     fields_ty: Vec<(String, CheckedType)>,
 }
 
+/// Possible generic generated nodes. Since we can only expand generic functions or
+/// generic types, there is no need to store any other instruction type.
+pub enum SpecializedNode {
+    Func(FunctionDec),
+    Type(TypeDec),
+}
+
 // TODO: Should we factor this into a `Context` trait? All contexts will share some
 // similarities, such as the ability to emit errors or enter and exit scopes
 /// The [`TypeCtx`]'s role is to keep track of declared types based on the scope they
@@ -63,6 +74,10 @@ pub struct TypeCtx {
     /// For functions, we keep a vector of argument types as well as the return type.
     /// Custom types need to keep a type for themselves, as well as types for all their fields
     types: ScopeMap<CheckedType, FunctionDec, CustomTypeType>,
+    /// When typechecking, monomorphization is performed, meaning that generic functions
+    /// and types get expanded into a new [`Instruction`]. We need to store them
+    /// as we go and then use them in the calling context
+    generated: Vec<SpecializedNode>,
     // FIXME: Remove both of these fields...
     /// Path from which the typechecking context was instantiated
     path: Option<PathBuf>,
@@ -76,6 +91,7 @@ impl TypeCtx {
         let mut ctx = TypeCtx {
             error_handler: ErrorHandler::default(),
             types: ScopeMap::new(),
+            generated: vec![],
             path: None,
             included: HashSet::new(),
         };
@@ -149,6 +165,27 @@ impl TypeCtx {
                 ))
             }
         }
+    }
+
+    /// Add a new generated node to the context
+    pub fn add_specialized_node(&mut self, node: SpecializedNode) {
+        if let Err(e) = match &node {
+            SpecializedNode::Func(f) => self.declare_function(f.name().to_owned(), f.clone()),
+            SpecializedNode::Type(t) => {
+                todo!()
+            }
+        } {
+            self.error(e);
+        }
+
+        self.generated.push(node)
+    }
+
+    /// Take ownership of the specialized nodes currently present in the
+    /// type context. This replaces the vector of generated nodes with an
+    /// empty vector
+    pub fn take_specialized_nodes(&mut self) -> Vec<SpecializedNode> {
+        std::mem::take(&mut self.generated)
     }
 
     /// Declare a newly-created custom type

@@ -18,7 +18,7 @@ use std::rc::Rc;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
 use crate::parser;
-use crate::typechecker::{TypeCheck, TypeCtx, TypeId};
+use crate::typechecker::{SpecializedNode, TypeCheck, TypeCtx, TypeId};
 use crate::ObjectInstance;
 use crate::{Builtins, CheckedType, Generic};
 
@@ -301,15 +301,24 @@ impl Context {
         let mut is_err = false;
 
         ep.type_of(&mut self.typechecker);
-        if ep.expand(self).is_err() {
-            is_err = true;
-        }
-
-        ep.resolve_self(&mut self.typechecker);
+        // if ep.expand(self).is_err() {
+        //     is_err = true;
+        // }
+        // ep.resolve_self(&mut self.typechecker);
 
         self.error_handler
             .append(&mut self.typechecker.error_handler);
         self.emit_errors();
+
+        let new_nodes = self.typechecker.take_specialized_nodes();
+        new_nodes.into_iter().for_each(|node| {
+            if let Err(e) = match node {
+                SpecializedNode::Func(f) => self.add_function(f),
+                SpecializedNode::Type(t) => self.add_type(t),
+            } {
+                self.error(e);
+            }
+        });
 
         match self.error_handler.has_errors() || is_err {
             true => Err(Error::new(ErrKind::Context)),

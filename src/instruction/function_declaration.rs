@@ -56,7 +56,7 @@ impl FunctionDec {
         &self,
         mangled_name: String,
         type_map: &GenericMap,
-        ctx: &mut Context,
+        ctx: &mut TypeCtx,
     ) -> Result<FunctionDec, Error> {
         let mut new_fn = self.clone();
         new_fn.name = mangled_name;

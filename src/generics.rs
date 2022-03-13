@@ -24,6 +24,16 @@ impl GenericMap {
         if generics.len() != resolved.len() {
             // FIXME: Add better error message here printing both sets of generics
             let err_msg = String::from("missing types in generic expansion");
+            let mut err_msg = format!("{}\ngeneric types: ", err_msg);
+            for generic in generics {
+                err_msg.push_str(&format!("{}", generic));
+            }
+
+            let mut err_msg = format!("{}\nresolved types: ", err_msg);
+            for resolved in resolved {
+                err_msg.push_str(&format!("{}", resolved));
+            }
+
             return Err(Error::new(ErrKind::Generics).with_msg(err_msg));
         }
 
@@ -95,7 +105,7 @@ pub trait Generic {
     /// Mutate an instruction in order to resolve to the proper, expanded generic instruction.
     /// For example, a call to the function `f[T]` should now be replaced by a call to
     /// the function `generics::mangle("f", GenericMap { TypeId "T" })` // FIXME: Fix doc
-    fn resolve_self(&mut self, _ctx: &mut Context) {}
+    fn resolve_self(&mut self, _ctx: &mut TypeCtx) {}
 }
 
 #[cfg(test)]

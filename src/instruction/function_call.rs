@@ -3,7 +3,7 @@
 
 use crate::generics::GenericMap;
 use crate::instruction::{FunctionDec, FunctionKind, Var};
-use crate::typechecker::{CheckedType, TypeCtx, TypeId};
+use crate::typechecker::{CheckedType, SpecializedNode, TypeCtx, TypeId};
 use crate::{
     generics, log, Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance,
     SpanTuple, TypeCheck,
@@ -263,9 +263,37 @@ impl TypeCheck for FunctionCall {
         };
 
         if !function.generics().is_empty() || !self.generics.is_empty() {
-            // If there are generics, do not type check the call: We will do
-            // this during the generic expansion pass.
-            return CheckedType::Later;
+            log!(
+                "creating specialized fn. function generics: {}, call generics {}",
+                function.generics().len(),
+                self.generics().len()
+            );
+            let type_map = match GenericMap::create(function.generics(), self.generics(), ctx) {
+                Ok(map) => map,
+                Err(e) => {
+                    ctx.error(e.with_loc(self.location.clone()));
+                    return CheckedType::Error;
+                }
+            };
+            let specialized_name = generics::mangle(function.name(), self.generics());
+
+            // FIXME: Remove this clone once we have proper symbols
+            let specialized_fn =
+                match function.from_type_map(specialized_name.clone(), &type_map, ctx) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        ctx.error(e);
+                        return CheckedType::Error;
+                    }
+                };
+
+            self.fn_name = specialized_name;
+            self.generics = vec![];
+            ctx.add_specialized_node(SpecializedNode::Func(specialized_fn));
+
+            // Recursively resolve the type of self now that we changed the
+            // function to call
+            return self.type_of(ctx);
         }
 
         let (args_type, return_type) = (function.args(), function.ty());
@@ -369,26 +397,27 @@ impl Generic for FunctionCall {
                 Ok(m) => m,
             };
 
-        let mut new_fn = match dec.from_type_map(generic_name, &type_map, ctx) {
-            Ok(f) => f,
-            Err(e) => {
-                ctx.error(e.clone());
-                return Err(e);
-            }
-        };
-
-        if let Err(e) = ctx.type_check(&mut new_fn) {
-            // FIXME: This should probably be a generic error instead
-            // FIXME: The name is also mangled and shouldn't be
-            ctx.error(e);
-        } else {
-            ctx.add_function(new_fn).unwrap();
-        }
+        // FIXME: Remove entirely?
+        // let mut new_fn = match dec.from_type_map(generic_name, &type_map, ctx) {
+        //     Ok(f) => f,
+        //     Err(e) => {
+        //         ctx.error(e.clone());
+        //         return Err(e);
+        //     }
+        // };
+        //
+        // if let Err(e) = ctx.type_check(&mut new_fn) {
+        //     // FIXME: This should probably be a generic error instead
+        //     // FIXME: The name is also mangled and shouldn't be
+        //     ctx.error(e);
+        // } else {
+        //     ctx.add_function(new_fn).unwrap();
+        // }
 
         Ok(())
     }
 
-    fn resolve_self(&mut self, ctx: &mut Context) {
+    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
         let generic_name = generics::mangle(&self.fn_name, &self.generics);
         log!("resolving call from {} to {}", self.fn_name, &generic_name);
 
