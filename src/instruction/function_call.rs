@@ -180,6 +180,51 @@ impl FunctionCall {
     pub fn set_name(&mut self, fn_name: String) {
         self.fn_name = fn_name
     }
+
+    fn resolve_generic_call(&mut self, function: FunctionDec, ctx: &mut TypeCtx) -> CheckedType {
+        log!(
+            "creating specialized fn. function generics: {}, call generics {}",
+            function.generics().len(),
+            self.generics().len()
+        );
+        let type_map = match GenericMap::create(function.generics(), self.generics(), ctx) {
+            Ok(map) => map,
+            Err(e) => {
+                ctx.error(e.with_loc(self.location.clone()));
+                return CheckedType::Error;
+            }
+        };
+        let specialized_name = generics::mangle(function.name(), self.generics());
+
+        // FIXME: Remove this clone once we have proper symbols
+        let specialized_fn = match function.from_type_map(specialized_name.clone(), &type_map, ctx)
+        {
+            Ok(f) => f,
+            Err(e) => {
+                ctx.error(e.with_loc(self.location.clone()));
+                return CheckedType::Error;
+            }
+        };
+
+        self.fn_name = specialized_name;
+        self.generics = vec![];
+        ctx.add_specialized_node(SpecializedNode::Func(specialized_fn));
+
+        // let _resolved_types: Vec<TypeId> = self
+        //     .args
+        //     .iter_mut()
+        //     .map(|arg| match arg.type_of(ctx) {
+        //         CheckedType::Resolved(ty) => ty,
+        //         _ => TypeId::void(),
+        //         // FIXME: Is this the correct behavior? The error
+        //         // will already have been emitted at this point
+        //     })
+        //     .collect();
+
+        // Recursively resolve the type of self now that we changed the
+        // function to call
+        self.type_of(ctx)
+    }
 }
 
 impl Instruction for FunctionCall {
@@ -262,43 +307,14 @@ impl TypeCheck for FunctionCall {
             }
         };
 
-        if !function.generics().is_empty() || !self.generics.is_empty() {
-            log!(
-                "creating specialized fn. function generics: {}, call generics {}",
-                function.generics().len(),
-                self.generics().len()
-            );
-            let type_map = match GenericMap::create(function.generics(), self.generics(), ctx) {
-                Ok(map) => map,
-                Err(e) => {
-                    ctx.error(e.with_loc(self.location.clone()));
-                    return CheckedType::Error;
-                }
-            };
-            let specialized_name = generics::mangle(function.name(), self.generics());
-
-            // FIXME: Remove this clone once we have proper symbols
-            let specialized_fn =
-                match function.from_type_map(specialized_name.clone(), &type_map, ctx) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        ctx.error(e);
-                        return CheckedType::Error;
-                    }
-                };
-
-            self.fn_name = specialized_name;
-            self.generics = vec![];
-            ctx.add_specialized_node(SpecializedNode::Func(specialized_fn));
-
-            // Recursively resolve the type of self now that we changed the
-            // function to call
-            return self.type_of(ctx);
-        }
+        // FIXME: Add check for calling non-generic function usign generics
 
         let (args_type, return_type) = (function.args(), function.ty());
-
         let args_type = args_type.clone();
+
+        if !function.generics().is_empty() || !self.generics.is_empty() {
+            return self.resolve_generic_call(function, ctx);
+        }
 
         let mut errors = vec![];
         let mut args = vec![];
@@ -388,7 +404,7 @@ impl Generic for FunctionCall {
             return Err(Error::new(ErrKind::Generics));
         }
 
-        let type_map =
+        let _type_map =
             match GenericMap::create(dec.generics(), &self.generics, &mut ctx.typechecker) {
                 Err(e) => {
                     ctx.error(e);

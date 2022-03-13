@@ -8,7 +8,7 @@ pub use type_id::{TypeId, PRIMITIVE_TYPES};
 use crate::{
     error::ErrorHandler,
     instruction::{FunctionDec, TypeDec},
-    log, Error, ScopeMap,
+    Error, ScopeMap,
 };
 use colored::Colorize;
 use std::{
@@ -171,7 +171,7 @@ impl TypeCtx {
     pub fn add_specialized_node(&mut self, node: SpecializedNode) {
         if let Err(e) = match &node {
             SpecializedNode::Func(f) => self.declare_function(f.name().to_owned(), f.clone()),
-            SpecializedNode::Type(t) => {
+            SpecializedNode::Type(_t) => {
                 todo!()
             }
         } {
