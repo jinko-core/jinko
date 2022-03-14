@@ -1,10 +1,10 @@
 //! A method like call is syntactic sugar over regular function calls. During executions,
 //! they get desugared into a normal function call.
 
-use crate::generics::{self, Generic};
+use crate::generics::Generic;
 use crate::instruction::FunctionCall;
 use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{log, Context, Error, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck};
+use crate::{log, Context, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -41,11 +41,13 @@ impl Instruction for MethodCall {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("method call enter: {}", &self.print());
+        log!("desugared method call enter: `{}`", &self.method.print());
 
-        log!("method call exit: {}", &self.print());
+        let res = self.method.execute(ctx);
 
-        self.method.execute(ctx)
+        log!("desugared method call exit: `{}`", &self.method.print());
+
+        res
     }
 
     fn location(&self) -> Option<&SpanTuple> {
@@ -55,11 +57,15 @@ impl Instruction for MethodCall {
 
 impl TypeCheck for MethodCall {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        log!("typechecking method {}", self.method.name());
+        log!("typechecking method `{}`", self.method.name());
+        log!("desugaring method `{}`", self.print());
+
         self.method.add_arg_front(self.var.clone());
         if let Some(loc) = &self.location {
             self.method.set_location(loc.clone())
         };
+
+        log!("desugared method to `{}`", self.method.print());
 
         self.method.type_of(ctx)
     }
@@ -74,32 +80,32 @@ impl TypeCheck for MethodCall {
 }
 
 impl Generic for MethodCall {
-    fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
-        let mut call = self.method.clone();
-        call.add_arg_front(self.var.clone());
-        if let Some(loc) = &self.location {
-            call.set_location(loc.clone())
-        };
+    // fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
+    //     let mut call = self.method.clone();
+    //     call.add_arg_front(self.var.clone());
+    //     if let Some(loc) = &self.location {
+    //         call.set_location(loc.clone())
+    //     };
 
-        log!("generic expanding method call: {}", self.method.name());
+    //     log!("generic expanding method call: {}", self.method.name());
 
-        call.expand(ctx)
-    }
+    //     call.expand(ctx)
+    // }
 
-    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
-        self.method
-            .set_name(generics::mangle(self.method.name(), self.method.generics()));
+    // fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+    //     self.method
+    //         .set_name(generics::mangle(self.method.name(), self.method.generics()));
 
-        let mut call = self.method.clone();
-        call.add_arg_front(self.var.clone());
-        if let Some(loc) = &self.location {
-            call.set_location(loc.clone())
-        };
+    //     let mut call = self.method.clone();
+    //     call.add_arg_front(self.var.clone());
+    //     if let Some(loc) = &self.location {
+    //         call.set_location(loc.clone())
+    //     };
 
-        log!("generic resolving method call: {}", self.method.name());
+    //     log!("generic resolving method call: {}", self.method.name());
 
-        call.resolve_self(ctx);
-    }
+    //     call.resolve_self(ctx);
+    // }
 }
 
 #[cfg(test)]

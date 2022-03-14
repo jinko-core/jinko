@@ -305,9 +305,11 @@ impl TypeCheck for FunctionCall {
         let args_type = args_type.clone();
 
         if !function.generics().is_empty() || !self.generics.is_empty() {
+            log!("resolving generic call");
             return self.resolve_generic_call(function, ctx);
         }
 
+        log!("resolving args");
         let mut errors = vec![];
         let mut args = vec![];
 
