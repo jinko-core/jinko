@@ -1,12 +1,12 @@
 #!/bin/sh
 
-ft --version > /dev/null
-ft_exists=$?
+ftf --version > /dev/null
+ftf_exists=$?
 
-if [ $ft_exists -ne 0 ]
+if [ $ftf_exists -ne 0 ]
 then
-    printf '\n`ft` not found. Install it using the following command\n\n'
-    printf '\tcargo install --git https://github.com/cohenarthur/ft\n\n'
+    printf '\n`ftf` not found. Install it using the following command\n\n'
+    printf '\tcargo install ftf\n\n'
 
     exit 1
 fi
@@ -21,12 +21,12 @@ then
     printf "Test files:\n$@\n\n"
 
     for file in $@; do
-        ft -f $file
+        ftf -f $file
     done
 else
     files=$(find tests -name "*.yml")
 
     printf "Test files:\n$files\n\n"
 
-    ft -f $files
+    ftf -f $files
 fi
