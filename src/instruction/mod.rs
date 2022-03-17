@@ -2,6 +2,8 @@
 //! When using nested instructions, such as `foo = bar();`, you're actually using
 //! two instructions: A function call expression, and a variable assignment statement
 
+use std::fmt::Debug;
+
 use crate::{Context, ErrKind, Error, Generic, ObjectInstance, SpanTuple, TypeCheck};
 
 use colored::Colorize;
@@ -126,6 +128,12 @@ pub trait Instruction: InstructionClone + Downcast + TypeCheck + Generic {
 }
 
 impl_downcast!(Instruction);
+
+impl Debug for dyn Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.print())
+    }
+}
 
 /// The `InstructionClone` provides a wrapper around `Instruction` to allow cloning them
 pub trait InstructionClone {

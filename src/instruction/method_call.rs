@@ -43,11 +43,16 @@ impl Instruction for MethodCall {
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         log!("desugared method call enter: `{}`", &self.method.print());
 
-        let res = self.method.execute(ctx);
+        let mut call = self.method.clone();
+
+        call.add_arg_front(self.var.clone());
+        if let Some(loc) = &self.location {
+            call.set_location(loc.clone())
+        };
 
         log!("desugared method call exit: `{}`", &self.method.print());
 
-        res
+        call.execute(ctx)
     }
 
     fn location(&self) -> Option<&SpanTuple> {
@@ -60,14 +65,23 @@ impl TypeCheck for MethodCall {
         log!("typechecking method `{}`", self.method.name());
         log!("desugaring method `{}`", self.print());
 
-        self.method.add_arg_front(self.var.clone());
+        let mut call = self.method.clone();
+
+        call.add_arg_front(self.var.clone());
         if let Some(loc) = &self.location {
-            self.method.set_location(loc.clone())
+            call.set_location(loc.clone())
         };
 
-        log!("desugared method to `{}`", self.method.print());
+        log!("desugared method to `{}`", call.print());
 
-        self.method.type_of(ctx)
+        let res = call.type_of(ctx);
+
+        // FIXME: Figure out a way to do this without the extra clone, which
+        // is useless. We should be able to do desugaring here (or before)
+        // and simply resolve to the new mangled name if necessary
+        self.method.set_name(call.name().to_string());
+
+        res
     }
 
     fn set_cached_type(&mut self, ty: CheckedType) {
