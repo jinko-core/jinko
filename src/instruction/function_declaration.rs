@@ -56,7 +56,7 @@ impl FunctionDec {
         &self,
         mangled_name: String,
         type_map: &GenericMap,
-        ctx: &mut Context,
+        ctx: &mut TypeCtx,
     ) -> Result<FunctionDec, Error> {
         let mut new_fn = self.clone();
         new_fn.name = mangled_name;
@@ -345,12 +345,6 @@ impl TypeCheck for FunctionDec {
         // If the function has no block, trust the declaration
         if let Some(b) = &mut self.block {
             let block_ty = b.type_of(ctx);
-
-            // If the block's type cannot be determined yet, this is not an
-            // error: We simply have to wait for the next typechecking pass
-            if block_ty == CheckedType::Later {
-                return CheckedType::Later;
-            }
 
             if block_ty != return_ty {
                 ctx.error(

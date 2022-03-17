@@ -1,7 +1,7 @@
 //! A method like call is syntactic sugar over regular function calls. During executions,
 //! they get desugared into a normal function call.
 
-use crate::generics::{self, Generic};
+use crate::generics::Generic;
 use crate::instruction::FunctionCall;
 use crate::typechecker::{CheckedType, TypeCtx};
 use crate::{log, Context, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck};
@@ -41,19 +41,16 @@ impl Instruction for MethodCall {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("method call enter: {}", &self.print());
+        log!("desugared method call enter: `{}`", &self.method.print());
 
-        // FIXME: No clone here
         let mut call = self.method.clone();
+
+        call.add_arg_front(self.var.clone());
         if let Some(loc) = &self.location {
             call.set_location(loc.clone())
         };
 
-        call.add_arg_front(self.var.clone());
-
-        log!("desugaring to: {}", &call.print());
-
-        log!("method call exit: {}", &self.print());
+        log!("desugared method call exit: `{}`", &self.method.print());
 
         call.execute(ctx)
     }
@@ -65,13 +62,26 @@ impl Instruction for MethodCall {
 
 impl TypeCheck for MethodCall {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        log!("typechecking method `{}`", self.method.name());
+        log!("desugaring method `{}`", self.print());
+
         let mut call = self.method.clone();
+
         call.add_arg_front(self.var.clone());
         if let Some(loc) = &self.location {
             call.set_location(loc.clone())
         };
 
-        call.type_of(ctx)
+        log!("desugared method to `{}`", call.print());
+
+        let res = call.type_of(ctx);
+
+        // FIXME: Figure out a way to do this without the extra clone, which
+        // is useless. We should be able to do desugaring here (or before)
+        // and simply resolve to the new mangled name if necessary
+        self.method.set_name(call.name().to_string());
+
+        res
     }
 
     fn set_cached_type(&mut self, ty: CheckedType) {
@@ -84,32 +94,32 @@ impl TypeCheck for MethodCall {
 }
 
 impl Generic for MethodCall {
-    fn expand(&self, ctx: &mut Context) {
-        let mut call = self.method.clone();
-        call.add_arg_front(self.var.clone());
-        if let Some(loc) = &self.location {
-            call.set_location(loc.clone())
-        };
+    // fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
+    //     let mut call = self.method.clone();
+    //     call.add_arg_front(self.var.clone());
+    //     if let Some(loc) = &self.location {
+    //         call.set_location(loc.clone())
+    //     };
 
-        log!("generic expanding method call: {}", self.method.name());
+    //     log!("generic expanding method call: {}", self.method.name());
 
-        call.expand(ctx)
-    }
+    //     call.expand(ctx)
+    // }
 
-    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
-        self.method
-            .set_name(generics::mangle(self.method.name(), self.method.generics()));
+    // fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+    //     self.method
+    //         .set_name(generics::mangle(self.method.name(), self.method.generics()));
 
-        let mut call = self.method.clone();
-        call.add_arg_front(self.var.clone());
-        if let Some(loc) = &self.location {
-            call.set_location(loc.clone())
-        };
+    //     let mut call = self.method.clone();
+    //     call.add_arg_front(self.var.clone());
+    //     if let Some(loc) = &self.location {
+    //         call.set_location(loc.clone())
+    //     };
 
-        log!("generic resolving method call: {}", self.method.name());
+    //     log!("generic resolving method call: {}", self.method.name());
 
-        call.resolve_self(ctx);
-    }
+    //     call.resolve_self(ctx);
+    // }
 }
 
 #[cfg(test)]
@@ -130,16 +140,18 @@ mod tests {
     #[test]
     fn t_execute() {
         let mut ctx = Context::new();
-        let func_dec = constructs::expr(span!("func __first(a: int, b: int) -> int { a }"))
+        let mut func_dec = constructs::expr(span!("func __first(a: int, b: int) -> int { a }"))
             .unwrap()
             .1;
+        ctx.type_check(&mut *func_dec).unwrap();
         func_dec.execute(&mut ctx);
 
         let var1 = Box::new(JkInt::from(1));
         let var2 = Box::new(JkInt::from(2));
         let method = FunctionCall::new("__first".to_owned(), vec![], vec![var2]);
 
-        let mc = MethodCall::new(var1, method);
+        let mut mc = MethodCall::new(var1, method);
+        ctx.type_check(&mut mc).unwrap();
 
         assert_eq!(mc.execute(&mut ctx).unwrap(), JkInt::from(1).to_instance());
     }

@@ -24,6 +24,16 @@ impl GenericMap {
         if generics.len() != resolved.len() {
             // FIXME: Add better error message here printing both sets of generics
             let err_msg = String::from("missing types in generic expansion");
+            let mut err_msg = format!("{}\ngeneric types: ", err_msg);
+            for generic in generics {
+                err_msg.push_str(&format!("{}", generic));
+            }
+
+            let mut err_msg = format!("{}\nresolved types: ", err_msg);
+            for resolved in resolved {
+                err_msg.push_str(&format!("{}", resolved));
+            }
+
             return Err(Error::new(ErrKind::Generics).with_msg(err_msg));
         }
 
@@ -88,7 +98,9 @@ pub trait Generic {
     /// Expand all generics contained in the current instruction, or its sub-instructions.
     /// For example, a [`Block`] is responsible for expanding the generics of all the
     /// functions defined within itself.
-    fn expand(&self, _ctx: &mut Context) {}
+    fn expand(&self, _ctx: &mut Context) -> Result<(), Error> {
+        Ok(())
+    }
 
     /// Mutate an instruction in order to resolve to the proper, expanded generic instruction.
     /// For example, a call to the function `f[T]` should now be replaced by a call to
