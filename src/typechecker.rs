@@ -55,7 +55,7 @@ struct CustomTypeType {
 /// Possible generic generated nodes. Since we can only expand generic functions or
 /// generic types, there is no need to store any other instruction type.
 pub enum SpecializedNode {
-    Func(FunctionDec),
+    Func(Box<FunctionDec>),
     Type(TypeDec),
 }
 

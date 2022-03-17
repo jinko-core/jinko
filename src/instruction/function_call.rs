@@ -207,7 +207,7 @@ impl FunctionCall {
                     }
                 };
 
-            ctx.add_specialized_node(SpecializedNode::Func(specialized_fn));
+            ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)));
         }
 
         self.fn_name = specialized_name;

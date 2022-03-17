@@ -307,7 +307,7 @@ impl Context {
         let new_nodes = self.typechecker.take_specialized_nodes();
         new_nodes.into_iter().for_each(|node| {
             if let Err(e) = match node {
-                SpecializedNode::Func(f) => self.add_function(f),
+                SpecializedNode::Func(f) => self.add_function(*f),
                 SpecializedNode::Type(t) => self.add_type(t),
             } {
                 self.error(e);
