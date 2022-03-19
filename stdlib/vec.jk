@@ -1,0 +1,38 @@
+ext func memcpy(dest: int, src: int, n: int);
+ext func calloc(n: int, size: int);
+ext func realloc(ptr: int, size: int);
+ext func free(ptr: int);
+
+/* FIXME: Add default values for fields */
+type Vec[T](raw_pointer: int, len: int, size: int);
+/* type Vec[T](raw_pointer: int = 0, len: int = 0, size: int = 0); */
+
+func inner_init[T](value: T) -> Vec[T] {
+	Vec(inner: malloc(size_of(value)),
+		len: 1,
+		size: size_of(value))
+}
+
+func inner_grow[T](v: Vec[T], value: T) -> Vec[T] {
+	new_size = v.size + size_of(value);
+	new_pointer = v.raw_pointer.realloc(v.size + size_of(value));
+
+	Vec(raw_pointer: new_pointer, len: v.len + 1, size: new_size)
+}
+
+func push[T](v: Vec[T], value: T) -> Vec[T] {
+	if v.size == 0 {
+		inner_init(value)
+	} else {
+		inner_grow(v, value)
+	}
+}
+
+func release(v: Vec[T]) {
+	v.raw_pointer.free()
+}
+
+// FIXME: Add this once we have proper first parameter overloading
+// func deinitialize[T](v: Vec[T]) {
+// 	v.raw_pointer.free()
+// }

@@ -23,7 +23,7 @@ macro_rules! log {
         if $crate::log::is_enabled() {
             use colored::Colorize;
 
-            eprintln!("<{}> {}", "LOG".on_purple(), format_args!($($token)*));
+            eprintln!("<{}> {}", "LOG".black().on_purple(), format_args!($($token)*));
         }
     );
 }

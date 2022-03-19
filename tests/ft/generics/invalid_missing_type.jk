@@ -1,0 +1,6 @@
+type Invalid[T](inner: T);
+type Invalid2[T, U](inner1: T, inner2: U);
+
+a = Invalid[int](inner: 15);
+// missing type on `Invalid`
+b = Invalid2[Invalid, string](inner1: a, inner2: "woooow embedded");

@@ -66,3 +66,14 @@ tests:
     args:
       - "tests/ft/generics/invalid_typechecking.jk"
     exit_code: 1
+  - name: "Valid simple generic type"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_simple_type.jk"
+    exit_code: 15
+      # FIXME: Don't ignore once #408 is fixed
+      # - name: "Valid nested simple generic type"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "tests/ft/generics/valid_nested_type.jk"
+      #   exit_code: 15

@@ -91,6 +91,31 @@ pub fn mangle(name: &str, types: &[TypeId]) -> String {
     mangled
 }
 
+/// Performs the opposite conversion, turning a mangled name into a valid
+/// jinko function name with generics.
+pub fn demangle(_mangled_name: &str) -> String {
+    todo!()
+}
+
+/// Fetch the original name contained in a mangled name. This is useful for
+/// generic builtins, which only have one implementation despite being able
+/// to handle multiple types.
+///
+/// ```rust
+/// use jinko::generics::original_name;
+///
+/// let mangled = "type_of+int";
+/// let original_builtin_name = original_name(mangled);
+///
+/// assert_eq!(original_builtin_name, "type_of");
+/// ```
+pub fn original_name(mangled_name: &str) -> &str {
+    match mangled_name.find('+') {
+        None => mangled_name,
+        Some(first_separator) => &mangled_name[..first_separator],
+    }
+}
+
 /// Since most of the instructions cannot do generic expansion, we can implement
 /// default methods which do nothing. This avoid more boilerplate code for instructions
 /// such as constants or variables which cannot be generic.
@@ -135,6 +160,14 @@ mod tests {
         assert_eq!(
             mangle("mangled", &[ty!("float"), ty!("ComplexType")]),
             "mangled+float+ComplexType"
+        );
+    }
+
+    #[test]
+    fn get_original_name_back() {
+        assert_eq!(
+            original_name(&mangle("og_fn", &[ty!("float"), ty!("ComplexType")])),
+            "og_fn"
         );
     }
 

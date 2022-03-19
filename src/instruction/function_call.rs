@@ -274,6 +274,10 @@ impl Instruction for FunctionCall {
 }
 
 impl TypeCheck for FunctionCall {
+    fn type_log(&self) -> String {
+        self.fn_name.to_string()
+    }
+
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         log!("typechecking call to {}", self.fn_name);
 
@@ -454,6 +458,9 @@ impl Generic for FunctionCall {
                 // will already have been emitted at this point
             })
             .collect();
+
+        // FIXME: Do we need this?
+        // self.args.iter_mut().for_each(|arg| arg.resolve_self(ctx));
 
         self.fn_name = generic_name;
         self.generics = vec![];

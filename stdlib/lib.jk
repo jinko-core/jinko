@@ -1,6 +1,7 @@
 incl bool
 incl int
 incl string
+incl vec
 
 incl pair
 incl maybe
@@ -9,6 +10,7 @@ incl iter
 incl ffi
 incl args
 incl fmt
+incl intrinsics
 
 ext func __builtin_exit(exit_code: int);
 

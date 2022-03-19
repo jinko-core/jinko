@@ -202,6 +202,7 @@ impl Generic for VarAssign {
     }
 
     fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+        log!("resolving value of var assign");
         self.value.resolve_self(ctx)
     }
 }
@@ -300,5 +301,14 @@ mod tests {
             ctx.get_variable("x").unwrap().instance(),
             JkInt::from(0).to_instance()
         );
+    }
+
+    #[test]
+    fn generic_builtin_for_var_assign() {
+        jinko! {
+            a = 156;
+
+            int_size = size_of[int](a);
+        };
     }
 }

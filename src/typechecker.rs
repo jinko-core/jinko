@@ -8,7 +8,7 @@ pub use type_id::{TypeId, PRIMITIVE_TYPES};
 use crate::{
     error::ErrorHandler,
     instruction::{FunctionDec, TypeDec},
-    Error, ScopeMap,
+    log, Error, ScopeMap,
 };
 use colored::Colorize;
 use std::{
@@ -47,11 +47,6 @@ impl Display for CheckedType {
     }
 }
 
-struct CustomTypeType {
-    self_ty: CheckedType,
-    fields_ty: Vec<(String, CheckedType)>,
-}
-
 /// Possible generic generated nodes. Since we can only expand generic functions or
 /// generic types, there is no need to store any other instruction type.
 pub enum SpecializedNode {
@@ -73,7 +68,7 @@ pub struct TypeCtx {
     /// map: Variables, Functions and Types.
     /// For functions, we keep a vector of argument types as well as the return type.
     /// Custom types need to keep a type for themselves, as well as types for all their fields
-    types: ScopeMap<CheckedType, FunctionDec, CustomTypeType>,
+    types: ScopeMap<CheckedType, FunctionDec, TypeDec>,
     /// When typechecking, monomorphization is performed, meaning that generic functions
     /// and types get expanded into a new [`Instruction`]. We need to store them
     /// as we go and then use them in the calling context
@@ -100,8 +95,7 @@ impl TypeCtx {
             ($ty_name:ident) => {
                 ctx.declare_custom_type(
                     String::from(stringify!($ty_name)),
-                    CheckedType::Resolved(TypeId::from(stringify!($ty_name))),
-                    vec![],
+                    TypeDec::new(stringify!($ty_name).to_string(), vec![], vec![]),
                 )
                 .unwrap();
             };
@@ -185,14 +179,8 @@ impl TypeCtx {
     }
 
     /// Declare a newly-created custom type
-    pub fn declare_custom_type(
-        &mut self,
-        name: String,
-        self_ty: CheckedType,
-        fields_ty: Vec<(String, CheckedType)>,
-    ) -> Result<(), Error> {
-        self.types
-            .add_type(name, CustomTypeType { self_ty, fields_ty })
+    pub fn declare_custom_type(&mut self, name: String, dec: TypeDec) -> Result<(), Error> {
+        self.types.add_type(name, dec)
         // FIXME: Add hint here too
     }
 
@@ -207,13 +195,8 @@ impl TypeCtx {
     }
 
     /// Access a previously declared custom type
-    pub fn get_custom_type(
-        &mut self,
-        name: &str,
-    ) -> Option<(&CheckedType, &Vec<(String, CheckedType)>)> {
-        self.types
-            .get_type(name)
-            .map(|custom_type| (&custom_type.self_ty, &custom_type.fields_ty))
+    pub fn get_custom_type(&mut self, name: &str) -> Option<&TypeDec> {
+        self.types.get_type(name)
     }
 
     /// Create a new error to propagate to the original context
@@ -254,25 +237,37 @@ pub trait TypeCheck {
     /// Access the cached type of an instruction
     fn cached_type(&self) -> Option<&CheckedType>;
 
+    fn type_log(&self) -> String {
+        String::new()
+    }
+
     /// Access the cached type of an instruction or perform the type resolution process.
     /// This avoid typechecking an entire instruction a second time and allows the
     /// context to just access it. This is useful for passes such as generic expansion.
     fn type_of(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+        log!("type_of value {}", self.type_log());
+
         // FIXME: Remove clones
         match self.cached_type() {
-            None => match self.resolve_type(ctx) {
-                CheckedType::Resolved(new_ty) => {
-                    self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
-                    CheckedType::Resolved(new_ty)
+            None => {
+                log!("no cached type");
+                match self.resolve_type(ctx) {
+                    CheckedType::Resolved(new_ty) => {
+                        self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
+                        CheckedType::Resolved(new_ty)
+                    }
+                    CheckedType::Void => {
+                        self.set_cached_type(CheckedType::Void);
+                        CheckedType::Void
+                    }
+                    CheckedType::Error => CheckedType::Error,
+                    CheckedType::Later => CheckedType::Later,
                 }
-                CheckedType::Void => {
-                    self.set_cached_type(CheckedType::Void);
-                    CheckedType::Void
-                }
-                CheckedType::Error => CheckedType::Error,
-                CheckedType::Later => CheckedType::Later,
-            },
-            Some(ty) => ty.clone(),
+            }
+            Some(ty) => {
+                log!("cached type!: {}", ty);
+                ty.clone()
+            }
         }
     }
 }

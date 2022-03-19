@@ -1,0 +1,5 @@
+type Generic[T](inner: T);
+
+a = Generic[int](inner: 15);
+
+a.inner
