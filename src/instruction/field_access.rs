@@ -105,13 +105,14 @@ impl TypeCheck for FieldAccess {
 
         // We can unwrap here since the type that was resolved from the instance HAS
         // to exist. If it does not, this is an interpreter error
-        let (_, fields_ty) = ctx.get_custom_type(instance_ty_name).unwrap();
+        let dec = ctx.get_custom_type(instance_ty_name).unwrap();
 
-        match fields_ty
+        match dec
+            .fields()
             .iter()
-            .find(|(field_name, _)| *field_name == self.field_name)
+            .find(|dec_arg| dec_arg.name() == self.field_name)
         {
-            Some((_, field_ty)) => field_ty.clone(),
+            Some(dec_arg) => CheckedType::Resolved(dec_arg.get_type().clone()),
             None => {
                 ctx.error(
                     Error::new(ErrKind::TypeChecker)

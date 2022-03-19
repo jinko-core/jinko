@@ -1,9 +1,10 @@
 use super::{DecArg, InstrKind, Instruction};
 
 use crate::{
+    generics::GenericMap,
     log,
     typechecker::{CheckedType, TypeCtx, TypeId},
-    Context, Generic, ObjectInstance, SpanTuple, TypeCheck,
+    Context, ErrKind, Error, Generic, ObjectInstance, SpanTuple, TypeCheck,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -27,6 +28,42 @@ impl TypeDec {
         }
     }
 
+    /// Generate a new instance of [`TypeDec`] from a given generic type map
+    pub fn from_type_map(
+        &self,
+        mangled_name: String,
+        type_map: &GenericMap,
+        ctx: &mut TypeCtx,
+    ) -> Result<TypeDec, Error> {
+        let mut new_type = self.clone();
+        new_type.name = mangled_name;
+        new_type.generics = vec![];
+
+        let mut is_err = false;
+
+        new_type
+            .fields
+            .iter_mut()
+            .zip(self.fields().iter())
+            .filter(|(_, generic)| self.generics().contains(generic.get_type()))
+            .for_each(|(new_arg, old_generic)| {
+                let new_type = match type_map.get_match(old_generic.get_type()) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        ctx.error(e);
+                        is_err = true;
+                        TypeId::void()
+                    }
+                };
+                new_arg.set_type(new_type);
+            });
+
+        match is_err {
+            true => Err(Error::new(ErrKind::Generics)),
+            false => Ok(new_type),
+        }
+    }
+
     /// Get a reference to the name of the type
     pub fn name(&self) -> &str {
         &self.name
@@ -35,6 +72,11 @@ impl TypeDec {
     /// Get a reference to the type's fields
     pub fn fields(&self) -> &Vec<DecArg> {
         &self.fields
+    }
+
+    /// Get a reference to the type's generics
+    pub fn generics(&self) -> &Vec<TypeId> {
+        &self.generics
     }
 
     pub fn set_location(&mut self, location: SpanTuple) {
@@ -101,22 +143,7 @@ impl Instruction for TypeDec {
 
 impl TypeCheck for TypeDec {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        // TODO: FunctionDecs and TypeDec are very similar. Should we factor them together?
-        let fields_ty = self
-            .fields
-            .iter()
-            .map(|dec_arg| {
-                (
-                    dec_arg.name().to_string(),
-                    CheckedType::Resolved(dec_arg.get_type().clone()),
-                )
-            })
-            .collect();
-        if let Err(e) = ctx.declare_custom_type(
-            self.name.clone(),
-            CheckedType::Resolved(TypeId::from(self.name())),
-            fields_ty,
-        ) {
+        if let Err(e) = ctx.declare_custom_type(self.name.clone(), self.clone()) {
             ctx.error(e);
         }
 

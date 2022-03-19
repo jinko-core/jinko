@@ -107,7 +107,7 @@ pub fn demangle(_mangled_name: &str) -> String {
 /// let mangled = "type_of+int";
 /// let original_builtin_name = original_name(mangled);
 ///
-/// assert_eq(original_builtin_name, "type_of");
+/// assert_eq!(original_builtin_name, "type_of");
 /// ```
 pub fn original_name(mangled_name: &str) -> &str {
     match mangled_name.find('+') {

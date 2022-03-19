@@ -2,10 +2,12 @@
 //! type on execution.
 
 use super::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, VarAssign};
+use crate::generics::{self, GenericMap};
 use crate::instance::Name;
-use crate::typechecker::TypeCtx;
+use crate::symbol::Symbol;
+use crate::typechecker::{SpecializedNode, TypeCtx};
+use crate::{log, Generic, SpanTuple};
 use crate::{typechecker::CheckedType, TypeCheck, TypeId};
-use crate::{Generic, SpanTuple};
 
 use std::rc::Rc;
 
@@ -84,6 +86,47 @@ impl TypeInstantiation {
     pub fn set_location(&mut self, location: SpanTuple) {
         self.location = Some(location)
     }
+
+    pub fn resolve_generic_instantiation(
+        &mut self,
+        dec: TypeDec,
+        ctx: &mut TypeCtx,
+    ) -> CheckedType {
+        log!(
+            "creating specialized type. type generics: {}, instantiation generics {}",
+            dec.generics().len(),
+            self.generics.len()
+        );
+        let type_map = match GenericMap::create(dec.generics(), &self.generics, ctx) {
+            Ok(map) => map,
+            Err(e) => {
+                ctx.error(e.with_loc(self.location.clone()));
+                return CheckedType::Error;
+            }
+        };
+
+        let specialized_name = generics::mangle(dec.name(), &self.generics);
+        log!("specialized name {}", specialized_name);
+        if ctx.get_custom_type(&specialized_name).is_none() {
+            // FIXME: Remove this clone once we have proper symbols
+            let specialized_ty = match dec.from_type_map(specialized_name.clone(), &type_map, ctx) {
+                Ok(f) => f,
+                Err(e) => {
+                    ctx.error(e.with_loc(self.location.clone()));
+                    return CheckedType::Error;
+                }
+            };
+
+            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+        }
+
+        self.type_name = TypeId::new(Symbol::from(specialized_name));
+        self.generics = vec![];
+
+        // Recursively resolve the type of self now that we changed the
+        // function to call
+        self.type_of(ctx)
+    }
 }
 
 impl Instruction for TypeInstantiation {
@@ -143,8 +186,8 @@ impl Instruction for TypeInstantiation {
 
 impl TypeCheck for TypeInstantiation {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        let (_, fields_ty) = match ctx.get_custom_type(self.type_name.id()) {
-            Some(ty) => ty,
+        let dec = match ctx.get_custom_type(self.type_name.id()) {
+            Some(ty) => ty.clone(),
             None => {
                 ctx.error(
                     Error::new(ErrKind::TypeChecker)
@@ -159,17 +202,22 @@ impl TypeCheck for TypeInstantiation {
             }
         };
 
-        let fields_ty = fields_ty.clone();
+        if !dec.generics().is_empty() || !self.generics.is_empty() {
+            log!("resolving generic type instantiation");
+            return self.resolve_generic_instantiation(dec, ctx);
+        }
 
         let mut errors = vec![];
-        for ((_, field_ty), var_assign) in fields_ty.iter().zip(self.fields.iter_mut()) {
+        for (field_dec, var_assign) in dec.fields().iter().zip(self.fields.iter_mut()) {
+            let expected_ty = CheckedType::Resolved(field_dec.get_type().clone());
             let value_ty = var_assign.value_mut().type_of(ctx);
-            if field_ty != &value_ty {
+            if expected_ty != value_ty {
                 errors.push(
                     Error::new(ErrKind::TypeChecker)
                         .with_msg(format!(
                             "trying to assign value of type `{}` to field of type `{}`",
-                            value_ty, field_ty
+                            value_ty,
+                            field_dec.get_type()
                         ))
                         .with_loc(var_assign.location().cloned()),
                 );
