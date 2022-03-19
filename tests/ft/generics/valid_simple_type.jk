@@ -1,5 +1,5 @@
 type Generic[T](inner: T);
-type Generic2[T, U](inner1: T, inner2: U);
 
 a = Generic[int](inner: 15);
-b = Generic2[Generic[int], string](inner1: a, inner2: "woooow embedded");
+
+a.inner
