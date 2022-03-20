@@ -118,13 +118,24 @@ impl Error {
     }
 
     fn emit_hint(&self) {
-        if let Some(msg) = &self.msg {
-            eprintln!("{}: {}", "hint".black().on_green(), msg);
-            eprintln!();
-
-            if let Some(loc) = &self.loc {
-                loc.emit("|".green(), "^".green());
+        eprint!("{}: ", "hint".black().on_green());
+        if let Some(loc) = &self.loc {
+            if let Some(path) = loc.path() {
+                eprint!(
+                    "{}:{}:{}: ",
+                    path.display().to_string().green(),
+                    loc.start().line(),
+                    loc.start().column()
+                );
             }
+        }
+        if let Some(msg) = &self.msg {
+            eprintln!("{}", msg);
+        }
+        eprintln!();
+
+        if let Some(loc) = &self.loc {
+            loc.emit("|".green(), "^".green());
         }
     }
 
