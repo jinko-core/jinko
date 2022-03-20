@@ -144,6 +144,17 @@ impl TypeCheck for VarAssign {
             }
             None => {
                 let instance_ty = self.value.type_of(ctx);
+                if instance_ty == CheckedType::Void {
+                    ctx.error(
+                        Error::new(ErrKind::TypeChecker)
+                            .with_msg(format!(
+                                "trying to assign statement to variable `{}`",
+                                self.symbol
+                            ))
+                            .with_loc(self.location.clone()),
+                    );
+                    return CheckedType::Error;
+                }
                 if let Err(e) = ctx.declare_var(self.symbol.clone(), instance_ty) {
                     ctx.error(e);
                 }
@@ -154,15 +165,13 @@ impl TypeCheck for VarAssign {
             }
         };
 
-        // FIXME: We resolve the value twice
         let value_ty = self.value.type_of(ctx);
         if value_ty == CheckedType::Void {
             ctx.error(
                 Error::new(ErrKind::TypeChecker)
                     .with_msg(format!(
-                        "trying to assign statement `{}` to variable `{}`",
-                        self.value().print(),
-                        self.symbol
+                        "trying to assign statement to mutable variable `{}` of type `{}`",
+                        self.symbol, var_ty
                     ))
                     .with_loc(self.location.clone()),
             );
@@ -173,7 +182,7 @@ impl TypeCheck for VarAssign {
             ctx.error(
                 Error::new(ErrKind::TypeChecker)
                     .with_msg(format!(
-                        "trying to assign value of types `{}` to variable of type `{}`",
+                        "trying to assign value of type `{}` to variable of type `{}`",
                         value_ty, var_ty
                     ))
                     .with_loc(self.location.clone()),
