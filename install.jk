@@ -1,0 +1,36 @@
+incl oslib
+
+home = Env(name: "HOME").get();
+jk_dir = home.concat("/.jinko/");
+
+bin_dir = jk_dir.concat("bin");
+lib_dir = jk_dir.concat("libs");
+
+println("Setting up standard library...");
+
+Dir(path: bin_dir).create();
+Dir(path: lib_dir).create();
+
+cp_result = shell("cp -r stdlib {lib_dir}");
+if cp_result != 0 {
+    println_err("Failed to copy standard library");
+    exit(1);
+}
+
+if File(path: "Cargo.toml").exists() {
+    println("Compiling jinko from source...");
+
+    shell("cargo build --release");
+    print("jinko version: ");
+    shell("target/release/jinko -v");
+    println("");
+
+    shell("cp target/release/jinko {bin_dir}");
+} else {
+    print("Installing jinko from a release...");
+    shell("./jinko -v");
+
+    shell("cp jinko {bin_dir}");
+}
+
+println("jinko is installed! Remember to add {jk_dir} to your path!")
