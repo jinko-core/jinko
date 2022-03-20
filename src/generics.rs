@@ -4,7 +4,6 @@
 
 use std::collections::HashMap;
 
-use crate::context::Context;
 use crate::error::{ErrKind, Error};
 use crate::log;
 use crate::typechecker::{TypeCtx, TypeId};
@@ -58,21 +57,20 @@ impl GenericMap {
 
     /// Declare a new type "match" in the map. This function associates a generic type
     /// with its resolved counterpart, and errors out otherwise
-    pub fn declare(&mut self, lty: TypeId, rty: TypeId) -> Result<(), Error> {
-        match self.map.insert(lty.clone(), rty.clone()) {
+    pub fn declare(&mut self, generic: TypeId, specialized: TypeId) -> Result<(), Error> {
+        match self.map.insert(generic.clone(), specialized.clone()) {
             None => Ok(()),
             Some(existing_ty) => Err(Error::new(ErrKind::Generics).with_msg(format!(
                 "mapping type to already mapped generic type: {} <- {} with {}",
-                lty, existing_ty, rty
+                generic, existing_ty, specialized
             ))),
         }
     }
 
     /// Get the type associated with a generic type in a previous call to `declare()`
-    pub fn get_match(&self, to_resolve: &TypeId) -> Result<TypeId, Error> {
-        self.map.get(to_resolve).cloned().ok_or_else(|| {
-            Error::new(ErrKind::Generics)
-                .with_msg(format!("undeclared generic type: {}", to_resolve))
+    pub fn get_specialized(&self, generic: &TypeId) -> Result<TypeId, Error> {
+        self.map.get(generic).cloned().ok_or_else(|| {
+            Error::new(ErrKind::Generics).with_msg(format!("undeclared generic type: {}", generic))
         })
     }
 }
@@ -121,17 +119,10 @@ pub fn original_name(mangled_name: &str) -> &str {
 /// default methods which do nothing. This avoid more boilerplate code for instructions
 /// such as constants or variables which cannot be generic.
 pub trait Generic {
-    /// Expand all generics contained in the current instruction, or its sub-instructions.
-    /// For example, a [`Block`] is responsible for expanding the generics of all the
-    /// functions defined within itself.
-    fn expand(&self, _ctx: &mut Context) -> Result<(), Error> {
-        Ok(())
-    }
-
     /// Mutate an instruction in order to resolve to the proper, expanded generic instruction.
     /// For example, a call to the function `f[T]` should now be replaced by a call to
     /// the function `generics::mangle("f", GenericMap { TypeId "T" })` // FIXME: Fix doc
-    fn resolve_self(&mut self, _ctx: &mut TypeCtx) {}
+    fn resolve_self(&mut self, _type_map: &GenericMap, _ctx: &mut TypeCtx) {}
 }
 
 #[cfg(test)]

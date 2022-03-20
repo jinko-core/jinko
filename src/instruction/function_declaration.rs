@@ -72,7 +72,7 @@ impl FunctionDec {
             .zip(self.args().iter())
             .filter(|(_, generic)| self.generics().contains(generic.get_type()))
             .for_each(|(new_arg, old_generic)| {
-                let new_type = match type_map.get_match(old_generic.get_type()) {
+                let new_type = match type_map.get_specialized(old_generic.get_type()) {
                     Ok(t) => t,
                     Err(e) => {
                         ctx.error(e);
@@ -85,16 +85,16 @@ impl FunctionDec {
 
         if let Some(ret_ty) = &self.ty {
             if self.generics().contains(ret_ty) {
-                let new_ret_ty = type_map.get_match(ret_ty)?;
+                let new_ret_ty = type_map.get_specialized(ret_ty)?;
                 new_fn.ty = Some(new_ret_ty);
             }
         }
 
         // FIXME: We also need to generate a new version of each instruction in the
         // block
-        // if let Some(b) = &mut new_fn.block {
-        //     b.resolve_self(ctx);
-        // }
+        if let Some(b) = &mut new_fn.block {
+            b.resolve_self(type_map, ctx);
+        }
 
         match is_err {
             true => Err(Error::new(ErrKind::Generics)),

@@ -18,8 +18,7 @@
 //! Otherwise, it's `void`
 
 use crate::context::Context;
-use crate::error::Error;
-use crate::generics::Generic;
+use crate::generics::{Generic, GenericMap};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -158,20 +157,10 @@ impl TypeCheck for Block {
 }
 
 impl Generic for Block {
-    fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
-        self.instructions.iter().for_each(|inst| {
-            if let Err(e) = inst.expand(ctx) {
-                ctx.error(e)
-            }
-        });
-
-        Ok(())
-    }
-
-    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
+    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
         self.instructions
             .iter_mut()
-            .for_each(|inst| inst.resolve_self(ctx))
+            .for_each(|inst| inst.resolve_self(type_map, ctx))
     }
 }
 

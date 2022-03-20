@@ -49,7 +49,7 @@ impl TypeDec {
             .zip(self.fields().iter())
             .filter(|(_, generic)| self.generics().contains(generic.get_type()))
             .for_each(|(new_arg, old_generic)| {
-                let new_type = match type_map.get_match(old_generic.get_type()) {
+                let new_type = match type_map.get_specialized(old_generic.get_type()) {
                     Ok(t) => t,
                     Err(e) => {
                         ctx.error(e);

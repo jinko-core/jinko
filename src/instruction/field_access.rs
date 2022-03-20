@@ -3,7 +3,7 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::Generic;
+use crate::generics::{Generic, GenericMap};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -140,12 +140,8 @@ impl TypeCheck for FieldAccess {
 }
 
 impl Generic for FieldAccess {
-    fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
-        self.instance.expand(ctx)
-    }
-
-    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
-        self.instance.resolve_self(ctx)
+    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+        self.instance.resolve_self(type_map, ctx)
     }
 }
 
