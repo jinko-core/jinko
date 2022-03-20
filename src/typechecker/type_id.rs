@@ -67,19 +67,29 @@ impl TypeId {
     /// Add a generic type to a consumed [`TypeId`]'s generic list
     pub fn with_generic(self, generic: TypeId) -> TypeId {
         match self {
-            TypeId::Type { id, generics } => TypeId::Type {
-                id,
-                generics: [generics, [generic].to_vec()].concat(),
-            },
+            TypeId::Type { id, generics } => {
+                let mut new_generics = generics;
+                new_generics.push(generic);
+
+                TypeId::Type {
+                    id,
+                    generics: new_generics,
+                }
+            }
             TypeId::Functor {
                 generics,
                 arg_types,
                 return_type,
-            } => TypeId::Functor {
-                generics: [generics, [generic].to_vec()].concat(),
-                arg_types,
-                return_type,
-            },
+            } => {
+                let mut new_generics = generics;
+                new_generics.push(generic);
+
+                TypeId::Functor {
+                    generics: new_generics,
+                    arg_types,
+                    return_type,
+                }
+            }
         }
     }
 
@@ -97,11 +107,16 @@ impl TypeId {
                 generics,
                 arg_types,
                 return_type,
-            } => TypeId::Functor {
-                generics,
-                arg_types: [arg_types, [arg].to_vec()].concat(),
-                return_type,
-            },
+            } => {
+                let mut new_args = arg_types;
+                new_args.push(arg);
+
+                TypeId::Functor {
+                    generics,
+                    arg_types: new_args,
+                    return_type,
+                }
+            }
         }
     }
 
