@@ -615,7 +615,10 @@ fn func_type_or_var(
         func_or_type_inst_args(next(input), id, vec![], start_loc)
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
-        Ok((input, Box::new(VarAssign::new(false, id, value))))
+        let (input, end_loc) = position(input)?;
+        let mut var_assign = VarAssign::new(false, id, value);
+        var_assign.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        Ok((input, Box::new(var_assign)))
     } else {
         let (input, end_loc) = position(input)?;
         let mut var_or_et = VarOrEmptyType::new(id);
