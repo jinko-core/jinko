@@ -15,12 +15,14 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::rc::Rc;
 
+use crate::builtins::Builtins;
 use crate::error::{ErrKind, Error, ErrorHandler};
+use crate::instance::ObjectInstance;
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
+use crate::log;
+use crate::parser;
+use crate::typechecker::CheckedType;
 use crate::typechecker::{SpecializedNode, TypeCheck, TypeCtx, TypeId};
-use crate::ObjectInstance;
-use crate::{log, parser};
-use crate::{Builtins, CheckedType};
 
 /// Type the context uses for keys
 type CtxKey = String;

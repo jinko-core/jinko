@@ -3,10 +3,14 @@
 //! really an `Instruction`, and therefore their implementation lives in the parser
 //! module. They are executed at "compile" time, when running through the code first.
 
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::Generic;
+use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
-use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
-use crate::{Generic, SpanTuple};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 /// The potential ctx instructions
 #[derive(Clone, Debug, PartialEq)]

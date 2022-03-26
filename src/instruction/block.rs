@@ -17,11 +17,14 @@
 //! The return value of the function is the last instruction if it is an expression.
 //! Otherwise, it's `void`
 
-use crate::{
-    log,
-    typechecker::{CheckedType, TypeCtx},
-    Context, Error, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
-};
+use crate::context::Context;
+use crate::error::Error;
+use crate::generics::Generic;
+use crate::instance::ObjectInstance;
+use crate::instruction::{InstrKind, Instruction};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone, Default)]
 pub struct Block {

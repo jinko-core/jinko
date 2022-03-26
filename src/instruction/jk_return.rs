@@ -9,12 +9,12 @@
 //! return 42
 //! ```
 
+use crate::context::Context;
+use crate::generics::Generic;
+use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
-use crate::SpanTuple;
-use crate::{
-    typechecker::{CheckedType, TypeCtx},
-    Context, Generic, ObjectInstance, TypeCheck,
-};
+use crate::location::SpanTuple;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
 pub struct Return {

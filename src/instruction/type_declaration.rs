@@ -1,11 +1,13 @@
 use super::{DecArg, InstrKind, Instruction};
 
-use crate::{
-    generics::GenericMap,
-    log,
-    typechecker::{CheckedType, TypeCtx, TypeId},
-    Context, ErrKind, Error, Generic, ObjectInstance, SpanTuple, TypeCheck,
-};
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::Generic;
+use crate::generics::GenericMap;
+use crate::instance::ObjectInstance;
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {

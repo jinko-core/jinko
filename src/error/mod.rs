@@ -6,7 +6,8 @@ use std::path::PathBuf;
 
 use colored::Colorize;
 
-use crate::{ParseInput, SpanTuple};
+use crate::location::SpanTuple;
+use crate::parser::ParseInput;
 
 /// The role of the error handler is to keep track of errors and emit them properly
 /// once done

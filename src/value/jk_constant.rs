@@ -1,9 +1,12 @@
+use crate::context::Context;
+use crate::error::Error;
+use crate::generics::Generic;
+use crate::instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 use crate::instruction::{InstrKind, Instruction, Operator};
+use crate::location::SpanTuple;
+use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
-use crate::{
-    log, Context, Error, FromObjectInstance, Generic, JkString, ObjectInstance, SpanTuple,
-    ToObjectInstance, Value,
-};
+use crate::value::{JkString, Value};
 
 use std::convert::TryFrom;
 
@@ -390,7 +393,7 @@ impl From<String> for JkConstant<String> {
 #[cfg(test)]
 mod tests {
     use crate::jinko;
-    use crate::{JkBool, JkFloat, JkInt};
+    use crate::value::{JkBool, JkFloat, JkInt};
 
     use super::*;
 

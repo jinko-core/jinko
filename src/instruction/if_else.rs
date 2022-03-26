@@ -15,13 +15,15 @@
 //! x = if condition { 12 } else { 13 };
 //! ```
 
-use crate::instance::FromObjectInstance;
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::Generic;
+use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{Block, InstrKind, Instruction};
-use crate::typechecker::{TypeCtx, TypeId};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 use crate::value::JkBool;
-use crate::{log, ErrKind, Error};
-use crate::{typechecker::CheckedType, Context, ObjectInstance, TypeCheck};
-use crate::{Generic, SpanTuple};
 
 #[derive(Clone)]
 pub struct IfElse {

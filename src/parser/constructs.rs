@@ -20,16 +20,16 @@ use nom::{
 };
 use nom_locate::position;
 
+use crate::error::Error;
 use crate::instruction::{
     BinaryOp, Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl,
     Instruction, JkInst, Loop, LoopKind, MethodCall, Operator, Return, TypeDec, TypeInstantiation,
     Var, VarAssign, VarOrEmptyType,
 };
+use crate::location::{Location, SpanTuple};
 use crate::parser::{ConstantConstruct, ParseInput, ParseResult, Token};
 use crate::symbol::Symbol;
 use crate::typechecker::TypeId;
-use crate::Error;
-use crate::{Location, SpanTuple};
 
 /// Parse as many instructions as possible
 /// many_expr = ( expr_semicolon )*
@@ -797,7 +797,7 @@ pub(crate) fn constant(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Ins
 mod tests {
     use super::*;
     use crate::span;
-    use crate::{JkFloat, JkInt};
+    use crate::value::{JkFloat, JkInt};
 
     #[test]
     fn consume_whitespace() {

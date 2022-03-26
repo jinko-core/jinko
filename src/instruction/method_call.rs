@@ -1,10 +1,14 @@
 //! A method like call is syntactic sugar over regular function calls. During executions,
 //! they get desugared into a normal function call.
 
+use crate::context::Context;
 use crate::generics::Generic;
+use crate::instance::ObjectInstance;
 use crate::instruction::FunctionCall;
-use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{log, Context, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck};
+use crate::instruction::{InstrKind, Instruction};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
 pub struct MethodCall {
@@ -125,8 +129,10 @@ impl Generic for MethodCall {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instance::ToObjectInstance;
     use crate::parser::constructs;
-    use crate::*;
+    use crate::value::JkInt;
+    use crate::{jinko, span};
 
     #[test]
     fn t_print() {

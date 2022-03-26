@@ -1,9 +1,14 @@
 //! The VarAssign struct is used when assigning values to variables.
 
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::Generic;
+use crate::instance::ObjectInstance;
+use crate::instruction::Instruction;
 use crate::instruction::{InstrKind, Var};
-use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{log, Context, ErrKind, Error, Instruction, ObjectInstance, TypeCheck};
-use crate::{Generic, SpanTuple};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
 pub struct VarAssign {
@@ -219,9 +224,9 @@ impl Generic for VarAssign {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instance::ToObjectInstance;
     use crate::parser::constructs;
     use crate::value::{JkInt, JkString};
-    use crate::ToObjectInstance;
     use crate::{jinko, jinko_fail, span};
 
     #[test]

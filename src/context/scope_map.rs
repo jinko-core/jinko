@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, LinkedList};
 
-use crate::{ErrKind, Error};
+use crate::error::{ErrKind, Error};
 
 /// A scope contains a set of available variables, functions and types
 #[derive(Clone)]

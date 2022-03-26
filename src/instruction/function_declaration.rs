@@ -1,12 +1,14 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
-use crate::generics::GenericMap;
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::{Generic, GenericMap};
+use crate::instance::ObjectInstance;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction};
-use crate::typechecker::{CheckedType, TypeCtx, TypeId};
-use crate::Generic;
-use crate::{log, Context, ErrKind, Error, ObjectInstance, TypeCheck};
-use crate::{Location, SpanTuple};
+use crate::location::{Location, SpanTuple};
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks

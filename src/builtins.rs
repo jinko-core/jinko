@@ -3,12 +3,14 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::context::Context;
 #[cfg(feature = "ffi")]
 use crate::ffi;
-use crate::instance::{FromObjectInstance, ToObjectInstance};
-use crate::{
-    generics, log, Context, Instruction, JkBool, JkChar, JkFloat, JkInt, JkString, ObjectInstance,
-};
+use crate::generics;
+use crate::instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
+use crate::instruction::Instruction;
+use crate::log;
+use crate::value::{JkBool, JkChar, JkFloat, JkInt, JkString};
 
 type Args = Vec<Box<dyn Instruction>>;
 type BuiltinFn = fn(&mut Context, Args) -> Option<ObjectInstance>;

@@ -9,8 +9,9 @@
 
 use std::collections::HashMap;
 
+use crate::error::{ErrKind, Error};
+use crate::indent::Indent;
 use crate::typechecker::CheckedType;
-use crate::{ErrKind, Error, Indent};
 
 pub type Name = String;
 type Offset = usize;
@@ -169,7 +170,10 @@ pub trait FromObjectInstance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parser::constructs, span, Context, JkInt};
+    use crate::context::Context;
+    use crate::parser::constructs;
+    use crate::span;
+    use crate::value::JkInt;
 
     fn setup() -> Context {
         let mut ctx = Context::new();

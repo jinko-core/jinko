@@ -4,9 +4,10 @@
 
 use std::collections::HashMap;
 
-use crate::typechecker::TypeId;
-use crate::{log, ErrKind, Error};
-use crate::{Context, TypeCtx};
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::log;
+use crate::typechecker::{TypeCtx, TypeId};
 
 #[derive(Default)]
 pub struct GenericMap {

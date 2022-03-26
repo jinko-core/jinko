@@ -10,7 +10,8 @@ use nom::{
     combinator::peek, multi::many0, sequence::delimited, sequence::pair,
 };
 
-use crate::{parser::ParseResult, ErrKind, Error, ParseInput};
+use crate::error::{ErrKind, Error};
+use crate::parser::{ParseInput, ParseResult};
 
 /// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: [&str; 14] = [

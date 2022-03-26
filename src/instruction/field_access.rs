@@ -1,11 +1,14 @@
 //! FieldAccesses represent an access onto a type instance's members.
 //! FIXME: Add doc
 
-use crate::{
-    log,
-    typechecker::{CheckedType, TypeCtx},
-    Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
-};
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::Generic;
+use crate::instance::ObjectInstance;
+use crate::instruction::{InstrKind, Instruction};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
 pub struct FieldAccess {
@@ -151,7 +154,7 @@ mod tests {
     use super::*;
     use crate::instance::ToObjectInstance;
     use crate::parser::constructs;
-    use crate::JkInt;
+    use crate::value::JkInt;
     use crate::{jinko, jinko_fail, span};
 
     fn setup() -> Context {
