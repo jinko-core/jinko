@@ -1,3 +1,5 @@
+link_with("libc.so.6")
+
 ext func memcpy(dest: int, src: int, n: int);
 ext func calloc(n: int, size: int) -> int;
 ext func realloc(ptr: int, size: int) -> int;
