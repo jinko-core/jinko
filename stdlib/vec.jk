@@ -1,6 +1,6 @@
 ext func memcpy(dest: int, src: int, n: int);
-ext func calloc(n: int, size: int);
-ext func realloc(ptr: int, size: int);
+ext func calloc(n: int, size: int) -> int;
+ext func realloc(ptr: int, size: int) -> int;
 ext func free(ptr: int);
 
 /* FIXME: Add default values for fields */
@@ -8,9 +8,11 @@ type Vec[T](raw_pointer: int, len: int, size: int);
 /* type Vec[T](raw_pointer: int = 0, len: int = 0, size: int = 0); */
 
 func inner_init[T](value: T) -> Vec[T] {
-	Vec(inner: calloc(1, size_of[T](value)),
+	new_inner = calloc(1, size_of[T](value));
+	new_size = size_of[T](value);
+	Vec(inner: new_inner,
 		len: 1,
-		size: size_of[T](value))
+		size: new_size)
 }
 
 func inner_grow[T](v: Vec[T], value: T) -> Vec[T] {
