@@ -8,7 +8,7 @@ use crate::error::{ErrKind, Error};
 use crate::log;
 use crate::typechecker::{TypeCtx, TypeId};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct GenericMap {
     map: HashMap<TypeId, TypeId>,
 }
