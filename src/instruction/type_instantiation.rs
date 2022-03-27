@@ -243,9 +243,6 @@ impl TypeCheck for TypeInstantiation {
 
 impl Generic for TypeInstantiation {
     fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        // For function calls, we can just change our name to one resolved
-        // using the generic map. And obviously just visit all of our arguments
-
         // FIXME: Can we unwrap here?
         log!(generics, "type name: {}", self.type_name);
         let dec = ctx.get_custom_type(self.type_name.id()).unwrap();

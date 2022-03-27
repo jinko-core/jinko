@@ -232,8 +232,19 @@ impl Instruction for FunctionCall {
     }
 
     fn print(&self) -> String {
-        let mut base = format!("{}(", self.fn_name);
+        let mut base = String::from(&self.fn_name);
 
+        if !self.generics.is_empty() {
+            base = format!("{}[{}", base, self.generics[0]);
+
+            self.generics
+                .iter()
+                .skip(1)
+                .for_each(|generic| base.push_str(&format!(", {}", generic)));
+            base.push(']');
+        }
+
+        base.push('(');
         let mut first_arg = true;
         for arg in &self.args {
             if !first_arg {
@@ -244,8 +255,9 @@ impl Instruction for FunctionCall {
 
             first_arg = false;
         }
+        base.push(')');
 
-        format!("{})", base)
+        base
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
@@ -381,6 +393,7 @@ impl Generic for FunctionCall {
         // using the generic map. And obviously just visit all of our arguments
 
         // FIXME: Can we unwrap here?
+        log!(rare, "type map: {:?}", type_map);
         log!(generics, "fn name: {}", self.fn_name);
         let dec = match ctx.get_function(&self.fn_name) {
             Some(f) => f,

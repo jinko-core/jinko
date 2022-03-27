@@ -177,7 +177,12 @@ impl TypeCheck for BinaryOp {
     }
 }
 
-impl Generic for BinaryOp {}
+impl Generic for BinaryOp {
+    fn resolve_self(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
+        self.lhs.resolve_self(type_map, ctx);
+        self.rhs.resolve_self(type_map, ctx);
+    }
+}
 
 // TODO: Add typechecking tests
 #[cfg(test)]
