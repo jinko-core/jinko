@@ -27,6 +27,7 @@ use std::hash::Hash;
 
 use colored::Colorize;
 
+use crate::error::{ErrKind, Error};
 use crate::generics::{self, Generic, GenericMap};
 use crate::instruction::TypeDec;
 use crate::log;
@@ -201,8 +202,17 @@ impl Generic for TypeId {
             // nodes
             let type_dec = ctx.get_custom_type(&new_name);
             if type_dec.is_none() {
-                // FIXME: Don't unwrap here
-                let new_dec = ctx.get_custom_type(id.access()).unwrap().clone();
+                let new_dec = match ctx.get_custom_type(id.access()) {
+                    Some(t) => t.clone(),
+                    None => {
+                        ctx.error(
+                            Error::new(ErrKind::Generics)
+                                // FIXME: How do we get the location here?
+                                .with_msg(format!("undeclared generic type `{}`", self)),
+                        );
+                        return;
+                    }
+                };
                 let new_dec = new_dec
                     .from_type_map(new_name.clone(), type_map, ctx)
                     // FIXME: Don't unwrap here
