@@ -393,7 +393,6 @@ impl Generic for FunctionCall {
         // using the generic map. And obviously just visit all of our arguments
 
         // FIXME: Can we unwrap here?
-        log!(rare, "type map: {:?}", type_map);
         log!(generics, "fn name: {}", self.fn_name);
         let dec = match ctx.get_function(&self.fn_name) {
             Some(f) => f,
@@ -409,6 +408,8 @@ impl Generic for FunctionCall {
             .collect();
 
         let new_name = generics::mangle(&self.fn_name, &new_types);
+        // FIXME: Avoid the allocation
+        let old_name = String::from(&self.fn_name);
         self.fn_name = new_name;
         self.generics = vec![];
 
@@ -416,7 +417,8 @@ impl Generic for FunctionCall {
             .iter_mut()
             .for_each(|arg| arg.resolve_self(type_map, ctx));
 
-        if ctx.get_specialized_node(&self.fn_name).is_none() {
+        // FIXME: This is ugly as sin
+        if ctx.get_specialized_node(&self.fn_name).is_none() && self.fn_name != old_name {
             let demangled = generics::demangle(&self.fn_name);
 
             // FIXME: Can we unwrap here? Probably not
