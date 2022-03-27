@@ -32,6 +32,12 @@ func release(v: Vec[T]) {
 	v.raw_pointer.free()
 }
 
+// Creates an empty vector. Shorthand for while we still don't have default
+// field initialization
+func vec[T]() -> Vec[T] {
+	Vec[T](raw_pointer: 0, len: 0, size: 0)
+}
+
 // FIXME: Add this once we have proper first parameter overloading
 // func deinitialize[T](v: Vec[T]) {
 // 	v.raw_pointer.free()
