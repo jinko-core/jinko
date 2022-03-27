@@ -158,9 +158,10 @@ impl TypeCheck for Block {
 
 impl Generic for Block {
     fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.instructions
-            .iter_mut()
-            .for_each(|inst| inst.resolve_self(type_map, ctx))
+        self.instructions.iter_mut().for_each(|inst| {
+            log!(generics, "resolving stmt in block");
+            inst.resolve_self(type_map, ctx)
+        })
     }
 }
 

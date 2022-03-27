@@ -81,19 +81,24 @@ impl GenericMap {
 pub fn mangle(name: &str, types: &[TypeId]) -> String {
     let mut mangled = String::from(name);
     for type_id in types.iter() {
+        // FIXME: Add const for delimiter
         mangled.push('+');
         mangled.push_str(type_id.id());
     }
 
-    log!("mangled: {}", &mangled);
+    log!(generics, "mangled: {}", &mangled);
 
     mangled
 }
 
 /// Performs the opposite conversion, turning a mangled name into a valid
 /// jinko function name with generics.
-pub fn demangle(_mangled_name: &str) -> String {
-    todo!()
+pub fn demangle(mangled_name: &str) -> &str {
+    if let Some(idx) = mangled_name.find('+') {
+        &mangled_name[..idx]
+    } else {
+        mangled_name
+    }
 }
 
 /// Fetch the original name contained in a mangled name. This is useful for

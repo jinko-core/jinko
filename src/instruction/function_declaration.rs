@@ -64,42 +64,21 @@ impl FunctionDec {
         new_fn.name = mangled_name;
         new_fn.generics = vec![];
 
-        let mut is_err = false;
-
         new_fn
             .args
             .iter_mut()
-            .zip(self.args().iter())
-            .filter(|(_, generic)| self.generics().contains(generic.get_type()))
-            .for_each(|(new_arg, old_generic)| {
-                let new_type = match type_map.get_specialized(old_generic.get_type()) {
-                    Ok(t) => t,
-                    Err(e) => {
-                        ctx.error(e);
-                        is_err = true;
-                        TypeId::void()
-                    }
-                };
-                new_arg.set_type(new_type);
-            });
+            .for_each(|arg| arg.resolve_self(type_map, ctx));
 
-        if let Some(ret_ty) = &self.ty {
-            if self.generics().contains(ret_ty) {
-                let new_ret_ty = type_map.get_specialized(ret_ty)?;
-                new_fn.ty = Some(new_ret_ty);
-            }
+        if let Some(ret_ty) = &mut new_fn.ty {
+            ret_ty.resolve_self(type_map, ctx);
         }
 
-        // FIXME: We also need to generate a new version of each instruction in the
-        // block
         if let Some(b) = &mut new_fn.block {
             b.resolve_self(type_map, ctx);
         }
 
-        match is_err {
-            true => Err(Error::new(ErrKind::Generics)),
-            false => Ok(new_fn),
-        }
+        // FIXME: This can't be right
+        Ok(new_fn)
     }
 
     pub fn generics(&self) -> &Vec<TypeId> {

@@ -8,23 +8,23 @@ type Vec[T](raw_pointer: int, len: int, size: int);
 /* type Vec[T](raw_pointer: int = 0, len: int = 0, size: int = 0); */
 
 func inner_init[T](value: T) -> Vec[T] {
-	Vec(inner: malloc(size_of(value)),
+	Vec(inner: calloc(1, size_of[T](value)),
 		len: 1,
-		size: size_of(value))
+		size: size_of[T](value))
 }
 
 func inner_grow[T](v: Vec[T], value: T) -> Vec[T] {
-	new_size = v.size + size_of(value);
-	new_pointer = v.raw_pointer.realloc(v.size + size_of(value));
+	new_size = v.size + size_of[T](value);
+	new_pointer = v.raw_pointer.realloc(v.size + size_of[T](value));
 
 	Vec(raw_pointer: new_pointer, len: v.len + 1, size: new_size)
 }
 
 func push[T](v: Vec[T], value: T) -> Vec[T] {
 	if v.size == 0 {
-		inner_init(value)
+		inner_init[T](value)
 	} else {
-		inner_grow(v, value)
+		inner_grow[T](v, value)
 	}
 }
 

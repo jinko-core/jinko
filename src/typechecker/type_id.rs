@@ -27,8 +27,11 @@ use std::hash::Hash;
 
 use colored::Colorize;
 
+use crate::generics::{self, Generic, GenericMap};
 use crate::instruction::TypeDec;
+use crate::log;
 use crate::symbol::Symbol;
+use crate::typechecker::{SpecializedNode, TypeCtx};
 
 pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"];
 
@@ -154,9 +157,61 @@ impl TypeId {
         TypeId::new(Symbol::from(String::from("void")))
     }
 
+    fn set_id(&mut self, new_id: Symbol) {
+        if let TypeId::Type { id, .. } = self {
+            *id = new_id;
+        }
+    }
+
     #[deprecated]
     pub fn is_primitive(&self) -> bool {
         PRIMITIVE_TYPES.contains(&self.id())
+    }
+}
+
+impl Generic for TypeId {
+    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+        log!(generics, "resolving type id `{}`", self);
+
+        let generics = match self {
+            TypeId::Type { generics, .. } => generics,
+            TypeId::Functor { generics, .. } => generics,
+        };
+
+        // FIXME: Split generics in two using .partition(): Keep some in a new
+        // generic list, and resolve some others to the type's name
+        let new_types: Vec<TypeId> = generics
+            .iter()
+            .filter_map(|generic| type_map.get_specialized(generic).ok())
+            .collect();
+
+        // FIXME: What we need to do then is to go and visit all our newtype's generics
+        // and resolve them
+
+        generics.clear();
+
+        if let Ok(new_id) = type_map.get_specialized(self) {
+            self.set_id(Symbol::from(String::from(new_id.id())));
+        }
+
+        if let TypeId::Type { id, .. } = self {
+            let new_name = generics::mangle(id.access(), &new_types);
+
+            // If the type does not exist yet, then we must create it and add it to the specialized
+            // nodes
+            let type_dec = ctx.get_custom_type(&new_name);
+            if type_dec.is_none() {
+                // FIXME: Don't unwrap here
+                let new_dec = ctx.get_custom_type(id.access()).unwrap().clone();
+                let new_dec = new_dec
+                    .from_type_map(new_name.clone(), type_map, ctx)
+                    // FIXME: Don't unwrap here
+                    .unwrap();
+                ctx.add_specialized_node(SpecializedNode::Type(new_dec));
+            }
+
+            *id = Symbol::from(new_name);
+        }
     }
 }
 
@@ -183,6 +238,24 @@ impl From<TypeDec> for TypeId {
 
 impl Display for TypeId {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(f, "{}", self.id().purple())
+        write!(f, "{}", self.id().purple())?;
+
+        let generics = match self {
+            TypeId::Type { generics, .. } | TypeId::Functor { generics, .. } => generics,
+        };
+
+        if !generics.is_empty() {
+            write!(f, "[")?;
+            write!(f, "{}", generics[0])?;
+
+            generics
+                .iter()
+                .skip(1)
+                .try_for_each(|generic| write!(f, ", {}", generic))?;
+
+            write!(f, "]")?;
+        }
+
+        Ok(())
     }
 }

@@ -241,7 +241,29 @@ impl TypeCheck for TypeInstantiation {
     }
 }
 
-impl Generic for TypeInstantiation {}
+impl Generic for TypeInstantiation {
+    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+        // For function calls, we can just change our name to one resolved
+        // using the generic map. And obviously just visit all of our arguments
+
+        // FIXME: Can we unwrap here?
+        log!(generics, "type name: {}", self.type_name);
+        let dec = ctx.get_custom_type(self.type_name.id()).unwrap();
+        let new_types: Vec<TypeId> = dec
+            .generics()
+            .iter()
+            .filter_map(|generic| type_map.get_specialized(generic).ok())
+            .collect();
+
+        let new_name = generics::mangle(self.type_name.id(), &new_types);
+        self.type_name = TypeId::new(Symbol::from(new_name));
+        self.generics = vec![];
+
+        self.fields
+            .iter_mut()
+            .for_each(|arg| arg.resolve_self(type_map, ctx));
+    }
+}
 
 #[cfg(test)]
 mod test {

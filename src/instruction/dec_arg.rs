@@ -1,7 +1,8 @@
 use std::fmt::{Display, Formatter, Result};
 
+use crate::generics::{Generic, GenericMap};
 use crate::location::SpanTuple;
-use crate::typechecker::TypeId;
+use crate::typechecker::{TypeCtx, TypeId};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {
@@ -43,6 +44,12 @@ impl DecArg {
     /// Set the location of the argument
     pub fn set_location(&mut self, location: SpanTuple) {
         self.location = Some(location)
+    }
+}
+
+impl Generic for DecArg {
+    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+        self.ty.resolve_self(type_map, ctx)
     }
 }
 

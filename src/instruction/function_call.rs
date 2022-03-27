@@ -201,7 +201,7 @@ impl FunctionCall {
         log!("specialized name {}", specialized_name);
         if ctx.get_function(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
-            let mut specialized_fn =
+            let specialized_fn =
                 match function.from_type_map(specialized_name.clone(), &type_map, ctx) {
                     Ok(f) => f,
                     Err(e) => {
@@ -211,7 +211,7 @@ impl FunctionCall {
                 };
 
             // Resolve the generics of all items in the function's block
-            specialized_fn.resolve_self(&type_map, ctx);
+            // specialized_fn.resolve_self(&type_map, ctx);
 
             ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)));
         }
@@ -381,8 +381,14 @@ impl Generic for FunctionCall {
         // using the generic map. And obviously just visit all of our arguments
 
         // FIXME: Can we unwrap here?
-        log!("ARTHUR fn name: {}", self.fn_name);
-        let dec = ctx.get_function(&self.fn_name).unwrap();
+        log!(generics, "fn name: {}", self.fn_name);
+        let dec = match ctx.get_function(&self.fn_name) {
+            Some(f) => f,
+            None => {
+                ctx.error(Error::new(ErrKind::Generics).with_msg(format!("trying to access undeclared function in new specialized function: `{}`", self.fn_name)).with_loc(self.location.clone()));
+                return;
+            }
+        };
         let new_types: Vec<TypeId> = dec
             .generics()
             .iter()
@@ -396,6 +402,17 @@ impl Generic for FunctionCall {
         self.args
             .iter_mut()
             .for_each(|arg| arg.resolve_self(type_map, ctx));
+
+        if ctx.get_specialized_node(&self.fn_name).is_none() {
+            let demangled = generics::demangle(&self.fn_name);
+
+            // FIXME: Can we unwrap here? Probably not
+            let generic_dec = ctx.get_function(demangled).unwrap().clone();
+            match generic_dec.from_type_map(self.fn_name.clone(), type_map, ctx) {
+                Ok(new_f) => ctx.add_specialized_node(SpecializedNode::Func(Box::new(new_f))),
+                Err(e) => ctx.error(e),
+            }
+        }
     }
 }
 
