@@ -33,6 +33,13 @@ macro_rules! log {
             eprintln!("<{}> [{}] {}", "LOG".black().on_purple(), "generics".black().on_blue(), format_args!($($token)*));
         }
     );
+    (rare, $($token:tt)*) => (
+        if $crate::log::is_enabled() {
+            use colored::Colorize;
+
+            eprintln!("<{}> [{}] {}", "LOG".black().on_purple(), "RARE".black().on_red(), format_args!($($token)*));
+        }
+    );
     ($($token:tt)*) => (
         if $crate::log::is_enabled() {
             use colored::Colorize;
