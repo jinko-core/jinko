@@ -4,7 +4,12 @@
 
 use std::fmt::Debug;
 
-use crate::{Context, ErrKind, Error, Generic, ObjectInstance, SpanTuple, TypeCheck};
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::Generic;
+use crate::instance::ObjectInstance;
+use crate::location::SpanTuple;
+use crate::typechecker::TypeCheck;
 
 use colored::Colorize;
 use downcast_rs::{impl_downcast, Downcast};

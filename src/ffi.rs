@@ -2,11 +2,12 @@
 //! Primitive types are converted to their C counterparts.
 //! FIXME
 
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 use crate::instruction::{FunctionCall, FunctionDec};
-use crate::{
-    log, Context, ErrKind, Error, FromObjectInstance, JkBool, JkFloat, JkInt, JkString,
-    ObjectInstance, ToObjectInstance,
-};
+use crate::log;
+use crate::value::{JkBool, JkFloat, JkInt, JkString};
 
 use libffi::high::{arg, call as ffi_call, Arg as FfiArg, CodePtr};
 use libloading::{Library, Symbol};
@@ -220,9 +221,10 @@ pub fn execute(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instance::ToObjectInstance;
     use crate::parser::constructs;
+    use crate::value::JkInt;
     use crate::{jinko, span};
-    use crate::{JkInt, ToObjectInstance};
 
     fn init_ctx() -> Context {
         jinko! {

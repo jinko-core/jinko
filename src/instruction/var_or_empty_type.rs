@@ -1,9 +1,10 @@
-use crate::{
-    instruction::{TypeInstantiation, Var},
-    symbol::Symbol,
-    CheckedType, Context, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
-    TypeCtx, TypeId,
-};
+use crate::context::Context;
+use crate::generics::Generic;
+use crate::instance::ObjectInstance;
+use crate::instruction::{InstrKind, Instruction, TypeInstantiation, Var};
+use crate::location::SpanTuple;
+use crate::symbol::Symbol;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 #[derive(Clone, PartialEq)]
 enum Kind {

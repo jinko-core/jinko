@@ -5,13 +5,16 @@
 //! The available operators are `+`, `-`, `*` and `/`.
 //! That is `Add`, `Substract`, `Multiply` and `Divide`.
 
-use crate::{
-    instruction::Operator,
-    log,
-    typechecker::{CheckedType, TypeCtx, TypeId},
-    Context, ErrKind, Error, FromObjectInstance, Generic, InstrKind, Instruction, JkFloat, JkInt,
-    ObjectInstance, SpanTuple, TypeCheck, Value,
-};
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::Generic;
+use crate::instance::{FromObjectInstance, ObjectInstance};
+use crate::instruction::{InstrKind, Instruction, Operator};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::TypeCheck;
+use crate::typechecker::{CheckedType, TypeCtx, TypeId};
+use crate::value::{JkFloat, JkInt, Value};
 
 /// The `BinaryOp` struct contains two expressions and an operator, which can be an arithmetic
 /// or a comparison one
@@ -182,9 +185,9 @@ mod tests {
     use nom_locate::LocatedSpan;
 
     use super::*;
+    use crate::context::Context;
+    use crate::instance::ToObjectInstance;
     use crate::value::JkInt;
-    use crate::Context;
-    use crate::ToObjectInstance;
     use crate::{jinko, jinko_fail};
 
     #[test]
@@ -234,7 +237,7 @@ mod tests {
     }
 
     fn assert_bool(input: &str, value: bool) {
-        use crate::JkBool;
+        use crate::value::JkBool;
         let input = LocatedSpan::new_extra(input, None);
 
         let boxed_output = crate::parser::constructs::expr(input).unwrap().1;

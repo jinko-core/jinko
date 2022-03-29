@@ -3,11 +3,15 @@
 //! need to keep an option of an instance. A variable is either there, fully initialized,
 //! or it's not.
 
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::Generic;
+use crate::instance::ObjectInstance;
 use crate::instruction::TypeDec;
-use crate::typechecker::{CheckedType, TypeCtx};
-use crate::Generic;
-use crate::{log, SpanTuple};
-use crate::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeCheck};
+use crate::instruction::{InstrKind, Instruction};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
 pub struct Var {
@@ -141,8 +145,8 @@ impl Generic for Var {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instance::ToObjectInstance;
     use crate::value::JkInt;
-    use crate::ToObjectInstance;
     use crate::{jinko, jinko_fail};
 
     #[test]

@@ -1,4 +1,4 @@
-use jinko::Context;
+use jinko::context::Context;
 use std::io::{self, Result, Write};
 
 fn main() -> Result<()> {

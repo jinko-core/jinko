@@ -1,14 +1,17 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use crate::generics::GenericMap;
-use crate::instruction::{FunctionDec, FunctionKind, Var};
-use crate::typechecker::{CheckedType, SpecializedNode, TypeCtx, TypeId};
-use crate::{
-    generics, log, Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance,
-    SpanTuple, TypeCheck,
-};
 use std::rc::Rc;
+
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::{self, Generic, GenericMap};
+use crate::instance::ObjectInstance;
+use crate::instruction::{FunctionDec, FunctionKind, Var};
+use crate::instruction::{InstrKind, Instruction};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx, TypeId};
 
 #[derive(Clone)]
 pub struct FunctionCall {
@@ -516,8 +519,8 @@ mod tests {
 
     #[test]
     fn t_func_call_arg_return() {
+        use crate::instance::ToObjectInstance;
         use crate::value::JkInt;
-        use crate::ToObjectInstance;
 
         let mut i = Context::new();
         let func_dec = constructs::expr(span!("func __second(f: int, s: int) -> int { s }"))
@@ -535,8 +538,8 @@ mod tests {
 
     #[test]
     fn t_func_call_arg_return_binop() {
+        use crate::instance::ToObjectInstance;
         use crate::value::JkInt;
-        use crate::ToObjectInstance;
 
         let mut i = Context::new();
         let func_dec = constructs::expr(span!("func add(a: int, b: int) -> int { a + b }"))
@@ -554,8 +557,8 @@ mod tests {
 
     #[test]
     fn t_func_call_variable_return() {
+        use crate::instance::ToObjectInstance;
         use crate::value::JkInt;
-        use crate::ToObjectInstance;
 
         let mut i = Context::new();
         let func_dec = constructs::expr(span!("func one() -> int { one = 1; one }"))

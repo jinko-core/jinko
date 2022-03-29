@@ -1,7 +1,7 @@
 //! Creates a prompt based on the context's current status
 
 use colored::Colorize;
-use jinko::Context;
+use jinko::context::Context;
 
 pub struct Prompt;
 

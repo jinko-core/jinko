@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter, Result};
 
-use crate::{typechecker::TypeId, SpanTuple};
+use crate::location::SpanTuple;
+use crate::typechecker::TypeId;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {

@@ -2,12 +2,13 @@
 //! type on execution.
 
 use super::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, VarAssign};
+use crate::generics::Generic;
 use crate::generics::{self, GenericMap};
 use crate::instance::Name;
+use crate::location::SpanTuple;
+use crate::log;
 use crate::symbol::Symbol;
-use crate::typechecker::{SpecializedNode, TypeCtx};
-use crate::{log, Generic, SpanTuple};
-use crate::{typechecker::CheckedType, TypeCheck, TypeId};
+use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx, TypeId};
 
 use std::rc::Rc;
 

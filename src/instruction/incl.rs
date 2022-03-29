@@ -5,12 +5,15 @@ use std::path::{Path, PathBuf};
 
 use nom_locate::LocatedSpan;
 
-use crate::{
-    log,
-    parser::constructs,
-    typechecker::{CheckedType, TypeCtx},
-    Context, ErrKind, Error, Generic, InstrKind, Instruction, ObjectInstance, SpanTuple, TypeCheck,
-};
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::Generic;
+use crate::instance::ObjectInstance;
+use crate::instruction::{InstrKind, Instruction};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::parser::constructs;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 /// An `Incl` is constituted of a path, an optional alias and contains a context.
 /// The ctx is built from parsing the source file in the path.

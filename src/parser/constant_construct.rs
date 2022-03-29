@@ -5,9 +5,11 @@
 //! that sense.
 
 use super::constructs::expr;
+use crate::error::{ErrKind, Error};
 use crate::instruction::{FunctionCall, Instruction, MethodCall};
+use crate::location::{Location, SpanTuple};
 use crate::parser::{ParseInput, ParseResult, Token};
-use crate::{ErrKind, Error, JkBool, JkChar, JkFloat, JkInt, JkString, Location, SpanTuple};
+use crate::value::{JkBool, JkChar, JkFloat, JkInt, JkString};
 
 use nom::bytes::complete::take;
 use nom::sequence::terminated;

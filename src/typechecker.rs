@@ -5,12 +5,13 @@
 mod type_id;
 pub use type_id::{TypeId, PRIMITIVE_TYPES};
 
-use crate::{
-    error::ErrorHandler,
-    instruction::{FunctionDec, TypeDec},
-    log, Error, ScopeMap,
-};
+use crate::context::ScopeMap;
+use crate::error::{ErrKind, Error, ErrorHandler};
+use crate::instruction::{FunctionDec, TypeDec};
+use crate::log;
+
 use colored::Colorize;
+
 use std::{
     collections::HashSet,
     fmt::{Display, Formatter, Result as FmtResult},
@@ -153,7 +154,7 @@ impl TypeCtx {
             Err(err) => {
                 let previous_dec = self.types.get_function(&name).unwrap();
                 Err(err.with_hint(
-                    Error::new(crate::ErrKind::Hint)
+                    Error::new(ErrKind::Hint)
                         .with_msg(String::from("previous declaration here"))
                         .with_loc(previous_dec.loc()),
                 ))

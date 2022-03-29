@@ -1,10 +1,14 @@
 //! The Loop instruction is used for repeating instructions. They can be of three
 //! different kinds, `for`, `while` or `loop`.
 
+use crate::context::Context;
+use crate::generics::Generic;
+use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
-use crate::typechecker::{CheckedType, TypeCtx};
-use crate::{log, Context, FromObjectInstance, JkBool, ObjectInstance, TypeCheck};
-use crate::{Generic, SpanTuple};
+use crate::location::SpanTuple;
+use crate::log;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
+use crate::value::JkBool;
 
 /// What kind of loop the loop block represents: Either a for Loop, with a variable and
 /// a range expression, a while loop with just an upper bound, or a loop with no bound
@@ -228,9 +232,10 @@ impl Generic for Loop {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instance::ToObjectInstance;
     use crate::instruction::FunctionCall;
     use crate::jinko;
-    use crate::{JkInt, ToObjectInstance};
+    use crate::value::JkInt;
 
     #[test]
     fn pretty_print_loop() {

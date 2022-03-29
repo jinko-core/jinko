@@ -5,10 +5,12 @@ mod args;
 mod repl;
 
 use colored::Colorize;
-use jinko::{
-    CheckedType, Context, ErrKind, Error, FromObjectInstance, JkBool, JkFloat, JkInt,
-    ObjectInstance,
-};
+
+use jinko::context::Context;
+use jinko::error::{ErrKind, Error};
+use jinko::instance::{FromObjectInstance, ObjectInstance};
+use jinko::typechecker::CheckedType;
+use jinko::value::{JkBool, JkFloat, JkInt};
 
 use args::Args;
 #[cfg(feature = "repl")]
@@ -97,7 +99,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
         ctx.init_stdlib()?;
     }
 
-    jinko::parse(&mut ctx, &input, Some(file))?;
+    jinko::parser::parse(&mut ctx, &input, Some(file))?;
 
     ctx.set_path(Some(file.to_owned()));
     ctx.set_args(args.project_args());
