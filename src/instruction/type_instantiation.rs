@@ -248,12 +248,25 @@ impl GenericUser for TypeInstantiation {
             .collect();
 
         let new_name = generics::mangle(self.type_name.id(), &new_types);
-        self.type_name = TypeId::new(Symbol::from(new_name));
+        let old_name = String::from(self.type_name.id());
+        self.type_name = TypeId::new(Symbol::from(new_name.clone()));
         self.generics = vec![];
 
         self.fields
             .iter_mut()
             .for_each(|arg| arg.resolve_usages(type_map, ctx));
+
+        // FIXME: This is ugly as sin
+        if ctx.get_specialized_node(self.type_name.id()).is_none()
+            && self.type_name.id() != old_name
+        {
+            let demangled = generics::demangle(self.type_name.id());
+
+            // FIXME: Can we unwrap here? Probably not
+            let generic_dec = ctx.get_custom_type(demangled).unwrap().clone();
+            let specialized_ty = generic_dec.generate(new_name, type_map, ctx);
+            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+        }
     }
 }
 
