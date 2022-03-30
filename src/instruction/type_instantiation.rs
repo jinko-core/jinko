@@ -238,9 +238,15 @@ impl TypeCheck for TypeInstantiation {
 
 impl GenericUser for TypeInstantiation {
     fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        // FIXME: Can we unwrap here?
         log!(generics, "type name: {}", self.type_name);
-        let dec = ctx.get_custom_type(self.type_name.id()).unwrap();
+        let dec = match ctx.get_custom_type(self.type_name.id()) {
+            Some(t) => t,
+            None => {
+                ctx.error(Error::new(ErrKind::Generics).with_msg(format!("trying to access undeclared type when resolving generic type instantiation: `{}`", self.type_name)).with_loc(self.location.clone()));
+                return;
+            }
+        };
+
         let new_types: Vec<TypeId> = dec
             .generics()
             .iter()
