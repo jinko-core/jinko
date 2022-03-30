@@ -7,7 +7,7 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::location::SpanTuple;
@@ -177,10 +177,10 @@ impl TypeCheck for BinaryOp {
     }
 }
 
-impl Generic for BinaryOp {
-    fn resolve_self(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
-        self.lhs.resolve_self(type_map, ctx);
-        self.rhs.resolve_self(type_map, ctx);
+impl GenericUser for BinaryOp {
+    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
+        self.lhs.resolve_usages(type_map, ctx);
+        self.rhs.resolve_usages(type_map, ctx);
     }
 }
 

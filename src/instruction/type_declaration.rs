@@ -2,8 +2,7 @@ use super::{DecArg, InstrKind, Instruction};
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::Generic;
-use crate::generics::GenericMap;
+use crate::generics::{GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::location::SpanTuple;
 use crate::log;
@@ -164,7 +163,7 @@ impl TypeCheck for TypeDec {
     }
 }
 
-impl Generic for TypeDec {}
+impl GenericUser for TypeDec {}
 
 impl From<&str> for TypeDec {
     fn from(type_name: &str) -> TypeDec {

@@ -1,5 +1,5 @@
 use crate::context::Context;
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction, TypeInstantiation, Var};
 use crate::location::SpanTuple;
@@ -111,4 +111,4 @@ impl TypeCheck for VarOrEmptyType {
     }
 }
 
-impl Generic for VarOrEmptyType {}
+impl GenericUser for VarOrEmptyType {}

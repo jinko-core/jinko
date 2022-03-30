@@ -17,7 +17,7 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{Generic, GenericMap};
+use crate::generics::{GenericMap, GenericUser};
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{Block, InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -157,12 +157,12 @@ impl TypeCheck for IfElse {
     }
 }
 
-impl Generic for IfElse {
-    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.condition.resolve_self(type_map, ctx);
-        self.if_body.resolve_self(type_map, ctx);
+impl GenericUser for IfElse {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+        self.condition.resolve_usages(type_map, ctx);
+        self.if_body.resolve_usages(type_map, ctx);
         if let Some(b) = &mut self.else_body {
-            b.resolve_self(type_map, ctx)
+            b.resolve_usages(type_map, ctx)
         };
     }
 }

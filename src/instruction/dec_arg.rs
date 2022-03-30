@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
-use crate::generics::{Generic, GenericMap};
+use crate::generics::{GenericMap, GenericUser};
 use crate::location::SpanTuple;
 use crate::typechecker::{TypeCtx, TypeId};
 
@@ -47,9 +47,9 @@ impl DecArg {
     }
 }
 
-impl Generic for DecArg {
-    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.ty.resolve_self(type_map, ctx)
+impl GenericUser for DecArg {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+        self.ty.resolve_usages(type_map, ctx)
     }
 }
 

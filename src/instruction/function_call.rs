@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, Generic, GenericMap};
+use crate::generics::{self, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::instruction::{InstrKind, Instruction};
@@ -387,8 +387,8 @@ impl TypeCheck for FunctionCall {
     }
 }
 
-impl Generic for FunctionCall {
-    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+impl GenericUser for FunctionCall {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
         // For function calls, we can just change our name to one resolved
         // using the generic map. And obviously just visit all of our arguments
 
@@ -415,7 +415,7 @@ impl Generic for FunctionCall {
 
         self.args
             .iter_mut()
-            .for_each(|arg| arg.resolve_self(type_map, ctx));
+            .for_each(|arg| arg.resolve_usages(type_map, ctx));
 
         // FIXME: This is ugly as sin
         if ctx.get_specialized_node(&self.fn_name).is_none() && self.fn_name != old_name {

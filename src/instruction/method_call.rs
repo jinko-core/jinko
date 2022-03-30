@@ -2,7 +2,7 @@
 //! they get desugared into a normal function call.
 
 use crate::context::Context;
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::FunctionCall;
 use crate::instruction::{InstrKind, Instruction};
@@ -97,10 +97,10 @@ impl TypeCheck for MethodCall {
     }
 }
 
-impl Generic for MethodCall {
-    fn resolve_self(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
+impl GenericUser for MethodCall {
+    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
         // FIXME: Can we avoid adding the argument here?
-        self.method.resolve_self(type_map, ctx);
+        self.method.resolve_usages(type_map, ctx);
     }
 }
 

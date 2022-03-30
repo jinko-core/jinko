@@ -7,7 +7,7 @@ use nom_locate::LocatedSpan;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -235,7 +235,7 @@ impl TypeCheck for Incl {
     }
 }
 
-impl Generic for Incl {}
+impl GenericUser for Incl {}
 
 #[cfg(test)]
 mod tests {

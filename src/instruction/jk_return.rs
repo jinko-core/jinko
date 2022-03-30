@@ -10,7 +10,7 @@
 //! ```
 
 use crate::context::Context;
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -84,7 +84,7 @@ impl TypeCheck for Return {
     }
 }
 
-impl Generic for Return {}
+impl GenericUser for Return {}
 
 #[cfg(test)]
 mod tests {

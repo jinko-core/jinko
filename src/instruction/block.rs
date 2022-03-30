@@ -18,7 +18,7 @@
 //! Otherwise, it's `void`
 
 use crate::context::Context;
-use crate::generics::{Generic, GenericMap};
+use crate::generics::{GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -156,11 +156,11 @@ impl TypeCheck for Block {
     }
 }
 
-impl Generic for Block {
-    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+impl GenericUser for Block {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
         self.instructions.iter_mut().for_each(|inst| {
             log!(generics, "resolving stmt in block");
-            inst.resolve_self(type_map, ctx)
+            inst.resolve_usages(type_map, ctx)
         })
     }
 }

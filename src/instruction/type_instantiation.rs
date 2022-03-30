@@ -2,8 +2,7 @@
 //! type on execution.
 
 use super::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, VarAssign};
-use crate::generics::Generic;
-use crate::generics::{self, GenericMap};
+use crate::generics::{self, GenericMap, GenericUser};
 use crate::instance::Name;
 use crate::location::SpanTuple;
 use crate::log;
@@ -241,8 +240,8 @@ impl TypeCheck for TypeInstantiation {
     }
 }
 
-impl Generic for TypeInstantiation {
-    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+impl GenericUser for TypeInstantiation {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
         // FIXME: Can we unwrap here?
         log!(generics, "type name: {}", self.type_name);
         let dec = ctx.get_custom_type(self.type_name.id()).unwrap();
@@ -258,7 +257,7 @@ impl Generic for TypeInstantiation {
 
         self.fields
             .iter_mut()
-            .for_each(|arg| arg.resolve_self(type_map, ctx));
+            .for_each(|arg| arg.resolve_usages(type_map, ctx));
     }
 }
 

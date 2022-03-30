@@ -123,11 +123,15 @@ pub fn original_name(mangled_name: &str) -> &str {
 /// Since most of the instructions cannot do generic expansion, we can implement
 /// default methods which do nothing. This avoid more boilerplate code for instructions
 /// such as constants or variables which cannot be generic.
-pub trait Generic {
+pub trait GenericUser {
     /// Mutate an instruction in order to resolve to the proper, expanded generic instruction.
-    /// For example, a call to the function `f[T]` should now be replaced by a call to
-    /// the function `generics::mangle("f", GenericMap { TypeId "T" })` // FIXME: Fix doc
-    fn resolve_self(&mut self, _type_map: &GenericMap, _ctx: &mut TypeCtx) {}
+    /// This function is also responsible for calling `resolve_usages` on all its sub-items:
+    /// A block is responsible for resolving each of its statements, as well as its final
+    /// expression if there is one.
+    ///
+    /// With a type map like the following: `{ T: int, U: string }`, a type call like
+    /// `f[T, U]()` should be resolved to `f+int+string()`
+    fn resolve_usages(&mut self, _type_map: &GenericMap, _ctx: &mut TypeCtx) {}
 }
 
 #[cfg(test)]

@@ -5,7 +5,7 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -97,7 +97,7 @@ impl TypeCheck for JkInst {
     }
 }
 
-impl Generic for JkInst {}
+impl GenericUser for JkInst {}
 
 #[cfg(test)]
 mod tests {

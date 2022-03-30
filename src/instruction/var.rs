@@ -5,7 +5,7 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::TypeDec;
 use crate::instruction::{InstrKind, Instruction};
@@ -140,7 +140,7 @@ impl Default for Var {
     }
 }
 
-impl Generic for Var {}
+impl GenericUser for Var {}
 
 #[cfg(test)]
 mod tests {

@@ -28,11 +28,11 @@ use std::hash::Hash;
 use colored::Colorize;
 
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, Generic, GenericMap};
+use crate::generics::{self, GenericUser};
 use crate::instruction::TypeDec;
 use crate::log;
 use crate::symbol::Symbol;
-use crate::typechecker::{SpecializedNode, TypeCtx};
+use crate::typechecker::SpecializedNode;
 
 pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"];
 
@@ -170,8 +170,8 @@ impl TypeId {
     }
 }
 
-impl Generic for TypeId {
-    fn resolve_self(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+impl GenericUser for TypeId {
+    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut crate::TypeCtx) {
         log!(generics, "resolving type id `{}`", self);
 
         let generics = match self {

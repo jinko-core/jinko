@@ -3,7 +3,7 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{Generic, GenericMap};
+use crate::generics::{GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction};
 use crate::location::{Location, SpanTuple};
@@ -67,14 +67,14 @@ impl FunctionDec {
         new_fn
             .args
             .iter_mut()
-            .for_each(|arg| arg.resolve_self(type_map, ctx));
+            .for_each(|arg| arg.resolve_usages(type_map, ctx));
 
         if let Some(ret_ty) = &mut new_fn.ty {
-            ret_ty.resolve_self(type_map, ctx);
+            ret_ty.resolve_usages(type_map, ctx);
         }
 
         if let Some(b) = &mut new_fn.block {
-            b.resolve_self(type_map, ctx);
+            b.resolve_usages(type_map, ctx);
         }
 
         // FIXME: This can't be right
@@ -362,7 +362,7 @@ impl TypeCheck for FunctionDec {
     }
 }
 
-impl Generic for FunctionDec {}
+impl GenericUser for FunctionDec {}
 
 impl Default for FunctionDec {
     fn default() -> Self {
