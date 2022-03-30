@@ -1,8 +1,7 @@
 use super::{DecArg, InstrKind, Instruction};
 
 use crate::context::Context;
-use crate::error::{ErrKind, Error};
-use crate::generics::{GenericMap, GenericUser};
+use crate::generics::{GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::location::SpanTuple;
 use crate::log;
@@ -26,42 +25,6 @@ impl TypeDec {
             fields,
             typechecked: false,
             location: None,
-        }
-    }
-
-    /// Generate a new instance of [`TypeDec`] from a given generic type map
-    pub fn from_type_map(
-        &self,
-        mangled_name: String,
-        type_map: &GenericMap,
-        ctx: &mut TypeCtx,
-    ) -> Result<TypeDec, Error> {
-        let mut new_type = self.clone();
-        new_type.name = mangled_name;
-        new_type.generics = vec![];
-
-        let mut is_err = false;
-
-        new_type
-            .fields
-            .iter_mut()
-            .zip(self.fields().iter())
-            .filter(|(_, generic)| self.generics().contains(generic.get_type()))
-            .for_each(|(new_arg, old_generic)| {
-                let new_type = match type_map.get_specialized(old_generic.get_type()) {
-                    Ok(t) => t,
-                    Err(e) => {
-                        ctx.error(e);
-                        is_err = true;
-                        TypeId::void()
-                    }
-                };
-                new_arg.set_type(new_type);
-            });
-
-        match is_err {
-            true => Err(Error::new(ErrKind::Generics)),
-            false => Ok(new_type),
         }
     }
 
@@ -164,6 +127,21 @@ impl TypeCheck for TypeDec {
 }
 
 impl GenericUser for TypeDec {}
+
+impl GenericExpander for TypeDec {
+    fn generate(&self, mangled_name: String, type_map: &GenericMap, ctx: &mut TypeCtx) -> TypeDec {
+        let mut new_type = self.clone();
+        new_type.name = mangled_name;
+        new_type.generics = vec![];
+
+        new_type
+            .fields
+            .iter_mut()
+            .for_each(|arg| arg.resolve_usages(type_map, ctx));
+
+        new_type
+    }
+}
 
 impl From<&str> for TypeDec {
     fn from(type_name: &str) -> TypeDec {

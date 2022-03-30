@@ -134,6 +134,15 @@ pub trait GenericUser {
     fn resolve_usages(&mut self, _type_map: &GenericMap, _ctx: &mut TypeCtx) {}
 }
 
+/// Only a certain set of instructions are generic expansion sites - They can generate a "new
+/// version of themselves" with a given typemap. Once a new version is generated, they must
+/// be typechecked by the generator.
+pub trait GenericExpander: Sized {
+    /// Generate a new version of the instruction with the given typemap. The new version should
+    /// not contain any generics.
+    fn generate(&self, new_name: String, type_map: &GenericMap, ctx: &mut TypeCtx) -> Self;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

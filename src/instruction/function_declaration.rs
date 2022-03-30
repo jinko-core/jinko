@@ -3,7 +3,7 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{GenericMap, GenericUser};
+use crate::generics::{GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction};
 use crate::location::{Location, SpanTuple};
@@ -51,34 +51,6 @@ impl FunctionDec {
             typechecked: false,
             location: None,
         }
-    }
-
-    /// Generate a new instance of [`FunctionDec`] from a given generic type map
-    pub fn from_type_map(
-        &self,
-        mangled_name: String,
-        type_map: &GenericMap,
-        ctx: &mut TypeCtx,
-    ) -> Result<FunctionDec, Error> {
-        let mut new_fn = self.clone();
-        new_fn.name = mangled_name;
-        new_fn.generics = vec![];
-
-        new_fn
-            .args
-            .iter_mut()
-            .for_each(|arg| arg.resolve_usages(type_map, ctx));
-
-        if let Some(ret_ty) = &mut new_fn.ty {
-            ret_ty.resolve_usages(type_map, ctx);
-        }
-
-        if let Some(b) = &mut new_fn.block {
-            b.resolve_usages(type_map, ctx);
-        }
-
-        // FIXME: This can't be right
-        Ok(new_fn)
     }
 
     pub fn generics(&self) -> &Vec<TypeId> {
@@ -363,6 +335,34 @@ impl TypeCheck for FunctionDec {
 }
 
 impl GenericUser for FunctionDec {}
+
+impl GenericExpander for FunctionDec {
+    fn generate(
+        &self,
+        mangled_name: String,
+        type_map: &GenericMap,
+        ctx: &mut TypeCtx,
+    ) -> FunctionDec {
+        let mut new_fn = self.clone();
+        new_fn.name = mangled_name;
+        new_fn.generics = vec![];
+
+        new_fn
+            .args
+            .iter_mut()
+            .for_each(|arg| arg.resolve_usages(type_map, ctx));
+
+        if let Some(ret_ty) = &mut new_fn.ty {
+            ret_ty.resolve_usages(type_map, ctx);
+        }
+
+        if let Some(b) = &mut new_fn.block {
+            b.resolve_usages(type_map, ctx);
+        }
+
+        new_fn
+    }
+}
 
 impl Default for FunctionDec {
     fn default() -> Self {

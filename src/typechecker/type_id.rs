@@ -28,7 +28,7 @@ use std::hash::Hash;
 use colored::Colorize;
 
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericUser};
+use crate::generics::{self, GenericExpander, GenericUser};
 use crate::instruction::TypeDec;
 use crate::log;
 use crate::symbol::Symbol;
@@ -213,10 +213,7 @@ impl GenericUser for TypeId {
                         return;
                     }
                 };
-                let new_dec = new_dec
-                    .from_type_map(new_name.clone(), type_map, ctx)
-                    // FIXME: Don't unwrap here
-                    .unwrap();
+                let new_dec = new_dec.generate(new_name.clone(), type_map, ctx);
                 ctx.add_specialized_node(SpecializedNode::Type(new_dec));
             }
 

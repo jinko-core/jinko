@@ -1,9 +1,11 @@
 //! TypeInstantiations are used when instantiating a type. The argument list is given to the
 //! type on execution.
 
-use super::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, VarAssign};
-use crate::generics::{self, GenericMap, GenericUser};
-use crate::instance::Name;
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
+use crate::instance::{Name, ObjectInstance};
+use crate::instruction::{InstrKind, Instruction, TypeDec, VarAssign};
 use crate::location::SpanTuple;
 use crate::log;
 use crate::symbol::Symbol;
@@ -109,13 +111,7 @@ impl TypeInstantiation {
         log!("specialized name {}", specialized_name);
         if ctx.get_custom_type(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
-            let specialized_ty = match dec.from_type_map(specialized_name.clone(), &type_map, ctx) {
-                Ok(f) => f,
-                Err(e) => {
-                    ctx.error(e.with_loc(self.location.clone()));
-                    return CheckedType::Error;
-                }
-            };
+            let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
 
             ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
         }

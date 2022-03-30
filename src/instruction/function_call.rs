@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericMap, GenericUser};
+use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::instruction::{InstrKind, Instruction};
@@ -201,17 +201,7 @@ impl FunctionCall {
         log!("specialized name {}", specialized_name);
         if ctx.get_function(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
-            let specialized_fn =
-                match function.from_type_map(specialized_name.clone(), &type_map, ctx) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        ctx.error(e.with_loc(self.location.clone()));
-                        return CheckedType::Error;
-                    }
-                };
-
-            // Resolve the generics of all items in the function's block
-            // specialized_fn.resolve_self(&type_map, ctx);
+            let specialized_fn = function.generate(specialized_name.clone(), &type_map, ctx);
 
             ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)));
         }
@@ -423,10 +413,8 @@ impl GenericUser for FunctionCall {
 
             // FIXME: Can we unwrap here? Probably not
             let generic_dec = ctx.get_function(demangled).unwrap().clone();
-            match generic_dec.from_type_map(self.fn_name.clone(), type_map, ctx) {
-                Ok(new_f) => ctx.add_specialized_node(SpecializedNode::Func(Box::new(new_f))),
-                Err(e) => ctx.error(e),
-            }
+            let specialized_fn = generic_dec.generate(self.fn_name.clone(), type_map, ctx);
+            ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)));
         }
     }
 }
