@@ -1,0 +1,9 @@
+func id[T](input: T) -> T {
+	func inner_id[T](input: T) -> T {
+		input
+	};
+
+	inner_id[T](input)
+}
+
+id[int](15)

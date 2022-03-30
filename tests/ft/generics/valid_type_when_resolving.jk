@@ -1,0 +1,13 @@
+type Wrapper[T](inner: T);
+type WrapWrapper[T](inner: Wrapper[T]);
+
+func wrapper[T](input: T) -> Wrapper[T] {
+	wrapper = Wrapper[T](inner: input);
+	wrap_wrapper = WrapWrapper[T](inner: wrapper);
+
+	wrap_wrapper.inner
+}
+
+a = wrapper[int](15);
+
+a.inner
