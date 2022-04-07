@@ -97,3 +97,10 @@ tests:
     args:
       - "tests/ft/generics/valid_inner_type_when_resolving.jk"
     exit_code: 15
+      # FIXME: Don't ignore to pass #408
+      # - name: "Generic stress test"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "--check"
+      #     - "tests/ft/generics/maybe_simple.jk"
+      #   exit_code: 0
