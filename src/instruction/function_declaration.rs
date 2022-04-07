@@ -334,7 +334,14 @@ impl TypeCheck for FunctionDec {
     }
 }
 
-impl GenericUser for FunctionDec {}
+impl GenericUser for FunctionDec {
+    fn resolve_usages(&mut self, _type_map: &GenericMap, ctx: &mut TypeCtx) {
+        // FIXME: Can we do without that?
+        if let Err(e) = ctx.declare_function(self.name().to_string(), self.clone()) {
+            ctx.error(e);
+        };
+    }
+}
 
 impl GenericExpander for FunctionDec {
     fn generate(
@@ -346,6 +353,7 @@ impl GenericExpander for FunctionDec {
         let mut new_fn = self.clone();
         new_fn.name = mangled_name;
         new_fn.generics = vec![];
+        new_fn.typechecked = false;
 
         new_fn
             .args
