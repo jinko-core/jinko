@@ -387,15 +387,19 @@ impl GenericUser for FunctionCall {
         let dec = match ctx.get_function(&self.fn_name) {
             Some(f) => f,
             None => {
-                ctx.error(Error::new(ErrKind::Generics).with_msg(format!("trying to access undeclared function in new specialized function: `{}`", self.fn_name)).with_loc(self.location.clone()));
+                ctx.error(Error::new(ErrKind::Generics)
+                    .with_msg(format!("trying to access undeclared function in new specialized function: `{}`", self.fn_name))
+                    .with_loc(self.location.clone()));
                 return;
             }
         };
-        let new_types: Vec<TypeId> = dec
-            .generics()
-            .iter()
-            .filter_map(|generic| type_map.get_specialized(generic).ok())
-            .collect();
+        let new_types = match type_map.specialized_types(dec.generics()) {
+            Err(e) => {
+                ctx.error(e.with_loc(self.location().cloned()));
+                return;
+            }
+            Ok(new_t) => new_t,
+        };
 
         let new_name = generics::mangle(&self.fn_name, &new_types);
         // FIXME: Avoid the allocation

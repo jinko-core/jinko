@@ -247,11 +247,13 @@ impl GenericUser for TypeInstantiation {
             }
         };
 
-        let new_types: Vec<TypeId> = dec
-            .generics()
-            .iter()
-            .filter_map(|generic| type_map.get_specialized(generic).ok())
-            .collect();
+        let new_types = match type_map.specialized_types(dec.generics()) {
+            Err(e) => {
+                ctx.error(e.with_loc(self.location().cloned()));
+                return;
+            }
+            Ok(new_t) => new_t,
+        };
 
         let new_name = generics::mangle(self.type_name.id(), &new_types);
         let old_name = String::from(self.type_name.id());

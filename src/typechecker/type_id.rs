@@ -37,6 +37,7 @@ use crate::typechecker::SpecializedNode;
 pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"];
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+// FIXME: They should probably have location info
 pub enum TypeId {
     Type {
         id: Symbol,
@@ -181,10 +182,13 @@ impl GenericUser for TypeId {
 
         // FIXME: Split generics in two using .partition(): Keep some in a new
         // generic list, and resolve some others to the type's name
-        let new_types: Vec<TypeId> = generics
-            .iter()
-            .filter_map(|generic| type_map.get_specialized(generic).ok())
-            .collect();
+        let new_types = match type_map.specialized_types(generics) {
+            Err(e) => {
+                ctx.error(e);
+                return;
+            }
+            Ok(new_t) => new_t,
+        };
 
         // FIXME: What we need to do then is to go and visit all our newtype's generics
         // and resolve them

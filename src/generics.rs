@@ -73,6 +73,11 @@ impl GenericMap {
             Error::new(ErrKind::Generics).with_msg(format!("undeclared generic type: {}", generic))
         })
     }
+
+    /// Get the types associated with a list of generic types previously declared
+    pub fn specialized_types(&self, generics: &[TypeId]) -> Result<Vec<TypeId>, Error> {
+        generics.iter().map(|g| self.get_specialized(g)).collect()
+    }
 }
 
 /// Mangle a name to resolve it to its proper expanded name.
