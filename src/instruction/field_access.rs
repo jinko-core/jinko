@@ -88,22 +88,21 @@ impl Instruction for FieldAccess {
 }
 
 impl TypeCheck for FieldAccess {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        let instance_ty = self.instance.type_of(ctx);
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
+        let instance_ty = self.instance.type_of(ctx)?;
         let instance_ty_name = match &instance_ty {
-            CheckedType::Resolved(ti) => ti.id(),
+            CheckedType::Resolved(ty) => ty.id(),
             CheckedType::Void => {
-                ctx.error(
-                    Error::new(ErrKind::TypeChecker)
-                        .with_msg(format!(
-                            "trying to access field `{}` on statement",
-                            self.field_name
-                        ))
-                        .with_loc(self.instance.location().cloned()),
-                );
-                return CheckedType::Error;
+                return Err(Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "trying to access field `{}` on statement",
+                        self.field_name
+                    ))
+                    .with_loc(self.instance.location().cloned()));
             }
-            _ => return CheckedType::Error,
+            // FIXME: Remove this once we don't have ::Later and ::Error variants
+            // anymore
+            _ => unreachable!(),
         };
 
         // We can unwrap here since the type that was resolved from the instance HAS
@@ -115,18 +114,13 @@ impl TypeCheck for FieldAccess {
             .iter()
             .find(|dec_arg| dec_arg.name() == self.field_name)
         {
-            Some(dec_arg) => CheckedType::Resolved(dec_arg.get_type().clone()),
-            None => {
-                ctx.error(
-                    Error::new(ErrKind::TypeChecker)
-                        .with_msg(format!(
-                            "trying to access field `{}` on instance of type `{}`",
-                            self.field_name, instance_ty
-                        ))
-                        .with_loc(self.location.clone()),
-                );
-                CheckedType::Error
-            }
+            Some(dec_arg) => Ok(CheckedType::Resolved(dec_arg.get_type().clone())),
+            None => Err(Error::new(ErrKind::TypeChecker)
+                .with_msg(format!(
+                    "trying to access field `{}` on instance of type `{}`",
+                    self.field_name, instance_ty
+                ))
+                .with_loc(self.location.clone())),
         }
     }
 

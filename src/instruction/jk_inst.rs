@@ -86,8 +86,8 @@ impl Instruction for JkInst {
 }
 
 impl TypeCheck for JkInst {
-    fn resolve_type(&mut self, _ctx: &mut TypeCtx) -> CheckedType {
-        CheckedType::Void
+    fn resolve_type(&mut self, _ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
+        Ok(CheckedType::Void)
     }
 
     fn set_cached_type(&mut self, _ty: CheckedType) {}

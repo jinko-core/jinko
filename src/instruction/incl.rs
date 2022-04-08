@@ -170,7 +170,7 @@ impl Instruction for Incl {
 
 impl TypeCheck for Incl {
     // FIXME: We need to not add the path to the interpreter here
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         let base = match &self.base {
             Some(b) => b.clone(),
             None => match ctx.path() {
@@ -189,21 +189,15 @@ impl TypeCheck for Incl {
             Err((e1, e2)) => {
                 ctx.error(e1);
                 ctx.error(e2);
-                return CheckedType::Error;
+                return Err(Error::new(ErrKind::TypeChecker));
             }
         };
 
         if ctx.is_included(&final_path) {
-            return CheckedType::Void;
+            return Ok(CheckedType::Void);
         }
 
-        let instructions = match self.fetch_instructions(&final_path) {
-            Ok(instructions) => instructions,
-            Err(e) => {
-                ctx.error(e);
-                return CheckedType::Error;
-            }
-        };
+        let instructions = self.fetch_instructions(&final_path)?;
 
         self.instructions = instructions;
 
@@ -214,13 +208,15 @@ impl TypeCheck for Incl {
         ctx.set_path(Some(final_path));
 
         self.instructions.iter_mut().for_each(|instr| {
-            instr.type_of(ctx);
+            if let Err(e) = instr.type_of(ctx) {
+                ctx.error(e);
+            }
         });
 
         // Reset the old path before leaving the instruction
         ctx.set_path(old_path);
 
-        CheckedType::Void
+        Ok(CheckedType::Void)
     }
 
     fn set_cached_type(&mut self, _ty: CheckedType) {

@@ -1,6 +1,7 @@
 use super::{DecArg, InstrKind, Instruction};
 
 use crate::context::Context;
+use crate::error::Error;
 use crate::generics::{GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::location::SpanTuple;
@@ -106,12 +107,10 @@ impl Instruction for TypeDec {
 }
 
 impl TypeCheck for TypeDec {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        if let Err(e) = ctx.declare_custom_type(self.name.clone(), self.clone()) {
-            ctx.error(e);
-        }
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
+        ctx.declare_custom_type(self.name.clone(), self.clone())?;
 
-        CheckedType::Void
+        Ok(CheckedType::Void)
     }
 
     fn set_cached_type(&mut self, _ty: CheckedType) {

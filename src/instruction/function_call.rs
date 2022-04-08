@@ -129,6 +129,8 @@ impl FunctionCall {
     fn type_args(&self, args: Vec<(String, CheckedType)>, ctx: &mut TypeCtx) {
         ctx.scope_enter();
 
+        // FIXME: Can we refactor this into a more generic and usable aggregation
+        // site?
         args.into_iter().for_each(|(arg_name, arg_ty)| {
             if let Err(e) = ctx.declare_var(arg_name, arg_ty) {
                 ctx.error(e)
@@ -184,26 +186,24 @@ impl FunctionCall {
         self.fn_name = fn_name
     }
 
-    fn resolve_generic_call(&mut self, function: FunctionDec, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_generic_call(
+        &mut self,
+        function: FunctionDec,
+        ctx: &mut TypeCtx,
+    ) -> Result<CheckedType, Error> {
         log!(
             "creating specialized fn. function generics: {}, call generics {}",
             function.generics().len(),
             self.generics().len()
         );
-        let type_map = match GenericMap::create(function.generics(), self.generics(), ctx) {
-            Ok(map) => map,
-            Err(e) => {
-                ctx.error(e.with_loc(self.location.clone()));
-                return CheckedType::Error;
-            }
-        };
+        let type_map = GenericMap::create(function.generics(), self.generics(), ctx)?;
         let specialized_name = generics::mangle(function.name(), self.generics());
         log!("specialized name {}", specialized_name);
         if ctx.get_function(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
             let specialized_fn = function.generate(specialized_name.clone(), &type_map, ctx);
 
-            ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)));
+            ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)))?;
         }
 
         self.fn_name = specialized_name;
@@ -286,7 +286,7 @@ impl TypeCheck for FunctionCall {
         self.fn_name.to_string()
     }
 
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         log!("typechecking call to {}", self.fn_name);
 
         // FIXME: Expand generic here instead of resolving later
@@ -299,15 +299,12 @@ impl TypeCheck for FunctionCall {
             Some(f) => f.clone(), // FIXME: Remove this clone...
             // FIXME: This does not account for functions declared later in the code
             None => {
-                ctx.error(
-                    Error::new(ErrKind::TypeChecker)
-                        .with_msg(format!(
-                            "function `{}` was not declared in this scope",
-                            self.name()
-                        ))
-                        .with_loc(self.location.clone()),
-                );
-                return CheckedType::Error;
+                return Err(Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "function `{}` was not declared in this scope",
+                        self.name()
+                    ))
+                    .with_loc(self.location.clone()))
             }
         };
 
@@ -341,7 +338,13 @@ impl TypeCheck for FunctionCall {
 
         for (dec_arg, given_arg) in args_type.iter().zip(self.args.iter()) {
             // FIXME: Remove clone
-            let given_ty = given_arg.clone().type_of(ctx);
+            let given_ty = match given_arg.clone().type_of(ctx) {
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
+                Ok(ty) => ty,
+            };
             let expected_ty = CheckedType::Resolved(dec_arg.get_type().clone());
             if expected_ty != given_ty {
                 errors.push(
@@ -365,7 +368,7 @@ impl TypeCheck for FunctionCall {
         errors.into_iter().for_each(|err| ctx.error(err));
         self.type_args(args, ctx);
 
-        return_type.map_or_else(|| CheckedType::Void, |t| CheckedType::Resolved(t.clone()))
+        Ok(return_type.map_or_else(|| CheckedType::Void, |t| CheckedType::Resolved(t.clone())))
     }
 
     fn cached_type(&self) -> Option<&CheckedType> {
@@ -418,6 +421,7 @@ impl GenericUser for FunctionCall {
             // FIXME: Can we unwrap here? Probably not
             let generic_dec = ctx.get_function(demangled).unwrap().clone();
             let specialized_fn = generic_dec.generate(self.fn_name.clone(), type_map, ctx);
+
             ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)));
         }
     }

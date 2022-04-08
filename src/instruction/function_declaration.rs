@@ -239,14 +239,14 @@ impl Instruction for FunctionDec {
 }
 
 impl TypeCheck for FunctionDec {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         // FIXME Do not declare test functions in the typechecker? But typecheck
         // them still? Is this the correct behavior?
         if self.fn_kind() == FunctionKind::Test || self.fn_kind() == FunctionKind::Mock {
             return self
                 .block
                 .as_mut()
-                .map_or(CheckedType::Void, |b| b.type_of(ctx));
+                .map_or(Ok(CheckedType::Void), |b| b.type_of(ctx));
         }
 
         // If a declaration contains generic types, there is no point in type-checking
@@ -255,12 +255,9 @@ impl TypeCheck for FunctionDec {
         if !self.generics.is_empty() {
             // Just declare the function so we have it in the context and can
             // duplicate it
-            if let Err(e) = ctx.declare_function(self.name().into(), self.clone()) {
-                ctx.error(e);
-                return CheckedType::Error;
-            }
+            ctx.declare_function(self.name().into(), self.clone())?;
 
-            return CheckedType::Later;
+            return Ok(CheckedType::Later);
         }
 
         // FIXME: Remove clone?
@@ -297,29 +294,27 @@ impl TypeCheck for FunctionDec {
 
         // If the function has no block, trust the declaration
         if let Some(b) = &mut self.block {
-            let block_ty = b.type_of(ctx);
+            let block_ty = b.type_of(ctx)?;
 
             if block_ty != return_ty {
-                ctx.error(
-                    Error::new(ErrKind::TypeChecker)
-                        .with_msg(format!(
-                    "invalid type returned in function `{}`: expected type {}, found type {}",
-                    self.name(),
-                    return_ty,
-                    block_ty
-                ))
-                        .with_loc(self.loc()),
-                );
+                let err = Err(Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "invalid type returned in function `{}`: expected type {}, found type {}",
+                        self.name(),
+                        return_ty,
+                        block_ty
+                    ))
+                    .with_loc(self.loc()));
 
                 ctx.scope_exit();
 
-                return CheckedType::Error;
+                return err;
             }
         }
 
         ctx.scope_exit();
 
-        CheckedType::Void
+        Ok(CheckedType::Void)
     }
 
     fn set_cached_type(&mut self, _ty: CheckedType) {
@@ -467,7 +462,6 @@ mod tests {
         let mut ctx = Context::new();
 
         assert!(ctx.type_check(&mut function).is_err());
-        assert!(ctx.error_handler.has_errors());
     }
 
     #[test]

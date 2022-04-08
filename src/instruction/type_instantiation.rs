@@ -93,19 +93,13 @@ impl TypeInstantiation {
         &mut self,
         dec: TypeDec,
         ctx: &mut TypeCtx,
-    ) -> CheckedType {
+    ) -> Result<CheckedType, Error> {
         log!(
             "creating specialized type. type generics: {}, instantiation generics {}",
             dec.generics().len(),
             self.generics.len()
         );
-        let type_map = match GenericMap::create(dec.generics(), &self.generics, ctx) {
-            Ok(map) => map,
-            Err(e) => {
-                ctx.error(e.with_loc(self.location.clone()));
-                return CheckedType::Error;
-            }
-        };
+        let type_map = GenericMap::create(dec.generics(), &self.generics, ctx)?;
 
         let specialized_name = generics::mangle(dec.name(), &self.generics);
         log!("specialized name {}", specialized_name);
@@ -113,7 +107,7 @@ impl TypeInstantiation {
             // FIXME: Remove this clone once we have proper symbols
             let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
 
-            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty))?;
         }
 
         self.type_name = TypeId::new(Symbol::from(specialized_name));
@@ -181,20 +175,17 @@ impl Instruction for TypeInstantiation {
 }
 
 impl TypeCheck for TypeInstantiation {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         let dec = match ctx.get_custom_type(self.type_name.id()) {
             Some(ty) => ty.clone(),
             None => {
-                ctx.error(
-                    Error::new(ErrKind::TypeChecker)
-                        .with_msg(format!(
-                            "use of undeclared type `{}`",
-                            // FIXME: Remove this clone, not useful
-                            CheckedType::Resolved(self.type_name.clone())
-                        ))
-                        .with_loc(self.location.clone()),
-                );
-                return CheckedType::Error;
+                return Err(Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "use of undeclared type `{}`",
+                        // FIXME: Remove this clone, not useful
+                        CheckedType::Resolved(self.type_name.clone())
+                    ))
+                    .with_loc(self.location.clone()));
             }
         };
 
@@ -206,7 +197,7 @@ impl TypeCheck for TypeInstantiation {
         let mut errors = vec![];
         for (field_dec, var_assign) in dec.fields().iter().zip(self.fields.iter_mut()) {
             let expected_ty = CheckedType::Resolved(field_dec.get_type().clone());
-            let value_ty = var_assign.value_mut().type_of(ctx);
+            let value_ty = var_assign.value_mut().type_of(ctx)?;
             if expected_ty != value_ty {
                 errors.push(
                     Error::new(ErrKind::TypeChecker)
@@ -224,7 +215,7 @@ impl TypeCheck for TypeInstantiation {
         // Propagate all errors at once in the context
         errors.into_iter().for_each(|err| ctx.error(err));
 
-        CheckedType::Resolved(self.type_name.clone())
+        Ok(CheckedType::Resolved(self.type_name.clone()))
     }
 
     fn set_cached_type(&mut self, ty: CheckedType) {

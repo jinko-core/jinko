@@ -2,6 +2,7 @@
 //! they get desugared into a normal function call.
 
 use crate::context::Context;
+use crate::error::Error;
 use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::FunctionCall;
@@ -65,7 +66,7 @@ impl Instruction for MethodCall {
 }
 
 impl TypeCheck for MethodCall {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         log!("typechecking method `{}`", self.method.name());
         log!("desugaring method `{}`", self.print());
 

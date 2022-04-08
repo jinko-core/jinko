@@ -293,7 +293,7 @@ impl Context {
 
         match self.error_handler.has_errors() {
             true => Err(Error::new(ErrKind::TypeChecker)),
-            false => Ok(res),
+            false => Ok(res?),
         }
     }
 
@@ -302,7 +302,7 @@ impl Context {
 
         log!("starting first pass of typechecking");
 
-        ep.type_of(&mut self.typechecker);
+        ep.type_of(&mut self.typechecker)?;
 
         self.error_handler
             .append(&mut self.typechecker.error_handler);

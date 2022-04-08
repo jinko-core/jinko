@@ -96,55 +96,46 @@ impl Instruction for IfElse {
 }
 
 impl TypeCheck for IfElse {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         let bool_checkedtype = CheckedType::Resolved(TypeId::from("bool"));
-        let cond_ty = self.condition.type_of(ctx);
+        let cond_ty = self.condition.type_of(ctx)?;
 
         if cond_ty != bool_checkedtype {
-            ctx.error(
-                Error::new(ErrKind::TypeChecker)
-                    .with_msg(format!(
-                        "if condition should be a boolean, not a `{}`",
-                        cond_ty
-                    ))
-                    .with_loc(self.condition.location().cloned()),
-            );
+            return Err(Error::new(ErrKind::TypeChecker)
+                .with_msg(format!(
+                    "if condition should be a boolean, not a `{}`",
+                    cond_ty
+                ))
+                .with_loc(self.condition.location().cloned()));
         }
 
-        let if_ty = self.if_body.type_of(ctx);
+        let if_ty = self.if_body.type_of(ctx)?;
         let else_ty = self
             .else_body
             .as_mut()
             .map(|else_body| else_body.type_of(ctx));
 
         match (if_ty, else_ty) {
-            (CheckedType::Void, None) => CheckedType::Void,
+            (CheckedType::Void, None) => Ok(CheckedType::Void),
             (if_ty, Some(else_ty)) => {
+                let else_ty = else_ty?;
                 if if_ty != else_ty {
-                    ctx.error(
-                        Error::new(ErrKind::TypeChecker)
-                            .with_msg(format!(
-                                "incompatible types for `if` and `else` block: {} and {}",
-                                if_ty, else_ty,
-                            ))
-                            .with_loc(self.location.clone()),
-                    );
-                    CheckedType::Error
+                    Err(Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "incompatible types for `if` and `else` block: {} and {}",
+                            if_ty, else_ty,
+                        ))
+                        .with_loc(self.location.clone()))
                 } else {
-                    if_ty
+                    Ok(if_ty)
                 }
             }
-            (if_ty, None) => {
-                ctx.error(
-                    Error::new(ErrKind::TypeChecker)
-                        .with_msg(format!(
-                            "`if` block has a return type ({}) but no else block to match it",
-                            if_ty
-                        ))
-                        .with_loc(self.location.clone()),
-                );
-                CheckedType::Error
-            }
+            (if_ty, None) => Err(Error::new(ErrKind::TypeChecker)
+                .with_msg(format!(
+                    "`if` block has a return type ({}) but no else block to match it",
+                    if_ty
+                ))
+                .with_loc(self.location.clone())),
         }
     }
 
