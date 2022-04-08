@@ -76,19 +76,9 @@ impl FunctionDec {
     /// Add an instruction to the function declaration, in order. This is mostly useful
     /// when adding instructions to the entry point of the context, since parsing
     /// directly gives a block to the function
-    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) -> Result<(), Error> {
-        match &mut self.block {
-            Some(b) => {
-                b.add_instruction(instruction);
-                Ok(())
-            }
-            None => Err(Error::new(ErrKind::Context)
-                .with_msg(format!(
-                "function {} has no instruction block. It might be an extern function or an error",
-                self.name
-            ))
-                .with_loc(self.loc())),
-        }
+    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>) {
+        let block = &mut self.block.as_mut().unwrap();
+        block.add_instruction(instruction);
     }
 
     /// Return a reference to the function's name
@@ -173,11 +163,7 @@ impl Instruction for FunctionDec {
                     ctx.error(e);
                 }
             }
-            FunctionKind::Mock | FunctionKind::Unknown => ctx.error(
-                Error::new(ErrKind::Context)
-                    .with_msg(format!("unknown type for function {}", self.name()))
-                    .with_loc(self.loc()),
-            ),
+            FunctionKind::Mock | FunctionKind::Unknown => unreachable!(),
         }
 
         log!("funcdec exit: {}", self.name());

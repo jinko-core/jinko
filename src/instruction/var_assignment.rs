@@ -92,20 +92,11 @@ impl Instruction for VarAssign {
 
         match (var_creation, var.mutable()) {
             (false, false) => {
-                // The variable already exists. So we need to error out if it isn't
-                // mutable
-                ctx.error(
-                    Error::new(ErrKind::Context)
-                        .with_msg(format!(
-                            "trying to assign value to non mutable variable `{}`: `{}`",
-                            var.name(),
-                            self.value.print()
-                        ))
-                        .with_loc(self.location.clone()),
-                );
-                return None;
+                // The variable already exists. This is unreachable since it should
+                // have been caught at typechecking
+                unreachable!()
             }
-            (true, _) | (_, true) => var.set_instance(self.value.execute_expression(ctx)?),
+            (true, _) | (_, true) => var.set_instance(self.value.execute_expression(ctx)),
         }
 
         // We can unwrap safely since we checked that the variable does not

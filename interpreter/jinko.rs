@@ -119,7 +119,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
             #[cfg(feature = "repl")]
             true => Repl::new()?.with_context(ctx).launch(),
             #[cfg(not(feature = "repl"))]
-            true => panic!("Jinko is not compiled with repl support"),
+            true => panic!("jinko was not compiled with REPL support"),
             false => {
                 let res = ctx.execute()?;
                 ctx.emit_errors();
@@ -129,7 +129,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
         },
         true => {
             if args.interactive() {
-                return Err(Error::new(ErrKind::Context)
+                return Err(Error::new(ErrKind::Final)
                     .with_msg(String::from("cannot run tests in interactive mode")));
             }
 

@@ -57,19 +57,9 @@ impl BinaryOp {
         &self.rhs
     }
 
-    // FIXME: Use Context::execute_expression
     /// Execute a node of the binary operation
-    fn execute_node(&self, node: &dyn Instruction, ctx: &mut Context) -> Option<ObjectInstance> {
-        match node.execute(ctx) {
-            None => {
-                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                    "invalid use of statement in binary operation: {}",
-                    node.print()
-                )));
-                None
-            }
-            Some(v) => Some(v),
-        }
+    fn execute_node(&self, node: &dyn Instruction, ctx: &mut Context) -> ObjectInstance {
+        node.execute(ctx).unwrap()
     }
 
     pub fn set_location(&mut self, location: SpanTuple) {
@@ -94,8 +84,8 @@ impl Instruction for BinaryOp {
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         log!("binop enter: op: {}", self.op.as_str());
 
-        let l_value = self.execute_node(&*self.lhs, ctx)?;
-        let r_value = self.execute_node(&*self.rhs, ctx)?;
+        let l_value = self.execute_node(&*self.lhs, ctx);
+        let r_value = self.execute_node(&*self.rhs, ctx);
 
         // FIXME: This produces unhelpful errors for now
         if l_value.ty() != r_value.ty() {

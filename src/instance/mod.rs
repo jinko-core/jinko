@@ -9,7 +9,6 @@
 
 use std::collections::HashMap;
 
-use crate::error::{ErrKind, Error};
 use crate::indent::Indent;
 use crate::typechecker::CheckedType;
 
@@ -94,17 +93,14 @@ impl ObjectInstance {
         self.size
     }
 
-    pub fn get_field(&self, field_name: &str) -> Result<ObjectInstance, Error> {
-        match self.fields.as_ref() {
-            None => {
-                Err(Error::new(ErrKind::Context).with_msg(String::from("no fields on instance")))
-            }
-            Some(fields) => fields.get(field_name).map_or(
-                Err(Error::new(ErrKind::Context)
-                    .with_msg(format!("field `{}` does not exist on instance", field_name))),
-                |FieldInstance(_, instance)| Ok(instance.clone()),
-            ),
-        }
+    pub fn get_field_unchecked(&self, field_name: &str) -> ObjectInstance {
+        self.fields
+            .as_ref()
+            .unwrap()
+            .get(field_name)
+            .unwrap()
+            .instance()
+            .clone()
     }
 
     pub fn fields(&self) -> &Option<FieldsMap> {
@@ -206,8 +202,8 @@ mod tests {
 
         let inst = constructs::expr(span!("v")).unwrap().1;
         let v = inst.execute(&mut ctx).unwrap();
-        let v_f = v.get_field("f").unwrap();
-        let v_s = v.get_field("s").unwrap();
+        let v_f = v.get_field_unchecked("f");
+        let v_s = v.get_field_unchecked("s");
 
         assert_eq!(v_f, p);
         assert_eq!(v_s, p);
@@ -219,10 +215,10 @@ mod tests {
 
         let inst = constructs::expr(span!("v")).unwrap().1;
         let v = inst.execute(&mut ctx).unwrap();
-        let v_f = v.get_field("f").unwrap();
-        let v_s = v.get_field("s").unwrap();
-        let v_f_x = v_f.get_field("x").unwrap();
-        let v_f_y = v_s.get_field("y").unwrap();
+        let v_f = v.get_field_unchecked("f");
+        let v_s = v.get_field_unchecked("s");
+        let v_f_x = v_f.get_field_unchecked("x");
+        let v_f_y = v_s.get_field_unchecked("y");
 
         assert_eq!(v_f_x, JkInt::from(1).to_instance());
         assert_eq!(v_f_y, JkInt::from(2).to_instance());

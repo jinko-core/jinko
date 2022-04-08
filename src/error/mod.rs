@@ -62,11 +62,12 @@ impl ErrorHandler {
 pub enum ErrKind {
     Hint,
     Parsing,
-    Context,
     TypeChecker,
     Generics,
     ExternFunc,
     IO,
+    Scoping,
+    Final,
 }
 
 impl ErrKind {
@@ -74,11 +75,12 @@ impl ErrKind {
         match self {
             ErrKind::Hint => "Hint",
             ErrKind::Parsing => "Parsing",
-            ErrKind::Context => "Interpreter",
             ErrKind::TypeChecker => "Typechecker",
             ErrKind::Generics => "Generics",
             ErrKind::IO => "I/O",
             ErrKind::ExternFunc => "External Function",
+            ErrKind::Scoping => "Scoping",
+            ErrKind::Final => "",
         }
     }
 }

@@ -267,7 +267,7 @@ impl Context {
     /// Register a test to be executed by the context
     pub fn add_test(&mut self, test: FunctionDec) -> Result<(), Error> {
         match self.tests.get(test.name()) {
-            Some(test) => Err(Error::new(ErrKind::Context)
+            Some(test) => Err(Error::new(ErrKind::Scoping)
                 .with_msg(format!("test function already declared: {}", test.name()))),
             None => {
                 self.tests.insert(test.name().to_owned(), test);
@@ -319,7 +319,7 @@ impl Context {
         });
 
         match self.error_handler.has_errors() {
-            true => Err(Error::new(ErrKind::Context)),
+            true => Err(Error::new(ErrKind::TypeChecker)),
             false => Ok(()),
         }
     }
@@ -345,7 +345,7 @@ impl Context {
         self.emit_errors();
 
         match self.error_handler.has_errors() {
-            true => Err(Error::new(ErrKind::Context)),
+            true => Err(Error::new(ErrKind::Final)),
             false => Ok(res),
         }
     }
@@ -370,11 +370,10 @@ impl Context {
         &mut self,
         builtin: &str,
         args: Vec<Box<dyn Instruction>>,
-    ) -> Result<Option<ObjectInstance>, Error> {
-        match self.builtins.get(builtin) {
-            Some(f) => Ok(f(self, args)),
-            None => Err(Error::new(ErrKind::Context)),
-        }
+    ) -> Option<ObjectInstance> {
+        let builtin = self.builtins.get(builtin).unwrap();
+
+        builtin(self, args)
     }
 
     /// Add a library to the interpreter
@@ -395,7 +394,7 @@ impl Context {
             crate::instruction::Incl::new(String::from("stdlib"), Some(String::from("")));
         stdlib_incl.set_base(PathBuf::new());
 
-        self.entry_point.add_instruction(Box::new(stdlib_incl))?;
+        self.entry_point.add_instruction(Box::new(stdlib_incl));
 
         Ok(())
     }

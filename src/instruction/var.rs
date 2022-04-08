@@ -85,17 +85,7 @@ impl Instruction for Var {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        let var = match ctx.get_variable(self.name()) {
-            Some(v) => v,
-            None => {
-                ctx.error(
-                    Error::new(ErrKind::Context)
-                        .with_msg(format!("variable has not been declared: {}", self.name)),
-                );
-
-                return None;
-            }
-        };
+        let var = ctx.get_variable(self.name()).unwrap();
 
         log!("var: {}", var.print());
 

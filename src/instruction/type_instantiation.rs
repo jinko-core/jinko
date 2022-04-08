@@ -52,29 +52,18 @@ impl TypeInstantiation {
     }
 
     /// Get the corresponding type declaration from a context
-    fn get_declaration(&self, ctx: &mut Context) -> Option<Rc<TypeDec>> {
-        match ctx.get_type(self.name()) {
-            // get_type() return a Rc, so this clones the Rc, not the TypeId
-            Some(t) => Some(t.clone()),
-            // FIXME: Fix Location and input
-            None => {
-                ctx.error(
-                    Error::new(ErrKind::Context)
-                        .with_msg(format!("Cannot find type {}", self.name().id()))
-                        .with_loc(self.location.clone()),
-                );
-                None
-            }
-        }
+    fn get_declaration(&self, ctx: &mut Context) -> Rc<TypeDec> {
+        // get_type() return a Rc, so this clones the Rc, not the TypeId
+        ctx.get_type(self.name()).cloned().unwrap()
     }
 
     /// Check if the fields received and the fields expected match
     fn check_fields_count(&self, type_dec: &TypeDec) -> Result<(), Error> {
         match self.fields().len() == type_dec.fields().len() {
             true => Ok(()),
-            false => Err(Error::new(ErrKind::Context).with_msg(format!(
-                "Wrong number of arguments \
-                    for type instantiation `{}`: Expected {}, got {}",
+            false => Err(Error::new(ErrKind::TypeChecker).with_msg(format!(
+                "wrong number of arguments \
+                    for type instantiation `{}`: expected {}, got {}",
                 self.name().id(),
                 type_dec.fields().len(),
                 self.fields().len()
@@ -143,12 +132,7 @@ impl Instruction for TypeInstantiation {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        let type_dec = self.get_declaration(ctx)?;
-
-        if let Err(e) = self.check_fields_count(&type_dec) {
-            ctx.error(e);
-            return None;
-        }
+        let type_dec = self.get_declaration(ctx);
 
         let mut size: usize = 0;
         let mut data: Vec<u8> = Vec::new();
@@ -159,7 +143,7 @@ impl Instruction for TypeInstantiation {
             let field_instr = named_arg.value();
             let field_name = named_arg.symbol();
 
-            let instance = field_instr.execute_expression(ctx)?;
+            let instance = field_instr.execute_expression(ctx);
             size += instance.size();
 
             data.append(&mut instance.data().to_vec());
@@ -190,6 +174,8 @@ impl TypeCheck for TypeInstantiation {
                     .with_loc(self.location.clone()));
             }
         };
+
+        self.check_fields_count(&dec)?;
 
         if !dec.generics().is_empty() || !self.generics.is_empty() {
             log!("resolving generic type instantiation");

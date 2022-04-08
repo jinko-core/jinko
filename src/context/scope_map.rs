@@ -40,7 +40,7 @@ impl<V, F, T> Scope<V, F, T> {
     /// Add a variable to the most recently created scope, if it doesn't already exist
     pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
         match self.get_variable(&name) {
-            Some(_) => Err(Error::new(ErrKind::Context)
+            Some(_) => Err(Error::new(ErrKind::Scoping)
                 .with_msg(format!("variable already declared: {}", name))),
             None => {
                 self.variables.insert(name, var);
@@ -57,7 +57,7 @@ impl<V, F, T> Scope<V, F, T> {
                 Ok(())
             }
             None => {
-                Err(Error::new(ErrKind::Context)
+                Err(Error::new(ErrKind::Scoping)
                     .with_msg(format!("variable does not exist: {}", name)))
             }
         }
@@ -66,7 +66,7 @@ impl<V, F, T> Scope<V, F, T> {
     /// Add a variable to the most recently created scope, if it doesn't already exist
     pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
         match self.get_function(&name) {
-            Some(_) => Err(Error::new(ErrKind::Context)
+            Some(_) => Err(Error::new(ErrKind::Scoping)
                 .with_msg(format!("function already declared: {}", name))),
             None => {
                 self.functions.insert(name, func);
@@ -79,7 +79,7 @@ impl<V, F, T> Scope<V, F, T> {
     pub fn add_type(&mut self, name: String, type_dec: T) -> Result<(), Error> {
         match self.get_type(&name) {
             Some(_) => {
-                Err(Error::new(ErrKind::Context)
+                Err(Error::new(ErrKind::Scoping)
                     .with_msg(format!("type already declared: {}", name)))
             }
             None => {
@@ -190,7 +190,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_variable(name, var),
-            None => Err(Error::new(ErrKind::Context)
+            None => Err(Error::new(ErrKind::Scoping)
                 .with_msg(String::from("Adding variable to empty scopemap"))),
         }
     }
@@ -199,7 +199,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     pub fn remove_variable(&mut self, name: &str) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.remove_variable(name),
-            None => Err(Error::new(ErrKind::Context)
+            None => Err(Error::new(ErrKind::Scoping)
                 .with_msg(String::from("Removing variable from empty scopemap"))),
         }
     }
@@ -208,7 +208,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_function(name, func),
-            None => Err(Error::new(ErrKind::Context)
+            None => Err(Error::new(ErrKind::Scoping)
                 .with_msg(String::from("Adding function to empty scopemap"))),
         }
     }
@@ -217,7 +217,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     pub fn add_type(&mut self, name: String, custom_type: T) -> Result<(), Error> {
         match self.scopes.front_mut() {
             Some(head) => head.add_type(name, custom_type),
-            None => Err(Error::new(ErrKind::Context)
+            None => Err(Error::new(ErrKind::Scoping)
                 .with_msg(String::from("Adding new custom type to empty scopemap"))),
         }
     }

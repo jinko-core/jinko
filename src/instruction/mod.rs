@@ -82,37 +82,17 @@ pub trait Instruction: InstructionClone + Downcast + TypeCheck + GenericUser {
 
     /// Execute the instruction, hoping for an instance to be returned. If no instance is
     /// returned, error out.
-    fn execute_expression(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        let instance = self.execute(ctx);
-
-        match instance {
-            Some(obj) => Some(obj),
-            None => {
-                ctx.error(Error::new(ErrKind::Context).with_msg(format!(
-                    "statement found when expression was expected: {}",
-                    self.print()
-                )));
-                None
-            }
-        }
+    fn execute_expression(&self, ctx: &mut Context) -> ObjectInstance {
+        self.execute(ctx).unwrap()
     }
 
     /// Execute the instruction, hoping for no instance to be returned. If an instance is
     /// returned, error out.
     // FIXME: Cleanup the return type of this function
-    fn execute_statement(&self, ctx: &mut Context) -> Result<(), Error> {
-        let instance = self.execute(ctx);
-
-        match instance {
-            None => Ok(()),
-            Some(_) => {
-                let e = Error::new(ErrKind::Context).with_msg(format!(
-                    "expression found when statement was expected: {}",
-                    self.print()
-                ));
-                ctx.error(e.clone());
-                Err(e)
-            }
+    fn execute_statement(&self, ctx: &mut Context) {
+        // FIXME: Is there a better way to do this?
+        if let Some(_) = self.execute(ctx) {
+            unreachable!()
         }
     }
 

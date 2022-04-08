@@ -66,15 +66,9 @@ impl FunctionCall {
     }
 
     /// Get the corresponding declaration from a context
-    fn get_declaration(&self, ctx: &mut Context) -> Result<Rc<FunctionDec>, Error> {
-        match ctx.get_function(self.name()) {
-            // get_function() return a Rc, so this clones the Rc, not the FunctionDec
-            Some(f) => Ok(f.clone()),
-            // FIXME: Fix Location and input
-            None => Err(Error::new(ErrKind::Context)
-                .with_msg(format!("cannot find function {}", self.name()))
-                .with_loc(self.location.clone())),
-        }
+    fn get_declaration(&self, ctx: &mut Context) -> Rc<FunctionDec> {
+        // This clones the Rc, not the function dec
+        ctx.get_function(self.name()).cloned().unwrap()
     }
 
     /// Map each argument to its corresponding instruction
@@ -88,35 +82,12 @@ impl FunctionCall {
             // Create a new variable, and execute the content of the function argument
             // passed to the call
             let mut new_var = Var::new(func_arg.name().to_owned());
-            let mut instance = match call_arg.execute_expression(ctx) {
-                Some(i) => i,
-                None => {
-                    ctx.error(
-                        Error::new(ErrKind::Context)
-                            .with_msg(format!(
-                                "trying to map statement to function argument: {} -> {}",
-                                call_arg.print(),
-                                func_arg
-                            ))
-                            .with_loc(func_arg.location().cloned()),
-                    );
-                    return;
-                }
-            };
+            let mut instance = call_arg.execute_expression(ctx);
 
-            let ty = match ctx.get_type(func_arg.get_type()) {
-                // Double dereferencing: Some(t) gives us a &Rc<TypeDec>. We dereference
-                // it to access the Rc, and dereference it again to access the TypeDec.
-                Some(t) => (**t).clone(),
-                None => {
-                    ctx.error(
-                        Error::new(ErrKind::Context)
-                            .with_msg(format!("type not found: {}", func_arg.get_type().id()))
-                            .with_loc(func_arg.location().cloned()),
-                    );
-                    return;
-                }
-            };
+            let ty = ctx.get_type(func_arg.get_type()).unwrap();
+            //     // Double dereferencing: Some(t) gives us a &Rc<TypeDec>. We dereference
+            //     // it to access the Rc, and dereference it again to access the TypeDec.
+            let ty = (**ty).clone();
 
             instance.set_ty(CheckedType::Resolved(ty.into()));
 
@@ -148,13 +119,7 @@ impl FunctionCall {
         dec: &FunctionDec,
     ) -> Option<ObjectInstance> {
         if ctx.is_builtin(dec.name()) {
-            match ctx.call_builtin(dec.name(), self.args.clone()) {
-                Ok(value) => value,
-                Err(e) => {
-                    ctx.error(e);
-                    None
-                }
-            }
+            ctx.call_builtin(dec.name(), self.args.clone())
         } else {
             #[cfg(feature = "ffi")]
             match crate::ffi::execute(dec, self, ctx) {
@@ -253,13 +218,7 @@ impl Instruction for FunctionCall {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        let function = match self.get_declaration(ctx) {
-            Ok(f) => f,
-            Err(e) => {
-                ctx.error(e);
-                return None;
-            }
-        };
+        let function = self.get_declaration(ctx);
 
         if function.fn_kind() == FunctionKind::Ext {
             return self.execute_external_function(ctx, &function);

@@ -31,27 +31,8 @@ impl FieldAccess {
 
     /// Get a reference to the accessed field's instance
     fn get_field_instance(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        let calling_instance = match self.instance.execute(ctx) {
-            None => {
-                ctx.error(
-                    Error::new(ErrKind::Context)
-                        .with_msg(format!(
-                            "instance `{}` is a statement and cannot be accessed",
-                            self.instance.print()
-                        ))
-                        .with_loc(self.instance.location().cloned()),
-                );
-                return None;
-            }
-            Some(i) => i,
-        };
-        let field_instance = match calling_instance.get_field(&self.field_name) {
-            Ok(field) => field,
-            Err(e) => {
-                ctx.error(e);
-                return None;
-            }
-        };
+        let calling_instance = self.instance.execute(ctx)?;
+        let field_instance = calling_instance.get_field_unchecked(&self.field_name);
 
         Some(field_instance)
     }

@@ -86,13 +86,14 @@ impl Incl {
 
         match (dir_candidate.is_file(), file_candidate.is_file()) {
             // We cannot have both <path>/lib.jk and <path>.jk be valid files
-            (true, true) => Err(Error::new(ErrKind::Context)
+            // FIXME: Should this be a new error kind? Inclusion?
+            (true, true) => Err(Error::new(ErrKind::TypeChecker)
                 .with_msg(format!(
                     "invalid include: {:?} and {:?} are both valid candidates",
                     dir_candidate, file_candidate
                 ))
                 .with_loc(self.location.clone())),
-            (false, false) => Err(Error::new(ErrKind::Context)
+            (false, false) => Err(Error::new(ErrKind::TypeChecker)
                 .with_msg(format!(
                     "no candidate for include: {:?} and {:?} do not exist",
                     dir_candidate, file_candidate
