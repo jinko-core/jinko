@@ -272,25 +272,25 @@ mod test {
         use crate::typechecker::TypeId;
         use crate::value::JkInt;
 
-        let mut ctx = Context::new();
+        let mut ctx = TypeCtx::new();
 
         // Create a new type with two integers fields
         let fields = vec![
             DecArg::new("a".to_owned(), TypeId::from("int")),
             DecArg::new("b".to_owned(), TypeId::from("int")),
         ];
-        let t = TypeDec::new("Type_Test".to_owned(), vec![], fields);
+        let mut t = TypeDec::new("Type_Test".to_owned(), vec![], fields);
 
-        t.execute(&mut ctx);
+        t.resolve_type(&mut ctx).unwrap();
 
         let mut t_inst = TypeInstantiation::new(TypeId::from("Type_Test"));
 
-        assert!(t_inst.execute(&mut ctx).is_none());
+        assert!(t_inst.resolve_type(&mut ctx).is_err());
         assert!(
             ctx.error_handler.has_errors(),
             "Given 0 field to 2 fields type"
         );
-        ctx.clear_errors();
+        ctx.error_handler.clear();
 
         t_inst.add_field(VarAssign::new(
             false,
@@ -298,12 +298,12 @@ mod test {
             Box::new(JkInt::from(12)),
         ));
 
-        assert!(t_inst.execute(&mut ctx).is_none());
+        assert!(t_inst.resolve_type(&mut ctx).is_err());
         assert!(
             ctx.error_handler.has_errors(),
             "Given 1 field to 2 fields type"
         );
-        ctx.clear_errors();
+        ctx.error_handler.clear();
 
         t_inst.add_field(VarAssign::new(
             false,
@@ -312,7 +312,7 @@ mod test {
         ));
 
         assert!(
-            t_inst.execute(&mut ctx).is_some(),
+            t_inst.resolve_type(&mut ctx).is_err(),
             "Type instantiation should have a correct number of fields now"
         );
         assert!(!ctx.error_handler.has_errors());

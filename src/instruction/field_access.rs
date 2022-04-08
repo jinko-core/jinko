@@ -129,13 +129,11 @@ mod tests {
     use crate::{jinko, jinko_fail, span};
 
     fn setup() -> Context {
-        let ctx = jinko! {
+        jinko! {
             type Point(x: int, y:int);
             func basic() -> Point { Point ( x : 15, y : 14 )}
             b = basic();
-        };
-
-        ctx
+        }
     }
 
     #[test]
@@ -203,35 +201,31 @@ mod tests {
 
     #[test]
     fn t_field_access_on_void() {
-        let mut ctx = setup();
+        jinko_fail! {
+            func void() {}
 
-        let inst = constructs::expr(span!("func void() {}")).unwrap().1;
-        inst.execute(&mut ctx);
-
-        let inst = constructs::expr(span!("void().field")).unwrap().1;
-        assert!(inst.execute(&mut ctx).is_none());
-        assert!(ctx.error_handler.has_errors())
+            void().field
+        };
     }
 
     #[test]
     fn t_field_access_unknown_field() {
-        let mut ctx = setup();
+        jinko_fail! {
+            type Point(x: int, y:int);
+            func basic() -> Point { Point ( x : 15, y : 14 )}
+            b = basic();
 
-        let inst = constructs::expr(span!("b.not_a_field")).unwrap().1;
-        assert!(inst.execute(&mut ctx).is_none());
-        assert!(ctx.error_handler.has_errors());
+            b.not_a_field
+        };
     }
 
     #[test]
     fn t_field_access_field_on_primitive() {
-        let mut ctx = setup();
+        jinko_fail! {
+            i = 12;
 
-        let inst = constructs::expr(span!("i = 12")).unwrap().1;
-        inst.execute(&mut ctx);
-
-        let inst = constructs::expr(span!("i.field_on_primitive")).unwrap().1;
-        assert!(inst.execute(&mut ctx).is_none());
-        assert!(ctx.error_handler.has_errors())
+            i.field_on_primitive()
+        };
     }
 
     #[test]
