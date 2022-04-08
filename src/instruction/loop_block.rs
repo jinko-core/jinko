@@ -2,7 +2,8 @@
 //! different kinds, `for`, `while` or `loop`.
 
 use crate::context::Context;
-use crate::generics::GenericUser;
+use crate::error::Error;
+use crate::generics::Generic;
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
 use crate::location::SpanTuple;
@@ -207,7 +208,8 @@ impl Instruction for Loop {
 }
 
 impl TypeCheck for Loop {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
+        // FIXME: This is invalid
         self.block.type_of(ctx)
     }
 

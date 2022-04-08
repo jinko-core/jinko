@@ -126,8 +126,8 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<bool> {
-            fn resolve_type(&mut self, _: &mut TypeCtx) -> CheckedType {
-                CheckedType::Resolved(TypeId::from("bool"))
+            fn resolve_type(&mut self, _: &mut TypeCtx) -> Result<CheckedType, Error> {
+                Ok(CheckedType::Resolved(TypeId::from("bool")))
             }
 
             fn set_cached_type(&mut self, _: CheckedType) {}
@@ -196,8 +196,8 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<char> {
-            fn resolve_type(&mut self, _: &mut TypeCtx) -> CheckedType {
-                CheckedType::Resolved(TypeId::from("char"))
+            fn resolve_type(&mut self, _: &mut TypeCtx) -> Result<CheckedType, Error> {
+                Ok(CheckedType::Resolved(TypeId::from("char")))
             }
 
             fn set_cached_type(&mut self, _: CheckedType) {}
@@ -256,8 +256,8 @@ macro_rules! jk_primitive {
         }
 
         impl TypeCheck for JkConstant<$t> {
-            fn resolve_type(&mut self, _: &mut TypeCtx) -> CheckedType {
-                CheckedType::Resolved(TypeId::from($s))
+            fn resolve_type(&mut self, _: &mut TypeCtx) -> Result<CheckedType, Error> {
+                Ok(CheckedType::Resolved(TypeId::from($s)))
             }
 
             fn set_cached_type(&mut self, _: CheckedType) {}
@@ -354,8 +354,8 @@ impl Instruction for JkString {
 }
 
 impl TypeCheck for JkString {
-    fn resolve_type(&mut self, _ctx: &mut TypeCtx) -> CheckedType {
-        CheckedType::Resolved(TypeId::from("string"))
+    fn resolve_type(&mut self, _ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
+        Ok(CheckedType::Resolved(TypeId::from("string")))
     }
 
     fn set_cached_type(&mut self, _: CheckedType) {}

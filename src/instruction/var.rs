@@ -105,16 +105,15 @@ impl Instruction for Var {
 }
 
 impl TypeCheck for Var {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn type_log(&self) -> String {
+        self.name.to_string()
+    }
+
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         match ctx.get_var(self.name()) {
-            Some(var_ty) => var_ty.clone(),
-            None => {
-                ctx.error(
-                    Error::new(ErrKind::TypeChecker)
-                        .with_msg(format!("use of undeclared variable: `{}`", self.name())),
-                );
-                CheckedType::Error
-            }
+            Some(var_ty) => Ok(var_ty.clone()),
+            None => Err(Error::new(ErrKind::TypeChecker)
+                .with_msg(format!("use of undeclared variable: `{}`", self.name()))),
         }
     }
 
