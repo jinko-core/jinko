@@ -158,10 +158,9 @@ impl TypeCheck for Block {
 
 impl GenericUser for Block {
     fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.instructions.iter_mut().for_each(|inst| {
-            log!(generics, "resolving stmt in block");
-            inst.resolve_usages(type_map, ctx)
-        })
+        self.instructions
+            .iter_mut()
+            .for_each(|inst| inst.resolve_usages(type_map, ctx))
     }
 }
 
