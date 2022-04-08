@@ -1,10 +1,11 @@
 //! TypeInstantiations are used when instantiating a type. The argument list is given to the
 //! type on execution.
 
-use super::{Context, ErrKind, Error, InstrKind, Instruction, ObjectInstance, TypeDec, VarAssign};
-use crate::generics::Generic;
-use crate::generics::{self, GenericMap};
-use crate::instance::Name;
+use crate::context::Context;
+use crate::error::{ErrKind, Error};
+use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
+use crate::instance::{Name, ObjectInstance};
+use crate::instruction::{InstrKind, Instruction, TypeDec, VarAssign};
 use crate::location::SpanTuple;
 use crate::log;
 use crate::symbol::Symbol;
@@ -110,13 +111,7 @@ impl TypeInstantiation {
         log!("specialized name {}", specialized_name);
         if ctx.get_custom_type(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
-            let specialized_ty = match dec.from_type_map(specialized_name.clone(), &type_map, ctx) {
-                Ok(f) => f,
-                Err(e) => {
-                    ctx.error(e.with_loc(self.location.clone()));
-                    return CheckedType::Error;
-                }
-            };
+            let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
 
             ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
         }
@@ -241,7 +236,47 @@ impl TypeCheck for TypeInstantiation {
     }
 }
 
-impl Generic for TypeInstantiation {}
+impl GenericUser for TypeInstantiation {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+        log!(generics, "type name: {}", self.type_name);
+        let dec = match ctx.get_custom_type(self.type_name.id()) {
+            Some(t) => t,
+            None => {
+                ctx.error(Error::new(ErrKind::Generics).with_msg(format!("trying to access undeclared type when resolving generic type instantiation: `{}`", self.type_name)).with_loc(self.location.clone()));
+                return;
+            }
+        };
+
+        let new_types = match type_map.specialized_types(dec.generics()) {
+            Err(e) => {
+                ctx.error(e.with_loc(self.location().cloned()));
+                return;
+            }
+            Ok(new_t) => new_t,
+        };
+
+        let new_name = generics::mangle(self.type_name.id(), &new_types);
+        let old_name = String::from(self.type_name.id());
+        self.type_name = TypeId::new(Symbol::from(new_name.clone()));
+        self.generics = vec![];
+
+        self.fields
+            .iter_mut()
+            .for_each(|arg| arg.resolve_usages(type_map, ctx));
+
+        // FIXME: This is ugly as sin
+        if ctx.get_specialized_node(self.type_name.id()).is_none()
+            && self.type_name.id() != old_name
+        {
+            let demangled = generics::demangle(self.type_name.id());
+
+            // FIXME: Can we unwrap here? Probably not
+            let generic_dec = ctx.get_custom_type(demangled).unwrap().clone();
+            let specialized_ty = generic_dec.generate(new_name, type_map, ctx);
+            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {

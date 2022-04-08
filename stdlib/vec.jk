@@ -1,6 +1,8 @@
+link_with("libc.so.6")
+
 ext func memcpy(dest: int, src: int, n: int);
-ext func calloc(n: int, size: int);
-ext func realloc(ptr: int, size: int);
+ext func calloc(n: int, size: int) -> int;
+ext func realloc(ptr: int, size: int) -> int;
 ext func free(ptr: int);
 
 /* FIXME: Add default values for fields */
@@ -8,28 +10,36 @@ type Vec[T](raw_pointer: int, len: int, size: int);
 /* type Vec[T](raw_pointer: int = 0, len: int = 0, size: int = 0); */
 
 func inner_init[T](value: T) -> Vec[T] {
-	Vec(inner: malloc(size_of(value)),
+	new_inner = calloc(1, size_of[T](value));
+	new_size = size_of[T](value);
+	Vec(inner: new_inner,
 		len: 1,
-		size: size_of(value))
+		size: new_size)
 }
 
 func inner_grow[T](v: Vec[T], value: T) -> Vec[T] {
-	new_size = v.size + size_of(value);
-	new_pointer = v.raw_pointer.realloc(v.size + size_of(value));
+	new_size = v.size + size_of[T](value);
+	new_pointer = v.raw_pointer.realloc(v.size + size_of[T](value));
 
 	Vec(raw_pointer: new_pointer, len: v.len + 1, size: new_size)
 }
 
 func push[T](v: Vec[T], value: T) -> Vec[T] {
 	if v.size == 0 {
-		inner_init(value)
+		inner_init[T](value)
 	} else {
-		inner_grow(v, value)
+		inner_grow[T](v, value)
 	}
 }
 
 func release(v: Vec[T]) {
 	v.raw_pointer.free()
+}
+
+// Creates an empty vector. Shorthand for while we still don't have default
+// field initialization
+func vec[T]() -> Vec[T] {
+	Vec[T](raw_pointer: 0, len: 0, size: 0)
 }
 
 // FIXME: Add this once we have proper first parameter overloading

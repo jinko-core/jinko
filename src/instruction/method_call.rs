@@ -2,7 +2,7 @@
 //! they get desugared into a normal function call.
 
 use crate::context::Context;
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::FunctionCall;
 use crate::instruction::{InstrKind, Instruction};
@@ -97,33 +97,11 @@ impl TypeCheck for MethodCall {
     }
 }
 
-impl Generic for MethodCall {
-    // fn expand(&self, ctx: &mut Context) -> Result<(), Error> {
-    //     let mut call = self.method.clone();
-    //     call.add_arg_front(self.var.clone());
-    //     if let Some(loc) = &self.location {
-    //         call.set_location(loc.clone())
-    //     };
-
-    //     log!("generic expanding method call: {}", self.method.name());
-
-    //     call.expand(ctx)
-    // }
-
-    // fn resolve_self(&mut self, ctx: &mut TypeCtx) {
-    //     self.method
-    //         .set_name(generics::mangle(self.method.name(), self.method.generics()));
-
-    //     let mut call = self.method.clone();
-    //     call.add_arg_front(self.var.clone());
-    //     if let Some(loc) = &self.location {
-    //         call.set_location(loc.clone())
-    //     };
-
-    //     log!("generic resolving method call: {}", self.method.name());
-
-    //     call.resolve_self(ctx);
-    // }
+impl GenericUser for MethodCall {
+    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
+        // FIXME: Can we avoid adding the argument here?
+        self.method.resolve_usages(type_map, ctx);
+    }
 }
 
 #[cfg(test)]

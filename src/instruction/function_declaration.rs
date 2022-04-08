@@ -3,7 +3,7 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{Generic, GenericMap};
+use crate::generics::{GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction};
 use crate::location::{Location, SpanTuple};
@@ -50,55 +50,6 @@ impl FunctionDec {
             block: None,
             typechecked: false,
             location: None,
-        }
-    }
-
-    /// Generate a new instance of [`FunctionDec`] from a given generic type map
-    pub fn from_type_map(
-        &self,
-        mangled_name: String,
-        type_map: &GenericMap,
-        ctx: &mut TypeCtx,
-    ) -> Result<FunctionDec, Error> {
-        let mut new_fn = self.clone();
-        new_fn.name = mangled_name;
-        new_fn.generics = vec![];
-
-        let mut is_err = false;
-
-        new_fn
-            .args
-            .iter_mut()
-            .zip(self.args().iter())
-            .filter(|(_, generic)| self.generics().contains(generic.get_type()))
-            .for_each(|(new_arg, old_generic)| {
-                let new_type = match type_map.get_match(old_generic.get_type()) {
-                    Ok(t) => t,
-                    Err(e) => {
-                        ctx.error(e);
-                        is_err = true;
-                        TypeId::void()
-                    }
-                };
-                new_arg.set_type(new_type);
-            });
-
-        if let Some(ret_ty) = &self.ty {
-            if self.generics().contains(ret_ty) {
-                let new_ret_ty = type_map.get_match(ret_ty)?;
-                new_fn.ty = Some(new_ret_ty);
-            }
-        }
-
-        // FIXME: We also need to generate a new version of each instruction in the
-        // block
-        // if let Some(b) = &mut new_fn.block {
-        //     b.resolve_self(ctx);
-        // }
-
-        match is_err {
-            true => Err(Error::new(ErrKind::Generics)),
-            false => Ok(new_fn),
         }
     }
 
@@ -383,7 +334,43 @@ impl TypeCheck for FunctionDec {
     }
 }
 
-impl Generic for FunctionDec {}
+impl GenericUser for FunctionDec {
+    fn resolve_usages(&mut self, _type_map: &GenericMap, ctx: &mut TypeCtx) {
+        // FIXME: Can we do without that?
+        if let Err(e) = ctx.declare_function(self.name().to_string(), self.clone()) {
+            ctx.error(e);
+        };
+    }
+}
+
+impl GenericExpander for FunctionDec {
+    fn generate(
+        &self,
+        mangled_name: String,
+        type_map: &GenericMap,
+        ctx: &mut TypeCtx,
+    ) -> FunctionDec {
+        let mut new_fn = self.clone();
+        new_fn.name = mangled_name;
+        new_fn.generics = vec![];
+        new_fn.typechecked = false;
+
+        new_fn
+            .args
+            .iter_mut()
+            .for_each(|arg| arg.resolve_usages(type_map, ctx));
+
+        if let Some(ret_ty) = &mut new_fn.ty {
+            ret_ty.resolve_usages(type_map, ctx);
+        }
+
+        if let Some(b) = &mut new_fn.block {
+            b.resolve_usages(type_map, ctx);
+        }
+
+        new_fn
+    }
+}
 
 impl Default for FunctionDec {
     fn default() -> Self {

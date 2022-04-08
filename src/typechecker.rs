@@ -73,6 +73,7 @@ pub struct TypeCtx {
     /// When typechecking, monomorphization is performed, meaning that generic functions
     /// and types get expanded into a new [`Instruction`]. We need to store them
     /// as we go and then use them in the calling context
+    // FIXME: Turn this into a hashset?
     generated: Vec<SpecializedNode>,
     // FIXME: Remove both of these fields...
     /// Path from which the typechecking context was instantiated
@@ -172,6 +173,18 @@ impl TypeCtx {
         self.generated.push(node)
     }
 
+    /// Get a reference to a newly generated node
+    pub fn get_specialized_node(&mut self, name: &str) -> Option<&SpecializedNode> {
+        self.generated.iter().find(|node| {
+            let node_name = match node {
+                SpecializedNode::Func(f) => f.name(),
+                SpecializedNode::Type(t) => t.name(),
+            };
+
+            node_name == name
+        })
+    }
+
     /// Take ownership of the specialized nodes currently present in the
     /// type context. This replaces the vector of generated nodes with an
     /// empty vector
@@ -187,16 +200,19 @@ impl TypeCtx {
 
     /// Access a previously declared variable's type
     pub fn get_var(&mut self, name: &str) -> Option<&CheckedType> {
+        log!(typectx, "accessing variable: `{}`", name);
         self.types.get_variable(name)
     }
 
     /// Access a previously declared function's type
     pub fn get_function(&mut self, name: &str) -> Option<&FunctionDec> {
+        log!(typectx, "accessing function: `{}`", name);
         self.types.get_function(name)
     }
 
     /// Access a previously declared custom type
     pub fn get_custom_type(&mut self, name: &str) -> Option<&TypeDec> {
+        log!(typectx, "accessing custom type: `{}`", name);
         self.types.get_type(name)
     }
 

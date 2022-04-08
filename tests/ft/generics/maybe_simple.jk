@@ -1,0 +1,127 @@
+type MaybeSimple[T](is_nothing: bool, inner: T);
+
+func nothing_simple[T](default_value: T) -> MaybeSimple[T] {
+  MaybeSimple[T](is_nothing: true, inner: default_value)
+}
+
+func something[T](value: T) -> MaybeSimple[T] {
+  MaybeSimple[T](is_nothing: false, inner: value)
+}
+
+func filter[T](m: MaybeSimple[T], predicate: bool) -> MaybeSimple[T] {
+  if predicate {
+    m
+  } else {
+    nothing_simple[T](m.value)
+  }
+}
+
+func expect[T](m: MaybeSimple[T], msg: string) -> T {
+  if m.is_nothing {
+    println_err(msg);
+  };
+
+  m.value
+}
+
+func flatten[T](m: MaybeSimple[MaybeSimple[T]]) -> MaybeSimple[T] {
+  if m.is_nothing {
+    nothing[T](m.value.value)
+  } else {
+    if m.value.is_nothing {
+	nothing[T](m.value.value)
+    } else {
+	m.value
+    }
+  }
+}
+
+// Code using this `MaybeSimple` type
+
+func maybe_div(lhs: int, rhs: int) -> MaybeSimple[int] {
+  if rhs == 0 {
+    nothing_simple[int](0)
+  } else {
+    something[int](lhs / rhs)
+  }
+}
+
+oh_no = "oh no";
+
+div0 = maybe_div(15, 14);
+println("div0 is nothing {fmt_bool(div0.is_nothing)}");
+println("div0 value {fmt_int(div0.expect(oh_no))}");
+
+div1 = maybe_div(15, 0);
+println("div1 is nothing {fmt_bool(div1.is_nothing)}");
+println("div1 value {fmt_int(div1.expect(oh_no))}");
+
+random_unflat = something[MaybeSimple[int]](something[int](14));
+random_flat = random_unflat.flatten();
+maybe_div(random_flat.value, 7);
+
+// Code `MaybeSimple` with custom types
+
+type Consumer(consumer_id: int, name: string, surname: string);
+
+func maybe_fetch_consumer(consumer_id: int) -> MaybeSimple[Consumer] {
+  if consumer_id == 0 {
+    nothing[Consumer](Consumer(consumer_id: 0, name: "", surname: ""))
+  } else {
+    something[Consumer](Consumer(consumer_id: consumer_id, name: "John", surname: "Dory"))
+  }
+}
+
+func print_consumer(maybe_consumer: MaybeSimple[Consumer]) {
+  consumer = maybe_consumer.expect[Consumer]("invalid consumer given to function");
+
+  print("consumer ({fmt_int(consumer.consumer_id)}): {consumer.name} {consumer.surname}");
+}
+
+c0 = maybe_fetch_consumer(0);
+c0.print_consumer();
+
+c1 = maybe_fetch_consumer(19914);
+c1.print_consumer();
+
+// Nested maybes, with dog builder pattern
+
+type True;
+type Dog(name: MaybeSimple[string] /* sorry bud */, is_happy: MaybeSimple[True], is_hungry: MaybeSimpl[True]);
+
+func inner_dog_builder(name: Maybe[string], is_happy: Maybe[True], is_hungry: Maybe[True]) {
+  Dog(name: name, is_hungry: is_hungry, is_happy: is_happy)
+}
+
+func dog() -> Dog {
+  inner_dog_builder(nothing[string](""), nothing[True](True), nothing[True](True))
+}
+
+func with_name(doug: Dog, name: string) -> Dog {
+  inner_dog_builder(something[string](name), doug.is_happy, doug.is_hungry)
+}
+
+func make_happy(doug: Dog) -> Dog {
+  inner_dog_builder(doug.name, something[True](True), doug.is_hungry)
+}
+
+func make_hungry(doug: Dog) -> Dog {
+  inner_dog_builder(doug.name, doug.is_happy, something[True](True))
+}
+
+func has_name(doug: Dog) -> bool {
+  doug.name.is_nothing.not()
+}
+
+func hungry(doug: Dog) -> bool {
+  doug.is_hungry.is_nothing.not()
+}
+
+func happy(doug: Dog) -> bool {
+  doug.is_happy.is_nothing.not()
+}
+
+jinx = dog().with_name("Jinko").make_hungry().make_happy();
+jinx.has_name();
+jinx.hungry();
+jinx.happy();

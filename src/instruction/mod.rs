@@ -6,7 +6,7 @@ use std::fmt::Debug;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::location::SpanTuple;
 use crate::typechecker::TypeCheck;
@@ -68,7 +68,7 @@ pub enum InstrKind {
 
 /// The `Instruction` trait is the basic trait for all of Jinko's execution nodes. Each
 /// node that can be executed needs to implement it
-pub trait Instruction: InstructionClone + Downcast + TypeCheck + Generic {
+pub trait Instruction: InstructionClone + Downcast + TypeCheck + GenericUser {
     // FIXME: Add Rename here
     /// Execute the instruction, altering the state of the context. Executing
     /// this method may return an object instance

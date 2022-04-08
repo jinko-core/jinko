@@ -2,7 +2,7 @@
 //! different kinds, `for`, `while` or `loop`.
 
 use crate::context::Context;
-use crate::generics::Generic;
+use crate::generics::GenericUser;
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
 use crate::location::SpanTuple;
@@ -227,7 +227,7 @@ impl TypeCheck for Loop {
     }
 }
 
-impl Generic for Loop {}
+impl GenericUser for Loop {}
 
 #[cfg(test)]
 mod tests {

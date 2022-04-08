@@ -77,3 +77,30 @@ tests:
       #   args:
       #     - "tests/ft/generics/valid_nested_type.jk"
       #   exit_code: 15
+  - name: "Generic expansion in usage"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_type_when_resolving.jk"
+    exit_code: 15
+  - name: "Generic expansion in inner fn"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_inner_fn.jk"
+    exit_code: 15
+  - name: "Generic expansion in inner fn"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_inner_fn.jk"
+    exit_code: 15
+  - name: "Generic expansion in inner type"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/valid_inner_type_when_resolving.jk"
+    exit_code: 15
+      # FIXME: Don't ignore to pass #408
+      # - name: "Generic stress test"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "--check"
+      #     - "tests/ft/generics/maybe_simple.jk"
+      #   exit_code: 0

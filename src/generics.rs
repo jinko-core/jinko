@@ -4,12 +4,11 @@
 
 use std::collections::HashMap;
 
-use crate::context::Context;
 use crate::error::{ErrKind, Error};
 use crate::log;
 use crate::typechecker::{TypeCtx, TypeId};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct GenericMap {
     map: HashMap<TypeId, TypeId>,
 }
@@ -58,22 +57,26 @@ impl GenericMap {
 
     /// Declare a new type "match" in the map. This function associates a generic type
     /// with its resolved counterpart, and errors out otherwise
-    pub fn declare(&mut self, lty: TypeId, rty: TypeId) -> Result<(), Error> {
-        match self.map.insert(lty.clone(), rty.clone()) {
+    pub fn declare(&mut self, generic: TypeId, specialized: TypeId) -> Result<(), Error> {
+        match self.map.insert(generic.clone(), specialized.clone()) {
             None => Ok(()),
             Some(existing_ty) => Err(Error::new(ErrKind::Generics).with_msg(format!(
                 "mapping type to already mapped generic type: {} <- {} with {}",
-                lty, existing_ty, rty
+                generic, existing_ty, specialized
             ))),
         }
     }
 
     /// Get the type associated with a generic type in a previous call to `declare()`
-    pub fn get_match(&self, to_resolve: &TypeId) -> Result<TypeId, Error> {
-        self.map.get(to_resolve).cloned().ok_or_else(|| {
-            Error::new(ErrKind::Generics)
-                .with_msg(format!("undeclared generic type: {}", to_resolve))
+    pub fn get_specialized(&self, generic: &TypeId) -> Result<TypeId, Error> {
+        self.map.get(generic).cloned().ok_or_else(|| {
+            Error::new(ErrKind::Generics).with_msg(format!("undeclared generic type: {}", generic))
         })
+    }
+
+    /// Get the types associated with a list of generic types previously declared
+    pub fn specialized_types(&self, generics: &[TypeId]) -> Result<Vec<TypeId>, Error> {
+        generics.iter().map(|g| self.get_specialized(g)).collect()
     }
 }
 
@@ -83,19 +86,24 @@ impl GenericMap {
 pub fn mangle(name: &str, types: &[TypeId]) -> String {
     let mut mangled = String::from(name);
     for type_id in types.iter() {
+        // FIXME: Add const for delimiter
         mangled.push('+');
         mangled.push_str(type_id.id());
     }
 
-    log!("mangled: {}", &mangled);
+    log!(generics, "mangled: {}", &mangled);
 
     mangled
 }
 
 /// Performs the opposite conversion, turning a mangled name into a valid
 /// jinko function name with generics.
-pub fn demangle(_mangled_name: &str) -> String {
-    todo!()
+pub fn demangle(mangled_name: &str) -> &str {
+    if let Some(idx) = mangled_name.find('+') {
+        &mangled_name[..idx]
+    } else {
+        mangled_name
+    }
 }
 
 /// Fetch the original name contained in a mangled name. This is useful for
@@ -120,18 +128,24 @@ pub fn original_name(mangled_name: &str) -> &str {
 /// Since most of the instructions cannot do generic expansion, we can implement
 /// default methods which do nothing. This avoid more boilerplate code for instructions
 /// such as constants or variables which cannot be generic.
-pub trait Generic {
-    /// Expand all generics contained in the current instruction, or its sub-instructions.
-    /// For example, a [`Block`] is responsible for expanding the generics of all the
-    /// functions defined within itself.
-    fn expand(&self, _ctx: &mut Context) -> Result<(), Error> {
-        Ok(())
-    }
-
+pub trait GenericUser {
     /// Mutate an instruction in order to resolve to the proper, expanded generic instruction.
-    /// For example, a call to the function `f[T]` should now be replaced by a call to
-    /// the function `generics::mangle("f", GenericMap { TypeId "T" })` // FIXME: Fix doc
-    fn resolve_self(&mut self, _ctx: &mut TypeCtx) {}
+    /// This function is also responsible for calling `resolve_usages` on all its sub-items:
+    /// A block is responsible for resolving each of its statements, as well as its final
+    /// expression if there is one.
+    ///
+    /// With a type map like the following: `{ T: int, U: string }`, a type call like
+    /// `f[T, U]()` should be resolved to `f+int+string()`
+    fn resolve_usages(&mut self, _type_map: &GenericMap, _ctx: &mut TypeCtx) {}
+}
+
+/// Only a certain set of instructions are generic expansion sites - They can generate a "new
+/// version of themselves" with a given typemap. Once a new version is generated, they must
+/// be typechecked by the generator.
+pub trait GenericExpander: Sized {
+    /// Generate a new version of the instruction with the given typemap. The new version should
+    /// not contain any generics.
+    fn generate(&self, new_name: String, type_map: &GenericMap, ctx: &mut TypeCtx) -> Self;
 }
 
 #[cfg(test)]

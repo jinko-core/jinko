@@ -154,7 +154,7 @@ impl SpanTuple {
         format!("      {} {}", separator, line)
     }
 
-    fn from_path<T1: Display, T2: Display>(
+    fn with_path<T1: Display, T2: Display>(
         &self,
         separator: &T1,
         repetitor: &T2,
@@ -240,7 +240,7 @@ impl SpanTuple {
     fn to_string<T1: Display, T2: Display>(&self, separator: &T1, repetitor: &T2) -> String {
         log!("span: {:?}", &self);
         match &self.path {
-            Some(path) => self.from_path(separator, repetitor, path),
+            Some(path) => self.with_path(separator, repetitor, path),
             None => String::new(), // FIXME: Do we want to return an empty string if there is no path?
         }
     }
