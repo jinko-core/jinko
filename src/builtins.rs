@@ -78,6 +78,7 @@ fn string_equals(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
 
 /// Link with a given library at runtime
 fn ffi_link_with(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
+    // FIXME: We should do this at typechecking maybe?
     #[cfg(feature = "ffi")]
     {
         let lib_path = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
