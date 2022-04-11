@@ -1,8 +1,9 @@
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use crate::generics::{GenericMap, GenericUser};
 use crate::location::SpanTuple;
 use crate::typechecker::{TypeCtx, TypeId};
+use crate::Error;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecArg {
@@ -48,13 +49,13 @@ impl DecArg {
 }
 
 impl GenericUser for DecArg {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) -> Result<(), Error> {
         self.ty.resolve_usages(type_map, ctx)
     }
 }
 
 impl Display for DecArg {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(f, "{}: {}", self.name, self.ty.id())
     }
 }

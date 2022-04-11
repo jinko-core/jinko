@@ -15,7 +15,9 @@
 //! `loop { do_something_repeatedly(); }`
 //!
 //! The return value of the function is the last instruction if it is an expression.
-//! Otherwise, it's `void`
+//! Otherwise, it's `void`.
+//!
+//! Blocks are an aggregation site.
 
 use crate::context::Context;
 use crate::error::Error;
@@ -165,10 +167,15 @@ impl TypeCheck for Block {
 }
 
 impl GenericUser for Block {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.instructions
-            .iter_mut()
-            .for_each(|inst| inst.resolve_usages(type_map, ctx))
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) -> Result<(), Error> {
+        // Aggregate errors
+        self.instructions.iter_mut().for_each(|inst| {
+            if let Err(e) = inst.resolve_usages(type_map, ctx) {
+                ctx.error(e)
+            }
+        });
+
+        Ok(())
     }
 }
 

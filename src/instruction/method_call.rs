@@ -99,9 +99,12 @@ impl TypeCheck for MethodCall {
 }
 
 impl GenericUser for MethodCall {
-    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
-        // FIXME: Can we avoid adding the argument here?
-        self.method.resolve_usages(type_map, ctx);
+    fn resolve_usages(
+        &mut self,
+        type_map: &crate::generics::GenericMap,
+        ctx: &mut TypeCtx,
+    ) -> Result<(), Error> {
+        self.method.resolve_usages(type_map, ctx)
     }
 }
 

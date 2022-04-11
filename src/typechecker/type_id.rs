@@ -172,7 +172,11 @@ impl TypeId {
 }
 
 impl GenericUser for TypeId {
-    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut crate::TypeCtx) {
+    fn resolve_usages(
+        &mut self,
+        type_map: &crate::generics::GenericMap,
+        ctx: &mut crate::TypeCtx,
+    ) -> Result<(), Error> {
         log!(generics, "resolving type id `{}`", self);
 
         let generics = match self {
@@ -182,13 +186,7 @@ impl GenericUser for TypeId {
 
         // FIXME: Split generics in two using .partition(): Keep some in a new
         // generic list, and resolve some others to the type's name
-        let new_types = match type_map.specialized_types(generics) {
-            Err(e) => {
-                ctx.error(e);
-                return;
-            }
-            Ok(new_t) => new_t,
-        };
+        let new_types = type_map.specialized_types(generics)?;
 
         // FIXME: What we need to do then is to go and visit all our newtype's generics
         // and resolve them
@@ -209,20 +207,19 @@ impl GenericUser for TypeId {
                 let new_dec = match ctx.get_custom_type(id.access()) {
                     Some(t) => t.clone(),
                     None => {
-                        ctx.error(
-                            Error::new(ErrKind::Generics)
-                                // FIXME: How do we get the location here?
-                                .with_msg(format!("undeclared generic type `{}`", self)),
-                        );
-                        return;
+                        return Err(Error::new(ErrKind::Generics)
+                            // FIXME: How do we get the location here?
+                            .with_msg(format!("undeclared generic type `{}`", self)));
                     }
                 };
-                let new_dec = new_dec.generate(new_name.clone(), type_map, ctx);
-                ctx.add_specialized_node(SpecializedNode::Type(new_dec));
+                let new_dec = new_dec.generate(new_name.clone(), type_map, ctx)?;
+                ctx.add_specialized_node(SpecializedNode::Type(new_dec))?;
             }
 
             *id = Symbol::from(new_name);
         }
+
+        Ok(())
     }
 }
 

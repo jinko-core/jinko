@@ -194,7 +194,7 @@ impl TypeCheck for VarAssign {
 }
 
 impl GenericUser for VarAssign {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) -> Result<(), Error> {
         log!("resolving value of var assign");
         self.value.resolve_usages(type_map, ctx)
     }

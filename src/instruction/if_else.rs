@@ -149,12 +149,14 @@ impl TypeCheck for IfElse {
 }
 
 impl GenericUser for IfElse {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.condition.resolve_usages(type_map, ctx);
-        self.if_body.resolve_usages(type_map, ctx);
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) -> Result<(), Error> {
+        self.condition.resolve_usages(type_map, ctx)?;
+        self.if_body.resolve_usages(type_map, ctx)?;
         if let Some(b) = &mut self.else_body {
             b.resolve_usages(type_map, ctx)
-        };
+        } else {
+            Ok(())
+        }
     }
 }
 

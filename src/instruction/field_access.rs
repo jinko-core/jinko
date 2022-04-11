@@ -134,7 +134,7 @@ impl TypeCheck for FieldAccess {
 }
 
 impl GenericUser for FieldAccess {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) -> Result<(), Error> {
         self.instance.resolve_usages(type_map, ctx)
     }
 }

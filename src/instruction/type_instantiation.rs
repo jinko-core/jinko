@@ -1,5 +1,7 @@
 //! TypeInstantiations are used when instantiating a type. The argument list is given to the
 //! type on execution.
+//!
+//! Instantiating a type is an aggregation site.
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
@@ -105,7 +107,7 @@ impl TypeInstantiation {
         log!("specialized name {}", specialized_name);
         if ctx.get_custom_type(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
-            let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
+            let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx)?;
 
             ctx.add_specialized_node(SpecializedNode::Type(specialized_ty))?;
         }
@@ -228,20 +230,18 @@ impl TypeCheck for TypeInstantiation {
 }
 
 impl GenericUser for TypeInstantiation {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) -> Result<(), Error> {
         log!(generics, "type name: {}", self.type_name);
         let dec = match ctx.get_custom_type(self.type_name.id()) {
             Some(t) => t,
             None => {
-                ctx.error(Error::new(ErrKind::Generics).with_msg(format!("trying to access undeclared type when resolving generic type instantiation: `{}`", self.type_name)).with_loc(self.location.clone()));
-                return;
+                return Err(Error::new(ErrKind::Generics).with_msg(format!("trying to access undeclared type when resolving generic type instantiation: `{}`", self.type_name)).with_loc(self.location.clone()));
             }
         };
 
         let new_types = match type_map.specialized_types(dec.generics()) {
             Err(e) => {
-                ctx.error(e.with_loc(self.location().cloned()));
-                return;
+                return Err(e.with_loc(self.location().cloned()));
             }
             Ok(new_t) => new_t,
         };
@@ -251,9 +251,12 @@ impl GenericUser for TypeInstantiation {
         self.type_name = TypeId::new(Symbol::from(new_name.clone()));
         self.generics = vec![];
 
-        self.fields
-            .iter_mut()
-            .for_each(|arg| arg.resolve_usages(type_map, ctx));
+        // Aggregation site
+        self.fields.iter_mut().for_each(|arg| {
+            if let Err(e) = arg.resolve_usages(type_map, ctx) {
+                ctx.error(e)
+            }
+        });
 
         // FIXME: This is ugly as sin
         if ctx.get_specialized_node(self.type_name.id()).is_none()
@@ -263,8 +266,11 @@ impl GenericUser for TypeInstantiation {
 
             // FIXME: Can we unwrap here? Probably not
             let generic_dec = ctx.get_custom_type(demangled).unwrap().clone();
-            let specialized_ty = generic_dec.generate(new_name, type_map, ctx);
-            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+            let specialized_ty = generic_dec.generate(new_name, type_map, ctx)?;
+            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty))
+        } else {
+            // FIXME: Is that the expected behavior?
+            Ok(())
         }
     }
 }

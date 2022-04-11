@@ -1,5 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
+//!
+//! A FunctionCall is an aggregation site regarding its arguments.
 
 use std::rc::Rc;
 
@@ -201,7 +203,7 @@ impl FunctionCall {
         log!("specialized name {}", specialized_name);
         if ctx.get_function(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
-            let specialized_fn = function.generate(specialized_name.clone(), &type_map, ctx);
+            let specialized_fn = function.generate(specialized_name.clone(), &type_map, ctx)?;
 
             ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)))?;
         }
@@ -381,7 +383,7 @@ impl TypeCheck for FunctionCall {
 }
 
 impl GenericUser for FunctionCall {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) -> Result<(), Error> {
         // For function calls, we can just change our name to one resolved
         // using the generic map. And obviously just visit all of our arguments
 
@@ -390,19 +392,15 @@ impl GenericUser for FunctionCall {
         let dec = match ctx.get_function(&self.fn_name) {
             Some(f) => f,
             None => {
-                ctx.error(Error::new(ErrKind::Generics)
-                    .with_msg(format!("trying to access undeclared function in new specialized function: `{}`", self.fn_name))
+                return Err(Error::new(ErrKind::Generics)
+                    .with_msg(format!(
+                        "trying to access undeclared function in new specialized function: `{}`",
+                        self.fn_name
+                    ))
                     .with_loc(self.location.clone()));
-                return;
             }
         };
-        let new_types = match type_map.specialized_types(dec.generics()) {
-            Err(e) => {
-                ctx.error(e.with_loc(self.location().cloned()));
-                return;
-            }
-            Ok(new_t) => new_t,
-        };
+        let new_types = type_map.specialized_types(dec.generics())?;
 
         let new_name = generics::mangle(&self.fn_name, &new_types);
         // FIXME: Avoid the allocation
@@ -410,9 +408,11 @@ impl GenericUser for FunctionCall {
         self.fn_name = new_name;
         self.generics = vec![];
 
-        self.args
-            .iter_mut()
-            .for_each(|arg| arg.resolve_usages(type_map, ctx));
+        self.args.iter_mut().for_each(|arg| {
+            if let Err(e) = arg.resolve_usages(type_map, ctx) {
+                ctx.error(e);
+            }
+        });
 
         // FIXME: This is ugly as sin
         if ctx.get_specialized_node(&self.fn_name).is_none() && self.fn_name != old_name {
@@ -420,9 +420,12 @@ impl GenericUser for FunctionCall {
 
             // FIXME: Can we unwrap here? Probably not
             let generic_dec = ctx.get_function(demangled).unwrap().clone();
-            let specialized_fn = generic_dec.generate(self.fn_name.clone(), type_map, ctx);
+            let specialized_fn = generic_dec.generate(self.fn_name.clone(), type_map, ctx)?;
 
-            ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)));
+            ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)))
+        } else {
+            // FIXME: Is that the expected behavior?
+            Ok(())
         }
     }
 }

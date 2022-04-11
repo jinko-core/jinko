@@ -178,9 +178,16 @@ impl TypeCheck for BinaryOp {
 }
 
 impl GenericUser for BinaryOp {
-    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
-        self.lhs.resolve_usages(type_map, ctx);
-        self.rhs.resolve_usages(type_map, ctx);
+    fn resolve_usages(
+        &mut self,
+        type_map: &crate::generics::GenericMap,
+        ctx: &mut TypeCtx,
+    ) -> Result<(), Error> {
+        // Aggregate both sides of the expression for maximum feedback
+        let l_res = self.lhs.resolve_usages(type_map, ctx);
+        self.rhs.resolve_usages(type_map, ctx)?;
+
+        l_res
     }
 }
 

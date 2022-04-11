@@ -136,7 +136,9 @@ pub trait GenericUser {
     ///
     /// With a type map like the following: `{ T: int, U: string }`, a type call like
     /// `f[T, U]()` should be resolved to `f+int+string()`
-    fn resolve_usages(&mut self, _type_map: &GenericMap, _ctx: &mut TypeCtx) {}
+    fn resolve_usages(&mut self, _type_map: &GenericMap, _ctx: &mut TypeCtx) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 /// Only a certain set of instructions are generic expansion sites - They can generate a "new
@@ -145,7 +147,12 @@ pub trait GenericUser {
 pub trait GenericExpander: Sized {
     /// Generate a new version of the instruction with the given typemap. The new version should
     /// not contain any generics.
-    fn generate(&self, new_name: String, type_map: &GenericMap, ctx: &mut TypeCtx) -> Self;
+    fn generate(
+        &self,
+        new_name: String,
+        type_map: &GenericMap,
+        ctx: &mut TypeCtx,
+    ) -> Result<Self, Error>;
 }
 
 #[cfg(test)]

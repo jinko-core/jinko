@@ -1,3 +1,5 @@
+// A TypeDec is an aggregation site.
+
 use super::{DecArg, InstrKind, Instruction};
 
 use crate::context::Context;
@@ -126,27 +128,30 @@ impl TypeCheck for TypeDec {
 }
 
 impl GenericUser for TypeDec {
-    fn resolve_usages(&mut self, _type_map: &GenericMap, ctx: &mut TypeCtx) {
-        // FIXME: Can we do without that?
-        if let Err(e) = ctx.declare_custom_type(self.name().to_string(), self.clone()) {
-            ctx.error(e);
-        };
+    fn resolve_usages(&mut self, _type_map: &GenericMap, ctx: &mut TypeCtx) -> Result<(), Error> {
+        ctx.declare_custom_type(self.name().to_string(), self.clone())
     }
 }
 
 impl GenericExpander for TypeDec {
-    fn generate(&self, mangled_name: String, type_map: &GenericMap, ctx: &mut TypeCtx) -> TypeDec {
+    fn generate(
+        &self,
+        mangled_name: String,
+        type_map: &GenericMap,
+        ctx: &mut TypeCtx,
+    ) -> Result<TypeDec, Error> {
         let mut new_type = self.clone();
         new_type.name = mangled_name;
         new_type.generics = vec![];
         new_type.typechecked = false;
 
-        new_type
-            .fields
-            .iter_mut()
-            .for_each(|arg| arg.resolve_usages(type_map, ctx));
+        new_type.fields.iter_mut().for_each(|arg| {
+            if let Err(e) = arg.resolve_usages(type_map, ctx) {
+                ctx.error(e)
+            }
+        });
 
-        new_type
+        Ok(new_type)
     }
 }
 
