@@ -264,58 +264,19 @@ impl GenericUser for TypeInstantiation {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{jinko_fail, symbol::Symbol};
+    use crate::{jinko, jinko_fail, symbol::Symbol};
 
     #[test]
     fn t_fields_number() {
-        use super::super::DecArg;
-        use crate::typechecker::TypeId;
-        use crate::value::JkInt;
+        let _ = jinko_fail! {
+            type TypeTest(a: int, b: int);
+            TypeTest(a: 15);
+        };
 
-        let mut ctx = TypeCtx::new();
-
-        // Create a new type with two integers fields
-        let fields = vec![
-            DecArg::new("a".to_owned(), TypeId::from("int")),
-            DecArg::new("b".to_owned(), TypeId::from("int")),
-        ];
-        let mut t = TypeDec::new("Type_Test".to_owned(), vec![], fields);
-
-        t.resolve_type(&mut ctx).unwrap();
-
-        let mut t_inst = TypeInstantiation::new(TypeId::from("Type_Test"));
-
-        assert!(t_inst.resolve_type(&mut ctx).is_err());
-        assert!(
-            ctx.error_handler.has_errors(),
-            "Given 0 field to 2 fields type"
-        );
-        ctx.error_handler.clear();
-
-        t_inst.add_field(VarAssign::new(
-            false,
-            "a".to_string(),
-            Box::new(JkInt::from(12)),
-        ));
-
-        assert!(t_inst.resolve_type(&mut ctx).is_err());
-        assert!(
-            ctx.error_handler.has_errors(),
-            "Given 1 field to 2 fields type"
-        );
-        ctx.error_handler.clear();
-
-        t_inst.add_field(VarAssign::new(
-            false,
-            "b".to_string(),
-            Box::new(JkInt::from(8)),
-        ));
-
-        assert!(
-            t_inst.resolve_type(&mut ctx).is_err(),
-            "Type instantiation should have a correct number of fields now"
-        );
-        assert!(!ctx.error_handler.has_errors());
+        let _ = jinko! {
+            type TypeTest(a: int, b: int);
+            TypeTest(a: 15, b: 15);
+        };
     }
 
     #[test]
