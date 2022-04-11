@@ -5,7 +5,6 @@
 use std::fmt::Debug;
 
 use crate::context::Context;
-use crate::error::{ErrKind, Error};
 use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::location::SpanTuple;
