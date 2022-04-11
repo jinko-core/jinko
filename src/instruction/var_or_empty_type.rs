@@ -34,18 +34,20 @@ impl VarOrEmptyType {
         }
     }
 
-    fn resolve_kind(&self, ctx: &mut TypeCtx) -> Kind {
+    fn resolve_kind(&self, ctx: &mut TypeCtx) -> Result<Kind, Error> {
         let resolved = ctx.get_custom_type(&self.symbol);
         if resolved.is_some() {
-            return Kind::EmptyTypeInst;
+            return Ok(Kind::EmptyTypeInst);
         }
 
         let resolved = ctx.get_var(&self.symbol);
         if resolved.is_some() {
-            return Kind::VarAccess;
+            return Ok(Kind::VarAccess);
         }
 
-        Kind::Unknown
+        Err(Error::new(ErrKind::TypeChecker)
+            .with_msg(format!("couldn't resolve use of symbol `{}`: neither an empty type nor a declared variable", self.symbol))
+            .with_loc(self.location().cloned()))
     }
 
     pub fn set_location(&mut self, location: SpanTuple) {
@@ -84,13 +86,12 @@ impl Instruction for VarOrEmptyType {
 impl TypeCheck for VarOrEmptyType {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         let kind = if self.kind == Kind::Unknown {
-            self.resolve_kind(ctx)
+            self.resolve_kind(ctx)?
         } else {
             self.kind
         };
 
         match kind {
-            Kind::Unknown => Ok(CheckedType::Error),
             Kind::EmptyTypeInst => Ok(CheckedType::Resolved(TypeId::new(Symbol::from(
                 self.symbol.clone(),
             )))),
@@ -102,6 +103,7 @@ impl TypeCheck for VarOrEmptyType {
                     ))
                     .with_loc(self.location().cloned())
             }),
+            _ => unreachable!(),
         }
     }
 
