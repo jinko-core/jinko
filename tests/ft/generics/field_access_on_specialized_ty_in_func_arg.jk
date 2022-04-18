@@ -1,0 +1,5 @@
+type Id[T](value: T);
+
+func extract_int(id: Id[int]) ->int {
+    id.value
+}

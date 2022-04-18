@@ -1,0 +1,5 @@
+type Id[T](value: T);
+
+func take_specialized_id(id: Id[int]) {
+  println(type_of[Id[int]](id))
+}

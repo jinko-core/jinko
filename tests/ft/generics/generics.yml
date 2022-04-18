@@ -104,3 +104,13 @@ tests:
       #     - "--check"
       #     - "tests/ft/generics/maybe_simple.jk"
       #   exit_code: 0
+  - name: "Specialized type as argument type"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/specialized_ty_in_func_arg.jk"
+    exit_code: 0
+  - name: "Field access on specialized type"
+    binary: "target/debug/jinko"
+    args:
+      - "tests/ft/generics/field_access_on_specialized_ty_in_func_arg.jk"
+    exit_code: 0
