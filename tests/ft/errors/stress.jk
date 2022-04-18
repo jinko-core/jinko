@@ -23,3 +23,6 @@ w = Wrapper(inner: "not a char");
 
 type Redec(inner: int);
 type Redec(inner: string);
+
+type MultiWrapper(inner: char, inner2: char);
+multi_w = MultiWrapper(inner: 'c', inner2: "not a char");

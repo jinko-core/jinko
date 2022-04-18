@@ -33,6 +33,13 @@ impl VarAssign {
         }
     }
 
+    pub fn with_loc(self, location: SpanTuple) -> VarAssign {
+        VarAssign {
+            location: Some(location),
+            ..self
+        }
+    }
+
     /// Get a reference to the symbol of the variable assignment
     pub fn symbol(&self) -> &str {
         &self.symbol
