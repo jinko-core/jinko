@@ -7,7 +7,7 @@ pub use type_id::{TypeId, PRIMITIVE_TYPES};
 
 use crate::context::ScopeMap;
 use crate::error::{ErrKind, Error, ErrorHandler};
-use crate::instruction::{FunctionDec, TypeDec};
+use crate::instruction::{FunctionDec, Instruction, TypeDec};
 use crate::log;
 
 use colored::Colorize;
@@ -149,12 +149,13 @@ impl TypeCtx {
 
     /// Declare a newly-created function's type
     pub fn declare_function(&mut self, name: String, function: FunctionDec) -> Result<(), Error> {
-        // FIXME: Remove clone here
+        // FIXME: Remove clones here
+        let loc = function.location().cloned();
         match self.types.add_function(name.clone(), function) {
             Ok(_) => Ok(()),
             Err(err) => {
                 let previous_dec = self.types.get_function(&name).unwrap();
-                Err(err.with_hint(
+                Err(err.with_loc(loc).with_hint(
                     Error::new(ErrKind::Hint)
                         .with_msg(String::from("previous declaration here"))
                         .with_loc(previous_dec.loc()),
