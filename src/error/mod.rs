@@ -24,7 +24,7 @@ impl ErrorHandler {
             first_err.emit();
         }
         self.errors.iter().skip(1).for_each(|e| {
-            eprintln!("----------------------------------------------------------------");
+            eprintln!();
             e.emit()
         });
     }
@@ -72,13 +72,13 @@ pub enum ErrKind {
 impl ErrKind {
     pub fn as_str(&self) -> &'static str {
         match self {
-            ErrKind::Hint => "Hint",
-            ErrKind::Parsing => "Parsing",
-            ErrKind::Context => "Interpreter",
-            ErrKind::TypeChecker => "Typechecker",
-            ErrKind::Generics => "Generics",
-            ErrKind::IO => "I/O",
-            ErrKind::ExternFunc => "External Function",
+            ErrKind::Hint => "hint",
+            ErrKind::Parsing => "parsing",
+            ErrKind::Context => "runtime",
+            ErrKind::TypeChecker => "typechecker",
+            ErrKind::Generics => "generics",
+            ErrKind::IO => "i/o",
+            ErrKind::ExternFunc => "external function",
         }
     }
 }
@@ -97,11 +97,9 @@ impl Error {
 
         if let Some(msg) = &self.msg {
             if let Some(path) = loc.path() {
-                let kind_str = self.kind.as_str();
-
-                eprintln!("{}: {}", "error type".black().on_yellow(), kind_str);
                 eprintln!(
-                    "{}:{}:{}: {}",
+                    "{}: {}:{}:{}: {}",
+                    "error".black().on_yellow(),
                     path.display().to_string().yellow(),
                     loc.start().line(),
                     loc.start().column(),
@@ -119,6 +117,7 @@ impl Error {
     }
 
     fn emit_hint(&self) {
+        eprintln!();
         eprint!("{}: ", "hint".black().on_green());
         if let Some(loc) = &self.loc {
             if let Some(path) = loc.path() {
@@ -147,9 +146,11 @@ impl Error {
             eprintln!("{}", msg)
         }
 
-        eprintln!("----------------------------------------------------------------");
+        if let Some(first_hint) = self.hints.first() {
+            first_hint.emit_hint();
+        }
 
-        self.hints.iter().for_each(|hint| hint.emit_hint());
+        self.hints.iter().skip(1).for_each(|hint| hint.emit_hint());
     }
 
     pub fn new(kind: ErrKind) -> Error {
