@@ -635,16 +635,25 @@ fn func_or_type_inst_args(
     generics: Vec<TypeId>,
     start_loc: Location,
 ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
+    let (input, first_attr_start_loc) = position(input)?;
     if let Ok((input, first_attr)) =
         terminated(terminated(Token::identifier, nom_next), Token::colon)(input)
     {
+        let input = next(input);
         let (input, first_attr_val) = expr(input)?;
+        let (input, first_attr_end_loc) = position(input)?;
         let (input, attrs) = many0(preceded(Token::comma, type_inst_arg))(input)?;
         let (input, _) = Token::right_parenthesis(input)?;
         let (input, end_loc) = position(input)?;
 
         let mut type_inst = TypeInstantiation::new(TypeId::new(Symbol::from(id)));
-        type_inst.add_field(VarAssign::new(false, first_attr, first_attr_val));
+        type_inst.add_field(VarAssign::new(false, first_attr, first_attr_val).with_loc(
+            SpanTuple::new(
+                input.extra,
+                first_attr_start_loc.into(),
+                first_attr_end_loc.into(),
+            ),
+        ));
         attrs.into_iter().for_each(|attr| type_inst.add_field(attr));
 
         type_inst.set_generics(generics);
@@ -741,13 +750,23 @@ fn typed_arg(input: ParseInput) -> ParseResult<ParseInput, DecArg> {
 
 /// type_inst_arg = spaced_identifier ':' expr
 fn type_inst_arg(input: ParseInput) -> ParseResult<ParseInput, VarAssign> {
+    let input = next(input);
+    let (input, start_loc) = position(input)?;
     let (input, (id, _)) = spaced_identifier(input)?;
     let (input, _) = Token::colon(input)?;
     let input = next(input);
     let (input, value) = expr(input)?;
+    let (input, end_loc) = position(input)?;
     let input = next(input);
 
-    Ok((input, VarAssign::new(false, id, value)))
+    Ok((
+        input,
+        VarAssign::new(false, id, value).with_loc(SpanTuple::new(
+            input.extra,
+            start_loc.into(),
+            end_loc.into(),
+        )),
+    ))
 }
 
 fn spaced_identifier(input: ParseInput) -> ParseResult<ParseInput, (String, Location)> {

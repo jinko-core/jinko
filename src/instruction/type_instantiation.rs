@@ -215,7 +215,12 @@ impl TypeCheck for TypeInstantiation {
                             value_ty,
                             field_dec.get_type()
                         ))
-                        .with_loc(var_assign.location().cloned()),
+                        .with_loc(var_assign.location().cloned())
+                        .with_hint(
+                            Error::hint()
+                                .with_msg(format!("field `{}` declared here", field_dec.name()))
+                                .with_loc(field_dec.location().cloned()),
+                        ),
                 );
                 // FIXME: Add hint for typedec argument later
             }

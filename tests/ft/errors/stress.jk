@@ -1,0 +1,28 @@
+// This file shall not contain any parsing errors
+
+undeclared_call(15);
+UndeclaredType(f0: "eh", f1: "personality");
+
+// Comments afterwards to see what context looks like
+// More comments
+
+a = 15;
+mut a = 14;
+
+b = 14;
+b = 13;
+
+mut c = 15;
+c = 14.4;
+
+func redeclare() -> int { 15 }
+func redeclare() -> int { 14 }
+
+type Wrapper(inner: char);
+w = Wrapper(inner: "not a char");
+
+type Redec(inner: int);
+type Redec(inner: string);
+
+type MultiWrapper(inner: char, inner2: char);
+multi_w = MultiWrapper(inner: 'c', inner2: "not a char");
