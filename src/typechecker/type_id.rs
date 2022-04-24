@@ -28,10 +28,10 @@ use std::hash::Hash;
 use colored::Colorize;
 
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericExpander, GenericUser};
+use crate::generics::{self, GenericExpander, GenericList, GenericMap, GenericUser};
 use crate::instruction::TypeDec;
 use crate::symbol::Symbol;
-use crate::typechecker::SpecializedNode;
+use crate::typechecker::{SpecializedNode, TypeCtx};
 
 pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"];
 
@@ -40,10 +40,10 @@ pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"
 pub enum TypeId {
     Type {
         id: Symbol,
-        generics: Vec<TypeId>,
+        generics: GenericList,
     },
     Functor {
-        generics: Vec<TypeId>,
+        generics: GenericList,
         arg_types: Vec<TypeId>,
         return_type: Option<Box<TypeId>>,
     },
@@ -55,14 +55,14 @@ impl TypeId {
     pub fn new(id: Symbol) -> TypeId {
         TypeId::Type {
             id,
-            generics: vec![],
+            generics: GenericList::empty(),
         }
     }
 
     // Create a new empty function-like [`TypeId`] from a symbol
     pub fn functor() -> TypeId {
         TypeId::Functor {
-            generics: vec![],
+            generics: GenericList::empty(),
             arg_types: vec![],
             return_type: None,
         }
@@ -71,29 +71,19 @@ impl TypeId {
     /// Add a generic type to a consumed [`TypeId`]'s generic list
     pub fn with_generic(self, generic: TypeId) -> TypeId {
         match self {
-            TypeId::Type { id, generics } => {
-                let mut new_generics = generics;
-                new_generics.push(generic);
-
-                TypeId::Type {
-                    id,
-                    generics: new_generics,
-                }
-            }
+            TypeId::Type { id, generics } => TypeId::Type {
+                id,
+                generics: generics.with(generic),
+            },
             TypeId::Functor {
                 generics,
                 arg_types,
                 return_type,
-            } => {
-                let mut new_generics = generics;
-                new_generics.push(generic);
-
-                TypeId::Functor {
-                    generics: new_generics,
-                    arg_types,
-                    return_type,
-                }
-            }
+            } => TypeId::Functor {
+                generics: generics.with(generic),
+                arg_types,
+                return_type,
+            },
         }
     }
 
@@ -154,6 +144,12 @@ impl TypeId {
         }
     }
 
+    pub fn generics(&self) -> &GenericList {
+        match self {
+            TypeId::Type { generics, .. } | TypeId::Functor { generics, .. } => generics,
+        }
+    }
+
     pub fn void() -> TypeId {
         TypeId::new(Symbol::from(String::from("void")))
     }
@@ -168,14 +164,90 @@ impl TypeId {
     pub fn is_primitive(&self) -> bool {
         PRIMITIVE_TYPES.contains(&self.id())
     }
+
+    /// FIXME: Add documentation
+    pub fn create_type_dec(
+        &self,
+        generic_dec: &TypeDec,
+        ctx: &mut TypeCtx,
+    ) -> Result<String, Error> {
+        let type_map = GenericMap::create(generic_dec.generics(), self.generics(), ctx)?;
+
+        let specialized_name = generics::mangle(generic_dec.name(), self.generics());
+        if ctx.get_custom_type(&specialized_name).is_none() {
+            // FIXME: Remove this clone once we have proper symbols
+            let specialized_ty = generic_dec.generate(specialized_name.clone(), &type_map, ctx);
+
+            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+        }
+
+        Ok(specialized_name)
+    }
+
+    // Turn a specialized generic type into its mangled, flattened version.
+    // This can only be used for specialized types! It does not make sense to
+    // flatten a "still generic" [`TypeId`].
+    // This basically turns the following:
+    //
+    // ```ignore
+    // ty = TypeId (
+    //     name: "Tuple",
+    //     generics: ["int", "float"],
+    //     ..
+    // )
+    // ```
+    //
+    // into the following:
+    //
+    // ```ignore
+    // ty = TypeId (
+    //     name: generics::mangle("Tuple", ["int", "float"]),
+    //     generics: [], // empty
+    // )
+    // ```
+    // FIXME: Should we mutate &self instead?
+    // pub fn flatten(&self) -> TypeId {
+    //     let generics: Vec<TypeId> = self.generics().iter().map(|g| g.flatten()).collect();
+    //     let new_name = generics::mangle(self.id(), &generics);
+
+    //     TypeId::new(Symbol::from(new_name))
+    // }
+}
+
+impl GenericExpander for TypeId {
+    fn generate(&self, _new_name: String, _type_map: &GenericMap, _ctx: &mut TypeCtx) -> TypeId {
+        todo!()
+        // FIXME: What do we need to do here?
+        // if self.generics().is_empty() {
+        //     TypeId::new(Symbol::from(new_name))
+        // } else {
+        //     let _new_generics: Vec<TypeId> = self
+        //         .generics()
+        //         .iter()
+        //         .map(|generic| {
+        //             let new_name = generics::mangle(generic.id(), generic.generics());
+        //             generic.generate(new_name, type_map, ctx)
+        //         })
+        //         .collect();
+
+        //     todo!()
+        //     // self.generics().iter().map(|g| g.generate());
+        // }
+    }
 }
 
 impl GenericUser for TypeId {
-    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut crate::TypeCtx) {
+    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
+        // FIXME: Do we need this? Or can we only have flattened types here?
+
         let generics = match self {
             TypeId::Type { generics, .. } => generics,
             TypeId::Functor { generics, .. } => generics,
         };
+
+        //        generics
+        //            .iter_mut()
+        //            .for_each(|g| g.resolve_usages(type_map, ctx));
 
         // FIXME: Split generics in two using .partition(): Keep some in a new
         // generic list, and resolve some others to the type's name
@@ -190,7 +262,9 @@ impl GenericUser for TypeId {
         // FIXME: What we need to do then is to go and visit all our newtype's generics
         // and resolve them
 
-        generics.clear();
+        let _generics = GenericList::empty();
+        // generics.clear();
+        // let generics_copy = generics.clone();
 
         if let Ok(new_id) = type_map.get_specialized(self) {
             self.set_id(Symbol::from(String::from(new_id.id())));
@@ -206,6 +280,7 @@ impl GenericUser for TypeId {
                 let new_dec = match ctx.get_custom_type(id.access()) {
                     Some(t) => t.clone(),
                     None => {
+                        // We need to declare the type as if it was instantiated?
                         ctx.error(
                             Error::new(ErrKind::Generics)
                                 // FIXME: How do we get the location here?
@@ -251,6 +326,8 @@ impl Display for TypeId {
         let generics = match self {
             TypeId::Type { generics, .. } | TypeId::Functor { generics, .. } => generics,
         };
+
+        let generics = generics.data();
 
         if !generics.is_empty() {
             write!(f, "[")?;

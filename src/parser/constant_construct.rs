@@ -6,6 +6,7 @@
 
 use super::constructs::expr;
 use crate::error::{ErrKind, Error};
+use crate::generics::GenericList;
 use crate::instruction::{FunctionCall, Instruction, MethodCall};
 use crate::location::{Location, SpanTuple};
 use crate::parser::{ParseInput, ParseResult, Token};
@@ -120,7 +121,7 @@ impl ConstantConstruct {
             None => left,
             Some(right) => Box::new(MethodCall::new(
                 left,
-                FunctionCall::new(String::from("concat"), vec![], vec![right]),
+                FunctionCall::new(String::from("concat"), GenericList::empty(), vec![right]),
             )),
         }
     }

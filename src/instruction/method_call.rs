@@ -97,6 +97,7 @@ impl GenericUser for MethodCall {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::generics::GenericList;
     use crate::instance::ToObjectInstance;
     use crate::parser::constructs;
     use crate::value::JkInt;
@@ -105,7 +106,7 @@ mod tests {
     #[test]
     fn t_print() {
         let var = Box::new(JkInt::from(15));
-        let method = FunctionCall::new("some_int_func".to_owned(), vec![], vec![]);
+        let method = FunctionCall::new("some_int_func".to_owned(), GenericList::empty(), vec![]);
         let mc = MethodCall::new(var, method);
 
         assert_eq!(mc.print(), "15.some_int_func()".to_owned())
@@ -122,7 +123,7 @@ mod tests {
 
         let var1 = Box::new(JkInt::from(1));
         let var2 = Box::new(JkInt::from(2));
-        let method = FunctionCall::new("__first".to_owned(), vec![], vec![var2]);
+        let method = FunctionCall::new("__first".to_owned(), GenericList::empty(), vec![var2]);
 
         let mut mc = MethodCall::new(var1, method);
         ctx.type_check(&mut mc).unwrap();

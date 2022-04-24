@@ -3,7 +3,7 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
+use crate::generics::{self, GenericExpander, GenericList, GenericMap, GenericUser};
 use crate::instance::{Name, ObjectInstance};
 use crate::instruction::{InstrKind, Instruction, TypeDec, VarAssign};
 use crate::location::SpanTuple;
@@ -15,7 +15,7 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub struct TypeInstantiation {
     type_name: TypeId,
-    generics: Vec<TypeId>,
+    generics: GenericList,
     fields: Vec<VarAssign>,
     cached_type: Option<CheckedType>,
     location: Option<SpanTuple>,
@@ -26,7 +26,7 @@ impl TypeInstantiation {
     pub fn new(type_name: TypeId) -> TypeInstantiation {
         TypeInstantiation {
             type_name,
-            generics: vec![],
+            generics: GenericList::empty(),
             fields: vec![],
             cached_type: None,
             location: None,
@@ -80,7 +80,7 @@ impl TypeInstantiation {
         }
     }
 
-    pub fn set_generics(&mut self, generics: Vec<TypeId>) {
+    pub fn set_generics(&mut self, generics: GenericList) {
         self.generics = generics
     }
 
@@ -88,7 +88,7 @@ impl TypeInstantiation {
         self.location = Some(location)
     }
 
-    pub fn resolve_generic_instantiation(
+    pub fn resolve_specialized_instantiation(
         &mut self,
         dec: TypeDec,
         ctx: &mut TypeCtx,
@@ -110,7 +110,7 @@ impl TypeInstantiation {
         }
 
         self.type_name = TypeId::new(Symbol::from(specialized_name));
-        self.generics = vec![];
+        self.generics = GenericList::empty();
 
         // Recursively resolve the type of self now that we changed the
         // function to call
@@ -192,7 +192,7 @@ impl TypeCheck for TypeInstantiation {
         };
 
         if !dec.generics().is_empty() || !self.generics.is_empty() {
-            return self.resolve_generic_instantiation(dec, ctx);
+            return self.resolve_specialized_instantiation(dec, ctx);
         }
 
         let mut errors = vec![];
@@ -254,7 +254,7 @@ impl GenericUser for TypeInstantiation {
         let new_name = generics::mangle(self.type_name.id(), &new_types);
         let old_name = String::from(self.type_name.id());
         self.type_name = TypeId::new(Symbol::from(new_name.clone()));
-        self.generics = vec![];
+        self.generics = GenericList::empty();
 
         self.fields
             .iter_mut()
@@ -292,7 +292,7 @@ mod test {
             DecArg::new("a".to_owned(), TypeId::from("int")),
             DecArg::new("b".to_owned(), TypeId::from("int")),
         ];
-        let t = TypeDec::new("Type_Test".to_owned(), vec![], fields);
+        let t = TypeDec::new("Type_Test".to_owned(), GenericList::empty(), fields);
 
         t.execute(&mut ctx);
 
@@ -346,7 +346,7 @@ mod test {
             DecArg::new("a".to_owned(), TypeId::from("string")),
             DecArg::new("b".to_owned(), TypeId::from("int")),
         ];
-        let t = TypeDec::new(TYPE_NAME.to_owned(), vec![], fields);
+        let t = TypeDec::new(TYPE_NAME.to_owned(), GenericList::empty(), fields);
 
         t.execute(&mut ctx);
 

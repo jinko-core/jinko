@@ -21,6 +21,7 @@ use nom::{
 use nom_locate::position;
 
 use crate::error::Error;
+use crate::generics::GenericList;
 use crate::instruction::{
     BinaryOp, Block, DecArg, FieldAccess, FunctionCall, FunctionDec, FunctionKind, IfElse, Incl,
     Instruction, JkInst, Loop, LoopKind, MethodCall, Operator, Return, TypeDec, TypeInstantiation,
@@ -163,7 +164,8 @@ fn method_or_field(
         let input = next(input);
         let (input, args) = args(input)?;
         let (input, end_loc) = position(input)?;
-        let mut method_call = MethodCall::new(expr, FunctionCall::new(id, vec![], args));
+        let mut method_call =
+            MethodCall::new(expr, FunctionCall::new(id, GenericList::empty(), args));
         method_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
         Ok((input, Box::new(method_call)))
     } else if let Ok((input, _)) = Token::left_bracket(input) {
@@ -464,7 +466,7 @@ fn unit_jk_inst(
     let (input, end_loc) = position(input)?;
 
     // A jk_inst will never contain generics
-    let mut call = FunctionCall::new(name, vec![], args);
+    let mut call = FunctionCall::new(name, GenericList::empty(), args);
     call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
     match JkInst::from_function_call(&call) {
         Ok(inst) => Ok((input, Box::new(inst))),
@@ -508,7 +510,7 @@ fn unit_block(
 }
 
 // FIXME: This does not parse default generic types yet (`func f<T = int>()`)
-fn generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
+fn generic_list(input: ParseInput) -> ParseResult<ParseInput, GenericList> {
     fn whitespace_plus_type_id(input: ParseInput) -> ParseResult<ParseInput, TypeId> {
         let input = next(input);
         let (input, id) = type_id(input)?;
@@ -518,18 +520,22 @@ fn generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
     }
 
     let (input, first_type) = whitespace_plus_type_id(input)?;
-    let (input, mut generics) = many0(preceded(Token::comma, whitespace_plus_type_id))(input)?;
+    let (input, generics) = many0(preceded(Token::comma, whitespace_plus_type_id))(input)?;
     let (input, _) = Token::right_bracket(input)?;
 
-    generics.insert(0, first_type);
-    Ok((input, generics))
+    let list = GenericList::empty().with(first_type);
+
+    Ok((
+        input,
+        generics.into_iter().fold(list, |list, ty| list.with(ty)),
+    ))
 }
 
-fn maybe_generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeId>> {
+fn maybe_generic_list(input: ParseInput) -> ParseResult<ParseInput, GenericList> {
     if let Ok((input, _)) = Token::left_bracket(input) {
         Ok(generic_list(input)?)
     } else {
-        Ok((input, vec![]))
+        Ok((input, GenericList::empty()))
     }
 }
 
@@ -612,7 +618,7 @@ fn func_type_or_var(
     if let Ok((input, _)) = Token::left_bracket(input) {
         generic_func_or_type_inst_args(next(input), id, start_loc)
     } else if let Ok((input, _)) = Token::left_parenthesis(input) {
-        func_or_type_inst_args(next(input), id, vec![], start_loc)
+        func_or_type_inst_args(next(input), id, GenericList::empty(), start_loc)
     } else if let Ok((input, _)) = Token::equal(input) {
         let (input, value) = expr(input)?;
         let (input, end_loc) = position(input)?;
@@ -632,7 +638,7 @@ fn func_type_or_var(
 fn func_or_type_inst_args(
     input: ParseInput,
     id: String,
-    generics: Vec<TypeId>,
+    generics: GenericList,
     start_loc: Location,
 ) -> ParseResult<ParseInput, Box<dyn Instruction>> {
     let (input, first_attr_start_loc) = position(input)?;

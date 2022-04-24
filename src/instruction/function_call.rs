@@ -5,17 +5,17 @@ use std::rc::Rc;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
+use crate::generics::{self, GenericExpander, GenericList, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx, TypeId};
+use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
 pub struct FunctionCall {
     fn_name: String,
-    generics: Vec<TypeId>,
+    generics: GenericList,
     args: Vec<Box<dyn Instruction>>,
     cached_type: Option<CheckedType>,
     location: Option<SpanTuple>,
@@ -25,7 +25,7 @@ impl FunctionCall {
     /// Create a new function call and return it
     pub fn new(
         fn_name: String,
-        generics: Vec<TypeId>,
+        generics: GenericList,
         args: Vec<Box<dyn Instruction>>,
     ) -> FunctionCall {
         FunctionCall {
@@ -170,7 +170,7 @@ impl FunctionCall {
         }
     }
 
-    pub fn generics(&self) -> &Vec<TypeId> {
+    pub fn generics(&self) -> &GenericList {
         &self.generics
     }
 
@@ -178,15 +178,27 @@ impl FunctionCall {
         self.fn_name = fn_name
     }
 
-    fn resolve_generic_call(&mut self, function: FunctionDec, ctx: &mut TypeCtx) -> CheckedType {
-        let type_map = match GenericMap::create(function.generics(), self.generics(), ctx) {
+    fn resolve_specialized_call(
+        &mut self,
+        function: FunctionDec,
+        ctx: &mut TypeCtx,
+    ) -> CheckedType {
+        // let mut generics: Vec<TypeId> = self.generics().iter().map(|g| g.flatten()).collect();
+        let mut generics = self.generics().clone();
+        let type_map = match GenericMap::create(function.generics(), &generics, ctx) {
             Ok(map) => map,
             Err(e) => {
                 ctx.error(e.with_loc(self.location.clone()));
                 return CheckedType::Error;
             }
         };
-        let specialized_name = generics::mangle(function.name(), self.generics());
+
+        generics
+            .data_mut()
+            .iter_mut()
+            .for_each(|g| g.resolve_usages(&type_map, ctx));
+
+        let specialized_name = generics::mangle(function.name(), &generics);
         if ctx.get_function(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
             let specialized_fn = function.generate(specialized_name.clone(), &type_map, ctx);
@@ -195,7 +207,7 @@ impl FunctionCall {
         }
 
         self.fn_name = specialized_name;
-        self.generics = vec![];
+        self.generics = GenericList::empty();
 
         // Recursively resolve the type of self now that we changed the
         // function to call
@@ -212,10 +224,11 @@ impl Instruction for FunctionCall {
     fn print(&self) -> String {
         let mut base = String::from(&self.fn_name);
 
-        if !self.generics.is_empty() {
-            base = format!("{}[{}", base, self.generics[0]);
+        let generics = self.generics.data();
+        if !generics.is_empty() {
+            base = format!("{}[{}", base, generics[0]);
 
-            self.generics
+            generics
                 .iter()
                 .skip(1)
                 .for_each(|generic| base.push_str(&format!(", {}", generic)));
@@ -297,7 +310,7 @@ impl TypeCheck for FunctionCall {
         let args_type = args_type.clone();
 
         if !function.generics().is_empty() || !self.generics.is_empty() {
-            return self.resolve_generic_call(function, ctx);
+            return self.resolve_specialized_call(function, ctx);
         }
 
         let mut errors = vec![];
@@ -382,7 +395,7 @@ impl GenericUser for FunctionCall {
         // FIXME: Avoid the allocation
         let old_name = String::from(&self.fn_name);
         self.fn_name = new_name;
-        self.generics = vec![];
+        self.generics = GenericList::empty();
 
         self.args
             .iter_mut()
@@ -408,7 +421,7 @@ mod tests {
 
     #[test]
     fn t_pretty_print_empty() {
-        let function = FunctionCall::new("something".to_owned(), vec![], vec![]);
+        let function = FunctionCall::new("something".to_owned(), GenericList::empty(), vec![]);
 
         assert_eq!(function.print(), "something()");
     }
@@ -424,7 +437,7 @@ mod tests {
             func func0(a: int, b: int) {}
         };
 
-        let mut f_call = FunctionCall::new("func0".to_string(), vec![], vec![]);
+        let mut f_call = FunctionCall::new("func0".to_string(), GenericList::empty(), vec![]);
 
         assert!(ctx.type_check(&mut f_call).is_err());
         assert!(
@@ -433,8 +446,11 @@ mod tests {
         );
         ctx.clear_errors();
 
-        let mut f_call =
-            FunctionCall::new("func0".to_string(), vec![], vec![Box::new(JkInt::from(12))]);
+        let mut f_call = FunctionCall::new(
+            "func0".to_string(),
+            GenericList::empty(),
+            vec![Box::new(JkInt::from(12))],
+        );
 
         assert!(ctx.type_check(&mut f_call).is_err());
         assert!(

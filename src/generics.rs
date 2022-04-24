@@ -3,6 +3,7 @@
 //! calls. Its basic goal is to replace all instances of `T` with an actual [`TypeId`].
 
 use std::collections::HashMap;
+use std::vec::IntoIter;
 
 use crate::error::{ErrKind, Error};
 use crate::typechecker::{TypeCtx, TypeId};
@@ -16,10 +17,13 @@ impl GenericMap {
     /// Create a generic map from two sets of [`TypeId`]s: The set of generics to resolve,
     /// and the set of resolved generics.
     pub fn create(
-        generics: &[TypeId],
-        resolved: &[TypeId],
+        generics: &GenericList,
+        resolved: &GenericList,
         ctx: &mut TypeCtx,
     ) -> Result<GenericMap, Error> {
+        let generics = generics.data();
+        let resolved = resolved.data();
+
         if generics.len() != resolved.len() {
             // FIXME: Add better error message here printing both sets of generics
             let err_msg = String::from("missing types in generic expansion");
@@ -73,17 +77,76 @@ impl GenericMap {
     }
 
     /// Get the types associated with a list of generic types previously declared
-    pub fn specialized_types(&self, generics: &[TypeId]) -> Result<Vec<TypeId>, Error> {
-        generics.iter().map(|g| self.get_specialized(g)).collect()
+    pub fn specialized_types(&self, generics: &GenericList) -> Result<GenericList, Error> {
+        generics
+            .data()
+            .iter()
+            .map(|g| self.get_specialized(g))
+            .collect()
+    }
+}
+
+/// A list of generic types. This adds a lot of methods over a regular `Vec<TypeId>` which are
+/// useful for multiple instructions and types in the interpreter.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct GenericList(Vec<TypeId>);
+
+// FIXME: Implement `Display` for `GenericList`
+
+impl GenericList {
+    /// Create an empty list of generic types
+    pub fn empty() -> GenericList {
+        GenericList(vec![])
+    }
+
+    /// Is a [`GenericList`] empty
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Get the types contained in the [`GenericList`]
+    pub fn data(&self) -> &Vec<TypeId> {
+        self.0.as_ref()
+    }
+
+    /// Get a mutable reference on the types contained in the [`GenericList`]
+    pub fn data_mut(&mut self) -> &mut Vec<TypeId> {
+        self.0.as_mut()
+    }
+
+    /// Consume the vector to append a new type to it
+    pub fn with(mut self, ty: TypeId) -> GenericList {
+        self.0.push(ty);
+
+        GenericList(self.0)
+    }
+
+    // pub fn resolve(&self) -> GenericList {}
+}
+
+impl FromIterator<TypeId> for GenericList {
+    fn from_iter<T: IntoIterator<Item = TypeId>>(iter: T) -> Self {
+        iter.into_iter()
+            .fold(GenericList::empty(), |list, ty| list.with(ty))
+    }
+}
+
+impl IntoIterator for GenericList {
+    type Item = TypeId;
+
+    type IntoIter = IntoIter<TypeId>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
 /// Mangle a name to resolve it to its proper expanded name.
 /// The format used is the following:
 /// <name> '+' <T0> '+' <T1>...
-pub fn mangle(name: &str, types: &[TypeId]) -> String {
+pub fn mangle(name: &str, types: &GenericList) -> String {
     let mut mangled = String::from(name);
-    for type_id in types.iter() {
+    for type_id in types.data().iter() {
         // FIXME: Add const for delimiter
         mangled.push('+');
         mangled.push_str(type_id.id());
@@ -158,34 +221,38 @@ mod tests {
 
     #[test]
     fn mangle_no_generics() {
-        assert_eq!(mangle("mangled", &[]), "mangled");
+        let generics = GenericList::empty();
+        assert_eq!(mangle("mangled", &generics), "mangled");
     }
 
     #[test]
     fn mangle_one_generic() {
-        assert_eq!(mangle("mangled", &[ty!("bool")]), "mangled+bool");
+        let generics = GenericList::empty().with(ty!("bool"));
+        assert_eq!(mangle("mangled", &generics), "mangled+bool");
     }
 
     #[test]
     fn mangle_multi_generic() {
-        assert_eq!(
-            mangle("mangled", &[ty!("float"), ty!("ComplexType")]),
-            "mangled+float+ComplexType"
-        );
+        let generics = GenericList::empty()
+            .with(ty!("float"))
+            .with(ty!("ComplexType"));
+        assert_eq!(mangle("mangled", &generics), "mangled+float+ComplexType");
     }
 
     #[test]
     fn get_original_name_back() {
-        assert_eq!(
-            original_name(&mangle("og_fn", &[ty!("float"), ty!("ComplexType")])),
-            "og_fn"
-        );
+        let generics = GenericList::empty()
+            .with(ty!("float"))
+            .with(ty!("ComplexType"));
+        assert_eq!(original_name(&mangle("og_fn", &generics)), "og_fn");
     }
 
     #[test]
     fn create_map_different_size() {
         let mut ctx = TypeCtx::new();
+        let resolved = GenericList::empty().with(ty!("int")).with(ty!("float"));
+        let generics = GenericList::empty().with(ty!("T"));
 
-        assert!(GenericMap::create(&[ty!("int"), ty!("float")], &[ty!("T")], &mut ctx).is_err());
+        assert!(GenericMap::create(&resolved, &generics, &mut ctx).is_err());
     }
 }

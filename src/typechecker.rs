@@ -7,6 +7,7 @@ pub use type_id::{TypeId, PRIMITIVE_TYPES};
 
 use crate::context::ScopeMap;
 use crate::error::{ErrKind, Error, ErrorHandler};
+use crate::generics::GenericList;
 use crate::instruction::{FunctionDec, Instruction, TypeDec};
 
 use colored::Colorize;
@@ -96,7 +97,11 @@ impl TypeCtx {
             ($ty_name:ident) => {
                 ctx.declare_custom_type(
                     String::from(stringify!($ty_name)),
-                    TypeDec::new(stringify!($ty_name).to_string(), vec![], vec![]),
+                    TypeDec::new(
+                        stringify!($ty_name).to_string(),
+                        GenericList::empty(),
+                        vec![],
+                    ),
                 )
                 .unwrap();
             };

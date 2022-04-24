@@ -1,15 +1,15 @@
 use super::{DecArg, InstrKind, Instruction};
 
 use crate::context::Context;
-use crate::generics::{GenericExpander, GenericMap, GenericUser};
+use crate::generics::{GenericExpander, GenericList, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::location::SpanTuple;
-use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
     name: String,
-    generics: Vec<TypeId>,
+    generics: GenericList,
     fields: Vec<DecArg>,
     typechecked: bool,
     location: Option<SpanTuple>,
@@ -17,7 +17,7 @@ pub struct TypeDec {
 
 impl TypeDec {
     /// Create a new type
-    pub fn new(name: String, generics: Vec<TypeId>, fields: Vec<DecArg>) -> TypeDec {
+    pub fn new(name: String, generics: GenericList, fields: Vec<DecArg>) -> TypeDec {
         TypeDec {
             name,
             generics,
@@ -38,7 +38,7 @@ impl TypeDec {
     }
 
     /// Get a reference to the type's generics
-    pub fn generics(&self) -> &Vec<TypeId> {
+    pub fn generics(&self) -> &GenericList {
         &self.generics
     }
 
@@ -66,16 +66,13 @@ impl Instruction for TypeDec {
     fn print(&self) -> String {
         let mut base = format!("type {}", self.name);
 
-        if !self.generics.is_empty() {
+        let generics = self.generics.data();
+        if !generics.is_empty() {
             base.push('[');
-            base.push_str(self.generics.first().unwrap().id());
-            let generic_str = self
-                .generics
-                .iter()
-                .skip(1)
-                .fold(String::new(), |acc, ty_id| {
-                    format!("{}, {}", acc, ty_id.id())
-                });
+            base.push_str(generics.first().unwrap().id());
+            let generic_str = generics.iter().skip(1).fold(String::new(), |acc, ty_id| {
+                format!("{}, {}", acc, ty_id.id())
+            });
             base.push_str(&generic_str);
             base.push(']');
         }
@@ -134,7 +131,7 @@ impl GenericExpander for TypeDec {
     fn generate(&self, mangled_name: String, type_map: &GenericMap, ctx: &mut TypeCtx) -> TypeDec {
         let mut new_type = self.clone();
         new_type.name = mangled_name;
-        new_type.generics = vec![];
+        new_type.generics = GenericList::empty();
         new_type.typechecked = false;
 
         new_type
@@ -162,7 +159,7 @@ impl From<String> for TypeDec {
     fn from(type_name: String) -> TypeDec {
         TypeDec {
             name: type_name,
-            generics: vec![],
+            generics: GenericList::empty(),
             fields: vec![],
             typechecked: false,
             location: None,

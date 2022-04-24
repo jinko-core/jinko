@@ -2,7 +2,7 @@
 //! different kinds, `for`, `while` or `loop`.
 
 use crate::context::Context;
-use crate::generics::GenericUser;
+use crate::generics::{GenericList, GenericUser};
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
 use crate::location::SpanTuple;
@@ -129,26 +129,31 @@ impl Instruction for Loop {
 
                 // We construct the iterator from the iterable expression
                 // `+iterator = iter(+inner)`
-                let mut iter_constructor = FunctionCall::new(String::from("iter"), vec![], vec![]);
+                let mut iter_constructor =
+                    FunctionCall::new(String::from("iter"), GenericList::empty(), vec![]);
                 iter_constructor.add_arg(Box::new(inner.clone()));
                 iterator.set_instance(iter_constructor.execute(ctx).unwrap());
 
                 // We fetch the first value from the iterator: `value(+iterator)`
                 // This call will be reused multiple times!
-                let mut iterator_value = FunctionCall::new(String::from("value"), vec![], vec![]);
+                let mut iterator_value =
+                    FunctionCall::new(String::from("value"), GenericList::empty(), vec![]);
                 iterator_value.add_arg(Box::new(iterator.clone()));
 
                 // We check if `+maybe_value` contains `Some` or `Nothing`: `is_some(+maybe_value)`
                 // This call will be reused multiple times!
-                let mut maybe_is_some = FunctionCall::new(String::from("is_some"), vec![], vec![]);
+                let mut maybe_is_some =
+                    FunctionCall::new(String::from("is_some"), GenericList::empty(), vec![]);
                 maybe_is_some.add_arg(Box::new(maybe.clone()));
 
                 // We advance the iterator: `next(+iterator)`
                 // This call will be reused multiple times!
-                let mut iterator_next = FunctionCall::new(String::from("next"), vec![], vec![]);
+                let mut iterator_next =
+                    FunctionCall::new(String::from("next"), GenericList::empty(), vec![]);
                 iterator_next.add_arg(Box::new(iterator.clone()));
 
-                let mut maybe_unpack = FunctionCall::new(String::from("unpack"), vec![], vec![]);
+                let mut maybe_unpack =
+                    FunctionCall::new(String::from("unpack"), GenericList::empty(), vec![]);
                 maybe_unpack.add_arg(Box::new(maybe.clone()));
 
                 // Now we can declare our variables in the context
@@ -240,7 +245,11 @@ mod tests {
 
     #[test]
     fn pretty_print_for() {
-        let r = Box::new(FunctionCall::new("iter".to_owned(), vec![], vec![]));
+        let r = Box::new(FunctionCall::new(
+            "iter".to_owned(),
+            GenericList::empty(),
+            vec![],
+        ));
         let b = Block::new();
         let l = Loop::new(LoopKind::For(Box::new(Var::new("i".to_owned())), r), b);
 

@@ -17,6 +17,7 @@ use std::rc::Rc;
 
 use crate::builtins::Builtins;
 use crate::error::{ErrKind, Error, ErrorHandler};
+use crate::generics::GenericList;
 use crate::instance::ObjectInstance;
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
 use crate::parser;
@@ -70,7 +71,7 @@ impl Default for Context {
 
 impl Context {
     fn new_entry() -> FunctionDec {
-        let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None, vec![], vec![]);
+        let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None, GenericList::empty(), vec![]);
 
         ep.set_kind(FunctionKind::Func);
         ep.set_block(Block::new());
@@ -423,8 +424,8 @@ mod tests {
 
     #[test]
     fn t_redefinition_of_function() {
-        let f0 = FunctionDec::new("f0".to_owned(), None, vec![], vec![]);
-        let f0_copy = FunctionDec::new("f0".to_owned(), None, vec![], vec![]);
+        let f0 = FunctionDec::new("f0".to_owned(), None, GenericList::empty(), vec![]);
+        let f0_copy = FunctionDec::new("f0".to_owned(), None, GenericList::empty(), vec![]);
 
         let mut i = Context::new();
 
