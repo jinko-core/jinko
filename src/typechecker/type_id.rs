@@ -212,27 +212,46 @@ impl TypeId {
 
     //     TypeId::new(Symbol::from(new_name))
     // }
-}
 
-impl GenericExpander for TypeId {
-    fn generate(&self, _new_name: String, _type_map: &GenericMap, _ctx: &mut TypeCtx) -> TypeId {
-        todo!()
-        // FIXME: What do we need to do here?
-        // if self.generics().is_empty() {
-        //     TypeId::new(Symbol::from(new_name))
-        // } else {
-        //     let _new_generics: Vec<TypeId> = self
-        //         .generics()
-        //         .iter()
-        //         .map(|generic| {
-        //             let new_name = generics::mangle(generic.id(), generic.generics());
-        //             generic.generate(new_name, type_map, ctx)
-        //         })
-        //         .collect();
+    // FIXME: Should this return a Result instead?
+    pub fn generate_typedec(&self, ctx: &mut TypeCtx) {
+        log!(rare, "GENERATE {:#?}", self);
 
-        //     todo!()
-        //     // self.generics().iter().map(|g| g.generate());
-        // }
+        self.generics()
+            .data()
+            .iter()
+            .for_each(|g| g.generate_typedec(ctx));
+
+        println!("GENERATE {:#?}", self);
+        let dec = match ctx.get_custom_type(self.id()) {
+            Some(dec) => dec.clone(),
+            None => {
+                ctx.error(Error::new(ErrKind::Generics).with_msg(format!(
+                    "undeclared base type in generic specialization: `{}`",
+                    self.id()
+                )));
+                return;
+            }
+        };
+
+        let type_map = match GenericMap::create(dec.generics(), self.generics(), ctx) {
+            Ok(m) => m,
+            Err(e) => {
+                ctx.error(e);
+                return;
+            }
+        };
+
+        let specialized_name = generics::mangle(dec.name(), self.generics());
+        log!(rare, "SPECIALIZED {}", specialized_name);
+        if ctx.get_custom_type(&specialized_name).is_none() {
+            // FIXME: Remove this clone once we have proper symbols
+            let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
+
+            log!(rare, "GENERATED TYPE DEC: {:#?}", specialized_ty);
+
+            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+        }
     }
 }
 
@@ -245,56 +264,63 @@ impl GenericUser for TypeId {
             TypeId::Functor { generics, .. } => generics,
         };
 
-        //        generics
-        //            .iter_mut()
-        //            .for_each(|g| g.resolve_usages(type_map, ctx));
+        generics
+            .data_mut()
+            .iter_mut()
+            .for_each(|g| g.resolve_usages(type_map, ctx));
+
+        // Is this correct?
+        if let Ok(new_types) = type_map.specialized_types(self.generics()) {
+            let new_name = generics::mangle(self.id(), &new_types);
+            *self = TypeId::new(Symbol::from(new_name));
+        };
 
         // FIXME: Split generics in two using .partition(): Keep some in a new
         // generic list, and resolve some others to the type's name
-        let new_types = match type_map.specialized_types(generics) {
-            Err(e) => {
-                ctx.error(e);
-                return;
-            }
-            Ok(new_t) => new_t,
-        };
+        // let new_types = match type_map.specialized_types(generics) {
+        //     Err(e) => {
+        //         ctx.error(e);
+        //         return;
+        //     }
+        //     Ok(new_t) => new_t,
+        // };
 
         // FIXME: What we need to do then is to go and visit all our newtype's generics
         // and resolve them
 
-        let _generics = GenericList::empty();
-        // generics.clear();
-        // let generics_copy = generics.clone();
+        // let _generics = GenericList::empty();
+        // // generics.clear();
+        // // let generics_copy = generics.clone();
 
-        if let Ok(new_id) = type_map.get_specialized(self) {
-            self.set_id(Symbol::from(String::from(new_id.id())));
-        }
+        // if let Ok(new_id) = type_map.get_specialized(self) {
+        //     self.set_id(Symbol::from(String::from(new_id.id())));
+        // }
 
-        if let TypeId::Type { id, .. } = self {
-            let new_name = generics::mangle(id.access(), &new_types);
+        // if let TypeId::Type { id, .. } = self {
+        //     let new_name = generics::mangle(id.access(), &new_types);
 
-            // If the type does not exist yet, then we must create it and add it to the specialized
-            // nodes
-            let type_dec = ctx.get_custom_type(&new_name);
-            if type_dec.is_none() {
-                let new_dec = match ctx.get_custom_type(id.access()) {
-                    Some(t) => t.clone(),
-                    None => {
-                        // We need to declare the type as if it was instantiated?
-                        ctx.error(
-                            Error::new(ErrKind::Generics)
-                                // FIXME: How do we get the location here?
-                                .with_msg(format!("undeclared generic type `{}`", self)),
-                        );
-                        return;
-                    }
-                };
-                let new_dec = new_dec.generate(new_name.clone(), type_map, ctx);
-                ctx.add_specialized_node(SpecializedNode::Type(new_dec));
-            }
+        //     // If the type does not exist yet, then we must create it and add it to the specialized
+        //     // nodes
+        //     let type_dec = ctx.get_custom_type(&new_name);
+        //     if type_dec.is_none() {
+        //         let new_dec = match ctx.get_custom_type(id.access()) {
+        //             Some(t) => t.clone(),
+        //             None => {
+        //                 // We need to declare the type as if it was instantiated?
+        //                 ctx.error(
+        //                     Error::new(ErrKind::Generics)
+        //                         // FIXME: How do we get the location here?
+        //                         .with_msg(format!("undeclared generic type `{}`", self)),
+        //                 );
+        //                 return;
+        //             }
+        //         };
+        //         let new_dec = new_dec.generate(new_name.clone(), type_map, ctx);
+        //         ctx.add_specialized_node(SpecializedNode::Type(new_dec));
+        //     }
 
-            *id = Symbol::from(new_name);
-        }
+        //     *id = Symbol::from(new_name);
+        // }
     }
 }
 
