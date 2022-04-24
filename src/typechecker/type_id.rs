@@ -166,7 +166,6 @@ impl TypeId {
             .iter()
             .for_each(|g| g.generate_typedec(ctx));
 
-        println!("GENERATE {:#?}", self);
         let dec = match ctx.get_custom_type(self.id()) {
             Some(dec) => dec.clone(),
             None => {
@@ -186,10 +185,14 @@ impl TypeId {
             }
         };
 
-        let specialized_name = generics::mangle(dec.name(), self.generics());
+        let generics = self.generics();
+        let specialized_name = generics::mangle(dec.name(), &generics);
         if ctx.get_custom_type(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
             let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
+
+            eprintln!("GENERATED: {:#?}", &specialized_ty.name());
+            eprintln!("{:#?}", &specialized_ty.generics());
 
             ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
         }
@@ -197,48 +200,41 @@ impl TypeId {
 }
 
 impl GenericUser for TypeId {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        // FIXME: Do we need this? Or can we only have flattened types here?
+    fn resolve_usages(&mut self, type_map: &GenericMap, _ctx: &mut TypeCtx) {
+        if let Ok(new_ty) = type_map.get_specialized(self) {
+            if let TypeId::Type { id, .. } = self {
+                *id = Symbol::from(generics::mangle(new_ty.id(), new_ty.generics()))
+            };
 
-        let generics = match self {
-            TypeId::Type { generics, .. } => generics,
-            TypeId::Functor { generics, .. } => generics,
-        };
+            let (TypeId::Type { generics, .. } | TypeId::Functor { generics, .. }) = self;
+            *generics = GenericList::empty();
+        }
 
-        generics
-            .data_mut()
-            .iter_mut()
-            .for_each(|g| g.resolve_usages(type_map, ctx));
+        // log!(generics, "resolving type id `{}`", self);
 
-        // Is this correct?
-        if let Ok(new_types) = type_map.specialized_types(self.generics()) {
-            let new_name = generics::mangle(self.id(), &new_types);
-            *self = TypeId::new(Symbol::from(new_name));
-        };
+        // let old_generics = self.generics().clone();
 
-        // FIXME: Split generics in two using .partition(): Keep some in a new
-        // generic list, and resolve some others to the type's name
-        // let new_types = match type_map.specialized_types(generics) {
-        //     Err(e) => {
-        //         ctx.error(e);
-        //         return;
-        //     }
-        //     Ok(new_t) => new_t,
+        // let generics = match self {
+        //     TypeId::Type { generics, .. } => generics,
+        //     TypeId::Functor { generics, .. } => generics,
         // };
 
-        // FIXME: What we need to do then is to go and visit all our newtype's generics
-        // and resolve them
+        // // FIXME: Split generics in two using .partition(): Keep some in a new
+        // // generic list, and resolve some others to the type's name
 
-        // let _generics = GenericList::empty();
-        // // generics.clear();
-        // // let generics_copy = generics.clone();
+        // // FIXME: What we need to do then is to go and visit all our newtype's generics
+        // // and resolve them
+
+        // *generics = GenericList::empty();
 
         // if let Ok(new_id) = type_map.get_specialized(self) {
         //     self.set_id(Symbol::from(String::from(new_id.id())));
         // }
 
         // if let TypeId::Type { id, .. } = self {
-        //     let new_name = generics::mangle(id.access(), &new_types);
+        //     let new_name = generics::mangle(id.access(), &old_generics);
+        //     log!(rare, "resolved name {}", new_name);
+        //     log!(rare, "old generics {:#?}", old_generics);
 
         //     // If the type does not exist yet, then we must create it and add it to the specialized
         //     // nodes
@@ -247,7 +243,6 @@ impl GenericUser for TypeId {
         //         let new_dec = match ctx.get_custom_type(id.access()) {
         //             Some(t) => t.clone(),
         //             None => {
-        //                 // We need to declare the type as if it was instantiated?
         //                 ctx.error(
         //                     Error::new(ErrKind::Generics)
         //                         // FIXME: How do we get the location here?

@@ -107,12 +107,6 @@ impl TypeInstantiation {
             .iter()
             .for_each(|g| g.generate_typedec(ctx));
 
-        // Now we can resolve them
-        self.generics
-            .data_mut()
-            .iter_mut()
-            .for_each(|g| g.resolve_usages(&type_map, ctx));
-
         let specialized_name = generics::mangle(dec.name(), &self.generics);
         if ctx.get_custom_type(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols

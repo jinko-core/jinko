@@ -109,6 +109,26 @@ impl GenericList {
         self.0.as_ref()
     }
 
+    /// Flatten all nested generics into a single [`GenericList`]. This turns
+    /// the following:
+    ///
+    /// ```
+    /// [Id[Id[Tuple[Id[string], float]]]]
+    /// ```
+    /// into the following:
+    ///
+    /// ```
+    /// [Id, Id, Tuple, Id, string, float]
+    /// ```
+    pub fn flatten(&self) -> GenericList {
+        GenericList(
+            self.0
+                .iter()
+                .flat_map(|generic| generic.generics().flatten().into_iter())
+                .collect(),
+        )
+    }
+
     /// Get a mutable reference on the types contained in the [`GenericList`]
     pub fn data_mut(&mut self) -> &mut Vec<TypeId> {
         self.0.as_mut()
@@ -252,5 +272,16 @@ mod tests {
         let generics = GenericList::empty().with(ty!("T"));
 
         assert!(GenericMap::create(&resolved, &generics, &mut ctx).is_err());
+    }
+
+    #[test]
+    fn flatten() {
+        let int = ty!("int");
+        let inner = ty!("Id").with_generic(int);
+        let nested = ty!("Id").with_generic(inner);
+
+        let flattened = nested.generics().flatten();
+
+        assert_eq!(flattened, GenericList(vec![ty!("Id"), ty!("int")]));
     }
 }
