@@ -154,69 +154,13 @@ impl TypeId {
         TypeId::new(Symbol::from(String::from("void")))
     }
 
-    fn set_id(&mut self, new_id: Symbol) {
-        if let TypeId::Type { id, .. } = self {
-            *id = new_id;
-        }
-    }
-
     #[deprecated]
     pub fn is_primitive(&self) -> bool {
         PRIMITIVE_TYPES.contains(&self.id())
     }
 
-    /// FIXME: Add documentation
-    pub fn create_type_dec(
-        &self,
-        generic_dec: &TypeDec,
-        ctx: &mut TypeCtx,
-    ) -> Result<String, Error> {
-        let type_map = GenericMap::create(generic_dec.generics(), self.generics(), ctx)?;
-
-        let specialized_name = generics::mangle(generic_dec.name(), self.generics());
-        if ctx.get_custom_type(&specialized_name).is_none() {
-            // FIXME: Remove this clone once we have proper symbols
-            let specialized_ty = generic_dec.generate(specialized_name.clone(), &type_map, ctx);
-
-            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
-        }
-
-        Ok(specialized_name)
-    }
-
-    // Turn a specialized generic type into its mangled, flattened version.
-    // This can only be used for specialized types! It does not make sense to
-    // flatten a "still generic" [`TypeId`].
-    // This basically turns the following:
-    //
-    // ```ignore
-    // ty = TypeId (
-    //     name: "Tuple",
-    //     generics: ["int", "float"],
-    //     ..
-    // )
-    // ```
-    //
-    // into the following:
-    //
-    // ```ignore
-    // ty = TypeId (
-    //     name: generics::mangle("Tuple", ["int", "float"]),
-    //     generics: [], // empty
-    // )
-    // ```
-    // FIXME: Should we mutate &self instead?
-    // pub fn flatten(&self) -> TypeId {
-    //     let generics: Vec<TypeId> = self.generics().iter().map(|g| g.flatten()).collect();
-    //     let new_name = generics::mangle(self.id(), &generics);
-
-    //     TypeId::new(Symbol::from(new_name))
-    // }
-
     // FIXME: Should this return a Result instead?
     pub fn generate_typedec(&self, ctx: &mut TypeCtx) {
-        log!(rare, "GENERATE {:#?}", self);
-
         self.generics()
             .data()
             .iter()
@@ -243,12 +187,9 @@ impl TypeId {
         };
 
         let specialized_name = generics::mangle(dec.name(), self.generics());
-        log!(rare, "SPECIALIZED {}", specialized_name);
         if ctx.get_custom_type(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
             let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
-
-            log!(rare, "GENERATED TYPE DEC: {:#?}", specialized_ty);
 
             ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
         }

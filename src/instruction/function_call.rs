@@ -184,8 +184,7 @@ impl FunctionCall {
         ctx: &mut TypeCtx,
     ) -> CheckedType {
         // let mut generics: Vec<TypeId> = self.generics().iter().map(|g| g.flatten()).collect();
-        let mut generics = self.generics().clone();
-        let type_map = match GenericMap::create(function.generics(), &generics, ctx) {
+        let type_map = match GenericMap::create(function.generics(), &self.generics, ctx) {
             Ok(map) => map,
             Err(e) => {
                 ctx.error(e.with_loc(self.location.clone()));
@@ -193,12 +192,19 @@ impl FunctionCall {
             }
         };
 
-        generics
+        // Create missing type declarations from specialized types
+        self.generics
+            .data()
+            .iter()
+            .for_each(|g| g.generate_typedec(ctx));
+
+        // Now we can resolve them
+        self.generics
             .data_mut()
             .iter_mut()
             .for_each(|g| g.resolve_usages(&type_map, ctx));
 
-        let specialized_name = generics::mangle(function.name(), &generics);
+        let specialized_name = generics::mangle(function.name(), &self.generics);
         if ctx.get_function(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
             let specialized_fn = function.generate(specialized_name.clone(), &type_map, ctx);

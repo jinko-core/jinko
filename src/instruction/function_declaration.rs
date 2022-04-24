@@ -348,6 +348,12 @@ impl GenericExpander for FunctionDec {
         new_fn.generics = GenericList::empty();
         new_fn.typechecked = false;
 
+        // FIXME: Do we need this?
+        // new_fn
+        //     .args
+        //     .iter()
+        //     .for_each(|arg| arg.get_type().generate_typedec(ctx));
+
         new_fn
             .args
             .iter_mut()

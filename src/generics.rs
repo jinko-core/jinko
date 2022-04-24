@@ -120,8 +120,6 @@ impl GenericList {
 
         GenericList(self.0)
     }
-
-    // pub fn resolve(&self) -> GenericList {}
 }
 
 impl FromIterator<TypeId> for GenericList {
