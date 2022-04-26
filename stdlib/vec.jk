@@ -12,7 +12,7 @@ type Vec[T](raw_pointer: int, len: int, size: int);
 func inner_init[T](value: T) -> Vec[T] {
 	new_inner = calloc(1, size_of[T](value));
 	new_size = size_of[T](value);
-	Vec(inner: new_inner,
+	Vec[T](inner: new_inner,
 		len: 1,
 		size: new_size)
 }
@@ -21,7 +21,7 @@ func inner_grow[T](v: Vec[T], value: T) -> Vec[T] {
 	new_size = v.size + size_of[T](value);
 	new_pointer = v.raw_pointer.realloc(v.size + size_of[T](value));
 
-	Vec(raw_pointer: new_pointer, len: v.len + 1, size: new_size)
+	Vec[T](raw_pointer: new_pointer, len: v.len + 1, size: new_size)
 }
 
 func push[T](v: Vec[T], value: T) -> Vec[T] {
@@ -32,9 +32,9 @@ func push[T](v: Vec[T], value: T) -> Vec[T] {
 	}
 }
 
-func release(v: Vec[T]) {
-	v.raw_pointer.free()
-}
+// func release(v: Vec[T]) {
+// 	v.raw_pointer.free()
+// }
 
 // Creates an empty vector. Shorthand for while we still don't have default
 // field initialization
