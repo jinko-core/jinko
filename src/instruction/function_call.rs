@@ -10,7 +10,6 @@ use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx, TypeId};
 
 #[derive(Clone)]
@@ -78,11 +77,6 @@ impl FunctionCall {
     /// Map each argument to its corresponding instruction
     fn map_args(&self, function: &FunctionDec, ctx: &mut Context) {
         for (call_arg, func_arg) in self.args.iter().zip(function.args()) {
-            log!(
-                "var map: {}",
-                format!("mapping `{}` to `{}`", func_arg.name(), call_arg.print()),
-            );
-
             // Create a new variable, and execute the content of the function argument
             // passed to the call
             let mut new_var = Var::new(func_arg.name().to_owned());
@@ -185,11 +179,6 @@ impl FunctionCall {
     }
 
     fn resolve_generic_call(&mut self, function: FunctionDec, ctx: &mut TypeCtx) -> CheckedType {
-        log!(
-            "creating specialized fn. function generics: {}, call generics {}",
-            function.generics().len(),
-            self.generics().len()
-        );
         let type_map = match GenericMap::create(function.generics(), self.generics(), ctx) {
             Ok(map) => map,
             Err(e) => {
@@ -198,7 +187,6 @@ impl FunctionCall {
             }
         };
         let specialized_name = generics::mangle(function.name(), self.generics());
-        log!("specialized name {}", specialized_name);
         if ctx.get_function(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
             let specialized_fn = function.generate(specialized_name.clone(), &type_map, ctx);
@@ -265,8 +253,6 @@ impl Instruction for FunctionCall {
 
         ctx.scope_enter();
 
-        log!("call: {}", self.name());
-
         self.map_args(&function, ctx);
 
         let ret_val = function.run(ctx);
@@ -282,13 +268,7 @@ impl Instruction for FunctionCall {
 }
 
 impl TypeCheck for FunctionCall {
-    fn type_log(&self) -> String {
-        self.fn_name.to_string()
-    }
-
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        log!("typechecking call to {}", self.fn_name);
-
         // FIXME: Expand generic here instead of resolving later
         // if !self.generics.is_empty() && !ctx.is_second_pass() {
         //     return CheckedType::Later;
@@ -317,11 +297,9 @@ impl TypeCheck for FunctionCall {
         let args_type = args_type.clone();
 
         if !function.generics().is_empty() || !self.generics.is_empty() {
-            log!("resolving generic call");
             return self.resolve_generic_call(function, ctx);
         }
 
-        log!("resolving args");
         let mut errors = vec![];
         let mut args = vec![];
 
@@ -383,7 +361,6 @@ impl GenericUser for FunctionCall {
         // using the generic map. And obviously just visit all of our arguments
 
         // FIXME: Can we unwrap here?
-        log!(generics, "fn name: {}", self.fn_name);
         let dec = match ctx.get_function(&self.fn_name) {
             Some(f) => f,
             None => {

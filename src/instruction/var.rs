@@ -10,7 +10,6 @@ use crate::instance::ObjectInstance;
 use crate::instruction::TypeDec;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
@@ -97,8 +96,6 @@ impl Instruction for Var {
             }
         };
 
-        log!("var: {}", var.print());
-
         Some(var.instance())
     }
 
@@ -108,10 +105,6 @@ impl Instruction for Var {
 }
 
 impl TypeCheck for Var {
-    fn type_log(&self) -> String {
-        self.name.to_string()
-    }
-
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         match ctx.get_var(self.name()) {
             Some(var_ty) => var_ty.clone(),

@@ -6,7 +6,6 @@ use crate::generics::{GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction, Var};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
@@ -80,8 +79,6 @@ impl Instruction for VarAssign {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("assign var: {}", self.symbol());
-
         // Are we creating the variable or not
         let mut var_creation = false;
 
@@ -218,7 +215,6 @@ impl TypeCheck for VarAssign {
 
 impl GenericUser for VarAssign {
     fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        log!("resolving value of var assign");
         self.value.resolve_usages(type_map, ctx)
     }
 }

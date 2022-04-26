@@ -55,7 +55,6 @@ impl ExtraContent {
 
 impl Instruction for ExtraContent {
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("comment: {}", self.print().as_str());
 
         None
     }

@@ -6,7 +6,6 @@ use crate::generics::GenericUser;
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 use crate::value::JkBool;
 
@@ -68,20 +67,15 @@ impl Instruction for Loop {
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         match &self.kind {
             LoopKind::Loop => loop {
-                log!("loop enter");
                 self.block.execute(ctx)?;
-                log!("loop exit");
             },
             LoopKind::While(cond) => {
                 let cond = cond.execute(ctx)?;
-                log!("while enter");
                 while JkBool::from_instance(&cond).rust_value() {
                     self.block.execute(ctx)?;
                 }
-                log!("while exit");
             }
             LoopKind::For(var, range_expression) => {
-                log!("foreach enter");
                 // Let's break down the implementation for the following loop
                 // ```
                 // for i in range(0, 10) { /* exec() */ }
@@ -200,7 +194,6 @@ impl Instruction for Loop {
                 }
 
                 ctx.scope_exit();
-                log!("foreach exit");
             }
         }
 

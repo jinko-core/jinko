@@ -19,7 +19,6 @@ use crate::builtins::Builtins;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instance::ObjectInstance;
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
-use crate::log;
 use crate::parser;
 use crate::typechecker::CheckedType;
 use crate::typechecker::{SpecializedNode, TypeCheck, TypeCtx, TypeId};
@@ -299,8 +298,6 @@ impl Context {
 
     fn inner_check(&mut self, ep: &mut Block) -> Result<(), Error> {
         self.scope_enter();
-
-        log!("starting first pass of typechecking");
 
         ep.type_of(&mut self.typechecker);
 

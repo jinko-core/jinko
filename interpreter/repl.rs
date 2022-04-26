@@ -9,7 +9,6 @@ use jinko::{
     context::Context,
     instance::{FromObjectInstance, ObjectInstance},
     instruction::Instruction,
-    log,
     typechecker::CheckedType,
     value::JkConstant,
 };
@@ -71,8 +70,6 @@ impl Repl {
 
     /// Launch the REPL
     pub fn launch(self) -> InteractResult {
-        log!("starting REPL");
-
         let mut ctx = match self.ctx {
             Some(ctx) => ctx,
             None => Context::new(),

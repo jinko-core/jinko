@@ -7,7 +7,6 @@ use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
 use crate::instance::{Name, ObjectInstance};
 use crate::instruction::{InstrKind, Instruction, TypeDec, VarAssign};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::symbol::Symbol;
 use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx, TypeId};
 
@@ -94,11 +93,6 @@ impl TypeInstantiation {
         dec: TypeDec,
         ctx: &mut TypeCtx,
     ) -> CheckedType {
-        log!(
-            "creating specialized type. type generics: {}, instantiation generics {}",
-            dec.generics().len(),
-            self.generics.len()
-        );
         let type_map = match GenericMap::create(dec.generics(), &self.generics, ctx) {
             Ok(map) => map,
             Err(e) => {
@@ -108,7 +102,6 @@ impl TypeInstantiation {
         };
 
         let specialized_name = generics::mangle(dec.name(), &self.generics);
-        log!("specialized name {}", specialized_name);
         if ctx.get_custom_type(&specialized_name).is_none() {
             // FIXME: Remove this clone once we have proper symbols
             let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
@@ -199,7 +192,6 @@ impl TypeCheck for TypeInstantiation {
         };
 
         if !dec.generics().is_empty() || !self.generics.is_empty() {
-            log!("resolving generic type instantiation");
             return self.resolve_generic_instantiation(dec, ctx);
         }
 
@@ -243,7 +235,6 @@ impl TypeCheck for TypeInstantiation {
 
 impl GenericUser for TypeInstantiation {
     fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        log!(generics, "type name: {}", self.type_name);
         let dec = match ctx.get_custom_type(self.type_name.id()) {
             Some(t) => t,
             None => {

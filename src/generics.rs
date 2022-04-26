@@ -5,7 +5,6 @@
 use std::collections::HashMap;
 
 use crate::error::{ErrKind, Error};
-use crate::log;
 use crate::typechecker::{TypeCtx, TypeId};
 
 #[derive(Default, Debug)]
@@ -42,7 +41,6 @@ impl GenericMap {
         let mut is_err = false;
 
         generics.iter().zip(resolved).for_each(|(l_ty, r_ty)| {
-            log!("mapping generic: {} <- {}", l_ty, r_ty);
             if let Err(e) = map.declare(l_ty.clone(), r_ty.clone()) {
                 ctx.error(e);
                 is_err = true;
@@ -90,8 +88,6 @@ pub fn mangle(name: &str, types: &[TypeId]) -> String {
         mangled.push('+');
         mangled.push_str(type_id.id());
     }
-
-    log!(generics, "mangled: {}", &mangled);
 
     mangled
 }

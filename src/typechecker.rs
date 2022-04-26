@@ -8,7 +8,6 @@ pub use type_id::{TypeId, PRIMITIVE_TYPES};
 use crate::context::ScopeMap;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{FunctionDec, Instruction, TypeDec};
-use crate::log;
 
 use colored::Colorize;
 
@@ -201,19 +200,16 @@ impl TypeCtx {
 
     /// Access a previously declared variable's type
     pub fn get_var(&mut self, name: &str) -> Option<&CheckedType> {
-        log!(typectx, "accessing variable: `{}`", name);
         self.types.get_variable(name)
     }
 
     /// Access a previously declared function's type
     pub fn get_function(&mut self, name: &str) -> Option<&FunctionDec> {
-        log!(typectx, "accessing function: `{}`", name);
         self.types.get_function(name)
     }
 
     /// Access a previously declared custom type
     pub fn get_custom_type(&mut self, name: &str) -> Option<&TypeDec> {
-        log!(typectx, "accessing custom type: `{}`", name);
         self.types.get_type(name)
     }
 
@@ -255,37 +251,25 @@ pub trait TypeCheck {
     /// Access the cached type of an instruction
     fn cached_type(&self) -> Option<&CheckedType>;
 
-    fn type_log(&self) -> String {
-        String::new()
-    }
-
     /// Access the cached type of an instruction or perform the type resolution process.
     /// This avoid typechecking an entire instruction a second time and allows the
     /// context to just access it. This is useful for passes such as generic expansion.
     fn type_of(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        log!("type_of value {}", self.type_log());
-
         // FIXME: Remove clones
         match self.cached_type() {
-            None => {
-                log!("no cached type");
-                match self.resolve_type(ctx) {
-                    CheckedType::Resolved(new_ty) => {
-                        self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
-                        CheckedType::Resolved(new_ty)
-                    }
-                    CheckedType::Void => {
-                        self.set_cached_type(CheckedType::Void);
-                        CheckedType::Void
-                    }
-                    CheckedType::Error => CheckedType::Error,
-                    CheckedType::Later => CheckedType::Later,
+            None => match self.resolve_type(ctx) {
+                CheckedType::Resolved(new_ty) => {
+                    self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
+                    CheckedType::Resolved(new_ty)
                 }
-            }
-            Some(ty) => {
-                log!("cached type!: {}", ty);
-                ty.clone()
-            }
+                CheckedType::Void => {
+                    self.set_cached_type(CheckedType::Void);
+                    CheckedType::Void
+                }
+                CheckedType::Error => CheckedType::Error,
+                CheckedType::Later => CheckedType::Later,
+            },
+            Some(ty) => ty.clone(),
         }
     }
 }

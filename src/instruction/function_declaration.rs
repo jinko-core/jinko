@@ -7,7 +7,6 @@ use crate::generics::{GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction};
 use crate::location::{Location, SpanTuple};
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
@@ -70,6 +69,7 @@ impl FunctionDec {
         // locations
         let new_end = Location::new(end.line(), end.column() - 1);
         let loc = SpanTuple::new(loc.path().clone(), loc.start().clone(), new_end);
+
         self.location = Some(loc)
     }
 
@@ -158,8 +158,6 @@ impl Instruction for FunctionDec {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("funcdec enter: {}", self.name());
-
         match self.fn_kind() {
             FunctionKind::Func | FunctionKind::Ext => {
                 // FIXME: This error will have gotten caught at typechecking:
@@ -179,8 +177,6 @@ impl Instruction for FunctionDec {
                     .with_loc(self.loc()),
             ),
         }
-
-        log!("funcdec exit: {}", self.name());
 
         None
     }

@@ -9,7 +9,6 @@ use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 /// The potential ctx instructions
@@ -66,8 +65,6 @@ impl Instruction for JkInst {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("jinko_inst: {}", &self.print());
-
         match self.kind {
             JkInstKind::Dump => println!("{}", ctx.print()),
             JkInstKind::Quit => std::process::exit(0),

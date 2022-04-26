@@ -7,7 +7,6 @@ use crate::generics::{GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
@@ -73,13 +72,7 @@ impl Instruction for FieldAccess {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("field access enter: {}", &self.print());
-
-        let field_instance = self.get_field_instance(ctx);
-
-        log!("field access exit: {}", &self.print());
-
-        field_instance
+        self.get_field_instance(ctx)
     }
 
     fn location(&self) -> Option<&SpanTuple> {

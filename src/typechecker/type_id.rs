@@ -30,7 +30,6 @@ use colored::Colorize;
 use crate::error::{ErrKind, Error};
 use crate::generics::{self, GenericExpander, GenericUser};
 use crate::instruction::TypeDec;
-use crate::log;
 use crate::symbol::Symbol;
 use crate::typechecker::SpecializedNode;
 
@@ -173,8 +172,6 @@ impl TypeId {
 
 impl GenericUser for TypeId {
     fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut crate::TypeCtx) {
-        log!(generics, "resolving type id `{}`", self);
-
         let generics = match self {
             TypeId::Type { generics, .. } => generics,
             TypeId::Functor { generics, .. } => generics,
