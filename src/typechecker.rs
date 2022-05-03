@@ -8,6 +8,7 @@ pub use type_id::{TypeId, PRIMITIVE_TYPES};
 use crate::context::ScopeMap;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instruction::{FunctionDec, Instruction, TypeDec};
+use crate::io_trait::JkReader;
 
 use colored::Colorize;
 
@@ -78,11 +79,13 @@ pub struct TypeCtx {
     /// Path from which the typechecking context was instantiated
     path: Option<PathBuf>,
     included: HashSet<PathBuf>,
+
+    reader: Box<dyn JkReader>,
 }
 
 impl TypeCtx {
     /// Create a new empty [`TypeCtx`]
-    pub fn new() -> TypeCtx {
+    pub fn new(reader: Box<dyn JkReader>) -> TypeCtx {
         // FIXME: This doesn't contain builtins
         let mut ctx = TypeCtx {
             error_handler: ErrorHandler::default(),
@@ -90,6 +93,7 @@ impl TypeCtx {
             generated: vec![],
             path: None,
             included: HashSet::new(),
+            reader,
         };
 
         macro_rules! declare_primitive {
@@ -128,6 +132,10 @@ impl TypeCtx {
 
     pub fn is_included(&self, path: &Path) -> bool {
         self.included.contains(path)
+    }
+
+    pub fn reader(&self) -> &dyn JkReader {
+        self.reader.as_ref()
     }
 
     /// Enter a new scope. This is the same as lexical scopes
@@ -253,12 +261,6 @@ impl TypeCtx {
     /// Create a new error to propagate to the original context
     pub fn error(&mut self, err: Error) {
         self.error_handler.add(err)
-    }
-}
-
-impl Default for TypeCtx {
-    fn default() -> TypeCtx {
-        TypeCtx::new()
     }
 }
 

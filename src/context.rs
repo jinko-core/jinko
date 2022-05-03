@@ -19,6 +19,7 @@ use crate::builtins::Builtins;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instance::ObjectInstance;
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
+use crate::io_trait::JkReader;
 use crate::parser;
 use crate::typechecker::CheckedType;
 use crate::typechecker::{SpecializedNode, TypeCheck, TypeCtx, TypeId};
@@ -60,12 +61,8 @@ pub struct Context {
     pub entry_point: FunctionDec,
     /// Errors being kept by the context
     pub error_handler: ErrorHandler,
-}
 
-impl Default for Context {
-    fn default() -> Context {
-        Context::new()
-    }
+    reader: Box<dyn JkReader>,
 }
 
 impl Context {
@@ -79,7 +76,7 @@ impl Context {
     }
 
     /// Create a new empty context without the standard library
-    pub fn new() -> Context {
+    pub fn new(reader: Box<dyn JkReader>) -> Context {
         let mut ctx = Context {
             path: None,
             args: Vec::new(),
@@ -89,11 +86,12 @@ impl Context {
             #[cfg(feature = "ffi")]
             external_libs: Vec::new(),
             scope_map: ScopeMap::new(),
-            typechecker: TypeCtx::new(),
+            typechecker: TypeCtx::new(reader.clone()),
             debug_mode: false,
             code: None,
             entry_point: Self::new_entry(),
             error_handler: ErrorHandler::default(),
+            reader,
         };
 
         ctx.scope_enter();

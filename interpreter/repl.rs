@@ -7,8 +7,10 @@ use std::path::PathBuf;
 
 use jinko::{
     context::Context,
+    error::Error,
     instance::{FromObjectInstance, ObjectInstance},
     instruction::Instruction,
+    io_trait::JkReader,
     typechecker::CheckedType,
     value::JkConstant,
 };
@@ -36,6 +38,14 @@ impl std::fmt::Display for ReplInstance {
                 _ => String::new(),
             }
         )
+    }
+}
+
+#[derive(Clone)]
+pub struct ReplReader {}
+impl JkReader for ReplReader {
+    fn read_to_string(&self, path: &str) -> Result<String, Error> {
+        unimplemented!("POV t\'as pas implem");
     }
 }
 
@@ -72,7 +82,7 @@ impl Repl {
     pub fn launch(self) -> InteractResult {
         let mut ctx = match self.ctx {
             Some(ctx) => ctx,
-            None => Context::new(),
+            None => Context::new(Box::new(ReplReader {})),
         };
 
         Repl::setup_context(&mut ctx);
