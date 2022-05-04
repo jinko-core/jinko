@@ -7,13 +7,15 @@
 use std::collections::{HashMap, LinkedList};
 
 use crate::error::{ErrKind, Error};
+use crate::typechecker::TypeId;
 
-/// A scope contains a set of available variables, functions and types
+/// A scope contains a set of available variables, functions and types.
+/// Types are hashed based on their associated [`TypeId`]
 #[derive(Clone)]
 pub struct Scope<V, F, T> {
     pub(crate) variables: HashMap<String, V>,
     pub(crate) functions: HashMap<String, F>,
-    pub(crate) types: HashMap<String, T>,
+    pub(crate) types: HashMap<TypeId, T>,
 }
 
 impl<V, F, T> Scope<V, F, T> {
@@ -33,8 +35,8 @@ impl<V, F, T> Scope<V, F, T> {
     }
 
     /// Get a reference on a type from the scope map if is has been inserted already
-    pub fn get_type(&self, name: &str) -> Option<&T> {
-        self.types.get(name)
+    pub fn get_type(&self, id: &TypeId) -> Option<&T> {
+        self.types.get(id)
     }
 
     /// Add a variable to the most recently created scope, if it doesn't already exist
@@ -76,14 +78,14 @@ impl<V, F, T> Scope<V, F, T> {
     }
 
     /// Add a type to the most recently created scope, if it doesn't already exist
-    pub fn add_type(&mut self, name: String, type_dec: T) -> Result<(), Error> {
-        match self.get_type(&name) {
+    pub fn add_type(&mut self, id: TypeId, type_dec: T) -> Result<(), Error> {
+        match self.get_type(&id) {
             Some(_) => {
                 Err(Error::new(ErrKind::Context)
-                    .with_msg(format!("type already declared: {}", name)))
+                    .with_msg(format!("type already declared: `{}`", id)))
             }
             None => {
-                self.types.insert(name, type_dec);
+                self.types.insert(id, type_dec);
                 Ok(())
             }
         }
@@ -174,10 +176,10 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Maybe get a type in any available scopes
-    pub fn get_type(&self, name: &str) -> Option<&T> {
+    pub fn get_type(&self, id: &TypeId) -> Option<&T> {
         // FIXME: Use find for code quality?
         for scope in self.scopes.iter() {
-            match scope.get_type(name) {
+            match scope.get_type(id) {
                 Some(v) => return Some(v),
                 None => continue,
             };
@@ -214,9 +216,9 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Add a type to the current scope if it hasn't been added before
-    pub fn add_type(&mut self, name: String, custom_type: T) -> Result<(), Error> {
+    pub fn add_type(&mut self, id: TypeId, custom_type: T) -> Result<(), Error> {
         match self.scopes.front_mut() {
-            Some(head) => head.add_type(name, custom_type),
+            Some(head) => head.add_type(id, custom_type),
             None => Err(Error::new(ErrKind::Context)
                 .with_msg(String::from("Adding new custom type to empty scopemap"))),
         }

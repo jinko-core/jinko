@@ -74,12 +74,6 @@ pub struct Context {
     pub(crate) typechecker: TypeCtx,
 }
 
-impl Default for Context {
-    fn default() -> Context {
-        Context::new()
-    }
-}
-
 impl Context {
     fn new_entry() -> FunctionDec {
         let mut ep = FunctionDec::new(String::from(ENTRY_NAME), None, vec![], vec![]);
@@ -188,7 +182,7 @@ impl Context {
     /// if it existed already and was not.
     pub fn add_type(&mut self, custom_type: TypeDec) -> Result<(), Error> {
         self.scope_map
-            .add_type(custom_type.name().to_owned(), Rc::new(custom_type))
+            .add_type(custom_type.id().to_owned(), Rc::new(custom_type))
     }
 
     /// Remove a variable from the context
@@ -218,7 +212,7 @@ impl Context {
 
     /// Get a reference on an existing type
     pub fn get_type(&self, type_id: &TypeId) -> Option<&Rc<TypeDec>> {
-        self.scope_map.get_type(type_id.id())
+        self.scope_map.get_type(type_id)
     }
 
     /// Create a new empty scope

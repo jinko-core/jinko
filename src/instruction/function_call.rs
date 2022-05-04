@@ -412,7 +412,7 @@ impl GenericUser for FunctionCall {
             .for_each(|arg| arg.resolve_usages(type_map, ctx));
 
         // FIXME: This is ugly as sin
-        if ctx.get_specialized_node(&self.fn_name).is_none() && self.fn_name != old_name {
+        if ctx.get_specialized_function(&self.fn_name).is_none() && self.fn_name != old_name {
             let demangled = generics::demangle(&self.fn_name);
 
             // FIXME: Can we unwrap here? Probably not

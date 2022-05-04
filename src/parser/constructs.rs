@@ -422,6 +422,13 @@ fn unit_type_decl(
     // FIXME: This needs to use TypeIds
     let (input, (name, _)) = spaced_identifier(input)?;
     let (input, generics) = maybe_generic_list(input)?;
+
+    let type_id = generics
+        .into_iter()
+        .fold(TypeId::new(Symbol::from(name)), |id, generic| {
+            id.with_generic(generic)
+        });
+
     let (input, mut type_dec) = if let Ok((input, _)) = Token::left_parenthesis(input) {
         let (input, first_arg) = typed_arg(input)?;
         let (input, mut args) = many0(preceded(Token::comma, typed_arg))(input)?;
@@ -429,9 +436,9 @@ fn unit_type_decl(
 
         args.insert(0, first_arg);
 
-        (input, TypeDec::new(name, generics, args))
+        (input, TypeDec::new(type_id, args))
     } else {
-        (input, TypeDec::new(name, generics, vec![]))
+        (input, TypeDec::new(type_id, vec![]))
     };
     let (input, end_loc) = position(input)?;
 

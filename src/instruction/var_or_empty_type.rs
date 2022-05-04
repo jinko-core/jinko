@@ -34,7 +34,7 @@ impl VarOrEmptyType {
     }
 
     fn resolve_kind(&self, ctx: &mut TypeCtx) -> Kind {
-        let resolved = ctx.get_custom_type(&self.symbol);
+        let resolved = ctx.get_custom_type(&TypeId::new(Symbol::from(self.symbol.as_str())));
         if resolved.is_some() {
             return Kind::EmptyTypeInst;
         }

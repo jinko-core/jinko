@@ -27,12 +27,10 @@ use std::hash::Hash;
 
 use colored::Colorize;
 
-use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericExpander, GenericUser};
+use crate::generics::{self, GenericUser};
 use crate::instruction::TypeDec;
 use crate::log;
 use crate::symbol::Symbol;
-use crate::typechecker::SpecializedNode;
 
 pub const PRIMITIVE_TYPES: [&str; 5] = ["bool", "int", "float", "char", "string"];
 
@@ -155,6 +153,12 @@ impl TypeId {
         }
     }
 
+    pub fn generics(&self) -> &Vec<TypeId> {
+        let (TypeId::Type { generics, .. } | TypeId::Functor { generics, .. }) = self;
+
+        generics
+    }
+
     pub fn void() -> TypeId {
         TypeId::new(Symbol::from(String::from("void")))
     }
@@ -204,24 +208,25 @@ impl GenericUser for TypeId {
 
             // If the type does not exist yet, then we must create it and add it to the specialized
             // nodes
-            let type_dec = ctx.get_custom_type(&new_name);
-            if type_dec.is_none() {
-                let new_dec = match ctx.get_custom_type(id.access()) {
-                    Some(t) => t.clone(),
-                    None => {
-                        ctx.error(
-                            Error::new(ErrKind::Generics)
-                                // FIXME: How do we get the location here?
-                                .with_msg(format!("undeclared generic type `{}`", self)),
-                        );
-                        return;
-                    }
-                };
-                let new_dec = new_dec.generate(new_name.clone(), type_map, ctx);
-                ctx.add_specialized_node(SpecializedNode::Type(new_dec));
-            }
+            // FIXME: How to handle that?
+            // let type_dec = ctx.get_custom_type(&new_name);
+            // if type_dec.is_none() {
+            //     let new_dec = match ctx.get_custom_type(id.access()) {
+            //         Some(t) => t.clone(),
+            //         None => {
+            //             ctx.error(
+            //                 Error::new(ErrKind::Generics)
+            //                     // FIXME: How do we get the location here?
+            //                     .with_msg(format!("undeclared generic type `{}`", self)),
+            //             );
+            //             return;
+            //         }
+            //     };
+            //     let new_dec = new_dec.generate(new_name.clone(), type_map, ctx);
+            //     ctx.add_specialized_node(SpecializedNode::Type(new_dec));
+            // }
 
-            *id = Symbol::from(new_name);
+            // *id = Symbol::from(new_name);
         }
     }
 }
@@ -235,9 +240,10 @@ impl From<&str> for TypeId {
     }
 }
 
+// FIXME: Can we remove this?
 impl From<&TypeDec> for TypeId {
     fn from(td: &TypeDec) -> Self {
-        TypeId::from(td.name())
+        td.id().clone()
     }
 }
 

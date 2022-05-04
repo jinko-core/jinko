@@ -3,13 +3,13 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
+use crate::generics::{self, GenericMap, GenericUser};
 use crate::instance::{Name, ObjectInstance};
 use crate::instruction::{InstrKind, Instruction, TypeDec, VarAssign};
 use crate::location::SpanTuple;
 use crate::log;
 use crate::symbol::Symbol;
-use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx, TypeId};
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 use std::rc::Rc;
 
@@ -107,16 +107,19 @@ impl TypeInstantiation {
             }
         };
 
-        let specialized_name = generics::mangle(dec.name(), &self.generics);
-        log!("specialized name {}", specialized_name);
-        if ctx.get_custom_type(&specialized_name).is_none() {
-            // FIXME: Remove this clone once we have proper symbols
-            let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
+        // FIXME: How do we resolve this? How do we create a new [`TypeId`] from
+        // the resolved generics?
+        // let specialized_name = generics::mangle(dec.id(), &self.generics);
+        // log!("specialized name {}", specialized_name);
+        // if ctx.get_custom_type(&specialized_name).is_none() {
+        //     // FIXME: Remove this clone once we have proper symbols
+        //     let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
 
-            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
-        }
+        //     ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+        // }
 
-        self.type_name = TypeId::new(Symbol::from(specialized_name));
+        // self.type_name = TypeId::new(Symbol::from(specialized_name));
+
         self.generics = vec![];
 
         // Recursively resolve the type of self now that we changed the
@@ -182,7 +185,7 @@ impl Instruction for TypeInstantiation {
 
 impl TypeCheck for TypeInstantiation {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        let dec = match ctx.get_custom_type(self.type_name.id()) {
+        let dec = match ctx.get_custom_type(&self.type_name) {
             Some(ty) => ty.clone(),
             None => {
                 ctx.error(
@@ -244,7 +247,7 @@ impl TypeCheck for TypeInstantiation {
 impl GenericUser for TypeInstantiation {
     fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
         log!(generics, "type name: {}", self.type_name);
-        let dec = match ctx.get_custom_type(self.type_name.id()) {
+        let dec = match ctx.get_custom_type(&self.type_name) {
             Some(t) => t,
             None => {
                 ctx.error(Error::new(ErrKind::Generics).with_msg(format!("trying to access undeclared type when resolving generic type instantiation: `{}`", self.type_name)).with_loc(self.location.clone()));
@@ -270,15 +273,14 @@ impl GenericUser for TypeInstantiation {
             .for_each(|arg| arg.resolve_usages(type_map, ctx));
 
         // FIXME: This is ugly as sin
-        if ctx.get_specialized_node(self.type_name.id()).is_none()
-            && self.type_name.id() != old_name
-        {
+        if ctx.get_specialized_type(&self.type_name).is_none() && self.type_name.id() != old_name {
             let demangled = generics::demangle(self.type_name.id());
 
             // FIXME: Can we unwrap here? Probably not
-            let generic_dec = ctx.get_custom_type(demangled).unwrap().clone();
-            let specialized_ty = generic_dec.generate(new_name, type_map, ctx);
-            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+            // FIXME: How do we access the original [`TypeDec`] here?
+            // let generic_dec = ctx.get_custom_type(demangled).unwrap().clone();
+            // let specialized_ty = generic_dec.generate(new_name, type_map, ctx);
+            // ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
         }
     }
 }
