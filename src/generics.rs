@@ -109,26 +109,6 @@ impl GenericList {
         self.0.as_ref()
     }
 
-    /// Flatten all nested generics into a single [`GenericList`]. This turns
-    /// the following:
-    ///
-    /// ```
-    /// [Id[Id[Tuple[Id[string], float]]]]
-    /// ```
-    /// into the following:
-    ///
-    /// ```
-    /// [Id, Id, Tuple, Id, string, float]
-    /// ```
-    pub fn flatten(&self) -> GenericList {
-        GenericList(
-            self.0
-                .iter()
-                .flat_map(|generic| generic.generics().flatten().into_iter())
-                .collect(),
-        )
-    }
-
     /// Get a mutable reference on the types contained in the [`GenericList`]
     pub fn data_mut(&mut self) -> &mut Vec<TypeId> {
         self.0.as_mut()

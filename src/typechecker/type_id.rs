@@ -160,6 +160,7 @@ impl TypeId {
     }
 
     // FIXME: Should this return a Result instead?
+    // FIXME: How do we get the declaration here? The original declaration?
     pub fn generate_typedec(&self, ctx: &mut TypeCtx) {
         self.generics()
             .data()
@@ -187,6 +188,9 @@ impl TypeId {
 
         let generics = self.generics();
         // FIXME: We need to resolve something here as well
+        // TODO: We can solve the issue if we figure out the proper
+        // way to get a Type[Spec0, Spec1] from a Type[T, U]! The generic base!
+
         // let specialized_name = generics::mangle(dec.name(), &generics);
         // if ctx.get_custom_type(&specialized_name).is_none() {
         //     // FIXME: Remove this clone once we have proper symbols
