@@ -16,6 +16,7 @@ enum Kind {
 #[derive(Clone)]
 pub struct VarOrEmptyType {
     kind: Kind,
+    // FIXME: Use a [`Symbol`] here
     symbol: String,
     // FIXME: We can probably avoid keeping a `cached_type` and a `kind`. Only one
     // is enough. Refactor later

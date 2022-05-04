@@ -3,13 +3,13 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericMap, GenericUser};
+use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
 use crate::instance::{Name, ObjectInstance};
 use crate::instruction::{InstrKind, Instruction, TypeDec, VarAssign};
 use crate::location::SpanTuple;
 use crate::log;
 use crate::symbol::Symbol;
-use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
+use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx, TypeId};
 
 use std::rc::Rc;
 
@@ -107,19 +107,20 @@ impl TypeInstantiation {
             }
         };
 
-        // FIXME: How do we resolve this? How do we create a new [`TypeId`] from
-        // the resolved generics?
-        // let specialized_name = generics::mangle(dec.id(), &self.generics);
-        // log!("specialized name {}", specialized_name);
-        // if ctx.get_custom_type(&specialized_name).is_none() {
-        //     // FIXME: Remove this clone once we have proper symbols
-        //     let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
+        let specialized_type_id = self.generics.iter().fold(
+            TypeId::new(Symbol::from(self.name().id())),
+            |type_id, generic| type_id.with_generic(generic.clone()),
+        );
 
-        //     ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
-        // }
+        if ctx.get_custom_type(&specialized_type_id).is_none() {
+            // FIXME: Remove this clone once we have proper symbols
+            // FIXME: id().id() is disgusting and makes no sense
+            let specialized_ty = dec.generate(dec.id().id().to_string(), &type_map, ctx);
 
-        // self.type_name = TypeId::new(Symbol::from(specialized_name));
+            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+        }
 
+        self.type_name = specialized_type_id;
         self.generics = vec![];
 
         // Recursively resolve the type of self now that we changed the
