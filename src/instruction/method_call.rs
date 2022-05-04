@@ -7,7 +7,6 @@ use crate::instance::ObjectInstance;
 use crate::instruction::FunctionCall;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone)]
@@ -45,16 +44,12 @@ impl Instruction for MethodCall {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("desugared method call enter: `{}`", &self.method.print());
-
         let mut call = self.method.clone();
 
         call.add_arg_front(self.var.clone());
         if let Some(loc) = &self.location {
             call.set_location(loc.clone())
         };
-
-        log!("desugared method call exit: `{}`", &self.method.print());
 
         call.execute(ctx)
     }
@@ -66,17 +61,12 @@ impl Instruction for MethodCall {
 
 impl TypeCheck for MethodCall {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        log!("typechecking method `{}`", self.method.name());
-        log!("desugaring method `{}`", self.print());
-
         let mut call = self.method.clone();
 
         call.add_arg_front(self.var.clone());
         if let Some(loc) = &self.location {
             call.set_location(loc.clone())
         };
-
-        log!("desugared method to `{}`", call.print());
 
         let res = call.type_of(ctx);
 

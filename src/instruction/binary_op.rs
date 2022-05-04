@@ -11,7 +11,6 @@ use crate::generics::GenericUser;
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::TypeCheck;
 use crate::typechecker::{CheckedType, TypeCtx, TypeId};
 use crate::value::{JkFloat, JkInt, Value};
@@ -92,8 +91,6 @@ impl Instruction for BinaryOp {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("binop enter: op: {}", self.op.as_str());
-
         let l_value = self.execute_node(&*self.lhs, ctx)?;
         let r_value = self.execute_node(&*self.rhs, ctx)?;
 
@@ -127,8 +124,6 @@ impl Instruction for BinaryOp {
                 "attempting binary operation with void type or unknown type AFTER typechecking"
             ),
         }
-
-        log!("BINOP EXIT");
 
         Some(return_value)
     }

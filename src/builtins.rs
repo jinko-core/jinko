@@ -9,7 +9,6 @@ use crate::ffi;
 use crate::generics;
 use crate::instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 use crate::instruction::Instruction;
-use crate::log;
 use crate::value::{JkBool, JkChar, JkFloat, JkInt, JkString};
 
 type Args = Vec<Box<dyn Instruction>>;
@@ -148,16 +147,12 @@ fn fmt_float(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
 fn size_of(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let instance = args[0].execute(ctx).unwrap();
 
-    log!("called size_of");
-
     Some(JkInt::from(instance.size() as i64).to_instance())
 }
 
 fn type_of(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let instance = args[0].execute(ctx).unwrap();
     let instance_ty = instance.ty().to_string();
-
-    log!("called type_of");
 
     Some(JkString::from(instance_ty).to_instance())
 }
@@ -195,8 +190,6 @@ impl Builtins {
         // We can demangle builtins to dispatch to our single, non generic
         // implementation.
         let name = generics::original_name(name);
-
-        log!("checking if builtin is present: {}", name);
 
         self.functions.contains_key(name)
     }

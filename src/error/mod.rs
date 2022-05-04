@@ -67,6 +67,7 @@ pub enum ErrKind {
     Generics,
     ExternFunc,
     IO,
+    Debug,
 }
 
 impl ErrKind {
@@ -79,6 +80,7 @@ impl ErrKind {
             ErrKind::Generics => "generics",
             ErrKind::IO => "i/o",
             ErrKind::ExternFunc => "external function",
+            ErrKind::Debug => "debug",
         }
     }
 }
@@ -151,6 +153,46 @@ impl Error {
         }
 
         self.hints.iter().skip(1).for_each(|hint| hint.emit_hint());
+    }
+
+    /// Emit a debug interpreter error - this is only useful for debugging the
+    /// interpreter itself
+    pub fn emit_debug(&self) {
+        let dbg = "debug".black().on_purple();
+
+        if let Some(loc) = &self.loc {
+            let (before_ctx, after_ctx) = loc.generate_context();
+
+            if let Some(msg) = &self.msg {
+                if let Some(path) = loc.path() {
+                    eprintln!(
+                        "{}: {}:{}:{}: {}",
+                        dbg,
+                        path.display().to_string().purple(),
+                        loc.start().line(),
+                        loc.start().column(),
+                        msg
+                    );
+                    eprintln!();
+                }
+            }
+
+            if let Some(ctx) = before_ctx {
+                ctx.emit('|', '_')
+            };
+            loc.emit(">".purple().bold(), "^".purple());
+            after_ctx.emit('|', '_');
+        } else if let Some(msg) = &self.msg {
+            eprintln!("{}: {}", dbg, msg)
+        }
+
+        if let Some(first_hint) = self.hints.first() {
+            first_hint.emit_hint();
+        }
+
+        self.hints.iter().skip(1).for_each(|hint| hint.emit_hint());
+
+        eprintln!();
     }
 
     pub fn new(kind: ErrKind) -> Error {

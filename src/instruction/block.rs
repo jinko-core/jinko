@@ -22,7 +22,6 @@ use crate::generics::{GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 #[derive(Clone, Default)]
@@ -110,7 +109,6 @@ impl Instruction for Block {
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
         ctx.scope_enter();
-        log!("block enter");
 
         let ret_val = self
             .instructions
@@ -119,7 +117,6 @@ impl Instruction for Block {
             .last();
 
         ctx.scope_exit();
-        log!("block exit");
 
         match self.is_statement {
             false => ret_val.flatten(),

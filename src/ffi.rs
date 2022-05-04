@@ -6,7 +6,6 @@ use crate::context::Context;
 use crate::error::{ErrKind, Error};
 use crate::instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 use crate::instruction::{FunctionCall, FunctionDec};
-use crate::log;
 use crate::value::{JkBool, JkFloat, JkInt, JkString};
 
 use libffi::high::{arg, call as ffi_call, Arg as FfiArg, CodePtr};
@@ -100,7 +99,6 @@ pub fn execute(
     call: &FunctionCall,
     ctx: &mut Context,
 ) -> Result<Option<ObjectInstance>, Error> {
-    log!("ext call: {}", call.name());
     let sym = call.name().as_bytes();
 
     let mut errors = vec![];
@@ -188,7 +186,6 @@ pub fn execute(
                     }
                     "string" => {
                         let raw_ptr = ffi_call::<*mut i8>(func, &args);
-                        log!("Pointer: {:p}", raw_ptr);
                         // FIXME: Do we really want to return an empty string if the ffi
                         // function returns NULL?
                         return if raw_ptr.is_null() {

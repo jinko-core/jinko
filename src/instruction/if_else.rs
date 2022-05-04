@@ -21,7 +21,6 @@ use crate::generics::{GenericMap, GenericUser};
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{Block, InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 use crate::value::JkBool;
 
@@ -72,15 +71,11 @@ impl Instruction for IfElse {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("if_else enter");
-
         let cond = self.condition.execute(ctx)?;
 
         if JkBool::from_instance(&cond).rust_value() {
-            log!("if enter");
             self.if_body.execute(ctx)
         } else {
-            log!("else enter");
             match &self.else_body {
                 Some(b) => b.execute(ctx),
                 // FIXME: Fix logic: If an `if` returns something, the else should too.

@@ -11,7 +11,6 @@ use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::parser::constructs;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
@@ -44,8 +43,6 @@ impl Incl {
     }
 
     fn fetch_instructions(&self, formatted: &Path) -> Result<Vec<Box<dyn Instruction>>, Error> {
-        log!("final path: {}", &format!("{:?}", formatted));
-
         let input = std::fs::read_to_string(&formatted)?;
 
         // We can't just parse the input, since it adds the instructions
@@ -151,8 +148,6 @@ impl Instruction for Incl {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("incl enter: {}", self.print().as_str());
-
         self.instructions.iter().for_each(|instr| {
             // FIXME: Rework prefixing
             // instr.prefix(&prefix);

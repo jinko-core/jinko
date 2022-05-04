@@ -143,7 +143,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
 fn main() -> anyhow::Result<()> {
     let args = Args::handle();
     if args.debug() {
-        jinko::log::enable();
+        jinko::debug::enable();
     }
 
     #[cfg(feature = "repl")]

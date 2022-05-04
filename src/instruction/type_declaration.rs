@@ -4,7 +4,6 @@ use crate::context::Context;
 use crate::generics::{GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -54,14 +53,10 @@ impl Instruction for TypeDec {
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("custom type enter: {}", self.name);
-
         if let Err(e) = ctx.add_type(self.clone()) {
             ctx.error(e);
             return None;
         }
-
-        log!("custom type enter: {}", self.name);
 
         // Declaring a type is always a statement (for now)
         None

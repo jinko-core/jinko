@@ -4,7 +4,6 @@ use crate::generics::GenericUser;
 use crate::instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::location::SpanTuple;
-use crate::log;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 use crate::value::{JkString, Value};
 
@@ -116,8 +115,6 @@ macro_rules! jk_primitive {
             }
 
             fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
-                log!("constant: {}", &self.0.to_string());
-
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
                 Some(self.to_instance())
@@ -248,8 +245,6 @@ macro_rules! jk_primitive {
             }
 
             fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
-                log!("constant: {}", &self.0.to_string());
-
                 // Since we cannot use the generic ToObjectInstance implementation, we also have to
                 // copy paste our four basic implementations for jinko's primitive types...
                 Some(self.to_instance())
@@ -350,8 +345,6 @@ impl Instruction for JkString {
     }
 
     fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
-        log!("constant: {}", &self.0.to_string());
-
         Some(self.to_instance())
     }
 
