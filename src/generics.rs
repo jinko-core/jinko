@@ -222,6 +222,7 @@ pub trait GenericUser {
 pub trait GenericExpander: Sized {
     /// Generate a new version of the instruction with the given typemap. The new version should
     /// not contain any generics.
+    // FIXME: We need to remove the `new_name` parameter for types?
     fn generate(&self, new_name: String, type_map: &GenericMap, ctx: &mut TypeCtx) -> Self;
 }
 

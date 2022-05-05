@@ -166,7 +166,7 @@ impl TypeId {
             .iter()
             .for_each(|g| g.generate_typedec(ctx));
 
-        let dec = match ctx.get_custom_type(self.id()) {
+        let dec = match ctx.get_custom_type(self) {
             Some(dec) => dec.clone(),
             None => {
                 ctx.error(Error::new(ErrKind::Generics).with_msg(format!(
@@ -186,16 +186,17 @@ impl TypeId {
         };
 
         let generics = self.generics();
-        let specialized_name = generics::mangle(dec.name(), &generics);
-        if ctx.get_custom_type(&specialized_name).is_none() {
-            // FIXME: Remove this clone once we have proper symbols
-            let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
+        // FIXME: We need to resolve something here as well
+        // let specialized_name = generics::mangle(dec.name(), &generics);
+        // if ctx.get_custom_type(&specialized_name).is_none() {
+        //     // FIXME: Remove this clone once we have proper symbols
+        //     let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
 
-            eprintln!("GENERATED: {:#?}", &specialized_ty.name());
-            eprintln!("{:#?}", &specialized_ty.generics());
+        //     eprintln!("GENERATED: {:#?}", &specialized_ty.name());
+        //     eprintln!("{:#?}", &specialized_ty.generics());
 
-            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
-        }
+        //     ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+        // }
     }
 }
 
@@ -209,54 +210,6 @@ impl GenericUser for TypeId {
             let (TypeId::Type { generics, .. } | TypeId::Functor { generics, .. }) = self;
             *generics = GenericList::empty();
         }
-
-        // log!(generics, "resolving type id `{}`", self);
-
-        // let old_generics = self.generics().clone();
-
-        // let generics = match self {
-        //     TypeId::Type { generics, .. } => generics,
-        //     TypeId::Functor { generics, .. } => generics,
-        // };
-
-        // // FIXME: Split generics in two using .partition(): Keep some in a new
-        // // generic list, and resolve some others to the type's name
-
-        // // FIXME: What we need to do then is to go and visit all our newtype's generics
-        // // and resolve them
-
-        // *generics = GenericList::empty();
-
-        // if let Ok(new_id) = type_map.get_specialized(self) {
-        //     self.set_id(Symbol::from(String::from(new_id.id())));
-        // }
-
-        // if let TypeId::Type { id, .. } = self {
-        //     let new_name = generics::mangle(id.access(), &old_generics);
-        //     log!(rare, "resolved name {}", new_name);
-        //     log!(rare, "old generics {:#?}", old_generics);
-
-        //     // If the type does not exist yet, then we must create it and add it to the specialized
-        //     // nodes
-        //     let type_dec = ctx.get_custom_type(&new_name);
-        //     if type_dec.is_none() {
-        //         let new_dec = match ctx.get_custom_type(id.access()) {
-        //             Some(t) => t.clone(),
-        //             None => {
-        //                 ctx.error(
-        //                     Error::new(ErrKind::Generics)
-        //                         // FIXME: How do we get the location here?
-        //                         .with_msg(format!("undeclared generic type `{}`", self)),
-        //                 );
-        //                 return;
-        //             }
-        //         };
-        //         let new_dec = new_dec.generate(new_name.clone(), type_map, ctx);
-        //         ctx.add_specialized_node(SpecializedNode::Type(new_dec));
-        //     }
-
-        //     *id = Symbol::from(new_name);
-        // }
     }
 }
 
@@ -269,9 +222,10 @@ impl From<&str> for TypeId {
     }
 }
 
+// FIXME: Can we remove this?
 impl From<&TypeDec> for TypeId {
     fn from(td: &TypeDec) -> Self {
-        TypeId::from(td.name())
+        td.id().clone()
     }
 }
 

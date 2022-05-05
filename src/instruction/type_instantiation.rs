@@ -107,15 +107,20 @@ impl TypeInstantiation {
             .iter()
             .for_each(|g| g.generate_typedec(ctx));
 
-        let specialized_name = generics::mangle(dec.name(), &self.generics);
-        if ctx.get_custom_type(&specialized_name).is_none() {
+        let specialized_type_id = self.generics.data().iter().fold(
+            TypeId::new(Symbol::from(self.name().id())),
+            |type_id, generic| type_id.with_generic(generic.clone()),
+        );
+
+        if ctx.get_custom_type(&specialized_type_id).is_none() {
             // FIXME: Remove this clone once we have proper symbols
-            let specialized_ty = dec.generate(specialized_name.clone(), &type_map, ctx);
+            // FIXME: id().id() is disgusting and makes no sense
+            let specialized_ty = dec.generate(dec.id().id().to_string(), &type_map, ctx);
 
             ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
         }
 
-        self.type_name = TypeId::new(Symbol::from(specialized_name));
+        self.type_name = specialized_type_id;
         self.generics = GenericList::empty();
 
         // Recursively resolve the type of self now that we changed the
@@ -181,7 +186,7 @@ impl Instruction for TypeInstantiation {
 
 impl TypeCheck for TypeInstantiation {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        let dec = match ctx.get_custom_type(self.type_name.id()) {
+        let dec = match ctx.get_custom_type(&self.type_name) {
             Some(ty) => ty.clone(),
             None => {
                 ctx.error(
@@ -241,7 +246,7 @@ impl TypeCheck for TypeInstantiation {
 
 impl GenericUser for TypeInstantiation {
     fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        let dec = match ctx.get_custom_type(self.type_name.id()) {
+        let dec = match ctx.get_custom_type(&self.type_name) {
             Some(t) => t,
             None => {
                 ctx.error(Error::new(ErrKind::Generics).with_msg(format!("trying to access undeclared type when resolving generic type instantiation: `{}`", self.type_name)).with_loc(self.location.clone()));
@@ -267,15 +272,14 @@ impl GenericUser for TypeInstantiation {
             .for_each(|arg| arg.resolve_usages(type_map, ctx));
 
         // FIXME: This is ugly as sin
-        if ctx.get_specialized_node(self.type_name.id()).is_none()
-            && self.type_name.id() != old_name
-        {
+        if ctx.get_specialized_type(&self.type_name).is_none() && self.type_name.id() != old_name {
             let demangled = generics::demangle(self.type_name.id());
 
             // FIXME: Can we unwrap here? Probably not
-            let generic_dec = ctx.get_custom_type(demangled).unwrap().clone();
-            let specialized_ty = generic_dec.generate(new_name, type_map, ctx);
-            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
+            // FIXME: How do we access the original [`TypeDec`] here?
+            // let generic_dec = ctx.get_custom_type(demangled).unwrap().clone();
+            // let specialized_ty = generic_dec.generate(new_name, type_map, ctx);
+            // ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
         }
     }
 }
@@ -298,7 +302,7 @@ mod test {
             DecArg::new("a".to_owned(), TypeId::from("int")),
             DecArg::new("b".to_owned(), TypeId::from("int")),
         ];
-        let t = TypeDec::new("Type_Test".to_owned(), GenericList::empty(), fields);
+        let t = TypeDec::new(TypeId::new(Symbol::from("Type_Test")), fields);
 
         t.execute(&mut ctx);
 
@@ -352,7 +356,7 @@ mod test {
             DecArg::new("a".to_owned(), TypeId::from("string")),
             DecArg::new("b".to_owned(), TypeId::from("int")),
         ];
-        let t = TypeDec::new(TYPE_NAME.to_owned(), GenericList::empty(), fields);
+        let t = TypeDec::new(TypeId::new(Symbol::from(TYPE_NAME)), fields);
 
         t.execute(&mut ctx);
 

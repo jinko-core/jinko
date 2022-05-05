@@ -20,3 +20,9 @@ impl From<String> for Symbol {
         Symbol(inner)
     }
 }
+
+impl From<&str> for Symbol {
+    fn from(inner: &str) -> Self {
+        Symbol(inner.to_string())
+    }
+}

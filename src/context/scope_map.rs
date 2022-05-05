@@ -11,6 +11,7 @@ use std::{
 };
 
 use crate::error::{ErrKind, Error};
+use crate::typechecker::TypeId;
 
 /// A scope contains a set of available variables, functions and types.
 // FIXME: Shoud we split this in two? Between this and an ExecutionScope type?
@@ -31,8 +32,82 @@ pub struct Scope<V, F, T> {
     /// Types are identified by their [`TypeId`]. There is no way to differentiate
     /// between a generic [`TypeId`] and a specialized one, so you must be careful
     /// when appending types to the map.
-    pub(crate) generic_types: HashMap<String, T>,
-    pub(crate) types: HashMap<String, T>,
+    pub(crate) generic_types: HashMap<TypeId, T>,
+    pub(crate) types: HashMap<TypeId, T>,
+}
+
+impl<V, F, T> Scope<V, F, T> {
+    /// Get a reference on a variable from the scope map if is has been inserted already
+    pub fn get_variable(&self, name: &str) -> Option<&V> {
+        self.variables.get(name)
+    }
+
+    /// Get a mutable reference on a variable from the scope map if it has been inserted already
+    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut V> {
+        self.variables.get_mut(name)
+    }
+
+    /// Get a reference on a function from the scope map if is has been inserted already
+    pub fn get_function(&self, name: &str) -> Option<&F> {
+        self.functions.get(name)
+    }
+
+    /// Get a reference on a type from the scope map if is has been inserted already
+    pub fn get_type(&self, id: &TypeId) -> Option<&T> {
+        self.types.get(id)
+    }
+
+    /// Add a variable to the most recently created scope, if it doesn't already exist
+    pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
+        match self.get_variable(&name) {
+            Some(_) => Err(Error::new(ErrKind::Context)
+                .with_msg(format!("variable already declared: {}", name))),
+            None => {
+                self.variables.insert(name, var);
+                Ok(())
+            }
+        }
+    }
+
+    /// Remove a variable from the most recently created scope, if it exists
+    pub fn remove_variable(&mut self, name: &str) -> Result<(), Error> {
+        match self.get_variable(name) {
+            Some(_) => {
+                self.variables.remove(name).unwrap();
+                Ok(())
+            }
+            None => {
+                Err(Error::new(ErrKind::Context)
+                    .with_msg(format!("variable does not exist: {}", name)))
+            }
+        }
+    }
+
+    /// Add a variable to the most recently created scope, if it doesn't already exist
+    pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
+        match self.get_function(&name) {
+            Some(_) => Err(Error::new(ErrKind::Context)
+                .with_msg(format!("function already declared: {}", name))),
+            None => {
+                self.functions.insert(name, func);
+                Ok(())
+            }
+        }
+    }
+
+    /// Add a type to the most recently created scope, if it doesn't already exist
+    pub fn add_type(&mut self, id: TypeId, type_dec: T) -> Result<(), Error> {
+        match self.get_type(&id) {
+            Some(_) => {
+                Err(Error::new(ErrKind::Context)
+                    .with_msg(format!("type already declared: `{}`", id)))
+            }
+            None => {
+                self.types.insert(id, type_dec);
+                Ok(())
+            }
+        }
+    }
 }
 
 impl<V, F, T> Default for Scope<V, F, T> {
@@ -145,12 +220,12 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Maybe get a type in any available scopes
-    pub fn get_type(&self, name: &str) -> Option<&T> {
+    pub fn get_type(&self, name: &TypeId) -> Option<&T> {
         self.get(name, |scope| &scope.types)
     }
 
     /// Maybe get a generic type in any available scopes
-    pub fn get_generic_type(&self, name: &str) -> Option<&T> {
+    pub fn get_generic_type(&self, name: &TypeId) -> Option<&T> {
         self.get(name, |scope| &scope.generic_types)
     }
 
@@ -170,12 +245,12 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Add a type to the current scope if it hasn't been added before
-    pub fn add_type(&mut self, name: String, custom_type: T) -> Result<(), Error> {
+    pub fn add_type(&mut self, name: TypeId, custom_type: T) -> Result<(), Error> {
         self.insert_unique(name, custom_type, |scope| &mut scope.types)
     }
 
     /// Add a generic type to the current scope if it hasn't been added before
-    pub fn add_generic_type(&mut self, name: String, custom_type: T) -> Result<(), Error> {
+    pub fn add_generic_type(&mut self, name: TypeId, custom_type: T) -> Result<(), Error> {
         self.insert_unique(name, custom_type, |scope| &mut scope.generic_types)
     }
 }

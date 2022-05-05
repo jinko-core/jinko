@@ -16,6 +16,7 @@ enum Kind {
 #[derive(Clone)]
 pub struct VarOrEmptyType {
     kind: Kind,
+    // FIXME: Use a [`Symbol`] here
     symbol: String,
     // FIXME: We can probably avoid keeping a `cached_type` and a `kind`. Only one
     // is enough. Refactor later
@@ -34,7 +35,7 @@ impl VarOrEmptyType {
     }
 
     fn resolve_kind(&self, ctx: &mut TypeCtx) -> Kind {
-        let resolved = ctx.get_custom_type(&self.symbol);
+        let resolved = ctx.get_custom_type(&TypeId::new(Symbol::from(self.symbol.as_str())));
         if resolved.is_some() {
             return Kind::EmptyTypeInst;
         }

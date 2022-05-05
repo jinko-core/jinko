@@ -4,12 +4,12 @@ use crate::context::Context;
 use crate::generics::{GenericExpander, GenericList, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::location::SpanTuple;
-use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
+use crate::symbol::Symbol;
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDec {
-    name: String,
-    generics: GenericList,
+    id: TypeId,
     fields: Vec<DecArg>,
     typechecked: bool,
     location: Option<SpanTuple>,
@@ -17,10 +17,9 @@ pub struct TypeDec {
 
 impl TypeDec {
     /// Create a new type
-    pub fn new(name: String, generics: GenericList, fields: Vec<DecArg>) -> TypeDec {
+    pub fn new(id: TypeId, fields: Vec<DecArg>) -> TypeDec {
         TypeDec {
-            name,
-            generics,
+            id,
             fields,
             typechecked: false,
             location: None,
@@ -28,8 +27,8 @@ impl TypeDec {
     }
 
     /// Get a reference to the name of the type
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn id(&self) -> &TypeId {
+        &self.id
     }
 
     /// Get a reference to the type's fields
@@ -39,7 +38,7 @@ impl TypeDec {
 
     /// Get a reference to the type's generics
     pub fn generics(&self) -> &GenericList {
-        &self.generics
+        &self.id.generics()
     }
 
     pub fn set_location(&mut self, location: SpanTuple) {
@@ -64,15 +63,19 @@ impl Instruction for TypeDec {
 
     // FIXME: Really unefficient
     fn print(&self) -> String {
-        let mut base = format!("type {}", self.name);
+        let mut base = format!("type {}", self.id);
 
-        let generics = self.generics.data();
-        if !generics.is_empty() {
+        if !self.generics().is_empty() {
             base.push('[');
-            base.push_str(generics.first().unwrap().id());
-            let generic_str = generics.iter().skip(1).fold(String::new(), |acc, ty_id| {
-                format!("{}, {}", acc, ty_id.id())
-            });
+            base.push_str(self.generics().data().first().unwrap().id());
+            let generic_str = self
+                .generics()
+                .data()
+                .iter()
+                .skip(1)
+                .fold(String::new(), |acc, ty_id| {
+                    format!("{}, {}", acc, ty_id.id())
+                });
             base.push_str(&generic_str);
             base.push(']');
         }
@@ -99,7 +102,7 @@ impl Instruction for TypeDec {
 
 impl TypeCheck for TypeDec {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
-        if let Err(e) = ctx.declare_custom_type(self.name.clone(), self.clone()) {
+        if let Err(e) = ctx.declare_custom_type(self.id.clone(), self.clone()) {
             ctx.error(e);
         }
 
@@ -121,7 +124,7 @@ impl TypeCheck for TypeDec {
 impl GenericUser for TypeDec {
     fn resolve_usages(&mut self, _type_map: &GenericMap, ctx: &mut TypeCtx) {
         // FIXME: Can we do without that?
-        if let Err(e) = ctx.declare_custom_type(self.name().to_string(), self.clone()) {
+        if let Err(e) = ctx.declare_custom_type(self.id().clone(), self.clone()) {
             ctx.error(e);
         };
     }
@@ -130,8 +133,8 @@ impl GenericUser for TypeDec {
 impl GenericExpander for TypeDec {
     fn generate(&self, mangled_name: String, type_map: &GenericMap, ctx: &mut TypeCtx) -> TypeDec {
         let mut new_type = self.clone();
-        new_type.name = mangled_name;
-        new_type.generics = GenericList::empty();
+        // FIXME: Can we remove this?
+        new_type.id = TypeId::new(Symbol::from(mangled_name));
         new_type.typechecked = false;
 
         new_type
@@ -158,8 +161,7 @@ impl From<&String> for TypeDec {
 impl From<String> for TypeDec {
     fn from(type_name: String) -> TypeDec {
         TypeDec {
-            name: type_name,
-            generics: GenericList::empty(),
+            id: TypeId::new(Symbol::from(type_name)),
             fields: vec![],
             typechecked: false,
             location: None,
@@ -167,9 +169,10 @@ impl From<String> for TypeDec {
     }
 }
 
+// FIXME: Can we improve that, and is it really used?
 impl std::fmt::Display for TypeDec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
+        write!(f, "{}", self.id)
     }
 }
 

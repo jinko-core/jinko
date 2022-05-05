@@ -83,8 +83,8 @@ impl Instruction for FieldAccess {
 impl TypeCheck for FieldAccess {
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
         let instance_ty = self.instance.type_of(ctx);
-        let instance_ty_name = match &instance_ty {
-            CheckedType::Resolved(ti) => ti.id(),
+        let instance_ty = match &instance_ty {
+            CheckedType::Resolved(ty) => ty,
             CheckedType::Void => {
                 ctx.error(
                     Error::new(ErrKind::TypeChecker)
@@ -101,7 +101,7 @@ impl TypeCheck for FieldAccess {
 
         // We can unwrap here since the type that was resolved from the instance HAS
         // to exist. If it does not, this is an interpreter error
-        let dec = ctx.get_custom_type(instance_ty_name).unwrap();
+        let dec = ctx.get_custom_type(instance_ty).unwrap();
 
         match dec
             .fields()

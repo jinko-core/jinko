@@ -9,6 +9,7 @@ use crate::context::ScopeMap;
 use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::generics::GenericList;
 use crate::instruction::{FunctionDec, Instruction, TypeDec};
+use crate::symbol::Symbol;
 
 use colored::Colorize;
 
@@ -94,17 +95,11 @@ impl TypeCtx {
         };
 
         macro_rules! declare_primitive {
-            ($ty_name:ident) => {
-                ctx.declare_custom_type(
-                    String::from(stringify!($ty_name)),
-                    TypeDec::new(
-                        stringify!($ty_name).to_string(),
-                        GenericList::empty(),
-                        vec![],
-                    ),
-                )
-                .unwrap();
-            };
+            ($ty_name:ident) => {{
+                let id = TypeId::new(Symbol::from(stringify!($ty_name)));
+                ctx.declare_custom_type(id.clone(), TypeDec::new(id, vec![]))
+                    .unwrap();
+            }};
         }
 
         ctx.scope_enter();
@@ -199,15 +194,19 @@ impl TypeCtx {
         self.generated.push(node)
     }
 
-    /// Get a reference to a newly generated node
-    pub fn get_specialized_node(&mut self, name: &str) -> Option<&SpecializedNode> {
-        self.generated.iter().find(|node| {
-            let node_name = match node {
-                SpecializedNode::Func(f) => f.name(),
-                SpecializedNode::Type(t) => t.name(),
-            };
+    /// Get a reference to a newly generated function node
+    pub fn get_specialized_function(&mut self, name: &str) -> Option<&SpecializedNode> {
+        self.generated.iter().find(|node| match node {
+            SpecializedNode::Func(f) => f.name() == name,
+            _ => false,
+        })
+    }
 
-            node_name == name
+    /// Get a reference to a newly generated type node
+    pub fn get_specialized_type(&mut self, id: &TypeId) -> Option<&SpecializedNode> {
+        self.generated.iter().find(|node| match node {
+            SpecializedNode::Type(t) => t.id() == id,
+            _ => false,
         })
     }
 
@@ -219,14 +218,14 @@ impl TypeCtx {
     }
 
     /// Declare a newly-created custom type
-    pub fn declare_custom_type(&mut self, name: String, dec: TypeDec) -> Result<(), Error> {
-        self.types.add_type(name, dec)
+    pub fn declare_custom_type(&mut self, id: TypeId, dec: TypeDec) -> Result<(), Error> {
+        self.types.add_type(id, dec)
         // FIXME: Add hint here too
     }
 
     /// Declare a newly-created generic custom type
-    pub fn declare_generic_custom_type(&mut self, name: String, dec: TypeDec) -> Result<(), Error> {
-        self.types.add_generic_type(name, dec)
+    pub fn declare_generic_custom_type(&mut self, id: TypeId, dec: TypeDec) -> Result<(), Error> {
+        self.types.add_generic_type(id, dec)
         // FIXME: Add hint here too
     }
 
@@ -246,13 +245,13 @@ impl TypeCtx {
     }
 
     /// Access a previously declared custom type
-    pub fn get_custom_type(&mut self, name: &str) -> Option<&TypeDec> {
-        self.types.get_type(name)
+    pub fn get_custom_type(&mut self, id: &TypeId) -> Option<&TypeDec> {
+        self.types.get_type(id)
     }
 
     /// Access a previously declared generic custom type
-    pub fn get_generic_custom_type(&mut self, name: &str) -> Option<&TypeDec> {
-        self.types.get_generic_type(name)
+    pub fn get_generic_custom_type(&mut self, id: &TypeId) -> Option<&TypeDec> {
+        self.types.get_generic_type(id)
     }
 
     /// Create a new error to propagate to the original context
