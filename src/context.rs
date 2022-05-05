@@ -34,43 +34,32 @@ const ENTRY_NAME: &str = "__entry";
 /// variables, tests... and can be optimized, typechecked, executed or
 /// serialized/deserialized to bytecode.
 pub struct Context {
-    /// Is the context in debugging mode or not
-    pub debug_mode: bool,
-
-    /// Source code currently being interpreted by the context
-    pub code: Option<String>,
-
-    /// Entry point to the context, the "main" function
-    pub entry_point: FunctionDec,
-
     /// A context corresponds to a single source file (that might include other files)
     /// We need to keep track of its path in order to load files relative to this one
     path: Option<PathBuf>,
-
     /// Arguments given to the jinko program
     args: Vec<String>,
-
-    /// Contains the scopes of the context, in which are variables and functions
-    scope_map: ScopeMap<Var, Rc<FunctionDec>, Rc<TypeDec>>,
-
     /// Contains the functions shipping with the interpreter
     builtins: Builtins,
-
     /// Tests registered in the context
     tests: HashMap<CtxKey, FunctionDec>,
-
     /// Sources included by the context
     included: HashSet<PathBuf>,
-
     /// External libraries to use via FFI
     #[cfg(feature = "ffi")]
     external_libs: Vec<libloading::Library>,
-
-    /// Errors being kept by the context
-    pub error_handler: ErrorHandler,
-
+    /// Contains the scopes of the context, in which are variables and functions
+    pub(crate) scope_map: ScopeMap<Var, Rc<FunctionDec>, Rc<TypeDec>>,
     /// Various passes ran by the context
     pub(crate) typechecker: TypeCtx,
+    /// Is the context in debugging mode or not
+    pub debug_mode: bool,
+    /// Source code currently being interpreted by the context
+    pub code: Option<String>,
+    /// Entry point to the context, the "main" function
+    pub entry_point: FunctionDec,
+    /// Errors being kept by the context
+    pub error_handler: ErrorHandler,
 }
 
 impl Default for Context {
@@ -92,19 +81,19 @@ impl Context {
     /// Create a new empty context without the standard library
     pub fn new() -> Context {
         let mut ctx = Context {
-            debug_mode: false,
-            code: None,
-            entry_point: Self::new_entry(),
             path: None,
             args: Vec::new(),
-            scope_map: ScopeMap::new(),
             builtins: Builtins::new(),
             tests: HashMap::new(),
             included: HashSet::new(),
             #[cfg(feature = "ffi")]
             external_libs: Vec::new(),
-            error_handler: ErrorHandler::default(),
+            scope_map: ScopeMap::new(),
             typechecker: TypeCtx::new(),
+            debug_mode: false,
+            code: None,
+            entry_point: Self::new_entry(),
+            error_handler: ErrorHandler::default(),
         };
 
         ctx.scope_enter();
