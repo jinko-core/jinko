@@ -4,90 +4,35 @@
 //! scope. If the specified name cannot be found, it searches the other scopes, defined
 //! before the current one, until it finds the correct component.
 
-use std::collections::{HashMap, LinkedList};
+use std::{
+    borrow::Borrow,
+    collections::{HashMap, LinkedList},
+    hash::Hash,
+};
 
 use crate::error::{ErrKind, Error};
 
-/// A scope contains a set of available variables, functions and types
+/// A scope contains a set of available variables, functions and types.
+// FIXME: Shoud we split this in two? Between this and an ExecutionScope type?
 #[derive(Clone)]
 pub struct Scope<V, F, T> {
+    /// Variables cannot be generic: They always have a concrete well defined
+    /// type.
     pub(crate) variables: HashMap<String, V>,
+    /// There are two types of functions: "base", generic functions, which can
+    /// be duplicated and specialized into multiple versions, and "final" functions
+    /// which are already specialized (or do not contain generics in the first place).
+    /// Specialized functions should be referenced by their mangled names. If they
+    /// do not contain generics, then they will simply be referenced by their
+    /// names.
+    pub(crate) generic_functions: HashMap<String, F>,
     pub(crate) functions: HashMap<String, F>,
+    /// Similarly, there are two types of types: generic types and specialized types, which are final.
+    /// Types are identified by their [`TypeId`]. There is no way to differentiate
+    /// between a generic [`TypeId`] and a specialized one, so you must be careful
+    /// when appending types to the map.
+    pub(crate) generic_types: HashMap<String, T>,
     pub(crate) types: HashMap<String, T>,
-}
-
-impl<V, F, T> Scope<V, F, T> {
-    /// Get a reference on a variable from the scope map if is has been inserted already
-    pub fn get_variable(&self, name: &str) -> Option<&V> {
-        self.variables.get(name)
-    }
-
-    /// Get a mutable reference on a variable from the scope map if it has been inserted already
-    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut V> {
-        self.variables.get_mut(name)
-    }
-
-    /// Get a reference on a function from the scope map if is has been inserted already
-    pub fn get_function(&self, name: &str) -> Option<&F> {
-        self.functions.get(name)
-    }
-
-    /// Get a reference on a type from the scope map if is has been inserted already
-    pub fn get_type(&self, name: &str) -> Option<&T> {
-        self.types.get(name)
-    }
-
-    /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
-        match self.get_variable(&name) {
-            Some(_) => Err(Error::new(ErrKind::Context)
-                .with_msg(format!("variable already declared: {}", name))),
-            None => {
-                self.variables.insert(name, var);
-                Ok(())
-            }
-        }
-    }
-
-    /// Remove a variable from the most recently created scope, if it exists
-    pub fn remove_variable(&mut self, name: &str) -> Result<(), Error> {
-        match self.get_variable(name) {
-            Some(_) => {
-                self.variables.remove(name).unwrap();
-                Ok(())
-            }
-            None => {
-                Err(Error::new(ErrKind::Context)
-                    .with_msg(format!("variable does not exist: {}", name)))
-            }
-        }
-    }
-
-    /// Add a variable to the most recently created scope, if it doesn't already exist
-    pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
-        match self.get_function(&name) {
-            Some(_) => Err(Error::new(ErrKind::Context)
-                .with_msg(format!("function already declared: {}", name))),
-            None => {
-                self.functions.insert(name, func);
-                Ok(())
-            }
-        }
-    }
-
-    /// Add a type to the most recently created scope, if it doesn't already exist
-    pub fn add_type(&mut self, name: String, type_dec: T) -> Result<(), Error> {
-        match self.get_type(&name) {
-            Some(_) => {
-                Err(Error::new(ErrKind::Context)
-                    .with_msg(format!("type already declared: {}", name)))
-            }
-            None => {
-                self.types.insert(name, type_dec);
-                Ok(())
-            }
-        }
-    }
 }
 
 impl<V, F, T> Default for Scope<V, F, T> {
@@ -95,7 +40,9 @@ impl<V, F, T> Default for Scope<V, F, T> {
     fn default() -> Scope<V, F, T> {
         Scope {
             variables: HashMap::new(),
+            generic_functions: HashMap::new(),
             functions: HashMap::new(),
+            generic_types: HashMap::new(),
             types: HashMap::new(),
         }
     }
@@ -136,90 +83,100 @@ impl<V, F, T> ScopeMap<V, F, T> {
         self.scopes.pop_front().unwrap();
     }
 
-    /// Maybe get a variable in any available scopes
-    pub fn get_variable(&self, name: &str) -> Option<&V> {
-        // FIXME: Use find for code quality?
-        for scope in self.scopes.iter() {
-            match scope.get_variable(name) {
-                Some(v) => return Some(v),
-                None => continue,
-            };
-        }
-
-        None
+    fn get<'map, K, Q, U>(
+        &'map self,
+        key: &Q,
+        map_extractor: impl Fn(&Scope<V, F, T>) -> &HashMap<K, U>,
+    ) -> Option<&U>
+    where
+        K: Borrow<Q> + Hash + Eq + 'map,
+        Q: Hash + Eq + ?Sized,
+    {
+        self.scopes()
+            .iter()
+            .map(|scope| map_extractor(scope).get(key))
+            .find(|var| var.is_some())?
     }
 
-    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut V> {
-        for scope in self.scopes.iter_mut() {
-            match scope.get_variable_mut(name) {
-                Some(v) => return Some(v),
-                None => continue,
-            };
-        }
+    fn insert_unique<K, U>(
+        &mut self,
+        key: K,
+        value: U,
+        map_extractor: impl Fn(&mut Scope<V, F, T>) -> &mut HashMap<K, U>,
+    ) -> Result<(), Error>
+    where
+        K: Hash + Eq,
+    {
+        // If there is no front scope, this is an error in the interpreter's
+        // logic
+        let top = self.scopes.front_mut().unwrap();
+        let map = map_extractor(top);
 
-        None
+        match map.get(&key) {
+            Some(_) => Err(Error::new(ErrKind::Context)),
+            None => {
+                map.insert(key, value);
+                Ok(())
+            }
+        }
+    }
+
+    /// Maybe get a variable in any available scopes
+    pub fn get_variable(&self, name: &str) -> Option<&V> {
+        self.get(name, |scope| &scope.variables)
+    }
+
+    /// Maybe get a mutable reference to a variable in any available scopes
+    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut V> {
+        self.scopes
+            .iter_mut()
+            .map(|scope| scope.variables.get_mut(name))
+            .find(|var| var.is_some())?
     }
 
     /// Maybe get a function in any available scopes
     pub fn get_function(&self, name: &str) -> Option<&F> {
-        // FIXME: Use find for code quality?
-        for scope in self.scopes.iter() {
-            match scope.get_function(name) {
-                Some(v) => return Some(v),
-                None => continue,
-            };
-        }
+        self.get(name, |scope| &scope.functions)
+    }
 
-        None
+    /// Maybe get a generic function in any available scopes
+    pub fn get_generic_function(&self, name: &str) -> Option<&F> {
+        self.get(name, |scope| &scope.generic_functions)
     }
 
     /// Maybe get a type in any available scopes
     pub fn get_type(&self, name: &str) -> Option<&T> {
-        // FIXME: Use find for code quality?
-        for scope in self.scopes.iter() {
-            match scope.get_type(name) {
-                Some(v) => return Some(v),
-                None => continue,
-            };
-        }
+        self.get(name, |scope| &scope.types)
+    }
 
-        None
+    /// Maybe get a generic type in any available scopes
+    pub fn get_generic_type(&self, name: &str) -> Option<&T> {
+        self.get(name, |scope| &scope.generic_types)
     }
 
     /// Add a variable to the current scope if it hasn't been added before
     pub fn add_variable(&mut self, name: String, var: V) -> Result<(), Error> {
-        match self.scopes.front_mut() {
-            Some(head) => head.add_variable(name, var),
-            None => Err(Error::new(ErrKind::Context)
-                .with_msg(String::from("Adding variable to empty scopemap"))),
-        }
-    }
-
-    /// Remove a variable from the current scope if it hasn't been added before
-    pub fn remove_variable(&mut self, name: &str) -> Result<(), Error> {
-        match self.scopes.front_mut() {
-            Some(head) => head.remove_variable(name),
-            None => Err(Error::new(ErrKind::Context)
-                .with_msg(String::from("Removing variable from empty scopemap"))),
-        }
+        self.insert_unique(name, var, |scope| &mut scope.variables)
     }
 
     /// Add a function to the current scope if it hasn't been added before
     pub fn add_function(&mut self, name: String, func: F) -> Result<(), Error> {
-        match self.scopes.front_mut() {
-            Some(head) => head.add_function(name, func),
-            None => Err(Error::new(ErrKind::Context)
-                .with_msg(String::from("Adding function to empty scopemap"))),
-        }
+        self.insert_unique(name, func, |scope| &mut scope.functions)
+    }
+
+    /// Add a generic function to the current scope if it hasn't been added before
+    pub fn add_generic_function(&mut self, name: String, func: F) -> Result<(), Error> {
+        self.insert_unique(name, func, |scope| &mut scope.generic_functions)
     }
 
     /// Add a type to the current scope if it hasn't been added before
     pub fn add_type(&mut self, name: String, custom_type: T) -> Result<(), Error> {
-        match self.scopes.front_mut() {
-            Some(head) => head.add_type(name, custom_type),
-            None => Err(Error::new(ErrKind::Context)
-                .with_msg(String::from("Adding new custom type to empty scopemap"))),
-        }
+        self.insert_unique(name, custom_type, |scope| &mut scope.types)
+    }
+
+    /// Add a generic type to the current scope if it hasn't been added before
+    pub fn add_generic_type(&mut self, name: String, custom_type: T) -> Result<(), Error> {
+        self.insert_unique(name, custom_type, |scope| &mut scope.generic_types)
     }
 }
 

@@ -146,7 +146,7 @@ impl TypeCtx {
         self.types.add_variable(name, ty)
     }
 
-    /// Declare a newly-created function's type
+    /// Declare a newly-created function
     pub fn declare_function(&mut self, name: String, function: FunctionDec) -> Result<(), Error> {
         // FIXME: Remove clones here
         let loc = function.location().cloned();
@@ -157,6 +157,27 @@ impl TypeCtx {
                 Err(err.with_loc(loc).with_hint(
                     Error::new(ErrKind::Hint)
                         .with_msg(String::from("previous declaration here"))
+                        .with_loc(previous_dec.loc()),
+                ))
+            }
+        }
+    }
+
+    /// Declare a newly-created generic function
+    pub fn declare_generic_function(
+        &mut self,
+        name: String,
+        function: FunctionDec,
+    ) -> Result<(), Error> {
+        // FIXME: Remove clones here
+        let loc = function.location().cloned();
+        match self.types.add_function(name.clone(), function) {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                let previous_dec = self.types.get_generic_function(&name).unwrap();
+                Err(err.with_loc(loc).with_hint(
+                    Error::new(ErrKind::Hint)
+                        .with_msg(String::from("previous generic declaration here"))
                         .with_loc(previous_dec.loc()),
                 ))
             }
@@ -198,19 +219,35 @@ impl TypeCtx {
         // FIXME: Add hint here too
     }
 
+    /// Declare a newly-created generic custom type
+    pub fn declare_generic_custom_type(&mut self, name: String, dec: TypeDec) -> Result<(), Error> {
+        self.types.add_generic_type(name, dec)
+        // FIXME: Add hint here too
+    }
+
     /// Access a previously declared variable's type
     pub fn get_var(&mut self, name: &str) -> Option<&CheckedType> {
         self.types.get_variable(name)
     }
 
-    /// Access a previously declared function's type
+    /// Access a previously declared function
     pub fn get_function(&mut self, name: &str) -> Option<&FunctionDec> {
         self.types.get_function(name)
+    }
+
+    /// Access a previously declared generic function
+    pub fn get_generic_function(&mut self, name: &str) -> Option<&FunctionDec> {
+        self.types.get_generic_function(name)
     }
 
     /// Access a previously declared custom type
     pub fn get_custom_type(&mut self, name: &str) -> Option<&TypeDec> {
         self.types.get_type(name)
+    }
+
+    /// Access a previously declared generic custom type
+    pub fn get_generic_custom_type(&mut self, name: &str) -> Option<&TypeDec> {
+        self.types.get_generic_type(name)
     }
 
     /// Create a new error to propagate to the original context

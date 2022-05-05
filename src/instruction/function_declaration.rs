@@ -251,7 +251,7 @@ impl TypeCheck for FunctionDec {
         if !self.generics.is_empty() {
             // Just declare the function so we have it in the context and can
             // duplicate it
-            if let Err(e) = ctx.declare_function(self.name().into(), self.clone()) {
+            if let Err(e) = ctx.declare_generic_function(self.name().into(), self.clone()) {
                 ctx.error(e);
                 return CheckedType::Error;
             }
