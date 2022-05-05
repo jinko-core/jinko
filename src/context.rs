@@ -190,11 +190,6 @@ impl Context {
             .add_type(custom_type.name().to_owned(), Rc::new(custom_type))
     }
 
-    /// Remove a variable from the context
-    pub fn remove_variable(&mut self, var: &Var) -> Result<(), Error> {
-        self.scope_map.remove_variable(var.name())
-    }
-
     /// Replace a variable or create it if it does not exist
     pub fn replace_variable(&mut self, var: Var) -> Result<(), Error> {
         match self.scope_map.get_variable_mut(var.name()) {
