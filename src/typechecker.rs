@@ -225,7 +225,7 @@ impl TypeCtx {
 
     /// Declare a newly-created generic custom type
     pub fn declare_generic_custom_type(&mut self, id: TypeId, dec: TypeDec) -> Result<(), Error> {
-        self.types.add_generic_type(id, dec)
+        self.types.add_generic_type(id.symbol().clone(), dec)
         // FIXME: Add hint here too
     }
 
@@ -250,7 +250,7 @@ impl TypeCtx {
     }
 
     /// Access a previously declared generic custom type
-    pub fn get_generic_custom_type(&mut self, id: &TypeId) -> Option<&TypeDec> {
+    pub fn get_generic_custom_type(&mut self, id: &Symbol) -> Option<&TypeDec> {
         self.types.get_generic_type(id)
     }
 

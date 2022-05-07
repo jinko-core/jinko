@@ -254,15 +254,4 @@ mod tests {
 
         assert!(GenericMap::create(&resolved, &generics, &mut ctx).is_err());
     }
-
-    #[test]
-    fn flatten() {
-        let int = ty!("int");
-        let inner = ty!("Id").with_generic(int);
-        let nested = ty!("Id").with_generic(inner);
-
-        let flattened = nested.generics().flatten();
-
-        assert_eq!(flattened, GenericList(vec![ty!("Id"), ty!("int")]));
-    }
 }

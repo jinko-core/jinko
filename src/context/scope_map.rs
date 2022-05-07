@@ -11,6 +11,7 @@ use std::{
 };
 
 use crate::error::{ErrKind, Error};
+use crate::symbol::Symbol;
 use crate::typechecker::TypeId;
 
 /// A scope contains a set of available variables, functions and types.
@@ -29,10 +30,12 @@ pub struct Scope<V, F, T> {
     pub(crate) generic_functions: HashMap<String, F>,
     pub(crate) functions: HashMap<String, F>,
     /// Similarly, there are two types of types: generic types and specialized types, which are final.
-    /// Types are identified by their [`TypeId`]. There is no way to differentiate
-    /// between a generic [`TypeId`] and a specialized one, so you must be careful
-    /// when appending types to the map.
-    pub(crate) generic_types: HashMap<TypeId, T>,
+    /// Final/Specialized types are identified by their [`TypeId`], while generic types are
+    /// identified by their [`Symbol`]. This enables us to lookup base types to expand
+    /// without specifically knowing about the [`TypeId`] used for the declaration.
+    /// There is no way to differentiate between a generic [`TypeId`] and a specialized
+    /// one, so you must be careful when appending types to the map.
+    pub(crate) generic_types: HashMap<Symbol, T>,
     pub(crate) types: HashMap<TypeId, T>,
 }
 
@@ -225,7 +228,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Maybe get a generic type in any available scopes
-    pub fn get_generic_type(&self, name: &TypeId) -> Option<&T> {
+    pub fn get_generic_type(&self, name: &Symbol) -> Option<&T> {
         self.get(name, |scope| &scope.generic_types)
     }
 
@@ -250,7 +253,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
     }
 
     /// Add a generic type to the current scope if it hasn't been added before
-    pub fn add_generic_type(&mut self, name: TypeId, custom_type: T) -> Result<(), Error> {
+    pub fn add_generic_type(&mut self, name: Symbol, custom_type: T) -> Result<(), Error> {
         self.insert_unique(name, custom_type, |scope| &mut scope.generic_types)
     }
 }

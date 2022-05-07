@@ -43,6 +43,7 @@ pub enum TypeId {
         generics: GenericList,
     },
     Functor {
+        sym: Symbol,
         generics: GenericList,
         arg_types: Vec<TypeId>,
         return_type: Option<Box<TypeId>>,
@@ -62,6 +63,7 @@ impl TypeId {
     // Create a new empty function-like [`TypeId`] from a symbol
     pub fn functor() -> TypeId {
         TypeId::Functor {
+            sym: Symbol::from("func"),
             generics: GenericList::empty(),
             arg_types: vec![],
             return_type: None,
@@ -76,10 +78,12 @@ impl TypeId {
                 generics: generics.with(generic),
             },
             TypeId::Functor {
+                sym,
                 generics,
                 arg_types,
                 return_type,
             } => TypeId::Functor {
+                sym,
                 generics: generics.with(generic),
                 arg_types,
                 return_type,
@@ -92,12 +96,9 @@ impl TypeId {
     /// the argument type is added to the functor's argument types
     pub fn with_arg(self, arg: TypeId) -> TypeId {
         match self {
-            TypeId::Type { generics, .. } => TypeId::Functor {
-                generics,
-                arg_types: vec![],
-                return_type: None,
-            },
+            TypeId::Type { generics, .. } => TypeId::functor().with_arg(arg),
             TypeId::Functor {
+                sym,
                 generics,
                 arg_types,
                 return_type,
@@ -106,6 +107,7 @@ impl TypeId {
                 new_args.push(arg);
 
                 TypeId::Functor {
+                    sym,
                     generics,
                     arg_types: new_args,
                     return_type,
@@ -119,16 +121,14 @@ impl TypeId {
     /// the functor's return type is replaced
     pub fn with_return_type(self, ret: TypeId) -> TypeId {
         match self {
-            TypeId::Type { generics, .. } => TypeId::Functor {
-                generics,
-                arg_types: vec![],
-                return_type: Some(Box::new(ret)),
-            },
+            TypeId::Type { generics, .. } => TypeId::functor().with_return_type(ret),
             TypeId::Functor {
+                sym,
                 generics,
                 arg_types,
                 ..
             } => TypeId::Functor {
+                sym,
                 generics,
                 arg_types,
                 return_type: Some(Box::new(ret)),
@@ -136,12 +136,14 @@ impl TypeId {
         }
     }
 
-    pub fn id(&self) -> &str {
+    pub fn symbol(&self) -> &Symbol {
         match self {
-            TypeId::Type { id, .. } => id.access(),
-            // FIXME: Should we store "func" in a symbol?
-            _ => "func",
+            TypeId::Type { id: sym, .. } | TypeId::Functor { sym, .. } => sym,
         }
+    }
+
+    pub fn id(&self) -> &str {
+        self.symbol().access()
     }
 
     pub fn generics(&self) -> &GenericList {
@@ -167,7 +169,7 @@ impl TypeId {
             .iter()
             .for_each(|g| g.generate_typedec(ctx));
 
-        let dec = match ctx.get_custom_type(self) {
+        let dec = match ctx.get_generic_custom_type(self.symbol()) {
             Some(dec) => dec.clone(),
             None => {
                 ctx.error(Error::new(ErrKind::Generics).with_msg(format!(
