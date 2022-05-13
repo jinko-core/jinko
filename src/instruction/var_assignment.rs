@@ -247,7 +247,7 @@ mod tests {
 
     #[test]
     fn assign_mutable() {
-        let mut i = Context::new();
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
         let va_init = constructs::expr(span!("mut a = 13")).unwrap().1;
         let va_0 = constructs::expr(span!("a = 15")).unwrap().1;
 
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn assign_immutable() {
-        let mut i = Context::new();
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
         let va_init = constructs::expr(span!("a = 13")).unwrap().1;
         let va_0 = constructs::expr(span!("a = 15")).unwrap().1;
 

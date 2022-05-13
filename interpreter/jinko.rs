@@ -9,7 +9,6 @@ use colored::Colorize;
 use jinko::context::Context;
 use jinko::error::{ErrKind, Error};
 use jinko::instance::{FromObjectInstance, ObjectInstance};
-use jinko::io_trait::JkReader;
 use jinko::typechecker::CheckedType;
 use jinko::value::{JkBool, JkFloat, JkInt};
 
@@ -17,14 +16,6 @@ use args::Args;
 #[cfg(feature = "repl")]
 use repl::Repl;
 use std::{fs, path::Path};
-
-#[derive(Clone)]
-struct InterpreterReader {}
-impl JkReader for InterpreterReader {
-    fn read_to_string(&self, path: &str) -> Result<String, Error> {
-        unimplemented!("POV t\'as pas implem");
-    }
-}
 
 // FIXME: Add documentation
 pub type InteractResult = Result<(Option<ObjectInstance>, Context), Error>;
@@ -102,7 +93,7 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
-    let mut ctx = Context::new(Box::new(InterpreterReader {}));
+    let mut ctx = Context::new(Box::new(jinko::io_trait::JkStdReader {}));
 
     if !args.nostdlib() {
         ctx.init_stdlib()?;

@@ -176,7 +176,7 @@ mod tests {
     use crate::value::JkInt;
 
     fn setup() -> Context {
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
 
         let inst = constructs::expr(span!("type Point(x: int, y: int);"))
             .unwrap()

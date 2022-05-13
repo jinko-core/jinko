@@ -79,7 +79,7 @@ pub struct TypeCtx {
     /// Path from which the typechecking context was instantiated
     path: Option<PathBuf>,
     included: HashSet<PathBuf>,
-
+    /// A reader, able to read files from, whatever the platform
     reader: Box<dyn JkReader>,
 }
 

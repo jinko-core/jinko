@@ -426,7 +426,7 @@ mod tests {
             FunctionDec::new("fn".to_owned(), Some(TypeId::from("int")), vec![], vec![]);
         function.set_kind(FunctionKind::Ext);
 
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
 
         assert_eq!(ctx.type_check(&mut function).unwrap(), CheckedType::Void);
         assert!(!ctx.error_handler.has_errors());
@@ -441,7 +441,7 @@ mod tests {
         let block = constructs::block(span!("{ 15 }")).unwrap().1;
         function.set_block(block);
 
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
 
         assert_eq!(ctx.type_check(&mut function).unwrap(), CheckedType::Void);
         assert!(!ctx.error_handler.has_errors());
@@ -460,7 +460,7 @@ mod tests {
         let block = constructs::block(span!("{ 15 }")).unwrap().1;
         function.set_block(block);
 
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
 
         assert!(ctx.type_check(&mut function).is_err());
         assert!(ctx.error_handler.has_errors());

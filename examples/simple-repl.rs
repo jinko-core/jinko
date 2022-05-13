@@ -1,11 +1,12 @@
 use jinko::context::Context;
+use jinko::io_trait::JkStdReader;
 use std::io::{self, Result, Write};
 
 fn main() -> Result<()> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::new(Box::new(JkStdReader {}));
     let mut input = String::new();
 
     let mut prompt = "> ";
