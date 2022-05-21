@@ -6,7 +6,7 @@ fn main() -> Result<()> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
-    let mut ctx = Context::new(Box::new(JkStdReader {}));
+    let mut ctx = Context::new(Box::new(JkStdReader));
     let mut input = String::new();
 
     let mut prompt = "> ";

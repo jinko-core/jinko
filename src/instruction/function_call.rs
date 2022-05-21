@@ -448,7 +448,7 @@ mod tests {
         use crate::instance::ToObjectInstance;
         use crate::value::JkInt;
 
-        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
         let func_dec = constructs::expr(span!("func __second(f: int, s: int) -> int { s }"))
             .unwrap()
             .1;
@@ -467,7 +467,7 @@ mod tests {
         use crate::instance::ToObjectInstance;
         use crate::value::JkInt;
 
-        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
         let func_dec = constructs::expr(span!("func add(a: int, b: int) -> int { a + b }"))
             .unwrap()
             .1;
@@ -486,7 +486,7 @@ mod tests {
         use crate::instance::ToObjectInstance;
         use crate::value::JkInt;
 
-        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
         let func_dec = constructs::expr(span!("func one() -> int { one = 1; one }"))
             .unwrap()
             .1;

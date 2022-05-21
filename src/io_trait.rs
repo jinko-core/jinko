@@ -25,7 +25,7 @@ impl Clone for Box<dyn JkReader> {
 
 #[cfg(feature = "std")]
 #[derive(Clone)]
-pub struct JkStdReader {}
+pub struct JkStdReader;
 
 #[cfg(feature = "std")]
 impl JkReader for JkStdReader {

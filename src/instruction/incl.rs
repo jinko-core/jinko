@@ -48,7 +48,11 @@ impl Incl {
         formatted: &Path,
         reader: &dyn JkReader,
     ) -> Result<Vec<Box<dyn Instruction>>, Error> {
-        let input = reader.read_to_string(formatted.to_str().unwrap())?;
+        let input = reader.read_to_string(
+            formatted
+                .to_str()
+                .ok_or_else(|| Error::new(ErrKind::UTF8))?,
+        )?;
 
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
@@ -244,7 +248,7 @@ mod tests {
 
     #[test]
     fn tc_typecheck_stdlib() {
-        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
         ctx.execute().unwrap();
     }
 

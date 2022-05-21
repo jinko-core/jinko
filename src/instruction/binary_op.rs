@@ -203,7 +203,7 @@ mod tests {
             Operator::new("-"),
         );
 
-        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         assert_eq!(
             binary_op.rhs().execute(&mut i).unwrap(),
@@ -225,7 +225,7 @@ mod tests {
             Operator::new("-"),
         );
 
-        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         assert_eq!(binary_op.operator(), Operator::Sub);
 
@@ -243,7 +243,7 @@ mod tests {
         let boxed_output = crate::parser::constructs::expr(input).unwrap().1;
         let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
 
-        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         assert_eq!(
             output.execute(&mut i).unwrap(),
@@ -305,7 +305,7 @@ mod tests {
 
     macro_rules! binop_assert {
         ($expr:expr) => {{
-            let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+            let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
             let expr = crate::parser::constructs::expr(nom_locate::LocatedSpan::new_extra(
                 stringify!($expr),
                 None,

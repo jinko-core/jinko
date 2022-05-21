@@ -421,7 +421,7 @@ mod tests {
         let f0 = FunctionDec::new("f0".to_owned(), None, vec![], vec![]);
         let f0_copy = FunctionDec::new("f0".to_owned(), None, vec![], vec![]);
 
-        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         assert_eq!(i.add_function(f0), Ok(()));
         assert!(i.add_function(f0_copy).is_err());
@@ -432,7 +432,7 @@ mod tests {
         let v0 = Var::new("v0".to_owned());
         let v0_copy = Var::new("v0".to_owned());
 
-        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         assert_eq!(i.add_variable(v0), Ok(()));
         assert!(i.add_variable(v0_copy).is_err());
@@ -440,7 +440,7 @@ mod tests {
 
     #[test]
     fn t_print_scopemap() {
-        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
         ctx.init_stdlib().unwrap();
         ctx.execute().unwrap();
 
@@ -453,7 +453,7 @@ mod tests {
 
     #[test]
     fn t_print_eb() {
-        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         ctx.add_variable(Var::new(String::from("a_var_named_a")))
             .unwrap();
@@ -475,7 +475,7 @@ mod tests {
 
     #[test]
     fn t_eval() {
-        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
         let input = String::from("my_var = 1");
 
         ctx.eval(&input).unwrap();
@@ -486,7 +486,7 @@ mod tests {
 
     #[test]
     fn t_double_eval() {
-        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         let mut input = String::from("my_var = 1");
         ctx.eval(&input).unwrap();

@@ -203,7 +203,7 @@ mod tests {
         use crate::instance::ToObjectInstance;
         use crate::value::{JkBool, JkInt};
 
-        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         let mut if_block = Block::new();
         let mut else_block = Block::new();
@@ -225,7 +225,7 @@ mod tests {
         use crate::instance::ToObjectInstance;
         use crate::value::{JkBool, JkInt};
 
-        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader {}));
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         let mut if_block = Block::new();
         let mut else_block = Block::new();

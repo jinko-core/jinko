@@ -68,6 +68,7 @@ pub enum ErrKind {
     ExternFunc,
     IO,
     Debug,
+    UTF8,
 }
 
 impl ErrKind {
@@ -81,6 +82,7 @@ impl ErrKind {
             ErrKind::IO => "i/o",
             ErrKind::ExternFunc => "external function",
             ErrKind::Debug => "debug",
+            ErrKind::UTF8 => "UTF-8",
         }
     }
 }

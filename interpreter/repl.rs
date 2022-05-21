@@ -72,7 +72,7 @@ impl Repl {
     pub fn launch(self) -> InteractResult {
         let mut ctx = match self.ctx {
             Some(ctx) => ctx,
-            None => Context::new(Box::new(jinko::io_trait::JkStdReader {})),
+            None => Context::new(Box::new(jinko::io_trait::JkStdReader)),
         };
 
         Repl::setup_context(&mut ctx);
