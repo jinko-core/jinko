@@ -184,7 +184,8 @@ mod tests {
 
     #[test]
     fn create_map_different_size() {
-        let mut ctx = TypeCtx::new();
+        use crate::io_trait::JkStdReader;
+        let mut ctx = TypeCtx::new(Box::new(JkStdReader));
 
         assert!(GenericMap::create(&[ty!("int"), ty!("float")], &[ty!("T")], &mut ctx).is_err());
     }

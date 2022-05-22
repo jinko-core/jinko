@@ -93,7 +93,7 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::new(Box::new(jinko::io_trait::JkStdReader));
 
     if !args.nostdlib() {
         ctx.init_stdlib()?;

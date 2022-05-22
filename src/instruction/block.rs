@@ -212,7 +212,7 @@ mod tests {
     fn block_execute_empty() {
         let b = Block::new();
 
-        let mut i = Context::new();
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         assert_eq!(b.execute(&mut i), None);
         assert!(!i.error_handler.has_errors());
@@ -233,7 +233,7 @@ mod tests {
         ];
         b.set_instructions(instr);
 
-        let mut i = Context::new();
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         assert_eq!(b.execute(&mut i), None);
         assert!(!i.error_handler.has_errors());
@@ -253,7 +253,7 @@ mod tests {
         b.add_instruction(last);
         b.set_statement(false);
 
-        let mut i = Context::new();
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         assert_eq!(b.execute(&mut i).unwrap(), JkInt::from(18).to_instance());
         assert!(!i.error_handler.has_errors());
@@ -269,7 +269,7 @@ mod tests {
             .unwrap()
             .1;
 
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         assert_eq!(ctx.type_check(b.as_mut()).unwrap(), CheckedType::Void)
     }

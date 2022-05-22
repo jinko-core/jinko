@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn tc_string_type() {
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
         let mut s = JkString::from("that's a jk string");
 
         assert_eq!(
@@ -403,7 +403,7 @@ mod tests {
 
     #[test]
     fn tc_bool_type() {
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
         let mut s = JkBool::from(false);
 
         assert_eq!(
@@ -414,7 +414,7 @@ mod tests {
 
     #[test]
     fn tc_i_type() {
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
         let mut s = JkInt::from(0);
 
         assert_eq!(
@@ -425,7 +425,7 @@ mod tests {
 
     #[test]
     fn tc_f_type() {
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
         let mut s = JkFloat::from(15.4);
 
         assert_eq!(

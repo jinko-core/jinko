@@ -191,7 +191,7 @@ mod tests {
     #[test]
     #[ignore] // FIXME: Do not ignore once we can type instance fields
     fn t_valid_multi_field_access() {
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         let inst = constructs::expr(span!("type Pair1(x: int, y: int)"))
             .unwrap()

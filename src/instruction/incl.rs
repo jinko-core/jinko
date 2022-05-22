@@ -10,6 +10,7 @@ use crate::error::{ErrKind, Error};
 use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
+use crate::io_trait::JkReader;
 use crate::location::SpanTuple;
 use crate::parser::constructs;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
@@ -42,8 +43,16 @@ impl Incl {
         }
     }
 
-    fn fetch_instructions(&self, formatted: &Path) -> Result<Vec<Box<dyn Instruction>>, Error> {
-        let input = std::fs::read_to_string(&formatted)?;
+    fn fetch_instructions(
+        &self,
+        formatted: &Path,
+        reader: &dyn JkReader,
+    ) -> Result<Vec<Box<dyn Instruction>>, Error> {
+        let input = reader.read_to_string(
+            formatted
+                .to_str()
+                .ok_or_else(|| Error::new(ErrKind::UTF8))?,
+        )?;
 
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
@@ -192,7 +201,7 @@ impl TypeCheck for Incl {
             return CheckedType::Void;
         }
 
-        let instructions = match self.fetch_instructions(&final_path) {
+        let instructions = match self.fetch_instructions(&final_path, ctx.reader()) {
             Ok(instructions) => instructions,
             Err(e) => {
                 ctx.error(e);
@@ -239,7 +248,7 @@ mod tests {
 
     #[test]
     fn tc_typecheck_stdlib() {
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
         ctx.execute().unwrap();
     }
 

@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn keep_instance() {
-        let mut i = Context::new();
+        let mut i = Context::new(Box::new(crate::io_trait::JkStdReader));
         let mut v = Var::new("a".to_string());
 
         let instance = JkInt::from(15).to_instance();

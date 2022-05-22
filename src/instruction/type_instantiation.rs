@@ -285,7 +285,7 @@ mod test {
         use crate::typechecker::TypeId;
         use crate::value::JkInt;
 
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         // Create a new type with two integers fields
         let fields = vec![
@@ -339,7 +339,7 @@ mod test {
 
         const TYPE_NAME: &str = "Type_Name";
 
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
 
         // Create a new type with two integers fields
         let fields = vec![

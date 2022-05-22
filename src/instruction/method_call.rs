@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn t_execute() {
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
         let mut func_dec = constructs::expr(span!("func __first(a: int, b: int) -> int { a }"))
             .unwrap()
             .1;

@@ -24,9 +24,10 @@ libloading = { version = "0.7", optional = true }
 lazy_static = "1.4"
 
 [features]
-default = ["repl", "ffi"]
+default = ["repl", "ffi", "std"]
 repl = ["linefeed"]
 ffi = ["libloading", "libffi"]
+std = []
 
 [dev-dependencies]
 libc = "0.2"
@@ -34,6 +35,7 @@ libc = "0.2"
 [[bin]]
 name = "jinko"
 path = "interpreter/jinko.rs"
+required-features = ["std"]
 
 [profile.release]
 lto = true
