@@ -283,8 +283,8 @@ mod tests {
         };
 
         // Load libc, probably from LD_LIBRARY_PATH
-        jinko! {
-            link_with("libc.so.6");
-        };
+        // jinko! {
+        //     link_with("libc.so.6");
+        // };
     }
 }
