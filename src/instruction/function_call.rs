@@ -1,8 +1,8 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
-use std::rc::Rc;
 use std::fmt::Write;
+use std::rc::Rc;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
