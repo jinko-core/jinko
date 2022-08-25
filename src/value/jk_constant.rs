@@ -65,7 +65,7 @@ impl<T: Clone> JkConstant<T> {
 /// Circumvents the need for a generic implementation (see comment).
 /// Call it with the type contained in the JkConstant and the &str representation
 ///
-/// ```
+/// ```ignore
 /// // Implements a JkConstant<i64> with type displayed as "int"
 /// jk_primitive!(i64, "int");
 /// ```

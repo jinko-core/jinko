@@ -3,6 +3,7 @@
 //! calls. Its basic goal is to replace all instances of `T` with an actual [`TypeId`].
 
 use std::collections::HashMap;
+use std::fmt::Write;
 
 use crate::error::{ErrKind, Error};
 use crate::typechecker::{TypeCtx, TypeId};
@@ -25,12 +26,12 @@ impl GenericMap {
             let err_msg = String::from("missing types in generic expansion");
             let mut err_msg = format!("{}\ngeneric types: ", err_msg);
             for generic in generics {
-                err_msg.push_str(&format!("{}", generic));
+                write!(err_msg, "{}", generic).unwrap();
             }
 
             let mut err_msg = format!("{}\nresolved types: ", err_msg);
             for resolved in resolved {
-                err_msg.push_str(&format!("{}", resolved));
+                write!(err_msg, "{}", resolved).unwrap();
             }
 
             return Err(Error::new(ErrKind::Generics).with_msg(err_msg));

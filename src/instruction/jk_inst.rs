@@ -12,7 +12,7 @@ use crate::location::SpanTuple;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
 /// The potential ctx instructions
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum JkInstKind {
     Dump,
     Quit,

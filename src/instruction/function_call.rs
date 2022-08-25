@@ -2,6 +2,7 @@
 //! function on execution.
 
 use std::rc::Rc;
+use std::fmt::Write;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
@@ -218,7 +219,7 @@ impl Instruction for FunctionCall {
             self.generics
                 .iter()
                 .skip(1)
-                .for_each(|generic| base.push_str(&format!(", {}", generic)));
+                .for_each(|generic| write!(base, "{}", generic).unwrap());
             base.push(']');
         }
 

@@ -3,7 +3,7 @@
 
 /// All the binary operators available
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
     Add,
     Sub,
