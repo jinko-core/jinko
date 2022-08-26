@@ -17,6 +17,8 @@ jobs:
           default: true
           target: ${{ matrix.target }}
 
+      - uses: actions/checkout@v3
+
       - name: Build release
         run: |
           cargo build --release --target ${{ matrix.target }}
@@ -42,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup rust toolchain
         uses: actions-rs/toolchain@v1
         with:
