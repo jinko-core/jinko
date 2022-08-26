@@ -11,7 +11,8 @@ incl args
 incl fmt
 incl intrinsics
 
-incl vec
+/// Implicitly links with libc.so.6, this is not okay.  
+/// incl vec
 
 ext func __builtin_exit(exit_code: int);
 

@@ -57,7 +57,7 @@ impl ErrorHandler {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ErrKind {
     Hint,

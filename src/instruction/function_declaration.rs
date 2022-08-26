@@ -1,6 +1,8 @@
 //! Function Declarations are used when adding a new function to the source. They contain
 //! a name, a list of required arguments as well as an associated code block
 
+use std::fmt::Write;
+
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
 use crate::generics::{GenericExpander, GenericMap, GenericUser};
@@ -11,7 +13,7 @@ use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 /// What "kind" of function is defined. There are four types of functions in jinko,
 /// the normal ones, the external ones, the unit tests and the mocks
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FunctionKind {
     Unknown,
     Func,
@@ -208,7 +210,7 @@ impl Instruction for FunctionDec {
 
         base.push('(');
         if !self.args.is_empty() {
-            base.push_str(&format!("{}", self.args().iter().next().unwrap()));
+            write!(base, "{}", self.args().iter().next().unwrap()).unwrap();
             let arg_str = self
                 .args
                 .iter()

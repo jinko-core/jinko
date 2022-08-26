@@ -1,6 +1,7 @@
 //! FunctionCalls are used when calling a function. The argument list is given to the
 //! function on execution.
 
+use std::fmt::Write;
 use std::rc::Rc;
 
 use crate::context::Context;
@@ -218,7 +219,7 @@ impl Instruction for FunctionCall {
             self.generics
                 .iter()
                 .skip(1)
-                .for_each(|generic| base.push_str(&format!(", {}", generic)));
+                .for_each(|generic| write!(base, "{}", generic).unwrap());
             base.push(']');
         }
 

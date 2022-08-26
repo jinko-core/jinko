@@ -1,5 +1,7 @@
 use super::{DecArg, InstrKind, Instruction};
 
+use std::fmt::Write;
+
 use crate::context::Context;
 use crate::generics::{GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
@@ -82,7 +84,7 @@ impl Instruction for TypeDec {
 
         if !self.fields.is_empty() {
             base.push('(');
-            base.push_str(&format!("{}", self.fields.first().unwrap()));
+            write!(base, "{}", self.fields.first().unwrap()).unwrap();
             let arg_str = self
                 .fields
                 .iter()
