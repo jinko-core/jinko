@@ -18,8 +18,7 @@ pub use tokens::Token;
 pub type ParseInput<'i> = LocatedSpan<&'i str, Option<&'i Path>>;
 pub type ParseResult<T, I> = nom::IResult<T, I, Error>;
 
-/// Parses the entire user input and returns a hashmap corresponding to the user
-/// program
+/// Parses the entire user input into a vector of instructions in the context
 pub fn parse(ctx: &mut Context, input: &str, file_path: Option<&Path>) -> Result<(), Error> {
     // FIXME: Keep input in context here
     ctx.set_code(input.to_string());
