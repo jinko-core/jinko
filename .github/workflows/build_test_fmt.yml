@@ -36,7 +36,7 @@ jobs:
       env:
         RUSTFLAGS: "-D warnings" # Trigger an error on warnings
       run: |
-        cargo clippy
+        cargo check
 
   tests-check:
     runs-on: ubuntu-latest
