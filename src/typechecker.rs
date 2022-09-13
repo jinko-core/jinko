@@ -21,7 +21,7 @@ use std::{
 /// The [`CheckedType`] enum contains three possible states about the type. Either the
 /// type has been properly resolved to something, or it corresponds to a Void type. If the
 /// type has not been resolved yet, it can be unknown.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum CheckedType {
     Resolved(TypeId),
     // Should we remove this for Resolved(TypeId::void())?
