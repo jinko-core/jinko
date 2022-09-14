@@ -16,19 +16,8 @@ jobs:
       run: |
           cargo fmt -- --check
 
-  build:
-    runs-on: ubuntu-latest
-    needs: coding-style
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build jinko
-      run: |
-          cargo clippy
-
   build-without-warnings:
     runs-on: ubuntu-latest
-    needs: build
 
     steps:
     - uses: actions/checkout@v2
