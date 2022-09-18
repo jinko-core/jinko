@@ -15,6 +15,14 @@ jobs:
     - name: Check the coding style
       run: |
           cargo fmt -- --check
+          
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: echo
+        run: |
+          echo Hello
 
   build-without-warnings:
     runs-on: ubuntu-latest
