@@ -1,1 +1,1 @@
-status = ["clippy", "build-without-warnings","tests", "functional_tests" ]
+status = ["clippy", "build", "build-without-warnings","tests", "functional_tests" ]
