@@ -16,15 +16,6 @@ jobs:
       run: |
           cargo fmt -- --check
 
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Make sure that the build completes (with potential warnings)
-      run: |
-        cargo check
-
   build-without-warnings:
     runs-on: ubuntu-latest
 
