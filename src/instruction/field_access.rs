@@ -3,7 +3,6 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -123,12 +122,6 @@ impl TypeCheck for FieldAccess {
 
     fn cached_type(&self) -> Option<&CheckedType> {
         self.cached_type.as_ref()
-    }
-}
-
-impl GenericUser for FieldAccess {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.instance.resolve_usages(type_map, ctx)
     }
 }
 

@@ -3,7 +3,6 @@
 
 use crate::context::Context;
 use crate::error::Error;
-use crate::generics::Generic;
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{Block, FunctionCall, InstrKind, Instruction, Var};
 use crate::location::SpanTuple;
@@ -221,8 +220,6 @@ impl TypeCheck for Loop {
         self.cached_type.as_ref()
     }
 }
-
-impl GenericUser for Loop {}
 
 #[cfg(test)]
 mod tests {

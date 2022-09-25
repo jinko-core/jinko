@@ -5,7 +5,6 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::TypeDec;
 use crate::instruction::{InstrKind, Instruction};
@@ -105,10 +104,6 @@ impl Instruction for Var {
 }
 
 impl TypeCheck for Var {
-    fn type_log(&self) -> String {
-        self.name.to_string()
-    }
-
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         match ctx.get_var(self.name()) {
             Some(var_ty) => Ok(var_ty.clone()),
@@ -131,8 +126,6 @@ impl Default for Var {
         Var::new(String::new())
     }
 }
-
-impl GenericUser for Var {}
 
 #[cfg(test)]
 mod tests {

@@ -296,12 +296,9 @@ pub trait TypeCheck {
     /// This avoid typechecking an entire instruction a second time and allows the
     /// context to just access it. This is useful for passes such as generic expansion.
     fn type_of(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
-        log!("type_of value {}", self.type_log());
-
         // FIXME: Remove clones
         match self.cached_type() {
             None => {
-                log!("no cached type");
                 match self.resolve_type(ctx)? {
                     CheckedType::Resolved(new_ty) => {
                         self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
@@ -317,10 +314,7 @@ pub trait TypeCheck {
                     CheckedType::Later => Ok(CheckedType::Later),
                 }
             }
-            Some(ty) => {
-                log!("cached type!: {}", ty);
-                Ok(ty.clone())
-            }
+            Some(ty) => Ok(ty.clone()),
         }
     }
 }

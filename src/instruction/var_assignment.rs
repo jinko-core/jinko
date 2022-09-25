@@ -2,7 +2,6 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction, Var};
 use crate::location::SpanTuple;
@@ -197,12 +196,6 @@ impl TypeCheck for VarAssign {
     }
 }
 
-impl GenericUser for VarAssign {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.value.resolve_usages(type_map, ctx)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -300,6 +293,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Generics not re-implemented yet #587"]
     fn generic_builtin_for_var_assign() {
         jinko! {
             a = 156;

@@ -1,6 +1,5 @@
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::Generic;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction, TypeInstantiation, Var};
 use crate::location::SpanTuple;
@@ -118,5 +117,3 @@ impl TypeCheck for VarOrEmptyType {
         self.cached_type.as_ref()
     }
 }
-
-impl GenericUser for VarOrEmptyType {}

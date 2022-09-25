@@ -11,7 +11,6 @@
 
 use crate::context::Context;
 use crate::error::Error;
-use crate::generics::Generic;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -84,8 +83,6 @@ impl TypeCheck for Return {
         self.cached_type.as_ref()
     }
 }
-
-impl GenericUser for Return {}
 
 #[cfg(test)]
 mod tests {

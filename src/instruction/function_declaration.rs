@@ -5,7 +5,6 @@ use std::fmt::Write;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{Block, DecArg, InstrKind, Instruction};
 use crate::location::{Location, SpanTuple};
@@ -324,44 +323,6 @@ impl TypeCheck for FunctionDec {
             true => Some(&CheckedType::Void),
             false => None,
         }
-    }
-}
-
-impl GenericUser for FunctionDec {
-    fn resolve_usages(&mut self, _type_map: &GenericMap, ctx: &mut TypeCtx) {
-        // FIXME: Can we do without that?
-        if let Err(e) = ctx.declare_function(self.name().to_string(), self.clone()) {
-            ctx.error(e);
-        };
-    }
-}
-
-impl GenericExpander for FunctionDec {
-    fn generate(
-        &self,
-        mangled_name: String,
-        type_map: &GenericMap,
-        ctx: &mut TypeCtx,
-    ) -> FunctionDec {
-        let mut new_fn = self.clone();
-        new_fn.name = mangled_name;
-        new_fn.generics = vec![];
-        new_fn.typechecked = false;
-
-        new_fn
-            .args
-            .iter_mut()
-            .for_each(|arg| arg.resolve_usages(type_map, ctx));
-
-        if let Some(ret_ty) = &mut new_fn.ty {
-            ret_ty.resolve_usages(type_map, ctx);
-        }
-
-        if let Some(b) = &mut new_fn.block {
-            b.resolve_usages(type_map, ctx);
-        }
-
-        new_fn
     }
 }
 

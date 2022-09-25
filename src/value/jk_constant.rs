@@ -1,6 +1,5 @@
 use crate::context::Context;
 use crate::error::Error;
-use crate::generics::GenericUser;
 use crate::instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::location::SpanTuple;
@@ -136,8 +135,6 @@ macro_rules! jk_primitive {
                 Some(&self.1)
             }
         }
-
-        impl GenericUser for JkConstant<bool> {}
     };
     (char) => {
         impl ToObjectInstance for JkConstant<char> {
@@ -206,8 +203,6 @@ macro_rules! jk_primitive {
                 Some(&self.1)
             }
         }
-
-        impl GenericUser for JkConstant<char> {}
     };
     ($t:ty, $s:expr) => {
         impl ToObjectInstance for JkConstant<$t> {
@@ -266,8 +261,6 @@ macro_rules! jk_primitive {
                 Some(&self.1)
             }
         }
-
-        impl GenericUser for JkConstant<$t> {}
 
         impl From<$t> for JkConstant<$t> {
             fn from(rust_value: $t) -> Self {
@@ -364,8 +357,6 @@ impl TypeCheck for JkString {
         Some(&self.1)
     }
 }
-
-impl GenericUser for JkString {}
 
 impl From<&str> for JkConstant<String> {
     fn from(s: &str) -> Self {

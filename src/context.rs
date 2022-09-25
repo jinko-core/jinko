@@ -278,8 +278,7 @@ impl Context {
     fn inner_check(&mut self, ep: &mut Block) -> Result<(), Error> {
         self.scope_enter();
 
-        log!("starting first pass of typechecking");
-        ep.type_of(&mut self.typechecker);
+        ep.type_of(&mut self.typechecker)?;
 
         self.error_handler
             .append(&mut self.typechecker.error_handler);

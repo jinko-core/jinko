@@ -3,7 +3,7 @@ use super::{DecArg, InstrKind, Instruction};
 use std::fmt::Write;
 
 use crate::context::Context;
-use crate::generics::{GenericExpander, GenericMap, GenericUser};
+use crate::error::Error;
 use crate::instance::ObjectInstance;
 use crate::location::SpanTuple;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
@@ -118,31 +118,6 @@ impl TypeCheck for TypeDec {
             true => Some(&CheckedType::Void),
             false => None,
         }
-    }
-}
-
-impl GenericUser for TypeDec {
-    fn resolve_usages(&mut self, _type_map: &GenericMap, ctx: &mut TypeCtx) {
-        // FIXME: Can we do without that?
-        if let Err(e) = ctx.declare_custom_type(self.name().to_string(), self.clone()) {
-            ctx.error(e);
-        };
-    }
-}
-
-impl GenericExpander for TypeDec {
-    fn generate(&self, mangled_name: String, type_map: &GenericMap, ctx: &mut TypeCtx) -> TypeDec {
-        let mut new_type = self.clone();
-        new_type.name = mangled_name;
-        new_type.generics = vec![];
-        new_type.typechecked = false;
-
-        new_type
-            .fields
-            .iter_mut()
-            .for_each(|arg| arg.resolve_usages(type_map, ctx));
-
-        new_type
     }
 }
 

@@ -7,7 +7,6 @@ use nom_locate::LocatedSpan;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::io_trait::JkReader;
@@ -201,7 +200,7 @@ impl TypeCheck for Incl {
             return Ok(CheckedType::Void);
         }
 
-        let instructions = self.fetch_instructions(&final_path)?;
+        let instructions = self.fetch_instructions(&final_path, ctx.reader())?;
 
         self.instructions = instructions;
 
@@ -234,8 +233,6 @@ impl TypeCheck for Incl {
         }
     }
 }
-
-impl GenericUser for Incl {}
 
 #[cfg(test)]
 mod tests {

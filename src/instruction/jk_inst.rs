@@ -5,7 +5,6 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -93,8 +92,6 @@ impl TypeCheck for JkInst {
         Some(&CheckedType::Void)
     }
 }
-
-impl GenericUser for JkInst {}
 
 #[cfg(test)]
 mod tests {

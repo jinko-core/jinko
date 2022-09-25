@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use crate::context::Context;
 #[cfg(feature = "ffi")]
 use crate::ffi;
-use crate::generics;
 use crate::instance::{FromObjectInstance, ObjectInstance, ToObjectInstance};
 use crate::instruction::Instruction;
 use crate::value::{JkBool, JkChar, JkFloat, JkInt, JkString};
@@ -189,13 +188,14 @@ impl Builtins {
     pub fn contains(&self, name: &str) -> bool {
         // We can demangle builtins to dispatch to our single, non generic
         // implementation.
-        let name = generics::original_name(name);
+        // let name = generics::original_name(name);
 
         self.functions.contains_key(name)
     }
 
     pub fn get(&self, builtin: &str) -> Option<&BuiltinFn> {
-        self.functions.get(generics::original_name(builtin))
+        // self.functions.get(generics::original_name(builtin))
+        self.functions.get(builtin)
     }
 }
 

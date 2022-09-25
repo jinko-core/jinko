@@ -6,12 +6,11 @@ use std::rc::Rc;
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionDec, FunctionKind, Var};
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
-use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx, TypeId};
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 #[derive(Clone)]
 pub struct FunctionCall {
@@ -180,34 +179,6 @@ impl FunctionCall {
     pub fn set_name(&mut self, fn_name: String) {
         self.fn_name = fn_name
     }
-
-    fn resolve_generic_call(
-        &mut self,
-        function: FunctionDec,
-        ctx: &mut TypeCtx,
-    ) -> Result<CheckedType, Error> {
-        log!(
-            "creating specialized fn. function generics: {}, call generics {}",
-            function.generics().len(),
-            self.generics().len()
-        );
-        let type_map = GenericMap::create(function.generics(), self.generics(), ctx)?;
-        let specialized_name = generics::mangle(function.name(), self.generics());
-        if ctx.get_function(&specialized_name).is_none() {
-            // FIXME: Remove this clone once we have proper symbols
-            let specialized_fn =
-                function.from_type_map(specialized_name.clone(), &type_map, ctx)?;
-
-            ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)))?;
-        }
-
-        self.fn_name = specialized_name;
-        self.generics = vec![];
-
-        // Recursively resolve the type of self now that we changed the
-        // function to call
-        self.type_of(ctx)
-    }
 }
 
 impl Instruction for FunctionCall {
@@ -275,13 +246,7 @@ impl Instruction for FunctionCall {
 }
 
 impl TypeCheck for FunctionCall {
-    fn type_log(&self) -> String {
-        self.fn_name.to_string()
-    }
-
     fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
-        log!("typechecking call to {}", self.fn_name);
-
         // FIXME: Expand generic here instead of resolving later
         // if !self.generics.is_empty() && !ctx.is_second_pass() {
         //     return CheckedType::Later;
@@ -306,9 +271,9 @@ impl TypeCheck for FunctionCall {
         let (args_type, return_type) = (function.args(), function.ty());
         let args_type = args_type.clone();
 
-        if !function.generics().is_empty() || !self.generics.is_empty() {
-            return self.resolve_generic_call(function, ctx);
-        }
+        // if !function.generics().is_empty() || !self.generics.is_empty() {
+        //     return self.resolve_generic_call(function, ctx);
+        // }
 
         let mut errors = vec![];
         let mut args = vec![];
@@ -368,125 +333,6 @@ impl TypeCheck for FunctionCall {
 
     fn set_cached_type(&mut self, ty: CheckedType) {
         self.cached_type = Some(ty);
-    }
-}
-
-impl GenericUser for FunctionCall {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        // For function calls, we can just change our name to one resolved
-        // using the generic map. And obviously just visit all of our arguments
-
-        // FIXME: Can we unwrap here?
-        let dec = match ctx.get_function(&self.fn_name) {
-            Some(f) => f,
-            None => {
-                ctx.error(Error::new(ErrKind::Generics)
-                    .with_msg(format!("trying to access undeclared function in new specialized function: `{}`", self.fn_name))
-                    .with_loc(self.location.clone()));
-                return;
-            }
-        };
-        let new_types = match type_map.specialized_types(dec.generics()) {
-            Err(e) => {
-                ctx.error(e.with_loc(self.location().cloned()));
-                return;
-            }
-            Ok(new_t) => new_t,
-        };
-
-        if self.generics.is_empty() && dec.generics().is_empty() {
-            return Ok(());
-        }
-
-        if !self.generics.is_empty() && dec.generics().is_empty() {
-            // FIXME: Format generic list in error too
-            ctx.error(
-                Error::new(ErrKind::Generics)
-                    .with_msg(format!(
-                        "calling non-generic function with generic arguments: `{}`",
-                        self.name()
-                    ))
-                    .with_loc(self.location.clone()),
-            );
-            return Err(Error::new(ErrKind::Generics));
-        }
-
-        let _type_map =
-            match GenericMap::create(dec.generics(), &self.generics, &mut ctx.typechecker) {
-                Err(e) => {
-                    ctx.error(e);
-                    return Err(Error::new(ErrKind::Generics));
-                }
-                Ok(m) => m,
-            };
-
-        // FIXME: Remove entirely?
-        // let mut new_fn = match dec.from_type_map(generic_name, &type_map, ctx) {
-        //     Ok(f) => f,
-        //     Err(e) => {
-        //         ctx.error(e.clone());
-        //         return Err(e);
-        //     }
-        // };
-        //
-        // if let Err(e) = ctx.type_check(&mut new_fn) {
-        //     // FIXME: This should probably be a generic error instead
-        //     // FIXME: The name is also mangled and shouldn't be
-        //     ctx.error(e);
-        // } else {
-        //     ctx.add_function(new_fn).unwrap();
-        // }
-
-        Ok(())
-    }
-
-    fn resolve_self(&mut self, ctx: &mut TypeCtx) {
-        let generic_name = generics::mangle(&self.fn_name, &self.generics);
-        log!("resolving call from {} to {}", self.fn_name, &generic_name);
-
-        // FIXME: Should we unwrap here?
-        let dec = ctx.get_function(&generic_name).unwrap().clone();
-
-        // FIXME: This is a little weird
-        if self.generics.is_empty() && dec.generics().is_empty() {
-            return;
-        }
-
-        // FIXME: This doesnt have all the actual types? T (b's type) is missing (464_arg_ty.jk)
-        // So we actually need to only map argument from the dec's arguments which are generic. Not
-        // all of them. Get a list of indexes or something from the dec and fetch those argument
-        // types only
-        // FIXME: We can only have actual types here: Not void, not unknown, nothing
-        let _resolved_types: Vec<TypeId> = self
-            .args
-            .iter_mut()
-            .map(|arg| match arg.type_of(ctx) {
-                Ok(CheckedType::Resolved(ty)) => ty,
-                _ => TypeId::void(),
-                // FIXME: Is this the correct behavior? The error
-                // will already have been emitted at this point
-            })
-            .collect();
-
-        // FIXME: Do we need this?
-        // self.args.iter_mut().for_each(|arg| arg.resolve_self(ctx));
-
-        self.fn_name = generic_name;
-        self.generics = vec![];
-
-        self.args
-            .iter_mut()
-            .for_each(|arg| arg.resolve_usages(type_map, ctx));
-
-        // FIXME: This is ugly as sin
-        if ctx.get_specialized_node(&self.fn_name).is_none() && self.fn_name != old_name {
-            let demangled = generics::demangle(&self.fn_name);
-
-            // FIXME: Can we unwrap here? Probably not
-            let generic_dec = ctx.get_function(demangled).unwrap().clone();
-            let specialized_fn = generic_dec.generate(self.fn_name.clone(), type_map, ctx);
-            ctx.add_specialized_node(SpecializedNode::Func(Box::new(specialized_fn)));
-        }
     }
 }
 

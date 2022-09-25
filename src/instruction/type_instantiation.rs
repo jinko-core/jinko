@@ -3,12 +3,10 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{self, GenericExpander, GenericMap, GenericUser};
 use crate::instance::{Name, ObjectInstance};
 use crate::instruction::{InstrKind, Instruction, TypeDec, VarAssign};
 use crate::location::SpanTuple;
-use crate::symbol::Symbol;
-use crate::typechecker::{CheckedType, SpecializedNode, TypeCheck, TypeCtx, TypeId};
+use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
 use std::rc::Rc;
 
@@ -87,34 +85,6 @@ impl TypeInstantiation {
     pub fn set_location(&mut self, location: SpanTuple) {
         self.location = Some(location)
     }
-
-    pub fn resolve_generic_instantiation(
-        &mut self,
-        dec: TypeDec,
-        ctx: &mut TypeCtx,
-    ) -> Result<CheckedType, Error> {
-        log!(
-            "creating specialized type. type generics: {}, instantiation generics {}",
-            dec.generics().len(),
-            self.generics.len()
-        );
-        let type_map = GenericMap::create(dec.generics(), &self.generics, ctx)?;
-
-        let specialized_name = generics::mangle(dec.name(), &self.generics);
-        if ctx.get_custom_type(&specialized_name).is_none() {
-            // FIXME: Remove this clone once we have proper symbols
-            let specialized_ty = dec.from_type_map(specialized_name.clone(), &type_map, ctx)?;
-
-            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty))?;
-        }
-
-        self.type_name = TypeId::new(Symbol::from(specialized_name));
-        self.generics = vec![];
-
-        // Recursively resolve the type of self now that we changed the
-        // function to call
-        self.type_of(ctx)
-    }
 }
 
 impl Instruction for TypeInstantiation {
@@ -187,9 +157,9 @@ impl TypeCheck for TypeInstantiation {
             }
         };
 
-        if !dec.generics().is_empty() || !self.generics.is_empty() {
-            return self.resolve_generic_instantiation(dec, ctx);
-        }
+        // if !dec.generics().is_empty() || !self.generics.is_empty() {
+        //     return self.resolve_generic_instantiation(dec, ctx);
+        // }
 
         let mut errors = vec![];
         for (field_dec, var_assign) in dec.fields().iter().zip(self.fields.iter_mut()) {
@@ -226,47 +196,6 @@ impl TypeCheck for TypeInstantiation {
 
     fn cached_type(&self) -> Option<&CheckedType> {
         self.cached_type.as_ref()
-    }
-}
-
-impl GenericUser for TypeInstantiation {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        let dec = match ctx.get_custom_type(self.type_name.id()) {
-            Some(t) => t,
-            None => {
-                ctx.error(Error::new(ErrKind::Generics).with_msg(format!("trying to access undeclared type when resolving generic type instantiation: `{}`", self.type_name)).with_loc(self.location.clone()));
-                return;
-            }
-        };
-
-        let new_types = match type_map.specialized_types(dec.generics()) {
-            Err(e) => {
-                ctx.error(e.with_loc(self.location().cloned()));
-                return;
-            }
-            Ok(new_t) => new_t,
-        };
-
-        let new_name = generics::mangle(self.type_name.id(), &new_types);
-        let old_name = String::from(self.type_name.id());
-        self.type_name = TypeId::new(Symbol::from(new_name.clone()));
-        self.generics = vec![];
-
-        self.fields
-            .iter_mut()
-            .for_each(|arg| arg.resolve_usages(type_map, ctx));
-
-        // FIXME: This is ugly as sin
-        if ctx.get_specialized_node(self.type_name.id()).is_none()
-            && self.type_name.id() != old_name
-        {
-            let demangled = generics::demangle(self.type_name.id());
-
-            // FIXME: Can we unwrap here? Probably not
-            let generic_dec = ctx.get_custom_type(demangled).unwrap().clone();
-            let specialized_ty = generic_dec.generate(new_name, type_map, ctx);
-            ctx.add_specialized_node(SpecializedNode::Type(specialized_ty));
-        }
     }
 }
 
