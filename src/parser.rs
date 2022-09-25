@@ -2,10 +2,9 @@
 //! entry is created for the "main" function of the program. Including modules adds
 //! instructions to that main entry.
 
-use std::path::Path;
-
 use crate::context::Context;
 use crate::error::Error;
+use crate::location::Source;
 
 mod constant_construct;
 pub mod constructs;
@@ -15,15 +14,15 @@ pub use constant_construct::ConstantConstruct;
 use nom_locate::LocatedSpan;
 pub use tokens::Token;
 
-pub type ParseInput<'i> = LocatedSpan<&'i str, Option<&'i Path>>;
+pub type ParseInput<'i> = LocatedSpan<&'i str, Source<'i>>;
 pub type ParseResult<T, I> = nom::IResult<T, I, Error>;
 
 /// Parses the entire user input into a vector of instructions in the context
-pub fn parse(ctx: &mut Context, input: &str, file_path: Option<&Path>) -> Result<(), Error> {
+pub fn parse(ctx: &mut Context, input: &str, source: Source) -> Result<(), Error> {
     // FIXME: Keep input in context here
     ctx.set_code(input.to_string());
     let entry_block = ctx.entry_point.block_mut().unwrap();
-    let input = LocatedSpan::new_extra(input, file_path);
+    let input = LocatedSpan::new_extra(input, source);
 
     let (_, instructions) = constructs::many_expr(input)?;
 
@@ -36,6 +35,6 @@ pub fn parse(ctx: &mut Context, input: &str, file_path: Option<&Path>) -> Result
 #[macro_export]
 macro_rules! span {
     ($s:literal) => {
-        nom_locate::LocatedSpan::new_extra($s, None)
+        nom_locate::LocatedSpan::new_extra($s, $crate::location::Source::Empty)
     };
 }

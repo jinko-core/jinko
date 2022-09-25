@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use colored::Colorize;
 
-use crate::location::SpanTuple;
+use crate::location::{SourceOwned, SpanTuple};
 use crate::parser::ParseInput;
 
 /// The role of the error handler is to keep track of errors and emit them properly
@@ -95,22 +95,29 @@ pub struct Error {
     hints: Vec<Error>,
 }
 
+fn get_path_str(loc: &SpanTuple) -> String {
+    match loc.source() {
+        SourceOwned::Path(p) => format!("{}", p.display()),
+        SourceOwned::Input(_) => String::from("<source>"),
+        SourceOwned::Empty => String::from("<?>"),
+    }
+}
+
 impl Error {
     fn emit_full_loc(&self, loc: &SpanTuple) {
         let (before_ctx, after_ctx) = loc.generate_context();
+        let path = get_path_str(loc);
 
         if let Some(msg) = &self.msg {
-            if let Some(path) = loc.path() {
-                eprintln!(
-                    "{}: {}:{}:{}: {}",
-                    "error".black().on_yellow(),
-                    path.display().to_string().yellow(),
-                    loc.start().line(),
-                    loc.start().column(),
-                    msg
-                );
-                eprintln!();
-            }
+            eprintln!(
+                "{}: {}:{}:{}: {}",
+                "error".black().on_yellow(),
+                path.yellow(),
+                loc.start().line(),
+                loc.start().column(),
+                msg
+            );
+            eprintln!();
         }
 
         if let Some(ctx) = before_ctx {
@@ -124,14 +131,13 @@ impl Error {
         eprintln!();
         eprint!("{}: ", "hint".black().on_green());
         if let Some(loc) = &self.loc {
-            if let Some(path) = loc.path() {
-                eprint!(
-                    "{}:{}:{}: ",
-                    path.display().to_string().green(),
-                    loc.start().line(),
-                    loc.start().column()
-                );
-            }
+            let path = get_path_str(loc);
+            eprint!(
+                "{}:{}:{}: ",
+                path.green(),
+                loc.start().line(),
+                loc.start().column()
+            );
         }
         if let Some(msg) = &self.msg {
             eprintln!("{}", msg);
@@ -166,17 +172,16 @@ impl Error {
             let (before_ctx, after_ctx) = loc.generate_context();
 
             if let Some(msg) = &self.msg {
-                if let Some(path) = loc.path() {
-                    eprintln!(
-                        "{}: {}:{}:{}: {}",
-                        dbg,
-                        path.display().to_string().purple(),
-                        loc.start().line(),
-                        loc.start().column(),
-                        msg
-                    );
-                    eprintln!();
-                }
+                let path = get_path_str(loc);
+                eprintln!(
+                    "{}: {}:{}:{}: {}",
+                    dbg,
+                    path.purple(),
+                    loc.start().line(),
+                    loc.start().column(),
+                    msg
+                );
+                eprintln!();
             }
 
             if let Some(ctx) = before_ctx {
@@ -275,7 +280,7 @@ impl<'i> nom::error::ParseError<ParseInput<'i>> for Error {
     fn from_error_kind(span: ParseInput<'i>, _: nom::error::ErrorKind) -> Error {
         // FIXME: Add better location here in order to print whole line and
         // display specific hint about parse error
-        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(
+        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::with_source_ref(
             span.extra,
             span.into(),
             span.into(),
@@ -289,7 +294,7 @@ impl<'i> nom::error::ParseError<ParseInput<'i>> for Error {
         //     None => String::new(),
         // };
 
-        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::new(
+        Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::with_source_ref(
             span.extra,
             span.into(),
             span.into(),

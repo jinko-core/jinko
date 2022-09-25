@@ -38,7 +38,7 @@ impl ConstantConstruct {
         let (input, end_loc) = position(input)?;
         let string = inner.unwrap_or_else(|| {
             let mut s = JkString::from("");
-            s.set_location(SpanTuple::new(
+            s.set_location(SpanTuple::with_source_ref(
                 input.extra,
                 start_loc.into(),
                 end_loc.into(),
@@ -98,12 +98,20 @@ impl ConstantConstruct {
 
             let (input, end_loc) = position(input)?;
             let mut string = JkString::from(escaped);
-            string.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+            string.set_location(SpanTuple::with_source_ref(
+                input.extra,
+                start_loc,
+                end_loc.into(),
+            ));
             Ok((input, Box::new(string)))
         } else if let Some(index) = input.find(special) {
             let (input, end_loc) = position(input)?;
             let mut string = JkString::from(&input[..index]);
-            string.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+            string.set_location(SpanTuple::with_source_ref(
+                input.extra,
+                start_loc,
+                end_loc.into(),
+            ));
             Ok((input.slice(index..), Box::new(string)))
         } else {
             Err(NomError(

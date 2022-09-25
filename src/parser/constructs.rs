@@ -74,7 +74,7 @@ pub fn expr(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> 
         let (new_input, end_loc) = position(new_input)?;
         input = new_input;
         let mut b_op = BinaryOp::new(expr, rhs, Operator::new(op.fragment()));
-        b_op.set_location(SpanTuple::new(
+        b_op.set_location(SpanTuple::with_source_ref(
             input.extra,
             start_loc.into(),
             end_loc.into(),
@@ -93,7 +93,7 @@ pub fn cmp(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
         let (new_input, end_loc) = position(new_input)?;
         input = new_input;
         let mut b_op = BinaryOp::new(expr, rhs, Operator::new(op.fragment()));
-        b_op.set_location(SpanTuple::new(
+        b_op.set_location(SpanTuple::with_source_ref(
             input.extra,
             start_loc.into(),
             end_loc.into(),
@@ -115,7 +115,7 @@ fn term(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instruction>> {
         let new_input = next(new_input);
         input = new_input;
         let mut b_op = BinaryOp::new(term, rhs, Operator::new(op.fragment()));
-        b_op.set_location(SpanTuple::new(
+        b_op.set_location(SpanTuple::with_source_ref(
             input.extra,
             start_loc.into(),
             end_loc.into(),
@@ -164,7 +164,11 @@ fn method_or_field(
         let (input, args) = args(input)?;
         let (input, end_loc) = position(input)?;
         let mut method_call = MethodCall::new(expr, FunctionCall::new(id, vec![], args));
-        method_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        method_call.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            end_loc.into(),
+        ));
         Ok((input, Box::new(method_call)))
     } else if let Ok((input, _)) = Token::left_bracket(input) {
         let input = next(input);
@@ -175,12 +179,20 @@ fn method_or_field(
         let (input, args) = args(input)?;
         let (input, end_loc) = position(input)?;
         let mut method_call = MethodCall::new(expr, FunctionCall::new(id, generics, args));
-        method_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        method_call.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            end_loc.into(),
+        ));
         Ok((input, Box::new(method_call)))
     } else {
         let (input, end_loc) = position(input)?;
         let mut f_a = FieldAccess::new(expr, id);
-        f_a.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        f_a.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            end_loc.into(),
+        ));
 
         Ok((input, Box::new(f_a)))
     }
@@ -274,12 +286,20 @@ fn unit_if(
 
         let mut if_else = IfElse::new(cond, success, Some(else_body));
 
-        if_else.set_location(SpanTuple::new(input.extra, start_loc, if_end_loc));
+        if_else.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            if_end_loc,
+        ));
         Ok((input, Box::new(if_else)))
     } else {
         let (input, end_loc) = position(input)?;
         let mut if_else = IfElse::new(cond, success, None);
-        if_else.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        if_else.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            end_loc.into(),
+        ));
         Ok((input, Box::new(if_else)))
     }
 }
@@ -291,7 +311,11 @@ fn unit_while(
     let (input, (cond, block)) = pair(expr, block)(input)?;
     let (input, end_loc) = position(input)?;
     let mut while_loop = Loop::new(LoopKind::While(cond), block);
-    while_loop.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    while_loop.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
 
     Ok((input, Box::new(while_loop)))
 }
@@ -304,7 +328,11 @@ fn unit_loop(
     let (input, block) = block(input)?;
     let (input, end_loc) = position(input)?;
     let mut loop_loop = Loop::new(LoopKind::Loop, block);
-    loop_loop.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    loop_loop.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
 
     Ok((input, Box::new(loop_loop)))
 }
@@ -320,7 +348,11 @@ fn unit_for(
     let (input, end_loc) = position(input)?;
     let var = Var::new(id);
     let mut for_loop = Loop::new(LoopKind::For(Box::new(var), expr), block);
-    for_loop.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    for_loop.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
 
     Ok((input, Box::new(for_loop)))
 }
@@ -334,7 +366,11 @@ fn unit_func<'i>(
     let input = next(input);
     let (input, body) = block(input)?;
     let (input, end_loc) = position(input)?;
-    function.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    function.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
     function.set_block(body);
     function.set_kind(FunctionKind::from(*kind.fragment()));
     Ok((input, Box::new(function)))
@@ -349,12 +385,16 @@ fn unit_incl(
         let (input, alias) = preceded(nom_next, Token::identifier)(input)?;
         let (input, end_loc) = position(input)?;
         let mut inclusion = Incl::new(path, Some(alias));
-        inclusion.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        inclusion.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            end_loc.into(),
+        ));
         Ok((input, Box::new(inclusion)))
     } else {
         let end_loc = Location::new(id_loc.line(), id_loc.column() + path.len());
         let mut inclusion = Incl::new(path, None);
-        inclusion.set_location(SpanTuple::new(input.extra, start_loc, end_loc));
+        inclusion.set_location(SpanTuple::with_source_ref(input.extra, start_loc, end_loc));
         Ok((input, Box::new(inclusion)))
     }
 }
@@ -435,7 +475,11 @@ fn unit_type_decl(
     };
     let (input, end_loc) = position(input)?;
 
-    type_dec.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    type_dec.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
 
     Ok((input, Box::new(type_dec)))
 }
@@ -448,7 +492,11 @@ fn unit_mut_var(input: ParseInput) -> ParseResult<ParseInput, Box<dyn Instructio
     let (input, end_loc) = position(input)?;
 
     let mut assignment = VarAssign::new(true, symbol, value);
-    assignment.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    assignment.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
 
     Ok((input, Box::new(assignment)))
 }
@@ -465,7 +513,11 @@ fn unit_jk_inst(
 
     // A jk_inst will never contain generics
     let mut call = FunctionCall::new(name, vec![], args);
-    call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    call.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
     match JkInst::from_function_call(&call) {
         Ok(inst) => Ok((input, Box::new(inst))),
         Err(err) => Err(NomError(err)),
@@ -490,7 +542,11 @@ fn unit_return(
     let (input, end_loc) = position(input)?;
 
     let mut ret = Return::new(expr);
-    ret.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    ret.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
 
     Ok((input, Box::new(ret)))
 }
@@ -502,7 +558,11 @@ fn unit_block(
     let (input, mut block) = inner_block(next(input))?;
     let (input, end_loc) = position(input)?;
 
-    block.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    block.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
 
     Ok((input, Box::new(block)))
 }
@@ -571,7 +631,7 @@ pub fn block(input: ParseInput) -> ParseResult<ParseInput, Block> {
     let (input, mut block) = inner_block(input)?;
     let (input, end_loc) = position(input)?;
 
-    block.set_location(SpanTuple::new(
+    block.set_location(SpanTuple::with_source_ref(
         input.extra,
         start_loc.into(),
         end_loc.into(),
@@ -617,12 +677,20 @@ fn func_type_or_var(
         let (input, value) = expr(input)?;
         let (input, end_loc) = position(input)?;
         let mut var_assign = VarAssign::new(false, id, value);
-        var_assign.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        var_assign.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            end_loc.into(),
+        ));
         Ok((input, Box::new(var_assign)))
     } else {
         let (input, end_loc) = position(input)?;
         let mut var_or_et = VarOrEmptyType::new(id);
-        var_or_et.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        var_or_et.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            end_loc.into(),
+        ));
         Ok((input, Box::new(var_or_et)))
     }
 }
@@ -648,7 +716,7 @@ fn func_or_type_inst_args(
 
         let mut type_inst = TypeInstantiation::new(TypeId::new(Symbol::from(id)));
         type_inst.add_field(VarAssign::new(false, first_attr, first_attr_val).with_loc(
-            SpanTuple::new(
+            SpanTuple::with_source_ref(
                 input.extra,
                 first_attr_start_loc.into(),
                 first_attr_end_loc.into(),
@@ -657,14 +725,22 @@ fn func_or_type_inst_args(
         attrs.into_iter().for_each(|attr| type_inst.add_field(attr));
 
         type_inst.set_generics(generics);
-        type_inst.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        type_inst.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            end_loc.into(),
+        ));
 
         Ok((input, Box::new(type_inst)))
     } else {
         let (input, args) = args(input)?;
         let (input, end_loc) = position(input)?;
         let mut func_call = FunctionCall::new(id, generics, args);
-        func_call.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+        func_call.set_location(SpanTuple::with_source_ref(
+            input.extra,
+            start_loc,
+            end_loc.into(),
+        ));
 
         Ok((input, Box::new(func_call)))
     }
@@ -743,7 +819,11 @@ fn typed_arg(input: ParseInput) -> ParseResult<ParseInput, DecArg> {
     let (input, end_loc) = position(input)?;
 
     let mut dec_arg = DecArg::new(id, types);
-    dec_arg.set_location(SpanTuple::new(input.extra, start_loc, end_loc.into()));
+    dec_arg.set_location(SpanTuple::with_source_ref(
+        input.extra,
+        start_loc,
+        end_loc.into(),
+    ));
 
     Ok((input, dec_arg))
 }
@@ -761,7 +841,7 @@ fn type_inst_arg(input: ParseInput) -> ParseResult<ParseInput, VarAssign> {
 
     Ok((
         input,
-        VarAssign::new(false, id, value).with_loc(SpanTuple::new(
+        VarAssign::new(false, id, value).with_loc(SpanTuple::with_source_ref(
             input.extra,
             start_loc.into(),
             end_loc.into(),

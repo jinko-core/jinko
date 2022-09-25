@@ -187,6 +187,7 @@ mod tests {
     use super::*;
     use crate::context::Context;
     use crate::instance::ToObjectInstance;
+    use crate::location::Source;
     use crate::value::JkInt;
     use crate::{jinko, jinko_fail};
 
@@ -238,7 +239,7 @@ mod tests {
 
     fn assert_bool(input: &str, value: bool) {
         use crate::value::JkBool;
-        let input = LocatedSpan::new_extra(input, None);
+        let input = LocatedSpan::new_extra(input, Source::Empty);
 
         let boxed_output = crate::parser::constructs::expr(input).unwrap().1;
         let output = boxed_output.downcast_ref::<BinaryOp>().unwrap();
@@ -308,7 +309,7 @@ mod tests {
             let mut ctx = Context::new(Box::new(crate::io_trait::JkStdReader));
             let expr = crate::parser::constructs::expr(nom_locate::LocatedSpan::new_extra(
                 stringify!($expr),
-                None,
+                Source::Empty,
             ))
             .unwrap()
             .1;

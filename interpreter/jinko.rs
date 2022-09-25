@@ -9,6 +9,7 @@ use colored::Colorize;
 use jinko::context::Context;
 use jinko::error::{ErrKind, Error};
 use jinko::instance::{FromObjectInstance, ObjectInstance};
+use jinko::location::Source;
 use jinko::typechecker::CheckedType;
 use jinko::value::{JkBool, JkFloat, JkInt};
 
@@ -99,7 +100,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
         ctx.init_stdlib()?;
     }
 
-    jinko::parser::parse(&mut ctx, &input, Some(file))?;
+    jinko::parser::parse(&mut ctx, &input, Source::Path(file))?;
 
     ctx.set_path(Some(file.to_owned()));
     ctx.set_args(args.project_args());

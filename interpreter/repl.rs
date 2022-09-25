@@ -80,6 +80,8 @@ impl Repl {
         self.reader.set_prompt(&Prompt::get(&ctx))?;
 
         while let ReadResult::Input(input) = self.reader.read_line()? {
+            ctx.set_code(input.clone());
+
             if let Ok(Some(res)) = ctx.eval(&input) {
                 println!("{}", ReplInstance(res));
             }

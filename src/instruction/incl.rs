@@ -11,7 +11,7 @@ use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::io_trait::JkReader;
-use crate::location::SpanTuple;
+use crate::location::{Source, SpanTuple};
 use crate::parser::constructs;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx};
 
@@ -57,8 +57,10 @@ impl Incl {
         // We can't just parse the input, since it adds the instructions
         // to an entry block in order to execute them. What we can do, is
         // parse many instructions and add them to an empty ctx
-        let (remaining_input, instructions) =
-            constructs::many_expr(LocatedSpan::new_extra(input.as_str(), Some(formatted)))?;
+        let (remaining_input, instructions) = constructs::many_expr(LocatedSpan::new_extra(
+            input.as_str(),
+            Source::Path(formatted),
+        ))?;
 
         match remaining_input.len() {
             // The remaining input is empty: We parsed the whole file properly
