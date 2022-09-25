@@ -34,16 +34,18 @@ tests:
     args:
       - "tests/ft/regression/284.jk"
     exit_code: 0
-  - name: "Do not map non-generic return type #464"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/regression/464_return_ty.jk"
-    exit_code: 0
-  - name: "Do not map non-generic arg type #464"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/regression/464_arg_ty.jk"
-    exit_code: 0
+      # FIXME: #587
+      # - name: "Do not map non-generic return type #464"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "tests/ft/regression/464_return_ty.jk"
+      #   exit_code: 0
+      # FIXME: #587
+      # - name: "Do not map non-generic arg type #464"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "tests/ft/regression/464_arg_ty.jk"
+      #   exit_code: 0
   - name: "Test functions get declared during generics pass #468"
     binary: "target/debug/jinko"
     args:
@@ -56,8 +58,9 @@ tests:
       - "tests/ft/regression/468.jk"
     stdout: "in test!\n"
     exit_code: 0
-  - name: "Forbid calling non-generic fn with generic arguments #462"
-    binary: "target/debug/jinko"
-    args:
-      - "tests/ft/regression/462.jk"
-    exit_code: 1
+      # FIXME: #587
+      # - name: "Forbid calling non-generic fn with generic arguments #462"
+      #   binary: "target/debug/jinko"
+      #   args:
+      #     - "tests/ft/regression/462.jk"
+      #   exit_code: 1

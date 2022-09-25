@@ -2,7 +2,7 @@
 //! they get desugared into a normal function call.
 
 use crate::context::Context;
-use crate::generics::GenericUser;
+use crate::error::Error;
 use crate::instance::ObjectInstance;
 use crate::instruction::FunctionCall;
 use crate::instruction::{InstrKind, Instruction};
@@ -60,7 +60,7 @@ impl Instruction for MethodCall {
 }
 
 impl TypeCheck for MethodCall {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         let mut call = self.method.clone();
 
         call.add_arg_front(self.var.clone());
@@ -84,13 +84,6 @@ impl TypeCheck for MethodCall {
 
     fn cached_type(&self) -> Option<&CheckedType> {
         self.cached_type.as_ref()
-    }
-}
-
-impl GenericUser for MethodCall {
-    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
-        // FIXME: Can we avoid adding the argument here?
-        self.method.resolve_usages(type_map, ctx);
     }
 }
 

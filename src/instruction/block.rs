@@ -18,7 +18,7 @@
 //! Otherwise, it's `void`
 
 use crate::context::Context;
-use crate::generics::{GenericMap, GenericUser};
+use crate::error::Error;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -130,17 +130,24 @@ impl Instruction for Block {
 }
 
 impl TypeCheck for Block {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         let last_type = self
             .instructions
             .iter_mut()
-            .map(|inst| inst.type_of(ctx))
+            .map(|inst| match inst.type_of(ctx) {
+                // Aggregate
+                Err(e) => {
+                    ctx.error(e);
+                    CheckedType::Error
+                }
+                Ok(t) => t,
+            })
             .last()
             .unwrap_or(CheckedType::Void);
 
         match &self.is_statement {
-            true => CheckedType::Void,
-            false => last_type,
+            true => Ok(CheckedType::Void),
+            false => Ok(last_type),
         }
     }
 
@@ -150,14 +157,6 @@ impl TypeCheck for Block {
 
     fn cached_type(&self) -> Option<&CheckedType> {
         self.cached_type.as_ref()
-    }
-}
-
-impl GenericUser for Block {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.instructions
-            .iter_mut()
-            .for_each(|inst| inst.resolve_usages(type_map, ctx))
     }
 }
 

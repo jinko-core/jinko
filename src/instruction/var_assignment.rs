@@ -2,7 +2,6 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::{GenericMap, GenericUser};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction, Var};
 use crate::location::SpanTuple;
@@ -126,7 +125,7 @@ impl Instruction for VarAssign {
 }
 
 impl TypeCheck for VarAssign {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         let var_ty = match ctx.get_var(&self.symbol) {
             // FIXME: Remove clone?
             Some(checked_ty) => {
@@ -134,71 +133,55 @@ impl TypeCheck for VarAssign {
                 // for the first time. However, we entered the match arm because the variable
                 // is already present in the context. Error out appropriately.
                 if self.mutable() {
-                    let err_msg = format!(
-                        "trying to redefine already defined variable: {}",
-                        self.symbol()
-                    );
-
                     // FIXME: Add hint here about previous definition
-                    ctx.error(
-                        Error::new(ErrKind::TypeChecker)
-                            .with_msg(err_msg)
-                            .with_loc(self.location.clone()),
-                    );
-                    return CheckedType::Error;
+                    return Err(Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "trying to redefine already defined variable: {}",
+                            self.symbol()
+                        ))
+                        .with_loc(self.location.clone()));
                 }
 
                 checked_ty.clone()
             }
             None => {
-                let instance_ty = self.value.type_of(ctx);
+                let instance_ty = self.value.type_of(ctx)?;
                 if instance_ty == CheckedType::Void {
-                    ctx.error(
-                        Error::new(ErrKind::TypeChecker)
-                            .with_msg(format!(
-                                "trying to assign statement to variable `{}`",
-                                self.symbol
-                            ))
-                            .with_loc(self.location.clone()),
-                    );
-                    return CheckedType::Error;
+                    return Err(Error::new(ErrKind::TypeChecker)
+                        .with_msg(format!(
+                            "trying to assign statement to variable `{}`",
+                            self.symbol
+                        ))
+                        .with_loc(self.location.clone()));
                 }
-                if let Err(e) = ctx.declare_var(self.symbol.clone(), instance_ty) {
-                    ctx.error(e);
-                }
+                ctx.declare_var(self.symbol.clone(), instance_ty)?;
 
                 // We can return here since it's a new variable. This avoids checking
                 // the type later on
-                return CheckedType::Void;
+                return Ok(CheckedType::Void);
             }
         };
 
-        let value_ty = self.value.type_of(ctx);
+        let value_ty = self.value.type_of(ctx)?;
         if value_ty == CheckedType::Void {
-            ctx.error(
-                Error::new(ErrKind::TypeChecker)
-                    .with_msg(format!(
-                        "trying to assign statement to mutable variable `{}` of type `{}`",
-                        self.symbol, var_ty
-                    ))
-                    .with_loc(self.location.clone()),
-            );
-            return CheckedType::Error;
+            return Err(Error::new(ErrKind::TypeChecker)
+                .with_msg(format!(
+                    "trying to assign statement to mutable variable `{}` of type `{}`",
+                    self.symbol, var_ty
+                ))
+                .with_loc(self.location.clone()));
         }
 
         if var_ty != value_ty {
-            ctx.error(
-                Error::new(ErrKind::TypeChecker)
-                    .with_msg(format!(
-                        "trying to assign value of type `{}` to variable of type `{}`",
-                        value_ty, var_ty
-                    ))
-                    .with_loc(self.location.clone()),
-            );
-            return CheckedType::Error;
+            return Err(Error::new(ErrKind::TypeChecker)
+                .with_msg(format!(
+                    "trying to assign value of type `{}` to variable of type `{}`",
+                    value_ty, var_ty
+                ))
+                .with_loc(self.location.clone()));
         }
 
-        CheckedType::Void
+        Ok(CheckedType::Void)
     }
 
     fn set_cached_type(&mut self, _ty: CheckedType) {
@@ -210,12 +193,6 @@ impl TypeCheck for VarAssign {
             true => Some(&CheckedType::Void),
             false => None,
         }
-    }
-}
-
-impl GenericUser for VarAssign {
-    fn resolve_usages(&mut self, type_map: &GenericMap, ctx: &mut TypeCtx) {
-        self.value.resolve_usages(type_map, ctx)
     }
 }
 
@@ -316,6 +293,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Generics not re-implemented yet #587"]
     fn generic_builtin_for_var_assign() {
         jinko! {
             a = 156;

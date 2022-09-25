@@ -5,7 +5,6 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::TypeDec;
 use crate::instruction::{InstrKind, Instruction};
@@ -105,16 +104,11 @@ impl Instruction for Var {
 }
 
 impl TypeCheck for Var {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         match ctx.get_var(self.name()) {
-            Some(var_ty) => var_ty.clone(),
-            None => {
-                ctx.error(
-                    Error::new(ErrKind::TypeChecker)
-                        .with_msg(format!("use of undeclared variable: `{}`", self.name())),
-                );
-                CheckedType::Error
-            }
+            Some(var_ty) => Ok(var_ty.clone()),
+            None => Err(Error::new(ErrKind::TypeChecker)
+                .with_msg(format!("use of undeclared variable: `{}`", self.name()))),
         }
     }
 
@@ -132,8 +126,6 @@ impl Default for Var {
         Var::new(String::new())
     }
 }
-
-impl GenericUser for Var {}
 
 #[cfg(test)]
 mod tests {

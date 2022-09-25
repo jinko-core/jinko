@@ -7,7 +7,6 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::GenericUser;
 use crate::instance::{FromObjectInstance, ObjectInstance};
 use crate::instruction::{InstrKind, Instruction, Operator};
 use crate::location::SpanTuple;
@@ -134,32 +133,32 @@ impl Instruction for BinaryOp {
 }
 
 impl TypeCheck for BinaryOp {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         let l_type = self.lhs.type_of(ctx);
-        let r_type = self.rhs.type_of(ctx);
+        let r_type = self.rhs.type_of(ctx)?;
+
+        // Unpacking after checking rhs to give maximum feedback to the user
+        let l_type = l_type?;
 
         if l_type != r_type {
-            ctx.error(
-                Error::new(ErrKind::TypeChecker)
-                    .with_msg(format!(
-                        "trying to do binary operation on invalid types: {} {} {}",
-                        l_type,
-                        self.op.as_str(),
-                        r_type,
-                    ))
-                    .with_loc(self.location.clone()),
-            );
-            return CheckedType::Error;
-        }
-
-        match self.op {
-            Operator::Lt
-            | Operator::Gt
-            | Operator::LtEq
-            | Operator::GtEq
-            | Operator::Equals
-            | Operator::NotEquals => CheckedType::Resolved(TypeId::from("bool")),
-            _ => l_type,
+            Err(Error::new(ErrKind::TypeChecker)
+                .with_msg(format!(
+                    "trying to do binary operation on invalid types: {} {} {}",
+                    l_type,
+                    self.op.as_str(),
+                    r_type,
+                ))
+                .with_loc(self.location.clone()))
+        } else {
+            match self.op {
+                Operator::Lt
+                | Operator::Gt
+                | Operator::LtEq
+                | Operator::GtEq
+                | Operator::Equals
+                | Operator::NotEquals => Ok(CheckedType::Resolved(TypeId::from("bool"))),
+                _ => Ok(l_type),
+            }
         }
     }
 
@@ -169,13 +168,6 @@ impl TypeCheck for BinaryOp {
 
     fn cached_type(&self) -> Option<&CheckedType> {
         self.cached_type.as_ref()
-    }
-}
-
-impl GenericUser for BinaryOp {
-    fn resolve_usages(&mut self, type_map: &crate::generics::GenericMap, ctx: &mut TypeCtx) {
-        self.lhs.resolve_usages(type_map, ctx);
-        self.rhs.resolve_usages(type_map, ctx);
     }
 }
 

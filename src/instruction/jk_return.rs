@@ -10,7 +10,7 @@
 //! ```
 
 use crate::context::Context;
-use crate::generics::GenericUser;
+use crate::error::Error;
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -68,9 +68,9 @@ impl Instruction for Return {
 }
 
 impl TypeCheck for Return {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         match &mut self.value {
-            None => CheckedType::Void,
+            None => Ok(CheckedType::Void),
             Some(v) => v.type_of(ctx),
         }
     }
@@ -83,8 +83,6 @@ impl TypeCheck for Return {
         self.cached_type.as_ref()
     }
 }
-
-impl GenericUser for Return {}
 
 #[cfg(test)]
 mod tests {

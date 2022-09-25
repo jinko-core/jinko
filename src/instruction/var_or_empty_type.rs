@@ -1,12 +1,12 @@
 use crate::context::Context;
-use crate::generics::GenericUser;
+use crate::error::{ErrKind, Error};
 use crate::instance::ObjectInstance;
 use crate::instruction::{InstrKind, Instruction, TypeInstantiation, Var};
 use crate::location::SpanTuple;
 use crate::symbol::Symbol;
 use crate::typechecker::{CheckedType, TypeCheck, TypeCtx, TypeId};
 
-#[derive(Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 enum Kind {
     Unknown,
     EmptyTypeInst,
@@ -81,19 +81,26 @@ impl Instruction for VarOrEmptyType {
 }
 
 impl TypeCheck for VarOrEmptyType {
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         let kind = if self.kind == Kind::Unknown {
             self.resolve_kind(ctx)
         } else {
-            self.kind.clone()
+            self.kind
         };
 
         match kind {
-            Kind::Unknown => CheckedType::Error,
-            Kind::EmptyTypeInst => {
-                CheckedType::Resolved(TypeId::new(Symbol::from(self.symbol.clone())))
-            }
-            Kind::VarAccess => ctx.get_var(&self.symbol).unwrap().to_owned(),
+            Kind::Unknown => Ok(CheckedType::Error),
+            Kind::EmptyTypeInst => Ok(CheckedType::Resolved(TypeId::new(Symbol::from(
+                self.symbol.clone(),
+            )))),
+            Kind::VarAccess => ctx.get_var(&self.symbol).cloned().ok_or_else(|| {
+                Error::new(ErrKind::TypeChecker)
+                    .with_msg(format!(
+                        "trying to access undeclared variable `{}`",
+                        &self.symbol
+                    ))
+                    .with_loc(self.location().cloned())
+            }),
         }
     }
 
@@ -110,5 +117,3 @@ impl TypeCheck for VarOrEmptyType {
         self.cached_type.as_ref()
     }
 }
-
-impl GenericUser for VarOrEmptyType {}

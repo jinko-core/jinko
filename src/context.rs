@@ -271,14 +271,14 @@ impl Context {
 
         match self.error_handler.has_errors() {
             true => Err(Error::new(ErrKind::TypeChecker)),
-            false => Ok(res),
+            false => Ok(res?),
         }
     }
 
     fn inner_check(&mut self, ep: &mut Block) -> Result<(), Error> {
         self.scope_enter();
 
-        ep.type_of(&mut self.typechecker);
+        ep.type_of(&mut self.typechecker)?;
 
         self.error_handler
             .append(&mut self.typechecker.error_handler);

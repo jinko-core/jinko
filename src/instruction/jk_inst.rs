@@ -5,7 +5,6 @@
 
 use crate::context::Context;
 use crate::error::{ErrKind, Error};
-use crate::generics::GenericUser;
 use crate::instance::ObjectInstance;
 use crate::instruction::{FunctionCall, InstrKind, Instruction};
 use crate::location::SpanTuple;
@@ -83,8 +82,8 @@ impl Instruction for JkInst {
 }
 
 impl TypeCheck for JkInst {
-    fn resolve_type(&mut self, _ctx: &mut TypeCtx) -> CheckedType {
-        CheckedType::Void
+    fn resolve_type(&mut self, _ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
+        Ok(CheckedType::Void)
     }
 
     fn set_cached_type(&mut self, _ty: CheckedType) {}
@@ -93,8 +92,6 @@ impl TypeCheck for JkInst {
         Some(&CheckedType::Void)
     }
 }
-
-impl GenericUser for JkInst {}
 
 #[cfg(test)]
 mod tests {

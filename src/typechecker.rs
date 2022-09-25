@@ -193,13 +193,15 @@ impl TypeCtx {
     }
 
     /// Add a new generated node to the context
-    pub fn add_specialized_node(&mut self, mut node: SpecializedNode) {
+    pub fn add_specialized_node(&mut self, mut node: SpecializedNode) -> Result<(), Error> {
         match &mut node {
-            SpecializedNode::Func(f) => f.type_of(self),
-            SpecializedNode::Type(t) => t.type_of(self),
+            SpecializedNode::Func(f) => f.type_of(self)?,
+            SpecializedNode::Type(t) => t.type_of(self)?,
         };
 
-        self.generated.push(node)
+        self.generated.push(node);
+
+        Ok(())
     }
 
     /// Get a reference to a newly generated node
@@ -282,7 +284,7 @@ pub trait TypeCheck {
     /// Go through the context in order to figure out the type of an instruction.
     /// This function should report errors using the context, and the [`ErrKind::TypeCheck`]
     /// error kind.
-    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> CheckedType;
+    fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error>;
 
     /// Cache the type of an instruction
     fn set_cached_type(&mut self, ty: CheckedType);
@@ -293,22 +295,26 @@ pub trait TypeCheck {
     /// Access the cached type of an instruction or perform the type resolution process.
     /// This avoid typechecking an entire instruction a second time and allows the
     /// context to just access it. This is useful for passes such as generic expansion.
-    fn type_of(&mut self, ctx: &mut TypeCtx) -> CheckedType {
+    fn type_of(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
         // FIXME: Remove clones
         match self.cached_type() {
-            None => match self.resolve_type(ctx) {
-                CheckedType::Resolved(new_ty) => {
-                    self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
-                    CheckedType::Resolved(new_ty)
+            None => {
+                match self.resolve_type(ctx)? {
+                    CheckedType::Resolved(new_ty) => {
+                        self.set_cached_type(CheckedType::Resolved(new_ty.clone()));
+                        Ok(CheckedType::Resolved(new_ty))
+                    }
+                    CheckedType::Void => {
+                        self.set_cached_type(CheckedType::Void);
+                        Ok(CheckedType::Void)
+                    }
+                    // FIXME: How do we deal with CheckedType::Error now that we
+                    // have emission sites and aggreg. sites? Remove it?
+                    CheckedType::Error => Ok(CheckedType::Error),
+                    CheckedType::Later => Ok(CheckedType::Later),
                 }
-                CheckedType::Void => {
-                    self.set_cached_type(CheckedType::Void);
-                    CheckedType::Void
-                }
-                CheckedType::Error => CheckedType::Error,
-                CheckedType::Later => CheckedType::Later,
-            },
-            Some(ty) => ty.clone(),
+            }
+            Some(ty) => Ok(ty.clone()),
         }
     }
 }
