@@ -24,44 +24,6 @@ impl<T: Clone> JkConstant<T> {
     }
 }
 
-// We can do a generic implementation instead of copy pasting it 5 times.
-// However, this part of the rust compiler is still not ready
-// (https://github.com/rust-lang/rust/issues/43408)
-//
-// Here is the generic implementation:
-//
-// ```
-// impl<T: Sized> ToObjectInstance for JkConstant<T> {
-//     fn to_instance(&self) -> ObjectInstance {
-//         use std::mem::{size_of, transmute};
-//
-//         unsafe {
-//             ObjectInstance::from_bytes(
-//                 None,
-//                 size_of::<T>(),
-//                 &transmute::<T, [u8; size_of::<T>()]>(self.0),
-//             )
-//         }
-//     }
-// }
-//
-// /* (Plus a specific implementation for JkConstant<String>) */
-// ```
-//
-// which fails with the following error message:
-//
-// ```
-// error[E0277]: the size for values of type `T` cannot be known at compilation time
-// --> src/value/jink_constant.rs:34:48
-//     |
-// 25  | impl <T: Sized> ToObjectInstance for JkConstant<T> {
-//     |       - this type parameter needs to be `Sized`
-//     ...
-// 34  |         &transmute::<T, [u8; size_of::<T>()]>(self.0),
-//     |                                        ^ doesn't have a size known at compile-time
-// ```
-
-/// Circumvents the need for a generic implementation (see comment).
 /// Call it with the type contained in the JkConstant and the &str representation
 ///
 /// ```ignore
@@ -69,168 +31,54 @@ impl<T: Clone> JkConstant<T> {
 /// jk_primitive!(i64, "int");
 /// ```
 macro_rules! jk_primitive {
-    // Special implementation for JkBool, in order to have as_bool()
-    (bool) => {
-        impl ToObjectInstance for JkConstant<bool> {
-            fn to_instance(&self) -> ObjectInstance {
-                use std::mem::{size_of, transmute};
-
-                unsafe {
-                    ObjectInstance::from_bytes(
-                        CheckedType::Resolved(TypeId::from("bool")),
-                        size_of::<bool>(),
-                        &transmute::<bool, [u8; size_of::<bool>()]>(self.0),
-                        None,
-                    )
-                }
-            }
-        }
-
-        impl FromObjectInstance for JkConstant<bool> {
-            fn from_instance(i: &ObjectInstance) -> Self {
-                use std::mem::{size_of, transmute};
-
-                unsafe {
-                    Self::from(transmute::<[u8; size_of::<bool>()], bool>(
-                        TryFrom::try_from(i.data()).unwrap(),
-                    ))
-                }
-            }
-        }
-
-        impl From<bool> for JkConstant<bool> {
-            fn from(value: bool) -> JkConstant<bool> {
-                JkConstant(value, CheckedType::Resolved(TypeId::from("bool")), None)
-            }
-        }
-
-        impl Instruction for JkConstant<bool> {
-            fn kind(&self) -> InstrKind {
-                InstrKind::Expression(None)
-            }
-
-            fn print(&self) -> String {
-                self.0.to_string()
-            }
-
-            fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
-                // Since we cannot use the generic ToObjectInstance implementation, we also have to
-                // copy paste our four basic implementations for jinko's primitive types...
-                Some(self.to_instance())
-            }
-
-            fn location(&self) -> Option<&SpanTuple> {
-                self.2.as_ref()
-            }
-        }
-
-        impl TypeCheck for JkConstant<bool> {
-            fn resolve_type(&mut self, _: &mut TypeCtx) -> Result<CheckedType, Error> {
-                Ok(CheckedType::Resolved(TypeId::from("bool")))
-            }
-
-            fn set_cached_type(&mut self, _: CheckedType) {}
-
-            fn cached_type(&self) -> Option<&CheckedType> {
-                Some(&self.1)
-            }
+    (@toinstance $self:expr, $t:ty => "int" $size:expr) => {
+        ObjectInstance::from_bytes(
+            CheckedType::Resolved(TypeId::from("int")),
+            $size,
+            &$self.0.to_ne_bytes(),
+            None,
+        )
+    };
+    (@toinstance $self:expr, $t:ty => "float" $size:expr) => {
+        ObjectInstance::from_bytes(
+            CheckedType::Resolved(TypeId::from("float")),
+            $size,
+            &$self.0.to_ne_bytes(),
+            None,
+        )
+    };
+    (@toinstance $self:expr, $t:ty => $ty_name:literal $size:expr) => {
+        unsafe {
+            ObjectInstance::from_bytes(
+                CheckedType::Resolved(TypeId::from($ty_name)),
+                $size,
+                &std::mem::transmute::<$t, [u8; $size]>($self.0),
+                None,
+            )
         }
     };
-    (char) => {
-        impl ToObjectInstance for JkConstant<char> {
-            fn to_instance(&self) -> ObjectInstance {
-                use std::mem::{size_of, transmute};
-
-                unsafe {
-                    ObjectInstance::from_bytes(
-                        CheckedType::Resolved(TypeId::from("char")),
-                        size_of::<char>(),
-                        &transmute::<char, [u8; size_of::<char>()]>(self.0),
-                        None,
-                    )
-                }
-            }
-        }
-
-        impl FromObjectInstance for JkConstant<char> {
-            fn from_instance(i: &ObjectInstance) -> Self {
-                use std::mem::{size_of, transmute};
-
-                unsafe {
-                    Self::from(transmute::<[u8; size_of::<char>()], char>(
-                        TryFrom::try_from(i.data()).unwrap(),
-                    ))
-                }
-            }
-        }
-
-        impl From<char> for JkConstant<char> {
-            fn from(value: char) -> JkConstant<char> {
-                JkConstant(value, CheckedType::Resolved(TypeId::from("char")), None)
-            }
-        }
-
-        impl Instruction for JkConstant<char> {
-            fn kind(&self) -> InstrKind {
-                InstrKind::Expression(None)
-            }
-
-            fn print(&self) -> String {
-                self.0.to_string()
-            }
-
-            fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {
-                ctx.debug("CONSTANT", &self.0.to_string());
-
-                // Since we cannot use the generic ToObjectInstance implementation, we also have to
-                // copy paste our four basic implementations for jinko's primitive types...
-                Some(self.to_instance())
-            }
-
-            fn location(&self) -> Option<&SpanTuple> {
-                self.2.as_ref()
-            }
-        }
-
-        impl TypeCheck for JkConstant<char> {
-            fn resolve_type(&mut self, _: &mut TypeCtx) -> Result<CheckedType, Error> {
-                Ok(CheckedType::Resolved(TypeId::from("char")))
-            }
-
-            fn set_cached_type(&mut self, _: CheckedType) {}
-
-            fn cached_type(&self) -> Option<&CheckedType> {
-                Some(&self.1)
-            }
-        }
-    };
-    ($t:ty, $s:expr) => {
+    (@instantiate $t:ty => $ty_name:tt $size:expr) => {
         impl ToObjectInstance for JkConstant<$t> {
             fn to_instance(&self) -> ObjectInstance {
-                use std::mem::size_of;
-
-                ObjectInstance::from_bytes(
-                    CheckedType::Resolved(TypeId::from($s)),
-                    size_of::<$t>(),
-                    &self.0.to_ne_bytes(),
-                    None,
-                )
+                jk_primitive!(@toinstance self, $t => $ty_name $size)
             }
         }
 
         impl FromObjectInstance for JkConstant<$t> {
             fn from_instance(i: &ObjectInstance) -> Self {
-                use std::mem::{size_of, transmute};
-
                 unsafe {
-                    Self::from(transmute::<[u8; size_of::<$t>()], $t>(
+                    Self::from(std::mem::transmute::<[u8; $size], $t>(
                         TryFrom::try_from(i.data()).unwrap(),
                     ))
                 }
             }
         }
+    };
 
-        impl Instruction for JkConstant<$t> {
+    ($rust_type:ty, $jk_type_name:tt) => {
+        jk_primitive!(@instantiate $rust_type => $jk_type_name std::mem::size_of::<$rust_type>());
+
+        impl Instruction for JkConstant<$rust_type> {
             fn kind(&self) -> InstrKind {
                 InstrKind::Expression(None)
             }
@@ -240,8 +88,6 @@ macro_rules! jk_primitive {
             }
 
             fn execute(&self, _ctx: &mut Context) -> Option<ObjectInstance> {
-                // Since we cannot use the generic ToObjectInstance implementation, we also have to
-                // copy paste our four basic implementations for jinko's primitive types...
                 Some(self.to_instance())
             }
 
@@ -250,9 +96,9 @@ macro_rules! jk_primitive {
             }
         }
 
-        impl TypeCheck for JkConstant<$t> {
+        impl TypeCheck for JkConstant<$rust_type> {
             fn resolve_type(&mut self, _: &mut TypeCtx) -> Result<CheckedType, Error> {
-                Ok(CheckedType::Resolved(TypeId::from($s)))
+                Ok(CheckedType::Resolved(TypeId::from($jk_type_name)))
             }
 
             fn set_cached_type(&mut self, _: CheckedType) {}
@@ -262,9 +108,9 @@ macro_rules! jk_primitive {
             }
         }
 
-        impl From<$t> for JkConstant<$t> {
-            fn from(rust_value: $t) -> Self {
-                JkConstant(rust_value, CheckedType::Resolved(TypeId::from($s)), None)
+        impl From<$rust_type> for JkConstant<$rust_type> {
+            fn from(rust_value: $rust_type) -> Self {
+                JkConstant(rust_value, CheckedType::Resolved(TypeId::from($jk_type_name)), None)
             }
         }
     };
@@ -272,8 +118,8 @@ macro_rules! jk_primitive {
 
 jk_primitive!(i64, "int");
 jk_primitive!(f64, "float");
-jk_primitive!(char);
-jk_primitive!(bool);
+jk_primitive!(char, "char");
+jk_primitive!(bool, "bool");
 
 impl Value for JkConstant<i64> {
     fn do_op(&self, other: &Self, op: Operator) -> Result<ObjectInstance, Error> {
