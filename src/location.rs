@@ -65,20 +65,50 @@ impl<T: nom::AsBytes, X> From<LocatedSpan<T, X>> for Location {
     }
 }
 
+/// The [`Source`] enum contains information relevant to the source used by the user - this can mean
+/// a file path, a string input (in the case of a REPL for example) or in rare cases, an empty
+/// input (tests, mocking, etc). [`Source`] is used by the parser: It keeps references to the
+/// input or file names given to the interpreter. [`SourceOwned`] keeps ownership of its data: This is
+/// useful but extremely costly, especially in the case of a [`SourceOwned::Input`].
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Source<'s> {
+    Path(&'s Path),
+    Input(&'s str),
+    Empty,
+}
+
+/// Same as [`Source`], but owning the values
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SourceOwned {
+    Path(PathBuf),
+    Input(String),
+    Empty,
+}
+
+impl Source<'_> {
+    fn as_source(&self) -> SourceOwned {
+        match self {
+            Source::Path(p) => SourceOwned::Path(p.into()),
+            Source::Input(i) => SourceOwned::Input(String::from(*i)),
+            Source::Empty => SourceOwned::Empty,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct SpanTuple {
-    path: Option<PathBuf>,
+    source: SourceOwned,
     start: Location,
     end: Location,
 }
 
 impl SpanTuple {
-    pub fn new<T: Into<PathBuf>>(path: Option<T>, start: Location, end: Location) -> SpanTuple {
-        SpanTuple {
-            path: path.map(|p| p.into()),
-            start,
-            end,
-        }
+    pub fn with_source_ref(source: Source, start: Location, end: Location) -> SpanTuple {
+        SpanTuple::with_source(source.as_source(), start, end)
+    }
+
+    pub fn with_source(source: SourceOwned, start: Location, end: Location) -> SpanTuple {
+        SpanTuple { source, start, end }
     }
 
     pub fn start(&self) -> &Location {
@@ -89,8 +119,8 @@ impl SpanTuple {
         &self.end
     }
 
-    pub fn path(&self) -> &Option<PathBuf> {
-        &self.path
+    pub fn source(&self) -> &SourceOwned {
+        &self.source
     }
 
     /// Amount of lines to use when creating before and after context for a
@@ -113,14 +143,18 @@ impl SpanTuple {
             let before_start =
                 Location::whole_line(max(self.start().line() - SpanTuple::CONTEXT_LINES, 1));
             let before_end = Location::whole_line(self.start().line() - 1);
-            Some(SpanTuple::new(self.path.clone(), before_start, before_end))
+            Some(SpanTuple::with_source(
+                self.source().clone(),
+                before_start,
+                before_end,
+            ))
         } else {
             None
         };
 
         let after_start = Location::whole_line(self.end().line() + 1);
         let after_end = Location::whole_line(self.end().line() + SpanTuple::CONTEXT_LINES);
-        let after_ctx = SpanTuple::new(self.path.clone(), after_start, after_end);
+        let after_ctx = SpanTuple::with_source(self.source().clone(), after_start, after_end);
 
         (before_ctx, after_ctx)
     }
@@ -158,11 +192,20 @@ impl SpanTuple {
         repetitor: &T2,
         path: &Path,
     ) -> String {
-        let mut result = String::new();
-
         // If the file has been removed between parsing and emitting errors...
         // We're in trouble
         let input = fs::read_to_string(path).unwrap();
+
+        self.with_input(separator, repetitor, &input)
+    }
+
+    fn with_input<T1: Display, T2: Display>(
+        &self,
+        separator: &T1,
+        repetitor: &T2,
+        input: &str,
+    ) -> String {
+        let mut result = String::new();
 
         if self.start.line() > self.end.line() {
             return result;
@@ -236,9 +279,10 @@ impl SpanTuple {
     }
 
     fn to_string<T1: Display, T2: Display>(&self, separator: &T1, repetitor: &T2) -> String {
-        match &self.path {
-            Some(path) => self.with_path(separator, repetitor, path),
-            None => String::new(), // FIXME: Do we want to return an empty string if there is no path?
+        match self.source() {
+            SourceOwned::Path(path) => self.with_path(separator, repetitor, path),
+            SourceOwned::Input(input) => self.with_input(separator, repetitor, input),
+            SourceOwned::Empty => String::new(), // FIXME: Is that valid? Should we do something here?
         }
     }
 }
@@ -251,8 +295,8 @@ mod tests {
     fn span_same_line() {
         let s = Location::new(1, 3);
         let e = Location::new(1, 6);
-        let span = SpanTuple::new(
-            Some(PathBuf::from("tests/fixtures/span_test/code.jk")),
+        let span = SpanTuple::with_source(
+            SourceOwned::Path(PathBuf::from("tests/fixtures/span_test/code.jk")),
             s,
             e,
         );
@@ -268,8 +312,8 @@ mod tests {
     fn multi_line_span() {
         let s = Location::new(1, 1);
         let e = Location::new(9, 1);
-        let span = SpanTuple::new(
-            Some(PathBuf::from("tests/fixtures/span_test/code.jk")),
+        let span = SpanTuple::with_source(
+            SourceOwned::Path(PathBuf::from("tests/fixtures/span_test/code.jk")),
             s,
             e,
         );
@@ -292,8 +336,8 @@ mod tests {
     fn span_reversed_prints_nothing() {
         let s = Location::new(9, 1);
         let e = Location::new(1, 1);
-        let span = SpanTuple::new(
-            Some(PathBuf::from("tests/fixtures/span_test/code.jk")),
+        let span = SpanTuple::with_source(
+            SourceOwned::Path(PathBuf::from("tests/fixtures/span_test/code.jk")),
             s,
             e,
         );
@@ -317,5 +361,18 @@ mod tests {
     #[should_panic]
     fn zero_line_col() {
         Location::new(0, 0);
+    }
+
+    #[test]
+    fn span_from_input() {
+        let s = Location::new(1, 3);
+        let e = Location::new(1, 6);
+        let span = SpanTuple::with_source(SourceOwned::Input(String::from("type Nothing;")), s, e);
+
+        assert_eq!(
+            span.to_string(&'>', &'-'),
+            r#"    1 > type Nothing;
+          ---"#
+        );
     }
 }

@@ -20,6 +20,7 @@ use crate::error::{ErrKind, Error, ErrorHandler};
 use crate::instance::ObjectInstance;
 use crate::instruction::{Block, FunctionDec, FunctionKind, Instruction, TypeDec, Var};
 use crate::io_trait::JkReader;
+use crate::location::Source;
 use crate::parser;
 use crate::typechecker::CheckedType;
 use crate::typechecker::{SpecializedNode, TypeCheck, TypeCtx, TypeId};
@@ -44,7 +45,7 @@ pub struct Context {
     builtins: Builtins,
     /// Tests registered in the context
     tests: HashMap<CtxKey, FunctionDec>,
-    /// Sources included by the context
+    /// SourceOwneds included by the context
     included: HashSet<PathBuf>,
     /// External libraries to use via FFI
     #[cfg(feature = "ffi")]
@@ -55,7 +56,7 @@ pub struct Context {
     pub(crate) typechecker: TypeCtx,
     /// Is the context in debugging mode or not
     pub debug_mode: bool,
-    /// Source code currently being interpreted by the context
+    /// SourceOwned code currently being interpreted by the context
     pub code: Option<String>,
     /// Entry point to the context, the "main" function
     pub entry_point: FunctionDec,
@@ -329,7 +330,7 @@ impl Context {
     pub fn eval(&mut self, input: &str) -> Result<Option<ObjectInstance>, Error> {
         self.entry_point = Context::new_entry();
 
-        parser::parse(self, input, None)?;
+        parser::parse(self, input, Source::Input(input))?;
 
         self.execute()
     }
