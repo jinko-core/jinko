@@ -17,6 +17,9 @@ members = [
 ]
 
 [dependencies]
+ast = { path = "ast" }
+symbol = { path = "symbol" }
+error = { path = "error" }
 structopt = "0.3"
 colored = "2.0"
 nom = "7.0"

@@ -240,8 +240,10 @@ name = "jinko"
 version = "0.3.0-jinx7"
 dependencies = [
  "anyhow",
+ "ast",
  "colored",
  "downcast-rs",
+ "error",
  "lazy_static",
  "libc",
  "libffi",
@@ -250,6 +252,7 @@ dependencies = [
  "nom 7.1.1",
  "nom_locate",
  "structopt",
+ "symbol",
 ]
 
 [[package]]
