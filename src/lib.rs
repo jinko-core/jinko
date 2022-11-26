@@ -19,9 +19,9 @@ pub mod typechecker;
 mod utils;
 pub mod value;
 
+pub use crate::error::{ErrKind, Error};
 pub use builtins::Builtins;
 pub use context::{Context, Scope, ScopeMap};
-pub use error::{ErrKind, Error};
 // FIXME: Re-add once we reimplement generics
 // pub use generics::GenericUser;
 pub use indent::Indent;
