@@ -39,6 +39,7 @@ checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 name = "ast"
 version = "0.1.0"
 dependencies = [
+ "location",
  "symbol",
 ]
 
@@ -249,6 +250,7 @@ dependencies = [
  "libffi",
  "libloading",
  "linefeed",
+ "location",
  "nom 7.1.1",
  "nom_locate",
  "structopt",
@@ -306,6 +308,14 @@ dependencies = [
  "dirs 1.0.5",
  "mortal",
  "winapi",
+]
+
+[[package]]
+name = "location"
+version = "0.1.0"
+dependencies = [
+ "nom 7.1.1",
+ "nom_locate",
 ]
 
 [[package]]
