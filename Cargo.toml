@@ -12,6 +12,7 @@ repository = "https://github.com/cohenarthur/jinko"
 
 members = [
   "error",
+  "location",
   "symbol",
   "ast",
 ]
@@ -20,6 +21,7 @@ members = [
 ast = { path = "ast" }
 symbol = { path = "symbol" }
 error = { path = "error" }
+location = { path = "location" }
 structopt = "0.3"
 colored = "2.0"
 nom = "7.0"
