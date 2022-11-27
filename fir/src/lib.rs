@@ -1,4 +1,60 @@
-//! FIR stands for Flat Intermediate Representation
+//! FIR stands for Flat Intermediate Representation.
+//! At first, the "graph" is empty: There are nodes, scattered (flattily) within the structure, and no edges between the nodes
+//! (no links, no references, no origin points in fact).
+//! Let's take the following jinko program:
+//!
+//! ```ignore
+//! func f() { }
+//!
+//! f();
+//! ```
+//!
+//! The [`Fir`] might look something like this:
+//!
+//! ```ignore
+//! [
+//!   {Origin::1, Declaration(args: [], return_type: Unresolved)},
+//!   {Origin::2, Call(to: Unresolved, args: [])}
+//! ]
+//! ````
+//!
+//! Once name resolution is performed, we want the following graph:
+//!
+//! ```ignore
+//! [
+//!   {Origin::1, Declaration(args: [], return_type: Unresolved)},
+//!   {Origin::2, Call(to: Reference::1, args: [])} // < here
+//! ]
+//! ````
+//!
+//! We still have no type information. Once the typecheckin pass is done, we want
+//! something like that:
+//!
+//! ```ignore
+//! [
+//!   {Origin::1, Declaration(args: [], return_type: Reference::void_type)}, // < here
+//!   {Origin::2, Call(to: Reference::1, args: [])}
+//! ]
+//! ````
+//!
+//! (Assuming that we have an Origin point for the various builtin types such as `void`,
+//! `int`, `float`... so the graph would actually look something like that at this point,
+//! with builtin type nodes having been inserted before type-checking.
+//!
+//! ```ignore
+//! [
+//!   {Origin::1, Declaration(args: [], return_type: Reference::3)}, // < here...
+//!   {Origin::2, Call(to: Reference::1, args: [])},
+//!   {Origin::3, Type(name: "void",   generics: [], fields: [])} // < ...and here
+//!   {Origin::4, Type(name: "int",    generics: [], fields: [])} // < ...and here
+//!   {Origin::5, Type(name: "float",  generics: [], fields: [])} // < ...and here
+//!   {Origin::6, Type(name: "char",   generics: [], fields: [])} // < ...and here
+//!   {Origin::7, Type(name: "bool",   generics: [], fields: [])} // < ...and here
+//!   {Origin::8, Type(name: "string", generics: [], fields: [])} // < ...and here
+//! ]
+//! ````
+//!
+//! Their position in the [`Fir`] does not really matter, since the representation is... flat.
 
 // FIXME:
 // How do we represent types here? How would we perform type checking? How do we perform name resolution?
@@ -45,7 +101,18 @@ use std::hash::Hash;
 use location::SpanTuple;
 use symbol::Symbol;
 
-type FirIdx = u64;
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum FirIdx {
+    /// An unresolved index into the [`Fir`]. This indicates a step that has not been done yet: Either a
+    /// declaration/origin point has not been visited yet, or a reference to a declaration has not been resolved
+    /// yet
+    Unresolved,
+    /// An origin point - this is where a variable, type or function is defined. Later uses of that
+    /// object (variable, type or function) are resolved to [`FirIdx::Reference`]s
+    Origin(u64),
+    /// A reference to a definition/origin point. The reference should only ever refer to [`FirIdx::Origin`] nodes.
+    Reference(u64), // FIXME: Should this instead be a `Reference(&'idx FirIdx)`?
+}
 
 pub trait WithHashMap<K: Hash + Eq, V> {
     fn with(self, key: K, value: V) -> Self;
@@ -62,11 +129,6 @@ impl<K: Hash + Eq, V> WithHashMap<K, V> for HashMap<K, V> {
 #[derive(Debug, Clone)]
 pub enum Kind {
     Declaration(Symbol),
-    UnresolvedCall {
-        to: Symbol,
-        generics: Vec<Node>,
-        args: Vec<Node>,
-    },
     Call {
         to: FirIdx,
         generics: Vec<FirIdx>,
@@ -83,64 +145,27 @@ pub struct Node {
 /// An instance of [`Fir`] is similar to a graph, containing [`Node`]s and relationships binding them together.
 #[derive(Default)]
 pub struct Fir {
+    // FIXME: We need better than a hashmap to represent a graph I think
     pub nodes: HashMap<FirIdx, Node>,
 }
 
-struct NameResolver {
-    mappings: HashMap<String, FirIdx>,
+pub trait Pass {
+    /// This function should panic if a condition fails to be upheld
+    fn pre_condition(fir: &Fir);
+
+    /// This function should panic if a condition fails to be upheld
+    fn post_condition(fir: &Fir);
+
+    fn pass<F: FnOnce(Fir) -> Result<Fir, u64>>(
+        fir: Fir,
+        f: F,
+    ) -> Result<Fir, u64 /* FIXME: Use a proper Error type */> {
+        Self::pre_condition(&fir);
+
+        let fir = f(fir)?;
+
+        Self::post_condition(&fir);
+
+        Ok(fir)
+    }
 }
-
-fn name_resolve(fir: Fir) -> Fir {
-    // How do we have a visitor using this baby?
-    let resolver = NameResolver {
-        mappings: HashMap::new(),
-    };
-
-    fir.nodes.into_iter().fold(Fir::default(), |fir, node| {
-        let (_, value) = node;
-        let Node { kind, location } = value;
-        let resolved = match kind {
-            Kind::UnresolvedCall {
-                to: _,
-                generics: _,
-                args: _,
-            } => {
-                // how do we get an idx from the `to` here, which is a symbol?
-                // how do we visit each generic node?
-                // how do we visit each argument node?
-                let _idx = fir.nodes.get(&15);
-                // we need visitors here to resolve generics and arguments
-
-                Node {
-                    location,
-                    kind: Kind::Call {
-                        to: 15,
-                        generics: vec![],
-                        args: vec![],
-                    },
-                }
-            }
-            // Forbidden nodes
-            Kind::Call { .. } => unreachable!(),
-            // Nothing to do for the other nodes
-            _ => todo!(),
-        };
-
-        Fir {
-            nodes: fir.nodes.with(16, resolved),
-        }
-    })
-}
-
-// pub fn insert_call(fir: Fir) -> Fir {
-//     let fn_idx = fir.functions.get(&15).unwrap();
-//     let call = Node {
-//         location: None,
-//         kind: Kind::Call(*fn_idx),
-//     };
-
-//     Fir {
-//         nodes: fir.nodes.with(16, call),
-//         ..fir
-//     }
-// }
