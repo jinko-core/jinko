@@ -1,6 +1,6 @@
 //! Abstract Syntax Tree representation of jinko's source code
 
-use location::Location;
+use location::SpanTuple;
 use symbol::Symbol;
 
 /// A type argument, i.e. when performing a specific generic call or specifying a variable's type
@@ -22,7 +22,7 @@ pub struct TypeArgument {
 
 /// A value with its associated type. This is used for function arguments or type fields
 #[derive(Debug)]
-pub struct TypedValue(Symbol, TypeArgument);
+pub struct TypedValue(pub Symbol, pub TypeArgument);
 
 /// A generic argument declaration
 /// ```ignore
@@ -34,6 +34,7 @@ pub struct TypedValue(Symbol, TypeArgument);
 /// func id[T = int](value: T) -> T { value }
 /// //      ^^^^^^^
 /// ```
+#[derive(Debug)]
 pub struct GenericArgument {
     pub name: Symbol,
     pub default: Option<Symbol>,
@@ -65,7 +66,7 @@ pub enum LoopKind {
 // As a "Smart pointer" type? E.g by having it implement `Deref<T = AstInner>`?
 // Would that even work? If it does, it is ergonomic but boy is it not idiomatic
 #[derive(Debug)]
-pub enum AstNode {
+pub enum Node {
     Block(Vec<Ast>),
     Incl {
         source: Symbol,
@@ -74,12 +75,14 @@ pub enum AstNode {
     Function {
         kind: FunctionKind,
         name: Symbol,
-        generics: Vec<Symbol>,
+        generics: Vec<GenericArgument>,
         arguments: Vec<TypedValue>,
+        return_type: Option<TypeArgument>,
         block: Box<Ast>,
     },
     Type {
         name: Symbol,
+        generics: Vec<GenericArgument>,
         fields: Vec<TypedValue>,
         with: Option<Box<Ast>>,
     },
@@ -111,6 +114,6 @@ pub enum AstNode {
 /// extra information such as the node's [`Location`]
 #[derive(Debug)]
 pub struct Ast {
-    pub location: Location,
-    pub node: AstNode,
+    pub location: SpanTuple,
+    pub node: Node,
 }
