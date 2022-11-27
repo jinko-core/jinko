@@ -1,7 +1,5 @@
 use ast::{Ast, Node as AstNode};
-
-// FIXME: use fir::Fir;
-type Fir = ();
+use fir::Fir;
 
 pub trait FlattenAst: Sized {
     fn flatten(self) -> Fir;
