@@ -8,3 +8,4 @@ edition = "2021"
 
 [dependencies]
 symbol = { path = "../symbol" }
+location = { path = "../location" }
