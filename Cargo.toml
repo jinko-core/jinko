@@ -15,10 +15,14 @@ members = [
   "location",
   "symbol",
   "ast",
+  "fir",
+  "flatten"
 ]
 
 [dependencies]
 ast = { path = "ast" }
+fir = { path = "fir" }
+flatten = { path = "flatten" }
 symbol = { path = "symbol" }
 error = { path = "error" }
 location = { path = "location" }

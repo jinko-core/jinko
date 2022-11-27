@@ -191,6 +191,22 @@ name = "error"
 version = "0.1.0"
 
 [[package]]
+name = "fir"
+version = "0.1.0"
+dependencies = [
+ "location",
+ "symbol",
+]
+
+[[package]]
+name = "flatten"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "fir",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -245,6 +261,8 @@ dependencies = [
  "colored",
  "downcast-rs",
  "error",
+ "fir",
+ "flatten",
  "lazy_static",
  "libc",
  "libffi",
