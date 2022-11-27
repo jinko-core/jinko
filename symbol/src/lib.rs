@@ -3,7 +3,7 @@
 //! useful in contexts where the same string might be reused multiple times. This also
 //! goes well in combination with a "small string type", one which allows storing the
 //! string directly on the stack if it is less than a pointer's width in length. This is
-//! quite useful since most names within a program are less than an usual pointer width
+//! quite useful since most names within a program are less than an usual pointer width.
 
 // FIXME: How do we do that? There's two ways to go around the issue:
 // 1. Keep a `static mut HashSet`
@@ -14,15 +14,15 @@
 // int, float, string...
 
 use std::collections::HashSet;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref SYMBOL: Mutex<HashSet<String>> = {
+    static ref SYMBOLS: Mutex<HashSet<Arc<String>>> = {
         macro_rules! builtin {
             ($set:expr, $builtin:literal) => {
-                $set.insert(String::from($builtin))
+                $set.insert(Arc::new(String::from($builtin)))
             };
         }
 
@@ -41,21 +41,64 @@ lazy_static! {
     };
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Symbol(
-    &'static String, /* FIXME: Switch to SmolStr or equivalent */
+    Arc<String>, /* FIXME: Switch to SmolStr or equivalent */
 );
 
 impl Symbol {
-    #[must_use]
     /// # Panics
     ///
     /// This function panics if the underlying mutex is poisoned
+    #[must_use]
     pub fn new(inner: String) -> Symbol {
-        let mut set = SYMBOL.lock().unwrap();
+        let mut set = SYMBOLS.lock().unwrap();
 
         // FIXME: When `hash_set_entry` gets stabilized :)
         // Symbol(set.get_or_insert(inner))
 
-        todo!()
+        if let Some(reference) = set.get(&inner) {
+            Symbol(reference.clone())
+        } else {
+            let arc = Arc::new(inner);
+
+            set.insert(arc.clone());
+            Symbol(arc)
+        }
+    }
+
+    /// Access a reference to the underlying string contained in a [`Symbol`]
+    #[must_use]
+    pub fn access(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl From<String> for Symbol {
+    fn from(inner: String) -> Symbol {
+        Symbol::new(inner)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn insertion() {
+        {
+            let set = SYMBOLS.lock().unwrap();
+
+            assert!(set.get(&String::from("int")).is_some());
+            assert!(set.get(&String::from("zip")).is_none());
+        }
+
+        let _sym = Symbol::new(String::from("zip"));
+
+        {
+            let set = SYMBOLS.lock().unwrap();
+
+            assert!(set.get(&String::from("zip")).is_some());
+        }
     }
 }
