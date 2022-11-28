@@ -96,6 +96,7 @@
 // Is this going to cause problems?
 
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::hash::Hash;
 
 use location::SpanTuple;
@@ -121,7 +122,7 @@ pub enum RefIdx {
 /// An origin point - this is where a variable, type or function is defined. Later uses of that
 /// object (variable, type or function) are resolved to [`RefIdx::Resolved`]s.
 #[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq)]
-pub struct OriginIdx(u64);
+pub struct OriginIdx(pub u64);
 
 impl OriginIdx {
     /// Get the next origin from an existing one. This allows [`Pass`]es to simply keep an [`OriginIdx`] in their context
@@ -192,27 +193,34 @@ pub enum Kind {
 }
 
 #[derive(Debug, Clone)]
-pub struct Node {
+pub struct Node<T: Debug = ()> {
+    pub data: T,
     pub origin: OriginIdx,
     // FIXME: Do we need to keep a Symbol here?
     // FIXME: Can we avoid that by doing mappings between the AST and FIR?
+    // FIXME: Should we do something along the lines of Node<T = ()>? And keep an instance of T within the node?
+    // FIXME: Is that going to be annoying to use? Do we actually need a Location here?
     pub location: Option<SpanTuple>,
     pub kind: Kind,
 }
 
 /// An instance of [`Fir`] is similar to a graph, containing [`Node`]s and relationships binding them together.
 #[derive(Default)]
-pub struct Fir {
-    pub nodes: HashMap<OriginIdx, Node>,
+pub struct Fir<T: Debug = ()> {
+    pub nodes: HashMap<OriginIdx, Node<T>>,
 }
 
-impl Fir {
-    pub fn append(self, node: Node) -> Fir {
+impl<T: Debug> Fir<T> {
+    /// Append a new node to the [`Fir`]
+    pub fn append(self, node: Node<T>) -> Fir<T> {
         Fir {
             nodes: self.nodes.with(node.origin, node),
         }
     }
 
+    /// Check if the [`Fir`] only contains links between entities allowed to link together.
+    /// For example, this asserts that there are no calls that have been resolved as calls to constant literals.
+    ///
     /// # Panic
     ///
     /// This function panic if the provided [`Fir`] contains invalid relationships.
@@ -278,24 +286,27 @@ impl Fir {
     }
 }
 
-pub trait Pass {
+pub trait Pass<T: Debug = (), U: Debug = ()> {
     /// Each implementer of [`Pass`] should keep its own [`OriginIdx`] counter in order to supply the [`Fir`]
     /// with new nodes. This can be done by keeping an [`OriginIdx`] as part of the context, and repeatedly
     /// calling [`OriginIdx::next`] on it.
-    fn next_origin(&self) -> OriginIdx;
+    fn next_origin(&mut self) -> OriginIdx;
 
     /// This function should panic if a condition fails to be upheld
     // FIXME: Add a #[cfg(not(release))] here
-    fn pre_condition(fir: &Fir);
+    fn pre_condition(fir: &Fir<T>);
 
     /// This function should panic if a condition fails to be upheld
     // FIXME: Add a #[cfg(not(release))] here
-    fn post_condition(fir: &Fir);
+    fn post_condition(fir: &Fir<U>);
 
     /// The actual pass algorithm.
-    fn transform(&mut self, fir: Fir) -> Fir;
+    // FIXME: Should this take an immutable context and return it?
+    fn transform(&mut self, fir: Fir<T>) -> Fir<U>;
 
-    fn pass(&mut self, fir: Fir) -> Fir {
+    // FIXME: Add documentation
+    // FIXME: Should this take an immutable context and return it?
+    fn pass(&mut self, fir: Fir<T>) -> Fir<U> {
         // FIXME: Add a #[cfg(not(release))] here
         Self::pre_condition(&fir);
 
