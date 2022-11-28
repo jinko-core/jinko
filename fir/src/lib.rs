@@ -13,8 +13,8 @@
 //!
 //! ```ignore
 //! [
-//!   {Origin::1, Declaration(args: [], return_type: Unresolved)},
-//!   {Origin::2, Call(to: Unresolved, args: [])}
+//!   {OriginIdx::1, Declaration(args: [], return_type: RefIdx::Unresolved)},
+//!   {OriginIdx::2, Call(to: RefIdx::Unresolved, args: [])}
 //! ]
 //! ````
 //!
@@ -22,8 +22,8 @@
 //!
 //! ```ignore
 //! [
-//!   {Origin::1, Declaration(args: [], return_type: Unresolved)},
-//!   {Origin::2, Call(to: Reference::1, args: [])} // < here
+//!   {OriginIdx::1, Declaration(args: [], return_type: RefIdx::Unresolved)},
+//!   {OriginIdx::2, Call(to: RefIdx::Resolved(1), args: [])} // < here
 //! ]
 //! ````
 //!
@@ -32,25 +32,25 @@
 //!
 //! ```ignore
 //! [
-//!   {Origin::1, Declaration(args: [], return_type: Reference::void_type)}, // < here
-//!   {Origin::2, Call(to: Reference::1, args: [])}
+//!   {OriginIdx::1, Declaration(args: [], return_type: RefIdx::Resolved(void_type)}, // < here
+//!   {OriginIdx::2, Call(to: RefIdx::Resolved(1), args: [])}
 //! ]
 //! ````
 //!
-//! (Assuming that we have an Origin point for the various builtin types such as `void`,
+//! (Assuming that we have an OriginIdx point for the various builtin types such as `void`,
 //! `int`, `float`... so the graph would actually look something like that at this point,
 //! with builtin type nodes having been inserted before type-checking.
 //!
 //! ```ignore
 //! [
-//!   {Origin::1, Declaration(args: [], return_type: Reference::3)}, // < here...
-//!   {Origin::2, Call(to: Reference::1, args: [])},
-//!   {Origin::3, Type(name: "void",   generics: [], fields: [])} // < ...and here
-//!   {Origin::4, Type(name: "int",    generics: [], fields: [])} // < ...and here
-//!   {Origin::5, Type(name: "float",  generics: [], fields: [])} // < ...and here
-//!   {Origin::6, Type(name: "char",   generics: [], fields: [])} // < ...and here
-//!   {Origin::7, Type(name: "bool",   generics: [], fields: [])} // < ...and here
-//!   {Origin::8, Type(name: "string", generics: [], fields: [])} // < ...and here
+//!   {OriginIdx::1, Declaration(args: [], return_type: RefIdx::Resolved(3)}, // < here...
+//!   {OriginIdx::2, Call(to: RefIdx::Resolved(1), args: [])},
+//!   {OriginIdx::3, Type(name: "void",   generics: [], fields: [])} // < ...and here
+//!   {OriginIdx::4, Type(name: "int",    generics: [], fields: [])} // < ...and here
+//!   {OriginIdx::5, Type(name: "float",  generics: [], fields: [])} // < ...and here
+//!   {OriginIdx::6, Type(name: "char",   generics: [], fields: [])} // < ...and here
+//!   {OriginIdx::7, Type(name: "bool",   generics: [], fields: [])} // < ...and here
+//!   {OriginIdx::8, Type(name: "string", generics: [], fields: [])} // < ...and here
 //! ]
 //! ````
 //!
@@ -88,9 +88,9 @@
 // enum Kind {
 //     Declaration(...),
 //     UnresolvedCall(Symbol, Vec<Node>, Vec<Node>),
-//     ResolvedCall(FirIdx, Vec<FirIdx>, Vec<FirIdx>),
+//     ResolvedCall(RefIdx, Vec<RefIdx>, Vec<RefIdx>),
 // }
-// Should name resolution be done separately and Fir only works using FirIdx? Yes?
+// Should name resolution be done separately and Fir only works using RefIdx? Yes?
 // Can we have that and have the typechecker work? By simply changing relations in the graph?
 // Does that make sense? Does that indicate that for all types we must first keep a Option<Ty> which is set to None?
 // Is this going to cause problems?
@@ -99,22 +99,40 @@ use std::collections::HashMap;
 use std::hash::Hash;
 
 use location::SpanTuple;
-use symbol::Symbol;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum FirIdx {
+/// A reference to another [`Node`] in the [`Fir`]. These references can be either resolved or unresolved, based
+/// on the state of the [`Fir`].
+/// For [`Node`]s whose [`Kind`] is a reference to a definition, for example a call to a function or the usage
+/// of a variable, there should be an extra [`RefIdx`] stored in the [`Kind`], which should at first be
+/// [`RefIdx::Unresolved`] before being changed to a [`RefIdx::Resolved`].
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum RefIdx {
     /// An unresolved index into the [`Fir`]. This indicates a step that has not been done yet: Either a
     /// declaration/origin point has not been visited yet, or a reference to a declaration has not been resolved
     /// yet
     Unresolved,
-    /// An origin point - this is where a variable, type or function is defined. Later uses of that
-    /// object (variable, type or function) are resolved to [`FirIdx::Reference`]s
-    Origin(u64),
-    /// A reference to a definition/origin point. The reference should only ever refer to [`FirIdx::Origin`] nodes.
-    Reference(u64), // FIXME: Should this instead be a `Reference(&'idx FirIdx)`?
+    /// A resolved reference to a definition/origin point.
+    Resolved(OriginIdx),
 }
 
-pub trait WithHashMap<K: Hash + Eq, V> {
+/// Each [`Node`] in the [`Fir`] is its own [`OriginIdx`], which is an origin point. This is a bit wasteful
+/// since most nodes aren't definitions and instead *refer* to definitions, but it makes it easy to refer to
+/// call points or to emit errors.
+/// An origin point - this is where a variable, type or function is defined. Later uses of that
+/// object (variable, type or function) are resolved to [`RefIdx::Resolved`]s.
+#[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct OriginIdx(u64);
+
+impl OriginIdx {
+    /// Get the next origin from an existing one. This allows [`Pass`]es to simply keep an [`OriginIdx`] in their context
+    /// and repeatedly call [`next`] on it.
+    pub fn next(&self) -> OriginIdx {
+        OriginIdx(self.0 + 1)
+    }
+}
+
+/// Helper trait to enable an immutable pattern on the [`Fir`]
+trait WithHashMap<K: Hash + Eq, V> {
     fn with(self, key: K, value: V) -> Self;
 }
 
@@ -126,18 +144,58 @@ impl<K: Hash + Eq, V> WithHashMap<K, V> for HashMap<K, V> {
     }
 }
 
+/// An abstraction over a statically typed value. This is similar to keeping a tuple of [`RefIdx`]s,
+/// but provides some helper methods
+#[derive(Debug, Clone)]
+pub struct TypedValue(RefIdx, RefIdx);
+
+impl TypedValue {
+    /// Get the underlying [`RefIdx`] to the "value" contained in the [`TypedValue`]
+    pub fn value(&self) -> RefIdx {
+        self.0
+    }
+
+    /// Get the underlying [`RefIdx`] to the type contained in the [`TypedValue`]
+    pub fn ty(&self) -> RefIdx {
+        self.1
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Kind {
-    Declaration(Symbol),
+    // FIXME: Figure out more leaf/basic block types
+    Type {
+        generics: Vec<RefIdx>, // to Kind::Generic
+        fields: Vec<TypedValue>,
+    },
+    /// A statically typed constant. This can be either a literal or an empty type
+    Constant(RefIdx), // to Kind::Type
+    // FIXME: Should we keep a TypedValue here as kind and instead of keeping
+    // Vec<TypedValue>, keep Vec<RefIdx> to Kind::TypedValue?
+    Generic {
+        default: Option<RefIdx>,
+    },
+    FnDeclaration {
+        generics: Vec<RefIdx>, // to Kind::Generic
+        args: Vec<TypedValue>,
+    },
     Call {
-        to: FirIdx,
-        generics: Vec<FirIdx>,
-        args: Vec<FirIdx>,
+        to: RefIdx,            // to Kind::FnDeclaration
+        generics: Vec<RefIdx>, // to Kind::Type
+        args: Vec<TypedValue>,
+    },
+    Instantiation {
+        to: RefIdx,            // to Kind::Type
+        generics: Vec<RefIdx>, // to Kind::Type
+        fields: Vec<TypedValue>,
     },
 }
 
 #[derive(Debug, Clone)]
 pub struct Node {
+    pub origin: OriginIdx,
+    // FIXME: Do we need to keep a Symbol here?
+    // FIXME: Can we avoid that by doing mappings between the AST and FIR?
     pub location: Option<SpanTuple>,
     pub kind: Kind,
 }
@@ -145,27 +203,109 @@ pub struct Node {
 /// An instance of [`Fir`] is similar to a graph, containing [`Node`]s and relationships binding them together.
 #[derive(Default)]
 pub struct Fir {
-    // FIXME: We need better than a hashmap to represent a graph I think
-    pub nodes: HashMap<FirIdx, Node>,
+    pub nodes: HashMap<OriginIdx, Node>,
+}
+
+impl Fir {
+    pub fn append(self, node: Node) -> Fir {
+        Fir {
+            nodes: self.nodes.with(node.origin, node),
+        }
+    }
+
+    /// # Panic
+    ///
+    /// This function panic if the provided [`Fir`] contains invalid relationships.
+    pub fn check(&self) {
+        macro_rules! check {
+            ($ref:expr => $kind:pat, $node:expr) => {
+                if let RefIdx::Resolved(origin) = $ref {
+                    match self.nodes[&origin].kind {
+                        $kind => {}
+                        // FIXME: Do a nice error here
+                        _ => panic!("invalid relationship detected in `Fir`:\n\n{:#?}\n\nrefers to\n\n{:#?}\n\n[reference: {:?}]", $node, self.nodes[&origin], $ref),
+                    }
+                }
+            };
+            (@$iter:expr => $kind:pat, $node:expr) => {
+                $iter.iter().for_each(|value| check!(value => $kind, $node))
+            };
+        }
+
+        self.nodes.iter().for_each(|kv| {
+            let node = &kv.1;
+            match &node.kind {
+                Kind::Constant(r) => check!(r => Kind::Type { .. }, node),
+                Kind::Generic {
+                    default: Some(default),
+                } => check!(default => Kind::Type { .. }, node),
+                Kind::FnDeclaration {
+                    generics,
+                    args: _args,
+                } => {
+                    check!(@generics => Kind::Generic { .. }, node);
+                    // check!(@args => Kind::TypedValue);
+                }
+                Kind::Call {
+                    to,
+                    generics,
+                    args: _args,
+                } => {
+                    check!(to => Kind::FnDeclaration { .. }, node);
+                    check!(@generics => Kind::Type { .. }, node);
+                    // check!(@args => Kind::TypedValue);
+                }
+                Kind::Type {
+                    generics,
+                    fields: _fields,
+                } => {
+                    check!(@generics => Kind::Generic { .. }, node);
+                    // check!(@fields => Kind::TypedValue);
+                }
+                Kind::Instantiation {
+                    to,
+                    generics,
+                    fields: _fields,
+                } => {
+                    check!(to => Kind::Type { .. }, node);
+                    check!(@generics => Kind::Type { .. }, node);
+                    // check!(@fields => Kind::TypedValue);
+                }
+                // Nothing to do for generics without a default
+                Kind::Generic { .. } => {}
+            }
+        })
+    }
 }
 
 pub trait Pass {
+    /// Each implementer of [`Pass`] should keep its own [`OriginIdx`] counter in order to supply the [`Fir`]
+    /// with new nodes. This can be done by keeping an [`OriginIdx`] as part of the context, and repeatedly
+    /// calling [`OriginIdx::next`] on it.
+    fn next_origin(&self) -> OriginIdx;
+
     /// This function should panic if a condition fails to be upheld
+    // FIXME: Add a #[cfg(not(release))] here
     fn pre_condition(fir: &Fir);
 
     /// This function should panic if a condition fails to be upheld
+    // FIXME: Add a #[cfg(not(release))] here
     fn post_condition(fir: &Fir);
 
-    fn pass<F: FnOnce(Fir) -> Result<Fir, u64>>(
-        fir: Fir,
-        f: F,
-    ) -> Result<Fir, u64 /* FIXME: Use a proper Error type */> {
+    /// The actual pass algorithm.
+    fn transform(&mut self, fir: Fir) -> Fir;
+
+    fn pass(&mut self, fir: Fir) -> Fir {
+        // FIXME: Add a #[cfg(not(release))] here
         Self::pre_condition(&fir);
 
-        let fir = f(fir)?;
+        let new_fir = self.transform(fir);
 
-        Self::post_condition(&fir);
+        // FIXME: Add a #[cfg(not(release))] here
+        Self::post_condition(&new_fir);
+        // FIXME: Add a #[cfg(not(release))] here
+        new_fir.check();
 
-        Ok(fir)
+        new_fir
     }
 }
