@@ -80,6 +80,12 @@ impl From<String> for Symbol {
     }
 }
 
+impl From<&str> for Symbol {
+    fn from(inner: &str) -> Symbol {
+        Symbol::new(String::from(inner))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
