@@ -95,7 +95,7 @@
 // Does that make sense? Does that indicate that for all types we must first keep a Option<Ty> which is set to None?
 // Is this going to cause problems?
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -218,13 +218,35 @@ impl<T: Debug> Fir<T> {
         }
     }
 
+    /// Check that all origins in the [`Fir`] are unique
+    ///
+    /// # Panic
+    ///
+    /// This function panic if the provided [`Fir`] contains an origin that is present multiple times.
+    fn check_unique_origins(&self) {
+        let mut origins = HashSet::new();
+        self.nodes.iter().for_each(|kv| {
+            let origin = kv.0;
+
+            match origins.get(origin) {
+                // FIXME: Do a nice error here
+                // FIXME: Add more info like both nodes having the same origin
+                // c\n\n{:#?}\n\nrefers to\n\n{:#?}\n\n[reference: {:?}]", $node, self.nodes[&origin], $ref),
+                Some(_) => panic!("non-unique `OriginIdx` detected in `Fir`"),
+                None => {
+                    origins.insert(origin);
+                }
+            }
+        })
+    }
+
     /// Check if the [`Fir`] only contains links between entities allowed to link together.
     /// For example, this asserts that there are no calls that have been resolved as calls to constant literals.
     ///
     /// # Panic
     ///
     /// This function panic if the provided [`Fir`] contains invalid relationships.
-    pub fn check(&self) {
+    fn check_valid_links(&self) {
         macro_rules! check {
             ($ref:expr => $kind:pat, $node:expr) => {
                 if let RefIdx::Resolved(origin) = $ref {
@@ -283,6 +305,11 @@ impl<T: Debug> Fir<T> {
                 Kind::Generic { .. } => {}
             }
         })
+    }
+
+    fn check(&self) {
+        self.check_unique_origins();
+        self.check_valid_links();
     }
 }
 
