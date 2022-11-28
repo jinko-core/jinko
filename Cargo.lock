@@ -193,10 +193,6 @@ version = "0.1.0"
 [[package]]
 name = "fir"
 version = "0.1.0"
-dependencies = [
- "location",
- "symbol",
-]
 
 [[package]]
 name = "flatten"
