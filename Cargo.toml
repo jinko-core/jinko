@@ -16,13 +16,15 @@ members = [
   "symbol",
   "ast",
   "fir",
-  "flatten"
+  "flatten",
+  "name_resolve",
 ]
 
 [dependencies]
 ast = { path = "ast" }
 fir = { path = "fir" }
 flatten = { path = "flatten" }
+name_resolve = { path = "name_resolve" }
 symbol = { path = "symbol" }
 error = { path = "error" }
 location = { path = "location" }
