@@ -269,6 +269,7 @@ dependencies = [
  "libloading",
  "linefeed",
  "location",
+ "name_resolve",
  "nom 7.1.1",
  "nom_locate",
  "structopt",
@@ -371,6 +372,14 @@ dependencies = [
  "unicode-normalization",
  "unicode-width",
  "winapi",
+]
+
+[[package]]
+name = "name_resolve"
+version = "0.1.0"
+dependencies = [
+ "fir",
+ "symbol",
 ]
 
 [[package]]
