@@ -13,6 +13,8 @@
 // The first one has the advantage of making it easy to initialize with "default" symbols:
 // int, float, string...
 
+// FIXME: The Symbol API should only take &str parameters, not Strings. Otherwise there's no point
+
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
