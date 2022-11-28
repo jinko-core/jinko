@@ -8,7 +8,3 @@ edition = "2021"
 [dependencies]
 fir = { path = "../fir" }
 symbol = { path = "../symbol" }
-
-[[bin]]
-name = "testouille"
-path = "src/main.rs"
