@@ -20,13 +20,15 @@ impl NameResolveCtx {
     }
 
     fn resolve_symbol(&self, sym: &Symbol) -> RefIdx {
-        RefIdx::Resolved(*self.mappings.get(sym).unwrap())
+        match self.mappings.get(sym) {
+            Some(idx) => RefIdx::Resolved(*idx),
+            None => RefIdx::Unresolved,
+        }
     }
 }
 
 impl Pass<Symbol> for NameResolveCtx {
     fn next_origin(&mut self) -> OriginIdx {
-        // FIXME: this is bugged. Needs to update self.current
         let old = self.current;
         self.current = self.current.next();
 
