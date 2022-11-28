@@ -60,7 +60,6 @@ impl Pass<Symbol> for NameResolveCtx {
             fir.append(Node {
                 data: (),
                 origin,
-                location: None,
                 kind: new_kind,
             })
         })
@@ -96,7 +95,6 @@ mod tests {
         .append(Node {
             data: Symbol::from("a"),
             origin: OriginIdx(0),
-            location: None,
             kind: Kind::FnDeclaration {
                 generics: vec![],
                 args: vec![],
@@ -106,7 +104,6 @@ mod tests {
         .append(Node {
             data: Symbol::from("a"),
             origin: OriginIdx(1),
-            location: None,
             kind: Kind::Call {
                 to: RefIdx::Unresolved,
                 generics: vec![],
