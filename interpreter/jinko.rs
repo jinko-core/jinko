@@ -6,6 +6,9 @@ mod repl;
 
 use colored::Colorize;
 
+use flatten::FlattenAst;
+use name_resolve::NameResolve;
+
 use jinko::context::Context;
 use jinko::error::{ErrKind, Error};
 use jinko::instance::{FromObjectInstance, ObjectInstance};
@@ -93,22 +96,24 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
 
 fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     let ast = jinko::xperimental::parser::parse(input, Source::Path(file))?;
-    dbg!(ast);
+
+    let _fir = ast.flatten().name_resolve();
+
     todo!()
 }
 
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
-    let mut ctx = Context::new(Box::new(jinko::io_trait::JkStdReader));
-
-    if !args.nostdlib() {
-        ctx.init_stdlib()?;
-    }
-
     if args.experimental {
         experimental_pipeline(&input, file)
     } else {
+        let mut ctx = Context::new(Box::new(jinko::io_trait::JkStdReader));
+
+        if !args.nostdlib() {
+            ctx.init_stdlib()?;
+        }
+
         jinko::parser::parse(&mut ctx, &input, Source::Path(file))?;
 
         ctx.set_path(Some(file.to_owned()));
