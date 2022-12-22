@@ -91,6 +91,12 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
     Ok(res)
 }
 
+fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
+    let ast = jinko::xperimental::parser::parse(input, Source::Path(file))?;
+    dbg!(ast);
+    todo!()
+}
+
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
@@ -101,8 +107,7 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
     }
 
     if args.experimental {
-        let ast = jinko::xperimental::parser::parse(&input, Source::Path(file))?;
-        todo!()
+        experimental_pipeline(&input, file)
     } else {
         jinko::parser::parse(&mut ctx, &input, Source::Path(file))?;
 

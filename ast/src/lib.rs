@@ -52,7 +52,7 @@ pub struct GenericArgument {
     pub default: Option<Symbol>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Operator {
     Add,
     Sub,

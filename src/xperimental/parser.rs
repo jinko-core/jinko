@@ -35,7 +35,16 @@ pub type ParseResult<T, I> = nom::IResult<T, I, Error>;
 
 /// Parses the entire user input into a vector of instructions in the context
 pub fn parse(input: &str, source: Source) -> Result<Ast, Error> {
-    todo!()
+    let input = LocatedSpan::new_extra(input, source);
+
+    let (input, start) = position::<ParseInput, Error>(input)?;
+    let (input, stmts) = many_exprs(input)?;
+    let (input, end) = position::<ParseInput, Error>(input)?;
+
+    Ok(Ast {
+        location: pos_to_loc(input, start, end),
+        node: Node::Block(stmts),
+    })
 }
 
 // FIXME: Refactor, rework, remove
@@ -94,9 +103,8 @@ fn inner_string(input: ParseInput, start_loc: Location) -> ParseResult<ParseInpu
 fn special(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, Ast> {
     let special_chars = &['"', '{', '\\'];
 
-    if let Ok((_input, _)) = Token::left_curly_bracket(input) {
-        // FIXME: terminated(expr, Token::right_curly_bracket)(input)
-        todo!()
+    if let Ok((input, _)) = Token::left_curly_bracket(input) {
+        terminated(expr, Token::right_curly_bracket)(input)
     } else if let Ok((input, _)) = Token::backslash(input) {
         if input.is_empty() {
             return special(input, start_loc);
@@ -313,7 +321,7 @@ mod tests {
 
 /// Parse as many instructions as possible
 /// many_expr = ( expr_semicolon )*
-pub fn many_expr(mut input: ParseInput) -> ParseResult<ParseInput, Vec<Ast>> {
+pub fn many_exprs(mut input: ParseInput) -> ParseResult<ParseInput, Vec<Ast>> {
     let mut exprs = vec![];
     loop {
         input = next(input);
@@ -836,7 +844,7 @@ fn unit_mut_var(input: ParseInput) -> ParseResult<ParseInput, Ast> {
 }
 
 /// IDENTIFIER next '(' next args
-fn unit_jk_inst(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, Ast> {
+fn unit_jk_inst(_input: ParseInput, _start_loc: Location) -> ParseResult<ParseInput, Ast> {
     // let (input, name) = delimited(nom_next, Token::identifier, nom_next)(input)?;
     // let (input, _) = Token::left_parenthesis(input)?;
     // let (input, args) = args(next(input))?;
@@ -1029,9 +1037,14 @@ fn inner_block(input: ParseInput) -> ParseResult<ParseInput, Node> {
     }
 
     let (input, block) = preceded(Token::semicolon, preceded(nom_next, inner_block))(input)?;
-    // block.push_front_instruction(inst);
-    todo!();
-    Ok((input, block))
+    let mut stmts = match block {
+        Node::Block(stmts) => stmts,
+        _ => unreachable!(),
+    };
+
+    stmts.insert(0, inst);
+
+    Ok((input, Node::Block(stmts)))
 }
 
 /// func_type_or_var = '(' next func_or_type_inst_args
@@ -1280,4 +1293,873 @@ pub(crate) fn constant(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     ))(input)?;
 
     Ok(constant)
+}
+
+#[cfg(test)]
+mod tests_constructs {
+    use super::*;
+    use crate::span;
+
+    use ast::Node::*;
+    use ast::Value::*;
+
+    #[test]
+    fn consume_whitespace() {
+        assert_eq!(
+            nom_next(span!("   input")).map(|(input, _)| *input.fragment()),
+            Ok("input")
+        );
+        assert_eq!(
+            nom_next(span!(" \t input")).map(|(input, _)| *input.fragment()),
+            Ok("input")
+        );
+    }
+
+    #[test]
+    fn simple_int_sum() {
+        let (input, expr) = expr(span!(" 401 + 809 ")).unwrap();
+
+        let (op, lhs, rhs) = match expr.node {
+            BinaryOp(op, lhs, rhs) => match (lhs.node, rhs.node) {
+                (Constant(Integer(lhs)), Constant(Integer(rhs))) => (op, lhs, rhs),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        };
+
+        assert_eq!(*input.fragment(), "");
+        assert_eq!(op, Operator::Add);
+        assert_eq!(lhs, 401);
+        assert_eq!(rhs, 809);
+    }
+
+    #[test]
+    fn simple_float_mul() {
+        let (input, expr) = expr(span!("3.15 * 9.999")).unwrap();
+
+        let (op, lhs, rhs) = match expr.node {
+            BinaryOp(op, lhs, rhs) => match (lhs.node, rhs.node) {
+                (Constant(Float(lhs)), Constant(Float(rhs))) => (op, lhs, rhs),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        };
+
+        assert_eq!(*input.fragment(), "");
+        assert_eq!(op, Operator::Mul);
+        assert_eq!(lhs, 3.15);
+        assert_eq!(rhs, 9.999);
+    }
+
+    //     #[test]
+    //     fn chained_sum_sub() {
+    //         let (input, expr) = expr(span!("239 + 809 - 1004")).unwrap();
+    //         let (sub_op, add_op, first, second, third) = match expr.node {
+    //             BinaryOp(sub_op, lhs, third) => match lhs.node {
+    //                 BinaryOp(add_op, first, second) => (sub_op, add_op, first, second, third),
+    //                 _ => unreachable!(),
+    //             },
+    //             _ => unreachable!(),
+    //         };
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(sub_op, Operator::Sub);
+    //         assert_eq!(add_op, Operator::Add);
+    //         assert_eq!(first, 239);
+    //         assert_eq!(second, 809);
+    //         assert_eq!(third, 1004);
+    //     }
+
+    //     #[test]
+    //     fn math_precedence() {
+    //         let (input, expr) = expr(span!("5.9 + 128 / 809.1 - 1004")).unwrap();
+    //         let sub: &BinaryOp = expr.downcast_ref().unwrap();
+    //         let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
+    //         let div: &BinaryOp = add.rhs().downcast_ref().unwrap();
+
+    //         let first: &JkFloat = add.lhs().downcast_ref().unwrap();
+    //         let second: &JkInt = div.lhs().downcast_ref().unwrap();
+    //         let third: &JkFloat = div.rhs().downcast_ref().unwrap();
+    //         let fourth: &JkInt = sub.rhs().downcast_ref().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(sub.operator(), Operator::Sub);
+    //         assert_eq!(add.operator(), Operator::Add);
+    //         assert_eq!(div.operator(), Operator::Div);
+    //         assert_eq!(first.print(), "5.9");
+    //         assert_eq!(second.print(), "128");
+    //         assert_eq!(third.print(), "809.1");
+    //         assert_eq!(fourth.print(), "1004");
+    //     }
+
+    //     #[test]
+    //     fn tricky_math_precedence() {
+    //         let (input, expr) = expr(span!("5.9 + 128 / 809.1 - 1 * 1.1")).unwrap();
+    //         let sub: &BinaryOp = expr.downcast_ref().unwrap();
+    //         let add: &BinaryOp = sub.lhs().downcast_ref().unwrap();
+    //         let mul: &BinaryOp = sub.rhs().downcast_ref().unwrap();
+    //         let div: &BinaryOp = add.rhs().downcast_ref().unwrap();
+
+    //         let first: &JkFloat = add.lhs().downcast_ref().unwrap();
+    //         let second: &JkInt = div.lhs().downcast_ref().unwrap();
+    //         let third: &JkFloat = div.rhs().downcast_ref().unwrap();
+    //         let fourth: &JkInt = mul.lhs().downcast_ref().unwrap();
+    //         let fifth: &JkFloat = mul.rhs().downcast_ref().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(sub.operator(), Operator::Sub);
+    //         assert_eq!(add.operator(), Operator::Add);
+    //         assert_eq!(mul.operator(), Operator::Mul);
+    //         assert_eq!(div.operator(), Operator::Div);
+    //         assert_eq!(first.print(), "5.9");
+    //         assert_eq!(second.print(), "128");
+    //         assert_eq!(third.print(), "809.1");
+    //         assert_eq!(fourth.print(), "1");
+    //         assert_eq!(fifth.print(), "1.1");
+    //     }
+
+    //     #[test]
+    //     fn method_call_no_arg() {
+    //         let (input, expr) = expr(span!("a.call( )")).unwrap();
+
+    //         assert!(expr.downcast_ref::<MethodCall>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn method_call_one_arg() {
+    //         let (input, expr) = expr(span!("a.call(\"hello\")")).unwrap();
+
+    //         assert!(expr.downcast_ref::<MethodCall>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn method_call_many_args() {
+    //         let (input, expr) = expr(span!("a.call(\"hello\", 1   , variable)")).unwrap();
+
+    //         assert!(expr.downcast_ref::<MethodCall>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn method_call_many() {
+    //         let (input, expr) = expr(span!("a.call(\"hello\").sub().subsub(1, 20)")).unwrap();
+
+    //         assert!(expr.downcast_ref::<MethodCall>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn method_call_on_bool() {
+    //         let (input, expr) = expr(span!("true.call( )")).unwrap();
+
+    //         assert!(expr.downcast_ref::<MethodCall>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn field_access_single() {
+    //         let (input, expr) = expr(span!("a.attribute")).unwrap();
+
+    //         assert!(expr.downcast_ref::<FieldAccess>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn field_access_many() {
+    //         let (input, expr) = expr(span!("a.attr.sub_attr.subsub")).unwrap();
+
+    //         assert!(expr.downcast_ref::<FieldAccess>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn field_access_many_newline() {
+    //         let (input, expr) = expr(span!("a\n.attr\n.sub_attr\n.subsub")).unwrap();
+
+    //         assert!(expr.downcast_ref::<FieldAccess>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn if_no_else() {
+    //         let (input, expr) = expr(span!("if 1 + 1 { 10 / 2 }")).unwrap();
+
+    //         assert!(expr.downcast_ref::<IfElse>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn if_else() {
+    //         let (input, expr) = expr(span!("if 1 + 1 { 10 / 2 } else { var }")).unwrap();
+
+    //         assert!(expr.downcast_ref::<IfElse>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn while_loop() {
+    //         let (input, expr) = expr(span!("while true { var + 10 }")).unwrap();
+
+    //         assert!(expr.downcast_ref::<Loop>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn for_loop() {
+    //         let (input, expr) = expr(span!("for entry in collection { entry.print() }")).unwrap();
+
+    //         assert!(expr.downcast_ref::<Loop>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn loop_basic() {
+    //         let (input, expr) = expr(span!("loop { variable.get() + 10 }")).unwrap();
+
+    //         assert!(expr.downcast_ref::<Loop>().is_some());
+    //         assert_eq!(*input.fragment(), "");
+    //     }
+
+    //     #[test]
+    //     fn funcion_dec_no_arg() {
+    //         let (input, expr) = expr(span!("func a ( ) { 1 }")).unwrap();
+    //         let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(func.args().is_empty());
+    //     }
+
+    //     #[test]
+    //     fn funcion_dec_one_arg() {
+    //         let (input, expr) = expr(span!("func id ( arg: int ) { arg }")).unwrap();
+    //         let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(func.args().len() == 1);
+    //         assert!(func.args()[0].name() == "arg");
+    //         assert!(func.args()[0].get_type().id() == "int");
+    //     }
+
+    //     #[test]
+    //     fn funcion_dec_many_args() {
+    //         let (input, expr) = expr(span!(
+    //             "func concat ( arg1: char , arg2: int,arg3:float, arg4: string) { arg1 + arg2 + arg3 }"
+    //         ))
+    //         .unwrap();
+    //         let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(func.args().len() == 4);
+    //         assert!(func.args()[0].name() == "arg1");
+    //         assert!(func.args()[3].name() == "arg4");
+    //     }
+
+    //     #[test]
+    //     fn funcion_dec_many_args_with_return() {
+    //         let (input, expr) =
+    //             expr(span!("func concat ( arg1: char , arg2: int,arg3:float, arg4: string) -> string { arg1 + arg2 + arg3 }")).unwrap();
+    //         let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(func.args().len(), 4);
+    //         assert_eq!(func.ty().unwrap().id(), "string");
+    //         assert_eq!(func.args()[0].name(), "arg1");
+    //         assert_eq!(func.args()[3].name(), "arg4");
+    //     }
+
+    //     #[test]
+    //     fn funcion_dec_no_arg_with_return() {
+    //         let (input, expr) = expr(span!("func a ( ) -> int { 1 }")).unwrap();
+    //         let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(func.ty().unwrap().id(), "int");
+    //         assert!(func.args().is_empty());
+    //     }
+
+    //     #[test]
+    //     fn test_dec_no_arg() {
+    //         let (input, expr) = expr(span!("test a ( ) { true }")).unwrap();
+    //         let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(func.fn_kind(), FunctionKind::Test);
+    //     }
+
+    //     #[test]
+    //     fn mock_dec_one_arg() {
+    //         let (input, expr) = expr(span!("mock id ( arg: int ) { arg }")).unwrap();
+    //         let func = expr.downcast_ref::<FunctionDec>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(func.fn_kind(), FunctionKind::Mock);
+    //     }
+
+    //     #[test]
+    //     fn block_empty() {
+    //         let (input, expr) = expr(span!("{ }")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<Block>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn block_one_inst() {
+    //         let (input, expr) = expr(span!("{ var }")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<Block>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn block_many_inst() {
+    //         let (input, expr) = expr(span!(
+    //             "{
+    //             var = 1 + 1;
+    //             var = var - 2;
+    //             var
+    //                                  }"
+    //         ))
+    //         .unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<Block>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn block_statement() {
+    //         let (input, expr) = expr(span!(
+    //             "{
+    //             var = 1 + 1;
+    //             var = var - 2;
+    //             var;
+    //                                  }"
+    //         ))
+    //         .unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<Block>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn block_missing_closing() {
+    //         assert!(expr(span!(
+    //             "{
+    //             var = 1 + 1;
+    //             var = var - 2;
+    //             var
+    //             "
+    //         ))
+    //         .is_err())
+    //     }
+
+    //     #[test]
+    //     fn type_dec_one_field() {
+    //         let (input, expr) = expr(span!("type Num ( val : int )")).unwrap();
+    //         let dec = expr.downcast_ref::<TypeDec>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(dec.name(), "Num");
+    //         assert_eq!(dec.fields().len(), 1);
+    //     }
+
+    //     #[test]
+    //     fn type_dec_multiple_field() {
+    //         let (input, expr) = expr(span!("type Point( x : int , y: int )")).unwrap();
+    //         let dec = expr.downcast_ref::<TypeDec>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(dec.name(), "Point");
+    //         assert_eq!(dec.fields().len(), 2);
+    //     }
+
+    //     #[test]
+    //     fn type_dec_incomplete() {
+    //         assert!(expr(span!("type Point( x:int , y: )")).is_err());
+    //     }
+
+    //     #[test]
+    //     fn include_simple() {
+    //         let (input, expr) = expr(span!("incl pair")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<Incl>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn include_with_alias() {
+    //         let (input, expr) = expr(span!("incl numpy as np")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<Incl>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn include_with_alias_missing_path() {
+    //         assert!(expr(span!("incl as uoh")).is_err());
+    //     }
+
+    //     #[test]
+    //     fn var_assignment() {
+    //         let (input, expr) = expr(span!("var = 'a'")).unwrap();
+    //         let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(assign.symbol(), "var");
+    //         assert!(!assign.mutable());
+    //     }
+
+    //     #[test]
+    //     fn var_assigment_tricky() {
+    //         let (input, expr) = expr(span!("n1=b.call() + 1")).unwrap();
+    //         let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(assign.symbol(), "n1");
+    //         assert!(!assign.mutable());
+    //     }
+
+    //     #[test]
+    //     fn mut_var_assigment() {
+    //         let (input, expr) = expr(span!("mut var = b.call() + 1")).unwrap();
+    //         let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(assign.symbol(), "var");
+    //         assert!(assign.mutable());
+    //     }
+
+    //     #[test]
+    //     fn t_comparison_op_valid() {
+    //         assert!(expr(span!("a <   12 ")).is_ok());
+    //         assert!(expr(span!("some() > 12.1")).is_ok());
+    //     }
+
+    //     #[test]
+    //     fn t_binary_op_invalid() {
+    //         let (input, expr) = expr(span!("a ? 12")).unwrap();
+
+    //         assert!(expr.downcast_ref::<BinaryOp>().is_none());
+    //         assert_eq!(*input.fragment(), "? 12");
+    //     }
+
+    //     #[test]
+    //     fn var_assigment_mut_in_name() {
+    //         let (input, expr) = expr(span!("mut_var = b.call() + 1")).unwrap();
+    //         let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(assign.symbol(), "mut_var");
+    //         assert!(!assign.mutable());
+    //     }
+
+    //     #[test]
+    //     fn mut_var_assigment_mut_in_name() {
+    //         let (input, expr) = expr(span!("mut mut_var = b.call() + 1")).unwrap();
+    //         let assign = expr.downcast_ref::<VarAssign>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(assign.symbol(), "mut_var");
+    //         assert!(assign.mutable());
+    //     }
+
+    //     #[test]
+    //     fn jk_inst_no_arg() {
+    //         let (input, expr) = expr(span!("@quit ( )")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<JkInst>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn jk_inst_arg() {
+    //         let (input, expr) = expr(span!("@dump ( thing )")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<JkInst>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn jk_inst_non_existant() {
+    //         assert!(expr(span!("@crab ( thing )")).is_err());
+    //     }
+
+    //     #[test]
+    //     fn extern_no_args() {
+    //         let (input, expr) = expr(span!("ext func exit () ;")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<FunctionDec>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn extern_many_args() {
+    //         let (input, expr) = expr(span!("ext func memcpy(dst: char, src: char, n: int);")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<FunctionDec>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn extern_missing_semicolon() {
+    //         assert!(expr(span!("ext func memcpy(dst: char , n: int) ")).is_err());
+    //     }
+
+    //     #[test]
+    //     fn return_nothing() {
+    //         let (input, expr) = expr(span!("return")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<Return>().is_some());
+    //     }
+
+    //     #[test]
+    //     fn return_sum() {
+    //         let (input, expr) = expr(span!("return 10 + 9")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert!(expr.downcast_ref::<Return>().is_some());
+    //     }
+
+    //     /// Mimic previous parsers behaviour
+    //     #[test]
+    //     #[ignore]
+    //     fn return_malformed() {
+    //         let (input, expr) = expr(span!("return 10 +")).unwrap();
+
+    //         assert_eq!(*input.fragment(), "10 +");
+    //         assert!(expr.downcast_ref::<Return>().is_none());
+    //     }
+
+    //     #[test]
+    //     fn function_call_no_arg() {
+    //         let (input, expr) = expr(span!("call ( )")).unwrap();
+    //         let func = expr.downcast_ref::<FunctionCall>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(func.name(), "call");
+    //         assert!(func.args().is_empty());
+    //     }
+
+    //     #[test]
+    //     fn function_call_one() {
+    //         let (input, expr) = expr(span!("id ( 10 )")).unwrap();
+    //         let func = expr.downcast_ref::<FunctionCall>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(func.name(), "id");
+    //         assert_eq!(func.args().len(), 1);
+    //     }
+
+    //     #[test]
+    //     fn function_call_many() {
+    //         let (input, expr) = expr(span!("concat( 'h','e', 'l' , 'l', 'o')")).unwrap();
+    //         let func = expr.downcast_ref::<FunctionCall>().unwrap();
+
+    //         assert_eq!(*input.fragment(), "");
+    //         assert_eq!(func.name(), "concat");
+    //         assert_eq!(func.args().len(), 5);
+    //     }
+
+    #[test]
+    fn function_call_missing_paren() {
+        assert!(expr(span!("concat( 'h','e', 'l' , 'l', 'o'")).is_err());
+    }
+
+    #[test]
+    fn function_call_double_paren() {
+        assert!(expr(span!("fn((")).is_err());
+    }
+
+    #[test]
+    fn multi_comment_multi_line() {
+        let input = span!(
+            r#"/**
+        * This function does nothing
+        */
+        func void() { }"#
+        );
+
+        let (input, expr) = expr(input).unwrap();
+        assert!(matches!(expr.node, Function { .. }));
+
+        assert_eq!(*input.fragment(), "");
+    }
+
+    #[test]
+    fn sing_comment_multi_line() {
+        let input = span!(
+            r#" // Comment
+        func void() { }"#
+        );
+
+        let (input, expr) = expr(input).unwrap();
+        assert!(matches!(expr.node, Function { .. }));
+
+        assert_eq!(*input.fragment(), "");
+    }
+
+    #[test]
+    fn hashtag_comment_multi_line() {
+        let input = span!(
+            r##"# Comment
+    func void() { }"##
+        );
+
+        let (input, expr) = expr(input).unwrap();
+        assert!(matches!(expr.node, Function { .. }));
+
+        assert_eq!(*input.fragment(), "");
+    }
+
+    #[test]
+    fn multiple_different_comments() {
+        let input = span!(
+            r##"# Comment
+    # Another one
+                /**
+                   * Some documentation
+                   */
+        func void() { }"##
+        );
+
+        let (input, expr) = expr(input).unwrap();
+        assert!(matches!(expr.node, Function { .. }));
+
+        assert_eq!(*input.fragment(), "");
+    }
+
+    #[test]
+    fn multiple_different_comments_close() {
+        let input = span!(
+            r##"# Comment
+    # Another one
+                /**
+                   * Some documentation
+                   *//* Some more */
+        func void() { }"##
+        );
+
+        let (input, expr) = expr(input).unwrap();
+        assert!(matches!(expr.node, Function { .. }));
+
+        assert_eq!(*input.fragment(), "");
+    }
+
+    #[test]
+    fn lt_exprs() {
+        assert!(expr(span!("a < b")).is_ok())
+    }
+
+    #[test]
+    fn gt_exprs() {
+        assert!(expr(span!("a > b")).is_ok())
+    }
+
+    #[test]
+    fn lte_exprs() {
+        assert!(expr(span!("lhs <= rhs")).is_ok())
+    }
+
+    #[test]
+    fn gte_exprs() {
+        assert!(expr(span!("lhs >= rhs")).is_ok())
+    }
+
+    #[test]
+    fn exprs_equals() {
+        assert!(expr(span!("lhs == rhs")).is_ok())
+    }
+
+    #[test]
+    fn exprs_not_equals() {
+        assert!(expr(span!("lhs != rhs")).is_ok())
+    }
+
+    #[test]
+    fn expr_with_parenthesis() {
+        assert!(expr(span!("lhs + (rhs - lhs)")).is_ok())
+    }
+
+    #[test]
+    fn parentheses() {
+        let (input, expr) = expr(span!("4 * (3 + 5)")).unwrap();
+        assert!(matches!(expr.node, BinaryOp { .. }));
+
+        assert_eq!(*input.fragment(), "");
+    }
+
+    #[test]
+    fn multi_type_2() {
+        assert!(expr(span!("func takes_mt(a: int | string) {}")).is_ok())
+    }
+
+    #[test]
+    fn multi_type_unclosed() {
+        assert!(expr(span!("func invalid_mt(a: int |) {}")).is_err())
+    }
+
+    #[test]
+    fn multi_type_long() {
+        assert!(expr(span!(
+            "func long_mt(a: int | string | float | char | bool) {}"
+        ))
+        .is_ok())
+    }
+
+    #[test]
+    fn multi_type_in_type_dec() {
+        assert!(expr(span!(
+            "type MultiTy(a: int | string | float | char | bool);"
+        ))
+        .is_ok())
+    }
+
+    #[test]
+    fn func_dec_one_generic() {
+        assert!(expr(span!("func a[T]() {}")).is_ok())
+    }
+
+    #[test]
+    fn func_dec_multiple_generic() {
+        assert!(expr(span!("func a[T, U, V]() {}")).is_ok())
+    }
+
+    #[test]
+    fn func_dec_generic_and_whitespace() {
+        assert!(expr(span!("func a[    T]() {}")).is_ok());
+        assert!(expr(span!("func a[    T  ]() {}")).is_ok());
+        assert!(expr(span!("func a[   T , U    , V]() {}")).is_ok())
+    }
+
+    #[test]
+    fn func_dec_empty_generic_list() {
+        assert!(expr(span!("func a[]() {}")).is_err())
+    }
+
+    #[test]
+    fn func_dec_no_generic_delimiter() {
+        assert!(expr(span!("func a[T, U() {}")).is_err())
+    }
+
+    #[test]
+    fn func_call_generics_one() {
+        assert!(expr(span!("fn_call[T]()")).is_ok());
+    }
+
+    #[test]
+    fn func_call_generics_multi() {
+        assert!(expr(span!("fn_call[T, U, V]()")).is_ok());
+    }
+
+    #[test]
+    fn func_call_generics_multi_and_args() {
+        assert!(expr(span!("fn_call[T, U, V](a, b, c)")).is_ok());
+    }
+
+    #[test]
+    fn type_inst_generics_multi_and_args() {
+        assert!(expr(span!("TypeInst[T, U, V](a: 0, b: 1, c: 2)")).is_ok());
+    }
+
+    #[test]
+    fn empty_type_declaration() {
+        assert!(expr(span!("type CustomType;")).is_ok())
+    }
+
+    #[test]
+    fn empty_type_instantiation() {
+        assert!(expr(span!("a = CustomType;")).is_ok())
+    }
+
+    #[test]
+    fn generic_type_decl() {
+        assert!(expr(span!("type Generic[T](inner: T);")).is_ok());
+    }
+
+    #[test]
+    fn multi_generic_type_decl() {
+        assert!(expr(span!(
+            "type Generic[T, U, V](inner: T, outer: int, something: W);"
+        ))
+        .is_ok());
+    }
+
+    #[test]
+    fn generic_empty_type_decl() {
+        assert!(expr(span!("type Generic[T];")).is_ok());
+    }
+
+    #[test]
+    fn generic_method_call() {
+        assert!(expr(span!("expr.call[T, U, V](arg0, arg1)")).is_ok());
+        assert!(expr(span!("call[W, Y, Z]().call[T, U, V](arg0, arg1)")).is_ok());
+        assert!(expr(span!("value.call[primitive]()")).is_ok());
+        assert!(expr(span!("value.call  [primitive]   ()")).is_ok());
+    }
+
+    #[test]
+    fn type_id_simple() {
+        assert!(type_id(span!("int")).is_ok());
+        assert!(type_id(span!("Custom")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_without_args() {
+        assert!(type_id(span!("func")).is_err());
+    }
+
+    #[test]
+    fn type_id_generic() {
+        assert!(type_id(span!("Vec[T]")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor() {
+        assert!(type_id(span!("func(int, string)")).is_ok());
+    }
+
+    #[test]
+    fn type_id_generic_functor() {
+        assert!(type_id(span!("func[T, U, V](int, string)")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_return_type() {
+        assert!(type_id(span!("func() -> A")).is_ok());
+        assert!(type_id(span!("func[T, U, V](A, B) -> A")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_generic_return_type() {
+        assert!(type_id(span!("func[T, U, V](A, B) -> A[T]")).is_ok());
+    }
+
+    #[test]
+    fn type_id_functor_functor_return_type() {
+        assert!(type_id(span!("func[T, U, V](A, B) -> func(T) -> A[T]")).is_ok());
+    }
+
+    #[test]
+    fn generic_func_arg_533() {
+        assert!(expr(span!("ext func __builtin_vec_len[T](vec: Vec[T]);")).is_ok());
+    }
+
+    #[test]
+    fn complex_function_declaration() {
+        assert!(expr(span!("func f_to_f[F1, F2](f1: func[F1](A) -> B, f2: func[F2](B) -> func(A) -> B, p: string) -> func[F1, F2](F1, F2, string) -> Pair[A, B] { /* todo :) */ }")).is_ok());
+    }
+
+    #[test]
+    fn nested_generic_type() {
+        assert!(expr(span!("a = Pair[Pair[int], int](a: 15, b: 14)")).is_ok());
+    }
+
+    #[test]
+    fn assign_call_to_generic_fn() {
+        assert!(expr(span!("int_size = size_of[int](15)")).is_ok());
+        assert!(expr(span!("int_size = size_of [int] (15)")).is_ok());
+    }
 }
