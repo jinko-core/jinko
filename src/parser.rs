@@ -35,6 +35,6 @@ pub fn parse(ctx: &mut Context, input: &str, source: Source) -> Result<(), Error
 #[macro_export]
 macro_rules! span {
     ($s:literal) => {
-        nom_locate::LocatedSpan::new_extra($s, $crate::location::Source::Empty)
+        nom_locate::LocatedSpan::new_extra($s, $crate::location::Source::Input($s))
     };
 }

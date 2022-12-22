@@ -33,6 +33,9 @@ pub struct Args {
 
     #[structopt()]
     arguments: Vec<String>,
+
+    #[structopt(short("-x"), long)]
+    pub(crate) experimental: bool,
 }
 
 impl Args {

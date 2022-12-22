@@ -12,14 +12,7 @@ impl FlattenAst for ast::Ast {
         match node {
             AstNode::Block(_) => todo!(),
             AstNode::Incl { source, as_path } => todo!(),
-            AstNode::Function {
-                kind,
-                name,
-                generics,
-                arguments,
-                return_type,
-                block,
-            } => todo!(),
+            AstNode::Function { kind, decl, block } => todo!(),
             AstNode::Type {
                 name,
                 generics,
@@ -45,6 +38,7 @@ impl FlattenAst for ast::Ast {
             AstNode::VarOrEmptyType(_) => todo!(),
             AstNode::Loop(_, _) => todo!(),
             AstNode::Return(_) => todo!(),
+            AstNode::Constant(_) => todo!(),
         }
     }
 }

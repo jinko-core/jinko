@@ -91,6 +91,12 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
     Ok(res)
 }
 
+fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
+    let ast = jinko::xperimental::parser::parse(input, Source::Path(file))?;
+    dbg!(ast);
+    todo!()
+}
+
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
     let input = fs::read_to_string(file)?;
 
@@ -100,43 +106,47 @@ fn handle_input(args: &Args, file: &Path) -> InteractResult {
         ctx.init_stdlib()?;
     }
 
-    jinko::parser::parse(&mut ctx, &input, Source::Path(file))?;
+    if args.experimental {
+        experimental_pipeline(&input, file)
+    } else {
+        jinko::parser::parse(&mut ctx, &input, Source::Path(file))?;
 
-    ctx.set_path(Some(file.to_owned()));
-    ctx.set_args(args.project_args());
+        ctx.set_path(Some(file.to_owned()));
+        ctx.set_args(args.project_args());
 
-    ctx.emit_errors();
-    ctx.clear_errors();
-
-    if args.check() {
-        ctx.check()?;
         ctx.emit_errors();
+        ctx.clear_errors();
 
-        return Ok((None, ctx));
-    }
+        if args.check() {
+            ctx.check()?;
+            ctx.emit_errors();
 
-    match args.test() {
-        false => match args.interactive() {
-            #[cfg(feature = "repl")]
-            true => Repl::new()?.with_context(ctx).launch(),
-            #[cfg(not(feature = "repl"))]
-            true => panic!("Jinko is not compiled with repl support"),
-            false => {
-                let res = ctx.execute()?;
-                ctx.emit_errors();
+            return Ok((None, ctx));
+        }
+
+        match args.test() {
+            false => match args.interactive() {
+                #[cfg(feature = "repl")]
+                true => Repl::new()?.with_context(ctx).launch(),
+                #[cfg(not(feature = "repl"))]
+                true => panic!("Jinko is not compiled with repl support"),
+                false => {
+                    let res = ctx.execute()?;
+                    ctx.emit_errors();
+
+                    Ok((res, ctx))
+                }
+            },
+            true => {
+                if args.interactive() {
+                    return Err(Error::new(ErrKind::Context)
+                        .with_msg(String::from("cannot run tests in interactive mode")));
+                }
+
+                let res = run_tests(&mut ctx)?;
 
                 Ok((res, ctx))
             }
-        },
-        true => {
-            if args.interactive() {
-                return Err(Error::new(ErrKind::Context)
-                    .with_msg(String::from("cannot run tests in interactive mode")));
-            }
-
-            let res = run_tests(&mut ctx)?;
-
-            Ok((res, ctx))
         }
     }
 }
@@ -146,7 +156,6 @@ fn main() -> anyhow::Result<()> {
     if args.debug() {
         jinko::debug::enable();
     }
-
     #[cfg(feature = "repl")]
     let result = args.input().map_or_else(
         || Repl::new()?.launch(),
