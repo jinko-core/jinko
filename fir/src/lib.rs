@@ -154,6 +154,7 @@ pub enum Kind {
         fields: Vec<RefIdx>,   // to Kind::TypedValue
     },
     /// A statically typed constant. This can be either a literal or an empty type
+    // TODO: Do we want newtype patterns so that references can only point to certain types? i.e TypeRef(RefIdx)
     Constant(RefIdx), // to Kind::Type
     TypedValue {
         value: RefIdx, // to Kind::{Call, Instantiation, TypedValue, Constant}
@@ -163,8 +164,9 @@ pub enum Kind {
         default: Option<RefIdx>, // to Kind::Type
     },
     FnDeclaration {
-        generics: Vec<RefIdx>, // to Kind::Generic
-        args: Vec<RefIdx>,     // to Kind::TypedValue
+        generics: Vec<RefIdx>,       // to Kind::Generic
+        args: Vec<RefIdx>,           // to Kind::TypedValue
+        return_type: Option<RefIdx>, // to Kind::Type,
     },
     Call {
         to: RefIdx,            // to Kind::FnDeclaration
@@ -176,6 +178,7 @@ pub enum Kind {
         generics: Vec<RefIdx>, // to Kind::Type
         fields: Vec<RefIdx>,   // to Kind::TypedValue
     },
+    Statements(Vec<RefIdx>), // to any kind
 }
 
 #[derive(Debug, Clone)]
@@ -220,6 +223,7 @@ pub trait Pass<T: Debug = (), U: Debug = ()> {
 
     // FIXME: Add documentation
     // FIXME: Should this take an immutable context and return it?
+    // FIXME: Should this return a Result<Fir<U>, E>?
     fn pass(&mut self, fir: Fir<T>) -> Fir<U> {
         // FIXME: Add a #[cfg(not(release))] here
         Self::pre_condition(&fir);
