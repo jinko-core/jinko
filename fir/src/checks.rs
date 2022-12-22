@@ -101,6 +101,12 @@ impl<T: Debug> Fir<T> {
         })
     }
 
+    /// Check that the [`Fir`] is in a valid state. This means that all [`OriginIdx`] should be unique,
+    /// and that all links between nodes should be allowed
+    ///
+    /// # Panic
+    ///
+    /// This function panics if the [`Fir`] is in a state deemed invalid
     pub fn check(&self) {
         self.check_unique_origins();
         self.check_valid_links();
