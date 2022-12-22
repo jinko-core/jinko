@@ -1,12 +1,13 @@
 use ast::{Ast, Node as AstNode};
 use fir::Fir;
+use symbol::Symbol;
 
 pub trait FlattenAst: Sized {
-    fn flatten(self) -> Fir;
+    fn flatten(self) -> Fir<Symbol>;
 }
 
 impl FlattenAst for ast::Ast {
-    fn flatten(self) -> Fir {
+    fn flatten(self) -> Fir<Symbol> {
         let Ast { location, node } = self;
 
         match node {
