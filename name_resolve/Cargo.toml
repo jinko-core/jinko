@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 fir = { path = "../fir" }
 symbol = { path = "../symbol" }
+flatten = { path = "../flatten" }
