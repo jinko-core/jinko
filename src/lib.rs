@@ -16,6 +16,7 @@ pub mod parser;
 pub mod typechecker;
 mod utils;
 pub mod value;
+pub mod xperimental;
 
 pub use crate::error::{ErrKind, Error};
 pub use builtins::Builtins;
