@@ -200,6 +200,8 @@ version = "0.1.0"
 dependencies = [
  "ast",
  "fir",
+ "location",
+ "symbol",
 ]
 
 [[package]]
@@ -375,6 +377,7 @@ name = "name_resolve"
 version = "0.1.0"
 dependencies = [
  "fir",
+ "flatten",
  "symbol",
 ]
 
