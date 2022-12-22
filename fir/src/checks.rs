@@ -66,9 +66,13 @@ impl<T: Debug> Fir<T> {
                 Kind::FnDeclaration {
                     generics,
                     args,
+                    return_type,
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
                     check!(@args => Kind::TypedValue { .. }, node);
+                    if let Some(ret_ty) = return_type {
+                        check!(ret_ty => Kind::Type { .. }, node);
+                    }
                 }
                 Kind::Call {
                     to,
@@ -95,6 +99,8 @@ impl<T: Debug> Fir<T> {
                     check!(@generics => Kind::Type { .. }, node);
                     check!(@fields => Kind::TypedValue { .. }, node);
                 }
+                // Statements can point to anything
+                Kind::Statements(_) => {}
                 // Nothing to do for generics without a default
                 Kind::Generic { default: None } => {}
             }
