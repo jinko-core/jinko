@@ -37,6 +37,11 @@ impl<T: Debug> Fir<T> {
     /// This function panic if the provided [`Fir`] contains invalid relationships.
     fn check_valid_links(&self) {
         macro_rules! check {
+            ($ref:expr => Some ( $kind:pat ), $node:expr) => {
+                if let Some(_e) = $ref {
+                    check!(_e => $kind, $node)
+                }
+            };
             ($ref:expr => $kind:pat, $node:expr) => {
                 if let RefIdx::Resolved(origin) = $ref {
                     match self.nodes[&origin].kind {
@@ -54,7 +59,8 @@ impl<T: Debug> Fir<T> {
         self.nodes.iter().for_each(|kv| {
             let node = &kv.1;
             match &node.kind {
-                Kind::Constant(r) => check!(r => Kind::Type { .. }, node),
+                Kind::Constant(r) => check!(r => Kind::TypeReference(_), node),
+                Kind::TypeReference(to) => check!(to => Kind::TypeReference(_) | Kind::Generic { .. }, node),
                 Kind::TypedValue { value, ty } => {
                     check!(ty => Kind::Type { .. }, node);
                     // `value` can link to basically anything
@@ -63,23 +69,23 @@ impl<T: Debug> Fir<T> {
                 Kind::Generic {
                     default: Some(default),
                 } => check!(default => Kind::Type { .. }, node),
-                Kind::FnDeclaration {
+                Kind::Function {
                     generics,
                     args,
                     return_type,
+                    block,
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
                     check!(@args => Kind::TypedValue { .. }, node);
-                    if let Some(ret_ty) = return_type {
-                        check!(ret_ty => Kind::Type { .. }, node);
-                    }
+                    check!(return_type => Some(Kind::Type { .. }), node);
+                    check!(block => Some(Kind::Statements(_)), node);
                 }
                 Kind::Call {
                     to,
                     generics,
                     args,
                 } => {
-                    check!(to => Kind::FnDeclaration { .. }, node);
+                    check!(to => Kind::Function { .. }, node);
                     check!(@generics => Kind::Type { .. }, node);
                     check!(@args => Kind::TypedValue { .. }, node);
                 }
@@ -103,6 +109,9 @@ impl<T: Debug> Fir<T> {
                 Kind::Statements(_) => {}
                 // Nothing to do for generics without a default
                 Kind::Generic { default: None } => {}
+                // Return statements can point to anything // FIXME: Is that true?
+                Kind::Return(_) => {},
+
             }
         })
     }
