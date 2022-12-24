@@ -157,8 +157,6 @@ use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
 use location::SpanTuple;
 use symbol::Symbol;
 
-use std::mem;
-
 #[derive(Debug, Default)]
 pub struct FlattenData {
     pub symbol: Option<Symbol>,
@@ -170,39 +168,57 @@ pub trait FlattenAst: Sized {
     fn flatten(&self) -> Fir<FlattenData>;
 }
 
+#[doc(hidden)]
+trait VecExt<T> {
+    fn with(self, elt: T) -> Self;
+}
+
+impl<T> VecExt<T> for Vec<T> {
+    fn with(mut self, elt: T) -> Vec<T> {
+        self.push(elt);
+
+        self
+    }
+}
+
 fn visit_block(
     fir: Fir<FlattenData>,
     location: SpanTuple,
     nodes: &[Ast],
     current_origin: OriginIdx,
     current_scope_level: u64,
-) -> Fir<FlattenData> {
+) -> (Fir<FlattenData>, RefIdx) {
     let mut origin = current_origin;
 
-    let (fir, refs) = nodes.iter().fold((fir, vec![]), |(fir, mut refs), node| {
+    let (fir, refs) = nodes.iter().fold((fir, vec![]), |(fir, refs), node| {
         let next = origin.next();
         origin = next;
 
-        refs.push(RefIdx::Resolved(next));
-        (visit(fir, node, next, current_scope_level + 1), refs)
+        let (fir, new_ref) = visit(fir, node, next, current_scope_level + 1);
+
+        (fir, refs.with(new_ref))
     });
 
-    fir.append(Node {
+    let origin = origin.next();
+    let node = Node {
         data: FlattenData {
             symbol: None,
             location: Some(location),
             scope: current_scope_level,
         },
-        origin: origin.next(),
+        origin,
         kind: Kind::Statements(refs),
-    })
+    };
+
+    (fir.append(node), RefIdx::Resolved(origin))
 }
 
 fn handle_ty_node(
+    fir: Fir<FlattenData>,
     ty: &TypeArgument,
     current_origin: OriginIdx,
     current_scope_level: u64,
-) -> Node<FlattenData> {
+) -> (Fir<FlattenData>, RefIdx) {
     todo!()
 }
 
@@ -214,40 +230,37 @@ fn visit_function(
         generics,
         args,
         return_type,
-    }: Declaration,
+    }: &Declaration,
+    block: &Option<Box<Ast>>,
     current_origin: OriginIdx,
     current_scope_level: u64,
-) -> Fir<FlattenData> {
+) -> (Fir<FlattenData>, RefIdx) {
     let mut origin = current_origin;
     let fn_scope = current_scope_level + 1;
 
-    let (fir, generics) = generics
-        .iter()
-        .fold((fir, vec![]), |(fir, mut refs), node| {
-            let next = origin.next();
-            origin = next;
-
-            let node = Node {
-                data: FlattenData {
-                    symbol: Some(node.name.clone()),
-                    location: Some(location.clone()), // FIXME: This needs to be the GenericArgument's location
-                    scope: fn_scope,
-                },
-                origin: next,
-                kind: Kind::Generic { default: None }, // FIXME: Use default properly
-            };
-
-            refs.push(RefIdx::Resolved(next));
-
-            (fir.append(node), refs)
-        });
-
-    let (fir, args) = args.iter().fold((fir, vec![]), |(fir, mut refs), arg| {
+    let (fir, generics) = generics.iter().fold((fir, vec![]), |(fir, refs), node| {
         let next = origin.next();
         origin = next;
 
-        let ty_node = handle_ty_node(&arg.ty, origin, fn_scope); // should these return Nodes instead?
-                                                                 // would be way more ergonomic
+        let node = Node {
+            data: FlattenData {
+                symbol: Some(node.name.clone()),
+                location: Some(location.clone()), // FIXME: This needs to be the GenericArgument's location
+                scope: fn_scope,
+            },
+            origin: next,
+            kind: Kind::Generic { default: None }, // FIXME: Use default properly
+        };
+
+        (fir.append(node), refs.with(RefIdx::Resolved(next)))
+    });
+
+    let (fir, args) = args.iter().fold((fir, vec![]), |(fir, refs), arg| {
+        let next = origin.next();
+        origin = next;
+
+        let (fir, ty_node_idx) = handle_ty_node(fir, &arg.ty, origin, fn_scope); // should these return Nodes instead?
+                                                                                 // would be way more ergonomic
         let node = Node {
             data: FlattenData {
                 symbol: Some(arg.symbol.clone()),
@@ -256,13 +269,23 @@ fn visit_function(
             },
             origin,
             kind: Kind::TypedValue {
-                value: todo!(), // FIXME: What do we put here?
-                ty: RefIdx::Resolved(ty_node.origin),
+                value: todo!(), // FIXME: What do we put here? Since this is a
+                // declaration and not a usage, the type in `Fir::TypedValue` doesn't make a lot
+                // of sense
+                ty: ty_node_idx,
             },
         };
 
-        (fir.append(ty_node).append(node), refs)
+        (fir.append(node), refs.with(RefIdx::Resolved(next)))
     });
+
+    // FIXME: Handle return type
+
+    let (fir, block_id) = if let Some(block) = block {
+        visit(fir, block, current_origin, fn_scope)
+    } else {
+        (fir, RefIdx::Unresolved) // FIXME: Invalid
+    };
 
     todo!();
 }
@@ -272,7 +295,7 @@ fn visit(
     ast: &Ast,
     current_origin: OriginIdx,
     current_scope_level: u64,
-) -> Fir<FlattenData> {
+) -> (Fir<FlattenData>, RefIdx) {
     match &ast.node {
         AstNode::Block(nodes) => visit_block(
             fir,
@@ -281,7 +304,14 @@ fn visit(
             current_origin,
             current_scope_level,
         ),
-        AstNode::Function { kind, decl, block } => todo!(),
+        AstNode::Function { decl, block, .. } => visit_function(
+            fir,
+            ast.location.clone(),
+            decl,
+            block,
+            current_origin,
+            current_scope_level,
+        ),
         AstNode::Type {
             name,
             generics,
@@ -307,15 +337,19 @@ fn visit(
         AstNode::VarOrEmptyType(_) => todo!(),
         AstNode::Loop(_, _) => todo!(),
         AstNode::Return(_) => todo!(),
-        AstNode::Constant(_) => fir.append(Node {
-            data: FlattenData {
-                symbol: None,
-                location: Some(ast.location.clone()),
-                scope: current_scope_level,
-            },
-            origin: current_origin,
-            kind: Kind::Constant(RefIdx::Unresolved),
-        }),
+        // Leaf node
+        AstNode::Constant(_) => (
+            fir.append(Node {
+                data: FlattenData {
+                    symbol: None,
+                    location: Some(ast.location.clone()),
+                    scope: current_scope_level,
+                },
+                origin: current_origin,
+                kind: Kind::Constant(RefIdx::Unresolved),
+            }),
+            RefIdx::Resolved(current_origin),
+        ),
         // TODO: will we still have Incl at this level? Probably not
         AstNode::Incl { .. } => {
             unreachable!("invalid AST state: `incl` expressions still present")
@@ -325,6 +359,8 @@ fn visit(
 
 impl FlattenAst for ast::Ast {
     fn flatten(&self) -> Fir<FlattenData> {
-        visit(Fir::default(), self, OriginIdx::default(), 0)
+        let (fir, _last_ref) = visit(Fir::default(), self, OriginIdx::default(), 0);
+
+        fir
     }
 }
