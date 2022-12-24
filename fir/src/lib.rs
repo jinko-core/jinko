@@ -137,9 +137,13 @@ trait WithHashMap<K: Hash + Eq, V> {
     fn with(self, key: K, value: V) -> Self;
 }
 
-impl<K: Hash + Eq, V> WithHashMap<K, V> for HashMap<K, V> {
+impl<K: Hash + Eq + Debug, V: Debug> WithHashMap<K, V> for HashMap<K, V> {
     fn with(mut self, key: K, value: V) -> HashMap<K, V> {
-        self.insert(key, value);
+        dbg!(&key);
+        dbg!(&value);
+        if self.insert(key, value).is_some() {
+            unreachable!("re-using already insert OriginIdx");
+        };
 
         self
     }
@@ -149,13 +153,11 @@ impl<K: Hash + Eq, V> WithHashMap<K, V> for HashMap<K, V> {
 #[derive(Debug, Clone)]
 pub enum Kind {
     // FIXME: Figure out more leaf/basic block types
-    Type {
-        generics: Vec<RefIdx>, // to Kind::Generic
-        fields: Vec<RefIdx>,   // to Kind::TypedValue
-    },
+    // FIXME: Do we need a TypeArgument node?
     /// A statically typed constant. This can be either a literal or an empty type
     // TODO: Do we want newtype patterns so that references can only point to certain types? i.e TypeRef(RefIdx)
-    Constant(RefIdx), // to Kind::Type
+    Constant(RefIdx), // to Kind::TypeReference, // FIXME: Is TypeReference the play? Yes, but really that way?
+    TypeReference(RefIdx), // to Kind::{Type, Generic}
     TypedValue {
         value: RefIdx, // to Kind::{Call, Instantiation, TypedValue, Constant}
         ty: RefIdx,    // to Kind::Type
@@ -163,22 +165,28 @@ pub enum Kind {
     Generic {
         default: Option<RefIdx>, // to Kind::Type
     },
-    FnDeclaration {
+    Type {
+        generics: Vec<RefIdx>, // to Kind::Generic
+        fields: Vec<RefIdx>,   // to Kind::TypedValue
+    },
+    Function {
         generics: Vec<RefIdx>,       // to Kind::Generic
         args: Vec<RefIdx>,           // to Kind::TypedValue
         return_type: Option<RefIdx>, // to Kind::Type,
-    },
-    Call {
-        to: RefIdx,            // to Kind::FnDeclaration
-        generics: Vec<RefIdx>, // to Kind::Type
-        args: Vec<RefIdx>,     // to Kind::TypedValue
+        block: Option<RefIdx>,       // to Kind::Statements
     },
     Instantiation {
         to: RefIdx,            // to Kind::Type
         generics: Vec<RefIdx>, // to Kind::Type
         fields: Vec<RefIdx>,   // to Kind::TypedValue
     },
+    Call {
+        to: RefIdx,            // to Kind::FnDeclaration
+        generics: Vec<RefIdx>, // to Kind::Type
+        args: Vec<RefIdx>,     // to Kind::TypedValue
+    },
     Statements(Vec<RefIdx>), // to any kind
+    Return(Option<RefIdx>),  // to any kind
 }
 
 #[derive(Debug, Clone)]
@@ -189,7 +197,7 @@ pub struct Node<T: Debug = ()> {
 }
 
 /// An instance of [`Fir`] is similar to a graph, containing [`Node`]s and relationships binding them together.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Fir<T: Debug = ()> {
     pub nodes: HashMap<OriginIdx, Node<T>>,
 }
