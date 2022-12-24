@@ -219,7 +219,37 @@ fn handle_ty_node(
     current_origin: OriginIdx,
     current_scope_level: u64,
 ) -> (Fir<FlattenData>, RefIdx) {
-    todo!()
+    let mut origin = current_origin;
+
+    let (fir, generics) = ty.generics.iter().fold((fir, vec![]), |(fir, refs), node| {
+        let next = origin.next();
+        origin = next;
+
+        let (fir, generic) = handle_ty_node(fir, node, next, current_scope_level);
+
+        (fir, refs.with(generic))
+    });
+
+    let next = origin.next();
+
+    (
+        fir.append(Node {
+            data: FlattenData {
+                symbol: match &ty.kind {
+                    ast::TypeKind::Ty(s) => Some(s.clone()),
+                    ast::TypeKind::FunctionLike(_, _) => Some(Symbol::from("func")),
+                },
+                location: None, // FIXME: Invalid
+                scope: current_scope_level,
+            },
+            origin: next,
+            kind: Kind::Type {
+                generics,
+                fields: vec![],
+            },
+        }),
+        RefIdx::Resolved(next),
+    )
 }
 
 fn visit_function(
@@ -242,6 +272,7 @@ fn visit_function(
         let next = origin.next();
         origin = next;
 
+        // FIXME: Why is this different from in `handle_ty_node`? WHich one is right?
         let node = Node {
             data: FlattenData {
                 symbol: Some(node.name.clone()),
@@ -269,7 +300,7 @@ fn visit_function(
             },
             origin,
             kind: Kind::TypedValue {
-                value: todo!(), // FIXME: What do we put here? Since this is a
+                value: RefIdx::Unresolved, // FIXME: What do we put here? Since this is a
                 // declaration and not a usage, the type in `Fir::TypedValue` doesn't make a lot
                 // of sense
                 ty: ty_node_idx,
@@ -279,15 +310,110 @@ fn visit_function(
         (fir.append(node), refs.with(RefIdx::Resolved(next)))
     });
 
-    // FIXME: Handle return type
-
-    let (fir, block_id) = if let Some(block) = block {
+    let (fir, block) = if let Some(block) = block {
         visit(fir, block, current_origin, fn_scope)
     } else {
-        (fir, RefIdx::Unresolved) // FIXME: Invalid
+        (fir, RefIdx::Unresolved) // FIXME: Invalid, this should be an option
     };
 
-    todo!();
+    let (fir, return_type) = match return_type {
+        Some(ty) => handle_ty_node(fir, ty, current_origin, current_scope_level),
+        None => (fir, RefIdx::Unresolved), // FIXME: Use an option here
+    };
+
+    let next = origin.next();
+
+    (
+        fir.append(Node {
+            data: FlattenData {
+                symbol: Some(name.clone()),
+                location: Some(location),
+                scope: current_scope_level,
+            },
+            origin: next,
+            kind: Kind::FnDeclaration {
+                generics,
+                args,
+                return_type: Some(return_type), // FIXME: THis is invalid and shouldn't always be Some(...)
+                block: Some(block),
+            },
+        }),
+        RefIdx::Resolved(next),
+    )
+}
+
+fn visit_return(
+    fir: Fir<FlattenData>,
+    to_return: &Option<Box<Ast>>,
+    location: SpanTuple,
+    current_origin: OriginIdx,
+    current_scope_level: u64,
+) -> (Fir<FlattenData>, RefIdx) {
+    let (fir, idx) = match to_return {
+        Some(node) => visit(fir, node, current_origin, current_scope_level),
+        None => (fir, RefIdx::Unresolved), // FIXME: This should be an option, so None here
+    };
+
+    let next = current_origin.next();
+
+    (
+        fir.append(Node {
+            data: FlattenData {
+                symbol: None,
+                location: Some(location),
+                scope: current_scope_level,
+            },
+            origin: next,
+            kind: Kind::Return(Some(idx)), // FIXME: Invalid. Don't alway keep Some(idx)
+        }),
+        RefIdx::Resolved(next),
+    )
+}
+
+fn visit_fn_call(
+    fir: Fir<FlattenData>,
+    to: &Symbol,
+    generics: &[TypeArgument],
+    args: &[Ast],
+    current_origin: OriginIdx,
+    current_scope_level: u64,
+) -> (Fir<FlattenData>, RefIdx) {
+    let mut origin = current_origin;
+
+    let (fir, generics) = generics.iter().fold((fir, vec![]), |(fir, refs), node| {
+        let next = origin.next();
+        origin = next;
+
+        let (fir, generic) = handle_ty_node(fir, node, next, current_scope_level);
+
+        (fir, refs.with(generic))
+    });
+
+    let (fir, args) = args.iter().fold((fir, vec![]), |(fir, refs), node| {
+        let next = origin.next();
+        origin = next;
+
+        let (fir, arg) = visit(fir, node, current_origin, current_scope_level);
+
+        (fir, refs.with(arg))
+    });
+
+    let next = origin.next();
+    let node = Node {
+        data: FlattenData {
+            symbol: Some(to.clone()),
+            location: None, // FIXME: Invalid
+            scope: current_scope_level,
+        },
+        origin: next,
+        kind: Kind::Call {
+            to: RefIdx::Unresolved,
+            generics,
+            args,
+        },
+    };
+
+    (fir.append(node), RefIdx::Resolved(next))
 }
 
 fn visit(
@@ -319,7 +445,9 @@ fn visit(
             with,
         } => todo!(),
         AstNode::TypeInstantiation(_) => todo!(),
-        AstNode::FunctionCall(_) => todo!(),
+        AstNode::FunctionCall(ast::Call { to, generics, args }) => {
+            visit_fn_call(fir, to, generics, args, current_origin, current_scope_level)
+        }
         AstNode::MethodCall { instance, call } => todo!(),
         AstNode::BinaryOp(_, _, _) => todo!(),
         AstNode::FieldAccess(_, _) => todo!(),
@@ -336,7 +464,13 @@ fn visit(
         AstNode::Var(_) => todo!(),
         AstNode::VarOrEmptyType(_) => todo!(),
         AstNode::Loop(_, _) => todo!(),
-        AstNode::Return(_) => todo!(),
+        AstNode::Return(value) => visit_return(
+            fir,
+            value,
+            ast.location.clone(),
+            current_origin,
+            current_scope_level,
+        ),
         // Leaf node
         AstNode::Constant(_) => (
             fir.append(Node {
