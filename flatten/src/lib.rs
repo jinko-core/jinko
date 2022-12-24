@@ -359,7 +359,7 @@ impl Ctx {
         let (ctx, block) = ctx.visit_opt(block);
 
         // FIXME: How to make this pattern look better? Also present in `visit_opt`
-        let (ctx, return_type) = match return_type {
+        let (mut ctx, return_type) = match return_type {
             Some(ty) => {
                 let (ctx, idx) = ctx.handle_ty_node(ty);
                 (ctx, Some(idx))
@@ -368,7 +368,7 @@ impl Ctx {
         };
 
         // FIXME: We can probably factor from here...
-        let next = ctx.origin.next();
+        let next = ctx.origin.increment();
         let node = Node {
             data: FlattenData {
                 symbol: Some(name.clone()),
