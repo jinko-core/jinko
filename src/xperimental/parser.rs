@@ -41,9 +41,13 @@ pub fn parse(input: &str, source: Source) -> Result<Ast, Error> {
     let (input, stmts) = many_exprs(input)?;
     let (input, end) = position::<ParseInput, Error>(input)?;
 
+    // TODO: How does this work with the last statement being an expression?
     Ok(Ast {
         location: pos_to_loc(input, start, end),
-        node: Node::Block(stmts),
+        node: Node::Block {
+            stmts,
+            last_is_expr: false,
+        }, // FIXME: Invalid
     })
 }
 
@@ -1028,23 +1032,44 @@ pub fn block(input: ParseInput) -> ParseResult<ParseInput, Ast> {
 ///             | expr ';' next inner_block
 fn inner_block(input: ParseInput) -> ParseResult<ParseInput, Node> {
     if let Ok((input, _)) = Token::right_curly_bracket(input) {
-        return Ok((input, Node::Block(vec![])));
+        return Ok((
+            input,
+            Node::Block {
+                stmts: vec![],
+                last_is_expr: false,
+            },
+        ));
     }
 
     let (input, inst) = expr(input)?;
     if let Ok((input, _)) = Token::right_curly_bracket(input) {
-        return Ok((input, Node::Block(vec![inst])));
+        return Ok((
+            input,
+            Node::Block {
+                stmts: vec![inst],
+                last_is_expr: true, // FIXME: Is that right?
+            },
+        ));
     }
 
     let (input, block) = preceded(Token::semicolon, preceded(nom_next, inner_block))(input)?;
-    let mut stmts = match block {
-        Node::Block(stmts) => stmts,
+    let (mut stmts, last_is_expr) = match block {
+        Node::Block {
+            stmts,
+            last_is_expr,
+        } => (stmts, last_is_expr),
         _ => unreachable!(),
     };
 
     stmts.insert(0, inst);
 
-    Ok((input, Node::Block(stmts)))
+    Ok((
+        input,
+        Node::Block {
+            stmts,
+            last_is_expr,
+        },
+    ))
 }
 
 /// func_type_or_var = '(' next func_or_type_inst_args
@@ -1302,6 +1327,45 @@ mod tests_constructs {
 
     use ast::Node::*;
     use ast::Value::*;
+
+    #[test]
+    fn block_expr() {
+        let (_, ast) = expr(span!("{ a }")).unwrap();
+
+        let last_is_expr = match ast.node {
+            Block { last_is_expr, .. } => last_is_expr,
+            _ => unreachable!(),
+        };
+
+        assert!(last_is_expr);
+
+        let (_, ast) = expr(span!("{ }")).unwrap();
+
+        let last_is_expr = match ast.node {
+            Block { last_is_expr, .. } => last_is_expr,
+            _ => unreachable!(),
+        };
+
+        assert!(!last_is_expr);
+
+        let (_, ast) = expr(span!("{ a; b; c; }")).unwrap();
+
+        let last_is_expr = match ast.node {
+            Block { last_is_expr, .. } => last_is_expr,
+            _ => unreachable!(),
+        };
+
+        assert!(!last_is_expr);
+
+        let (_, ast) = expr(span!("{ a; b; c }")).unwrap();
+
+        let last_is_expr = match ast.node {
+            Block { last_is_expr, .. } => last_is_expr,
+            _ => unreachable!(),
+        };
+
+        assert!(last_is_expr);
+    }
 
     #[test]
     fn consume_whitespace() {
