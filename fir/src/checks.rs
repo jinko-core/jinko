@@ -87,7 +87,7 @@ impl<T: Debug> Fir<T> {
                 } => {
                     check!(to => Kind::Function { .. }, node);
                     check!(@generics => Kind::Type { .. }, node);
-                    check!(@args => Kind::TypedValue { .. }, node);
+                    check!(@args => Kind::TypedValue { .. } | Kind::Constant { .. }, node);
                 }
                 Kind::Type {
                     generics,
