@@ -139,8 +139,6 @@ trait WithHashMap<K: Hash + Eq, V> {
 
 impl<K: Hash + Eq + Debug, V: Debug> WithHashMap<K, V> for HashMap<K, V> {
     fn with(mut self, key: K, value: V) -> HashMap<K, V> {
-        dbg!(&key);
-        dbg!(&value);
         if self.insert(key, value).is_some() {
             unreachable!("re-using already insert OriginIdx");
         };
