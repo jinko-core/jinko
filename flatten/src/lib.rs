@@ -201,6 +201,42 @@ impl Ctx {
         )
     }
 
+    fn scoped(mut self, f: impl Fn(Ctx) -> (Ctx, RefIdx)) -> (Ctx, RefIdx) {
+        self.scope += 1;
+
+        let (mut ctx, idx) = f(self);
+
+        ctx.scope -= 1;
+
+        (ctx, idx)
+    }
+
+    fn visit_fold<T>(
+        self,
+        iter: impl Iterator<Item = T>,
+        visitor: impl Fn(Ctx, T) -> (Ctx, RefIdx),
+    ) -> (Ctx, Vec<RefIdx>) {
+        iter.fold((self, vec![]), |(ctx, refs), node| {
+            let (ctx, new_ref) = visitor(ctx, node);
+
+            (ctx, refs.with(new_ref))
+        })
+    }
+
+    fn visit_opt<T>(
+        self,
+        node: Option<T>,
+        visitor: impl Fn(Ctx, T) -> (Ctx, RefIdx),
+    ) -> (Ctx, Option<RefIdx>) {
+        match node {
+            Some(node) => {
+                let (ctx, idx) = visitor(self, node);
+                (ctx, Some(idx))
+            }
+            None => (self, None),
+        }
+    }
+
     fn handle_generic_node(self, generic: &GenericArgument) -> (Ctx, RefIdx) {
         // FIXME: Needs AST to be fixed
         // let (ctx, default_ty) = self.handle_ty_node(generic.ty);
@@ -234,11 +270,121 @@ impl Ctx {
         ctx.append(data, kind)
     }
 
+    fn visit_block(self, location: &SpanTuple, nodes: &[Ast]) -> (Ctx, RefIdx) {
+        self.scoped(|ctx| {
+            let (ctx, refs) = ctx.visit_fold(nodes.iter(), Ctx::visit);
+
+            let data = FlattenData {
+                symbol: None,
+                location: Some(location.clone()),
+                scope: ctx.scope,
+            };
+            let kind = Kind::Statements(refs);
+
+            ctx.append(data, kind)
+        })
+    }
+
+    fn visit_fn_call(
+        self,
+        location: SpanTuple,
+        to: &Symbol,
+        generics: &[TypeArgument],
+        args: &[Ast],
+    ) -> (Ctx, RefIdx) {
+        let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_ty_node);
+        let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit);
+
+        let data = FlattenData {
+            symbol: Some(to.clone()),
+            location: Some(location),
+            scope: ctx.scope,
+        };
+        let kind = Kind::Call {
+            to: RefIdx::Unresolved,
+            generics,
+            args,
+        };
+
+        ctx.append(data, kind)
+    }
+
+    fn visit_function(
+        self,
+        location: &SpanTuple,
+        Declaration {
+            name,
+            generics,
+            args,
+            return_type,
+        }: &Declaration,
+        block: &Option<Box<Ast>>,
+    ) -> (Ctx, RefIdx) {
+        self.scoped(|ctx| {
+            let (ctx, generics) = ctx.visit_fold(generics.iter(), Ctx::handle_generic_node);
+            let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit_typed_value);
+            let (ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_ty_node);
+            let (ctx, block) = ctx.visit_opt(block.as_deref(), Ctx::visit);
+
+            let data = FlattenData {
+                symbol: Some(name.clone()),
+                location: Some(location.clone()),
+                scope: ctx.scope,
+            };
+            let kind = Kind::Function {
+                generics,
+                args,
+                return_type,
+                block,
+            };
+
+            ctx.append(data, kind)
+        })
+    }
+
+    fn visit_return(self, to_return: &Option<Box<Ast>>, location: SpanTuple) -> (Ctx, RefIdx) {
+        let (ctx, idx) = self.visit_opt(to_return.as_deref(), Ctx::visit);
+
+        let data = FlattenData {
+            symbol: None,
+            location: Some(location),
+            scope: ctx.scope,
+        };
+        let kind = Kind::Return(idx);
+
+        ctx.append(data, kind)
+    }
+
+    // TODO: Now: How do we improve the API? This sucks ass and is tedious to extend, and error-prone
+
+    fn visit_typed_value(
+        self,
+        TypedValue {
+            location,
+            symbol,
+            ty,
+        }: &TypedValue,
+    ) -> (Ctx, RefIdx) {
+        let (ctx, ty) = self.handle_ty_node(ty);
+
+        let data = FlattenData {
+            symbol: Some(symbol.clone()),
+            location: Some(location.clone()),
+            scope: ctx.scope,
+        };
+        let kind = Kind::TypedValue {
+            value: RefIdx::Unresolved, // FIXME: That's not valid, right?
+            ty,
+        };
+
+        ctx.append(data, kind)
+    }
+
     fn visit(self, ast: &Ast) -> (Ctx, RefIdx) {
         match &ast.node {
-            AstNode::Block(nodes) => self.visit_block(ast.location.clone(), nodes),
+            AstNode::Block(nodes) => self.visit_block(&ast.location, nodes),
             AstNode::Function { decl, block, .. } => {
-                self.visit_function(ast.location.clone(), decl, block)
+                self.visit_function(&ast.location, decl, block)
             }
             AstNode::Type {
                 name,
@@ -282,142 +428,6 @@ impl Ctx {
                 unreachable!("invalid AST state: `incl` expressions still present")
             }
         }
-    }
-
-    fn visit_block(self, location: SpanTuple, nodes: &[Ast]) -> (Ctx, RefIdx) {
-        let (ctx, refs) = self.visit_fold(nodes.iter(), Ctx::visit);
-
-        let data = FlattenData {
-            symbol: None,
-            location: Some(location),
-            scope: ctx.scope,
-        };
-        let kind = Kind::Statements(refs);
-
-        ctx.append(data, kind)
-    }
-
-    fn visit_fn_call(
-        self,
-        location: SpanTuple,
-        to: &Symbol,
-        generics: &[TypeArgument],
-        args: &[Ast],
-    ) -> (Ctx, RefIdx) {
-        let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_ty_node);
-        let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit);
-
-        let data = FlattenData {
-            symbol: Some(to.clone()),
-            location: Some(location),
-            scope: ctx.scope,
-        };
-        let kind = Kind::Call {
-            to: RefIdx::Unresolved,
-            generics,
-            args,
-        };
-
-        ctx.append(data, kind)
-    }
-
-    fn visit_opt<T>(
-        self,
-        node: Option<T>,
-        visitor: impl Fn(Ctx, T) -> (Ctx, RefIdx),
-    ) -> (Ctx, Option<RefIdx>) {
-        match node {
-            Some(node) => {
-                let (ctx, idx) = visitor(self, node);
-                (ctx, Some(idx))
-            }
-            None => (self, None),
-        }
-    }
-
-    fn visit_fold<T>(
-        self,
-        iter: impl Iterator<Item = T>,
-        visitor: impl Fn(Ctx, T) -> (Ctx, RefIdx),
-    ) -> (Ctx, Vec<RefIdx>) {
-        iter.fold((self, vec![]), |(ctx, refs), node| {
-            let (ctx, new_ref) = visitor(ctx, node);
-
-            (ctx, refs.with(new_ref))
-        })
-    }
-
-    fn visit_function(
-        mut self,
-        location: SpanTuple,
-        Declaration {
-            name,
-            generics,
-            args,
-            return_type,
-        }: &Declaration,
-        block: &Option<Box<Ast>>,
-    ) -> (Ctx, RefIdx) {
-        self.scope += 1;
-
-        let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
-        let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit_typed_value);
-        let (ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_ty_node);
-        let (mut ctx, block) = ctx.visit_opt(block.as_deref(), Ctx::visit);
-
-        let data = FlattenData {
-            symbol: Some(name.clone()),
-            location: Some(location),
-            scope: ctx.scope,
-        };
-        let kind = Kind::Function {
-            generics,
-            args,
-            return_type,
-            block,
-        };
-
-        ctx.scope -= 1;
-
-        ctx.append(data, kind)
-    }
-
-    fn visit_return(self, to_return: &Option<Box<Ast>>, location: SpanTuple) -> (Ctx, RefIdx) {
-        let (ctx, idx) = self.visit_opt(to_return.as_deref(), Ctx::visit);
-
-        let data = FlattenData {
-            symbol: None,
-            location: Some(location),
-            scope: ctx.scope,
-        };
-        let kind = Kind::Return(idx);
-
-        ctx.append(data, kind)
-    }
-
-    // TODO: Now: How do we improve the API? This sucks ass and is tedious to extend, and error-prone
-
-    fn visit_typed_value(
-        self,
-        TypedValue {
-            location,
-            symbol,
-            ty,
-        }: &TypedValue,
-    ) -> (Ctx, RefIdx) {
-        let (ctx, ty) = self.handle_ty_node(ty);
-
-        let data = FlattenData {
-            symbol: Some(symbol.clone()),
-            location: Some(location.clone()),
-            scope: ctx.scope,
-        };
-        let kind = Kind::TypedValue {
-            value: RefIdx::Unresolved, // FIXME: That's not valid, right?
-            ty,
-        };
-
-        ctx.append(data, kind)
     }
 }
 
