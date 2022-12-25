@@ -157,17 +157,17 @@ use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
 use location::SpanTuple;
 use symbol::Symbol;
 
-#[derive(Debug, Default)]
-pub struct FlattenData {
-    pub symbol: Option<Symbol>,
-    pub location: Option<SpanTuple>, // FIXME: Remove the option
-    pub scope: u64,
+#[doc(hidden)]
+trait VecExt<T> {
+    fn with(self, elt: T) -> Self;
 }
 
-struct Ctx {
-    pub fir: Fir<FlattenData>,
-    pub origin: OriginIdx,
-    pub scope: u64,
+impl<T> VecExt<T> for Vec<T> {
+    fn with(mut self, elt: T) -> Vec<T> {
+        self.push(elt);
+
+        self
+    }
 }
 
 trait OriginExt {
@@ -181,6 +181,19 @@ impl OriginExt for OriginIdx {
 
         *self
     }
+}
+
+#[derive(Debug, Default)]
+pub struct FlattenData {
+    pub symbol: Option<Symbol>,
+    pub location: Option<SpanTuple>, // FIXME: Remove the option
+    pub scope: u64,
+}
+
+struct Ctx {
+    pub fir: Fir<FlattenData>,
+    pub origin: OriginIdx,
+    pub scope: u64,
 }
 
 impl Ctx {
@@ -450,17 +463,4 @@ impl FlattenAst for ast::Ast {
 
 pub trait FlattenAst: Sized {
     fn flatten(&self) -> Fir<FlattenData>;
-}
-
-#[doc(hidden)]
-trait VecExt<T> {
-    fn with(self, elt: T) -> Self;
-}
-
-impl<T> VecExt<T> for Vec<T> {
-    fn with(mut self, elt: T) -> Vec<T> {
-        self.push(elt);
-
-        self
-    }
 }
