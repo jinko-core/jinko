@@ -97,9 +97,11 @@ mod tests {
         .append(Node {
             data: FlattenData(Some(Symbol::from("a")), None),
             origin: OriginIdx(0),
-            kind: Kind::FnDeclaration {
+            kind: Kind::Function {
                 generics: vec![],
                 args: vec![],
+                return_type: None,
+                block: None,
             },
         })
         // we add a call to "a"
