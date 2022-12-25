@@ -184,54 +184,57 @@ impl OriginExt for OriginIdx {
 }
 
 impl Ctx {
-    fn append(self, node: Node<FlattenData>) -> Ctx {
-        Ctx {
-            fir: self.fir.append(node),
-            ..self
-        }
-    }
-
-    fn handle_generic_node(mut self, generic: &GenericArgument) -> (Ctx, RefIdx) {
-        // let (ctx, default_ty) = self.handle_ty_node(generic.ty);
-
+    fn append(mut self, data: FlattenData, kind: Kind) -> (Ctx, RefIdx) {
         let next = self.origin.increment();
         let node = Node {
-            data: FlattenData {
-                symbol: Some(generic.name.clone()),
-                location: None, // FIXME
-                scope: self.scope,
-            },
+            data,
             origin: next,
-            kind: Kind::Generic { default: None }, // FIXME: Invalid
+            kind,
         };
 
-        (self.append(node), RefIdx::Resolved(next))
+        (
+            Ctx {
+                fir: self.fir.append(node),
+                ..self
+            },
+            RefIdx::Resolved(next),
+        )
+    }
+
+    fn handle_generic_node(self, generic: &GenericArgument) -> (Ctx, RefIdx) {
+        // FIXME: Needs AST to be fixed
+        // let (ctx, default_ty) = self.handle_ty_node(generic.ty);
+
+        let data = FlattenData {
+            symbol: Some(generic.name.clone()),
+            location: None, // FIXME
+            scope: self.scope,
+        };
+        let kind = Kind::Generic { default: None }; // FIXME: Invalid
+
+        self.append(data, kind)
     }
 
     fn handle_ty_node(self, ty: &TypeArgument) -> (Ctx, RefIdx) {
-        let (mut ctx, generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_ty_node);
+        let (ctx, generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_ty_node);
 
-        let next = ctx.origin.increment();
-        let node = Node {
-            data: FlattenData {
-                symbol: match &ty.kind {
-                    ast::TypeKind::Ty(s) => Some(s.clone()),
-                    ast::TypeKind::FunctionLike(_, _) => Some(Symbol::from("func")), // FIXME: Invalid but w/ever for now
-                },
-                location: None, // FIXME: Invalid
-                scope: ctx.scope,
+        let data = FlattenData {
+            symbol: match &ty.kind {
+                ast::TypeKind::Ty(s) => Some(s.clone()),
+                ast::TypeKind::FunctionLike(_, _) => Some(Symbol::from("func")), // FIXME: Invalid but w/ever for now
             },
-            origin: next,
-            kind: Kind::Type {
-                generics,
-                fields: vec![],
-            },
+            location: None, // FIXME: Invalid
+            scope: ctx.scope,
+        };
+        let kind = Kind::Type {
+            generics,
+            fields: vec![],
         };
 
-        (ctx.append(node), RefIdx::Resolved(next))
+        ctx.append(data, kind)
     }
 
-    fn visit(mut self, ast: &Ast) -> (Ctx, RefIdx) {
+    fn visit(self, ast: &Ast) -> (Ctx, RefIdx) {
         match &ast.node {
             AstNode::Block(nodes) => self.visit_block(ast.location.clone(), nodes),
             AstNode::Function { decl, block, .. } => {
@@ -245,7 +248,7 @@ impl Ctx {
             } => todo!(),
             AstNode::TypeInstantiation(_) => todo!(),
             AstNode::FunctionCall(ast::Call { to, generics, args }) => {
-                self.visit_fn_call(to, generics, args)
+                self.visit_fn_call(ast.location.clone(), to, generics, args)
             }
             AstNode::MethodCall { instance, call } => todo!(),
             AstNode::BinaryOp(_, _, _) => todo!(),
@@ -266,20 +269,13 @@ impl Ctx {
             AstNode::Return(value) => self.visit_return(value, ast.location.clone()),
             // Leaf node
             AstNode::Constant(_) => {
-                let next = self.origin.increment();
-                let scope = self.scope;
-                (
-                    self.append(Node {
-                        data: FlattenData {
-                            symbol: None,
-                            location: Some(ast.location.clone()),
-                            scope,
-                        },
-                        origin: next,
-                        kind: Kind::Constant(RefIdx::Unresolved),
-                    }),
-                    RefIdx::Resolved(next),
-                )
+                let data = FlattenData {
+                    symbol: None,
+                    location: Some(ast.location.clone()),
+                    scope: self.scope,
+                };
+                let kind = Kind::Constant(RefIdx::Unresolved);
+                self.append(data, kind)
             }
             // TODO: will we still have Incl at this level? Probably not
             AstNode::Incl { .. } => {
@@ -289,44 +285,40 @@ impl Ctx {
     }
 
     fn visit_block(self, location: SpanTuple, nodes: &[Ast]) -> (Ctx, RefIdx) {
-        let (mut ctx, refs) = self.visit_fold(nodes.iter(), Ctx::visit);
+        let (ctx, refs) = self.visit_fold(nodes.iter(), Ctx::visit);
 
-        // FIXME: How do we improve on that?
-        let origin = ctx.origin.increment();
-
-        let node = Node {
-            data: FlattenData {
-                symbol: None,
-                location: Some(location),
-                scope: ctx.scope,
-            },
-            origin,
-            kind: Kind::Statements(refs),
+        let data = FlattenData {
+            symbol: None,
+            location: Some(location),
+            scope: ctx.scope,
         };
+        let kind = Kind::Statements(refs);
 
-        (ctx.append(node), RefIdx::Resolved(origin))
+        ctx.append(data, kind)
     }
 
-    fn visit_fn_call(self, to: &Symbol, generics: &[TypeArgument], args: &[Ast]) -> (Ctx, RefIdx) {
+    fn visit_fn_call(
+        self,
+        location: SpanTuple,
+        to: &Symbol,
+        generics: &[TypeArgument],
+        args: &[Ast],
+    ) -> (Ctx, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_ty_node);
-        let (mut ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit);
+        let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit);
 
-        let next = ctx.origin.increment();
-        let node = Node {
-            data: FlattenData {
-                symbol: Some(to.clone()),
-                location: None, // FIXME: Invalid
-                scope: ctx.scope,
-            },
-            origin: next,
-            kind: Kind::Call {
-                to: RefIdx::Unresolved,
-                generics,
-                args,
-            },
+        let data = FlattenData {
+            symbol: Some(to.clone()),
+            location: Some(location),
+            scope: ctx.scope,
+        };
+        let kind = Kind::Call {
+            to: RefIdx::Unresolved,
+            generics,
+            args,
         };
 
-        (ctx.append(node), RefIdx::Resolved(next))
+        ctx.append(data, kind)
     }
 
     fn visit_opt<T>(
@@ -366,6 +358,7 @@ impl Ctx {
         }: &Declaration,
         block: &Option<Box<Ast>>,
     ) -> (Ctx, RefIdx) {
+        // FIXME: Add a self.scoped() method
         self.scope += 1;
 
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
@@ -373,42 +366,34 @@ impl Ctx {
         let (ctx, block) = ctx.visit_opt(block.as_deref(), Ctx::visit);
         let (mut ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_ty_node);
 
-        // FIXME: We can probably factor from here...
-        let next = ctx.origin.increment();
-        let node = Node {
-            data: FlattenData {
-                symbol: Some(name.clone()),
-                location: Some(location),
-                scope: ctx.scope,
-            },
-            origin: next,
-            kind: Kind::Function {
-                generics,
-                args,
-                return_type,
-                block,
-            },
+        let data = FlattenData {
+            symbol: Some(name.clone()),
+            location: Some(location),
+            scope: ctx.scope,
+        };
+        let kind = Kind::Function {
+            generics,
+            args,
+            return_type,
+            block,
         };
 
-        (ctx.append(node), RefIdx::Resolved(next))
-        // to here in a function. Something like `ctx.chain(Node)` or directly in ctx.append()
+        ctx.scope -= 1;
+
+        ctx.append(data, kind)
     }
 
     fn visit_return(self, to_return: &Option<Box<Ast>>, location: SpanTuple) -> (Ctx, RefIdx) {
-        let (mut ctx, idx) = self.visit_opt(to_return.as_deref(), Ctx::visit);
+        let (ctx, idx) = self.visit_opt(to_return.as_deref(), Ctx::visit);
 
-        let next = ctx.origin.increment();
-        let node = Node {
-            data: FlattenData {
-                symbol: None,
-                location: Some(location),
-                scope: ctx.scope,
-            },
-            origin: next,
-            kind: Kind::Return(idx),
+        let data = FlattenData {
+            symbol: None,
+            location: Some(location),
+            scope: ctx.scope,
         };
+        let kind = Kind::Return(idx);
 
-        (ctx.append(node), RefIdx::Resolved(next))
+        ctx.append(data, kind)
     }
 
     // TODO: Now: How do we improve the API? This sucks ass and is tedious to extend, and error-prone
@@ -421,23 +406,19 @@ impl Ctx {
             ty,
         }: &TypedValue,
     ) -> (Ctx, RefIdx) {
-        let (mut ctx, ty) = self.handle_ty_node(ty);
+        let (ctx, ty) = self.handle_ty_node(ty);
 
-        let next = ctx.origin.increment();
-        let node = Node {
-            data: FlattenData {
-                symbol: Some(symbol.clone()),
-                location: Some(location.clone()),
-                scope: ctx.scope,
-            },
-            origin: next,
-            kind: Kind::TypedValue {
-                value: RefIdx::Unresolved, // FIXME: That's not valid, right?
-                ty,
-            },
+        let data = FlattenData {
+            symbol: Some(symbol.clone()),
+            location: Some(location.clone()),
+            scope: ctx.scope,
+        };
+        let kind = Kind::TypedValue {
+            value: RefIdx::Unresolved, // FIXME: That's not valid, right?
+            ty,
         };
 
-        (ctx.append(node), RefIdx::Resolved(next))
+        ctx.append(data, kind)
     }
 }
 
