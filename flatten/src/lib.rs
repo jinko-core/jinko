@@ -329,6 +329,20 @@ impl Ctx {
         (ctx.append(node), RefIdx::Resolved(next))
     }
 
+    fn visit_opt<T>(
+        self,
+        node: Option<T>,
+        visitor: impl Fn(Ctx, T) -> (Ctx, RefIdx),
+    ) -> (Ctx, Option<RefIdx>) {
+        match node {
+            Some(node) => {
+                let (ctx, idx) = visitor(self, node);
+                (ctx, Some(idx))
+            }
+            None => (self, None),
+        }
+    }
+
     fn visit_fold<T>(
         self,
         iter: impl Iterator<Item = T>,
@@ -356,16 +370,8 @@ impl Ctx {
 
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
         let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit_typed_value);
-        let (ctx, block) = ctx.visit_opt(block);
-
-        // FIXME: How to make this pattern look better? Also present in `visit_opt`
-        let (mut ctx, return_type) = match return_type {
-            Some(ty) => {
-                let (ctx, idx) = ctx.handle_ty_node(ty);
-                (ctx, Some(idx))
-            }
-            None => (ctx, None),
-        };
+        let (ctx, block) = ctx.visit_opt(block.as_deref(), Ctx::visit);
+        let (mut ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_ty_node);
 
         // FIXME: We can probably factor from here...
         let next = ctx.origin.increment();
@@ -388,19 +394,8 @@ impl Ctx {
         // to here in a function. Something like `ctx.chain(Node)` or directly in ctx.append()
     }
 
-    // TODO: Make it type generic like visit_fold
-    fn visit_opt(self, node: &Option<Box<Ast>>) -> (Ctx, Option<RefIdx>) {
-        match node {
-            Some(node) => {
-                let (ctx, idx) = self.visit(node);
-                (ctx, Some(idx))
-            }
-            None => (self, None),
-        }
-    }
-
     fn visit_return(self, to_return: &Option<Box<Ast>>, location: SpanTuple) -> (Ctx, RefIdx) {
-        let (mut ctx, idx) = self.visit_opt(to_return);
+        let (mut ctx, idx) = self.visit_opt(to_return.as_deref(), Ctx::visit);
 
         let next = ctx.origin.increment();
         let node = Node {
