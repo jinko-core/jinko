@@ -152,7 +152,7 @@
 //! ]
 //! ```
 
-use ast::{Ast, Declaration, GenericArgument, Node as AstNode, TypeArgument, TypedValue};
+use ast::{Ast, Call, Declaration, GenericArgument, Node as AstNode, TypeArgument, TypedValue};
 use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
 use location::SpanTuple;
 use symbol::Symbol;
@@ -283,9 +283,30 @@ impl Ctx {
         ctx.append(data, kind)
     }
 
-    fn visit_block(self, location: &SpanTuple, nodes: &[Ast]) -> (Ctx, RefIdx) {
+    fn visit_block(self, location: &SpanTuple, stmts: &[Ast], last_is_expr: bool) -> (Ctx, RefIdx) {
         self.scoped(|ctx| {
-            let (ctx, refs) = ctx.visit_fold(nodes.iter(), Ctx::visit);
+            let (ctx, refs) = if let Some((maybe_return, nodes)) = stmts.split_last() {
+                let (ctx, refs) = ctx.visit_fold(nodes.iter(), Ctx::visit);
+                let (ctx, idx) = ctx.visit(maybe_return);
+
+                // If the block contains a last expression, transform it into a return
+                let (ctx, last_idx) = if last_is_expr {
+                    let data = FlattenData {
+                        symbol: None,
+                        location: Some(maybe_return.location.clone()),
+                        scope: ctx.scope,
+                    };
+                    let kind = Kind::Return(Some(idx));
+
+                    ctx.append(data, kind)
+                } else {
+                    (ctx, idx)
+                };
+
+                (ctx, refs.with(last_idx))
+            } else {
+                (ctx, vec![])
+            };
 
             let data = FlattenData {
                 symbol: None,
@@ -300,17 +321,41 @@ impl Ctx {
 
     fn visit_fn_call(
         self,
-        location: SpanTuple,
-        to: &Symbol,
-        generics: &[TypeArgument],
-        args: &[Ast],
+        location: &SpanTuple,
+        Call { to, generics, args }: &Call,
     ) -> (Ctx, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_ty_node);
         let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit);
 
         let data = FlattenData {
             symbol: Some(to.clone()),
-            location: Some(location),
+            location: Some(location.clone()),
+            scope: ctx.scope,
+        };
+        let kind = Kind::Call {
+            to: RefIdx::Unresolved,
+            generics,
+            args,
+        };
+
+        ctx.append(data, kind)
+    }
+
+    fn visit_method_call(
+        self,
+        location: &SpanTuple,
+        instance: &Ast,
+        Call { to, generics, args }: &Call,
+    ) -> (Ctx, RefIdx) {
+        let (ctx, idx) = self.visit(instance);
+        let (ctx, generics) = ctx.visit_fold(generics.iter(), Ctx::handle_ty_node);
+        let (ctx, mut args) = ctx.visit_fold(args.iter(), Ctx::visit);
+
+        args.insert(0, idx);
+
+        let data = FlattenData {
+            symbol: Some(to.clone()),
+            location: Some(location.clone()),
             scope: ctx.scope,
         };
         let kind = Kind::Call {
@@ -355,20 +400,18 @@ impl Ctx {
         })
     }
 
-    fn visit_return(self, to_return: &Option<Box<Ast>>, location: SpanTuple) -> (Ctx, RefIdx) {
+    fn visit_return(self, to_return: &Option<Box<Ast>>, location: &SpanTuple) -> (Ctx, RefIdx) {
         let (ctx, idx) = self.visit_opt(to_return.as_deref(), Ctx::visit);
 
         let data = FlattenData {
             symbol: None,
-            location: Some(location),
+            location: Some(location.clone()),
             scope: ctx.scope,
         };
         let kind = Kind::Return(idx);
 
         ctx.append(data, kind)
     }
-
-    // TODO: Now: How do we improve the API? This sucks ass and is tedious to extend, and error-prone
 
     fn visit_typed_value(
         self,
@@ -395,7 +438,10 @@ impl Ctx {
 
     fn visit(self, ast: &Ast) -> (Ctx, RefIdx) {
         match &ast.node {
-            AstNode::Block(nodes) => self.visit_block(&ast.location, nodes),
+            AstNode::Block {
+                stmts,
+                last_is_expr,
+            } => self.visit_block(&ast.location, stmts, *last_is_expr),
             AstNode::Function { decl, block, .. } => {
                 self.visit_function(&ast.location, decl, block)
             }
@@ -406,10 +452,10 @@ impl Ctx {
                 with,
             } => todo!(),
             AstNode::TypeInstantiation(_) => todo!(),
-            AstNode::FunctionCall(ast::Call { to, generics, args }) => {
-                self.visit_fn_call(ast.location.clone(), to, generics, args)
+            AstNode::FunctionCall(call) => self.visit_fn_call(&ast.location, call),
+            AstNode::MethodCall { instance, call } => {
+                self.visit_method_call(&ast.location, instance, call)
             }
-            AstNode::MethodCall { instance, call } => todo!(),
             AstNode::BinaryOp(_, _, _) => todo!(),
             AstNode::FieldAccess(_, _) => todo!(),
             AstNode::IfElse {
@@ -425,7 +471,7 @@ impl Ctx {
             AstNode::Var(_) => todo!(),
             AstNode::VarOrEmptyType(_) => todo!(),
             AstNode::Loop(_, _) => todo!(),
-            AstNode::Return(value) => self.visit_return(value, ast.location.clone()),
+            AstNode::Return(value) => self.visit_return(value, &ast.location),
             // Leaf node
             AstNode::Constant(_) => {
                 let data = FlattenData {
@@ -463,4 +509,48 @@ impl FlattenAst for ast::Ast {
 
 pub trait FlattenAst: Sized {
     fn flatten(&self) -> Fir<FlattenData>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ast::Value;
+    use location::{Location, Source};
+
+    macro_rules! fake_loc {
+        () => {
+            SpanTuple::with_source_ref(Source::Empty, Location::new(1, 1), Location::new(1, 1))
+        };
+    }
+
+    #[test]
+    fn block_expr() {
+        let block = Ast {
+            location: fake_loc!(),
+            node: AstNode::Block {
+                stmts: vec![Ast {
+                    location: fake_loc!(),
+                    node: AstNode::Constant(Value::Integer(15)),
+                }],
+                last_is_expr: true,
+            },
+        };
+
+        let fir = block.flatten();
+
+        let block = fir.nodes.get(&OriginIdx(3)).unwrap();
+        let stmts = match &block.kind {
+            Kind::Statements(stmts) => stmts,
+            _ => unreachable!(),
+        };
+        let ret_idx = match stmts[0] {
+            RefIdx::Resolved(i) => i,
+            RefIdx::Unresolved => unreachable!(),
+        };
+
+        assert!(matches!(
+            fir.nodes.get(&ret_idx).unwrap().kind,
+            Kind::Return(_),
+        ))
+    }
 }
