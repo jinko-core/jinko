@@ -358,13 +358,12 @@ impl Ctx {
         }: &Declaration,
         block: &Option<Box<Ast>>,
     ) -> (Ctx, RefIdx) {
-        // FIXME: Add a self.scoped() method
         self.scope += 1;
 
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
         let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit_typed_value);
-        let (ctx, block) = ctx.visit_opt(block.as_deref(), Ctx::visit);
-        let (mut ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_ty_node);
+        let (ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_ty_node);
+        let (mut ctx, block) = ctx.visit_opt(block.as_deref(), Ctx::visit);
 
         let data = FlattenData {
             symbol: Some(name.clone()),
