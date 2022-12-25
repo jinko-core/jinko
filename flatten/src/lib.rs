@@ -524,7 +524,46 @@ mod tests {
     }
 
     #[test]
+    fn block_order() {
+        // { 14; 15; }
+        let block = Ast {
+            location: fake_loc!(),
+            node: AstNode::Block {
+                stmts: vec![
+                    Ast {
+                        location: fake_loc!(),
+                        node: AstNode::Constant(Value::Integer(14)),
+                    },
+                    Ast {
+                        location: fake_loc!(),
+                        node: AstNode::Constant(Value::Integer(15)),
+                    },
+                ],
+                last_is_expr: false,
+            },
+        };
+
+        let fir = block.flatten();
+
+        assert!(matches!(
+            fir.nodes.get(&OriginIdx(0)).unwrap().kind,
+            Kind::Constant(_)
+        ));
+
+        assert!(matches!(
+            fir.nodes.get(&OriginIdx(1)).unwrap().kind,
+            Kind::Constant(_)
+        ));
+
+        assert!(matches!(
+            fir.nodes.get(&OriginIdx(2)).unwrap().kind,
+            Kind::Statements(_)
+        ));
+    }
+
+    #[test]
     fn block_expr() {
+        // { 15 }
         let block = Ast {
             location: fake_loc!(),
             node: AstNode::Block {
