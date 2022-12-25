@@ -25,6 +25,7 @@ pub enum TypeKind {
 pub struct TypeArgument {
     pub generics: Vec<TypeArgument>,
     pub kind: TypeKind,
+    // FIXME: Missing location member
 }
 
 /// A value with its associated type. This is used for function arguments or type fields
@@ -34,6 +35,7 @@ pub struct TypedValue {
     pub location: SpanTuple,
     pub symbol: Symbol,
     pub ty: TypeArgument,
+    // FIXME: Missing location member
 }
 
 /// A generic argument declaration
@@ -50,10 +52,13 @@ pub struct TypedValue {
 pub struct GenericArgument {
     pub name: Symbol,
     pub default: Option<Symbol>,
+    // FIXME: This should be an Option<TypeArgument>
+    // FIXME: Missing location member
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Operator {
+    // FIXME: Should this have location as well?
     Add,
     Sub,
     Mul,
@@ -114,7 +119,10 @@ pub enum Value {
 // Would that even work? If it does, it is ergonomic but boy is it not idiomatic
 #[derive(Debug)]
 pub enum Node {
-    Block(Vec<Ast>),
+    Block {
+        stmts: Vec<Ast>,
+        last_is_expr: bool,
+    },
     Incl {
         source: Symbol,
         as_path: Option<Symbol>,
