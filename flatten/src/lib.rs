@@ -486,6 +486,8 @@ impl Ctx {
             AstNode::Incl { .. } => {
                 unreachable!("invalid AST state: `incl` expressions still present")
             }
+            // FIXME: Is that correct?
+            AstNode::Empty => (self, RefIdx::Unresolved),
         }
     }
 }
