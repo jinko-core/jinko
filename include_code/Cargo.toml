@@ -7,3 +7,7 @@ edition = "2021"
 
 [dependencies]
 ast = { path = "../ast" }
+symbol = { path = "../symbol" }
+location = { path = "../location" }
+error = { path = "../error" }
+xparser = { path = "../xparser" }
