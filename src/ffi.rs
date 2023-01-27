@@ -66,7 +66,7 @@ fn lib_from_ld_library_path(lib_path: &Path) -> Result<Library, Error> {
     let paths = std::env::var("LD_LIBRARY_PATH")?;
 
     for dir in paths.split(':') {
-        let path = PathBuf::from(dir).join(&lib_path);
+        let path = PathBuf::from(dir).join(lib_path);
         if path.exists() {
             return unsafe { Ok(Library::new(path)?) };
         }
