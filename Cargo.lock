@@ -251,6 +251,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "include_code"
+version = "0.1.0"
+dependencies = [
+ "ast",
+]
+
+[[package]]
 name = "jinko"
 version = "0.3.0-jinx7"
 dependencies = [
@@ -261,6 +268,7 @@ dependencies = [
  "error",
  "fir",
  "flatten",
+ "include_code",
  "lazy_static",
  "libc",
  "libffi",
