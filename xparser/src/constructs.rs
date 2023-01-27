@@ -13,10 +13,8 @@
 //!
 //! is the grammar for a variable assignment.
 
-use crate::error::{ErrKind, Error};
-
 use super::tokens;
-use super::{ParseInput, ParseResult};
+use super::{Error, ParseInput, ParseResult};
 
 use ast::Ast;
 use ast::Call;
@@ -35,7 +33,6 @@ use location::SpanTuple;
 use nom::Err::Error as NomError;
 use nom::Slice;
 use nom_locate::position;
-// pub use constant_construct::ConstantConstruct;
 use symbol::Symbol;
 
 use nom::{
@@ -1112,8 +1109,10 @@ fn special(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, As
             "t" => "\t",
             _ => {
                 return Err(NomError(
-                    Error::new(ErrKind::Parsing).with_msg(String::from("Unknown character escape")),
-                ))
+                    // FIXME: Reuse this
+                    // Error::new(ErrKind::Parsing).with_msg(String::from("Unknown character escape")),
+                    Error,
+                ));
             }
         };
 
@@ -1132,7 +1131,9 @@ fn special(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, As
         Ok((input.slice(index..), string))
     } else {
         Err(NomError(
-            Error::new(ErrKind::Parsing).with_msg(String::from("undelimited string")),
+            // FIXME: Reuse this
+            // Error::new(ErrKind::Parsing).with_msg(String::from("undelimited string")),
+            Error,
         ))
     }
 }

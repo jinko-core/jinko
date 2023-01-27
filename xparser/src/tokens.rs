@@ -10,8 +10,8 @@ use nom::{
     combinator::peek, multi::many0, sequence::pair,
 };
 
-use crate::error::{ErrKind, Error};
-use crate::parser::{ParseInput, ParseResult};
+use super::Error;
+use super::{ParseInput, ParseResult};
 
 /// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: &[&str] = &[
@@ -49,9 +49,11 @@ fn specific_token<'tok>(
 
     if let Some(next_char) = input.chars().next() {
         if next_char.is_alphanumeric() || next_char == '_' {
-            return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
-                String::from("Unexpected alphanum character after symbol"),
-            )));
+            // FIXME: Reuse this
+            // return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
+            //     String::from("Unexpected alphanum character after symbol"),
+            // )));
+            return Err(NomError(Error));
         }
     }
     Ok((input, tag))
@@ -276,7 +278,9 @@ pub fn inner_identifer(input: ParseInput) -> ParseResult<ParseInput, ParseInput>
 
     if RESERVED_KEYWORDS.contains(&id) {
         return Err(NomError(
-            Error::new(ErrKind::Parsing).with_msg(String::from("identifier cannot be keyword")),
+            // FIXME: Reuse this
+            // Error::new(ErrKind::Parsing).with_msg(String::from("identifier cannot be keyword")),
+            Error,
         ));
     }
 
@@ -286,7 +290,9 @@ pub fn inner_identifer(input: ParseInput) -> ParseResult<ParseInput, ParseInput>
     }
 
     Err(NomError(
-        Error::new(ErrKind::Parsing).with_msg(String::from("invalid identifier")),
+        // FIXME: Reuse this
+        // Error::new(ErrKind::Parsing).with_msg(String::from("invalid identifier")),
+        Error,
     ))
 }
 
@@ -312,9 +318,12 @@ pub fn identifier(input: ParseInput) -> ParseResult<ParseInput, String> {
     //
     // which is not a valid identifier
     if namespace_separator(input).is_ok() {
-        return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
-            String::from("cannot finish identifier on namespace separator `::`"),
-        )));
+        return Err(NomError(
+            // FIXME: Reuse this
+            // Error::new(ErrKind::Parsing).with_msg(
+            // String::from("cannot finish identifier on namespace separator `::`"))
+            Error,
+        ));
     }
 
     Ok((input, identifier))
@@ -344,10 +353,14 @@ pub fn float_constant(input: ParseInput) -> ParseResult<ParseInput, f64> {
             Some(_) => Ok((input, -value)),
             None => Ok((input, value)),
         },
-        Err(_) => Err(NomError(Error::new(ErrKind::Parsing).with_msg(format!(
-            "invalid floating point number: {}.{}",
-            whole, decimal
-        )))),
+        Err(_) => Err(NomError(
+            // FIXME: Reuse this
+            //     Error::new(ErrKind::Parsing).with_msg(format!(
+            //     "invalid floating point number: {}.{}",
+            //     whole, decimal
+            // ))
+            Error,
+        )),
     }
 }
 
@@ -361,7 +374,9 @@ pub fn int_constant(input: ParseInput) -> ParseResult<ParseInput, i64> {
             None => Ok((input, value)),
         },
         Err(_) => Err(NomError(
-            Error::new(ErrKind::Parsing).with_msg(format!("invalid integer: {}", num)),
+            // FIXME: Reuse this
+            // Error::new(ErrKind::Parsing).with_msg(format!("invalid integer: {}", num)),
+            Error,
         )),
     }
 }
