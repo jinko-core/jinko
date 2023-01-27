@@ -456,7 +456,7 @@ impl Ctx {
             AstNode::MethodCall { instance, call } => {
                 self.visit_method_call(&ast.location, instance, call)
             }
-            AstNode::BinaryOp(_, _, _) => todo!(),
+            AstNode::BinaryOp(op, lhs, rhs) => self.visit_binary_op(&ast.location, op, lhs, rhs),
             AstNode::FieldAccess(_, _) => todo!(),
             AstNode::IfElse {
                 if_condition: _,
@@ -489,6 +489,54 @@ impl Ctx {
             // FIXME: Is that correct?
             AstNode::Empty => (self, RefIdx::Unresolved),
         }
+    }
+
+    fn visit_binary_op(
+        self,
+        location: &SpanTuple,
+        op: &ast::Operator,
+        lhs: &Ast,
+        rhs: &Ast,
+    ) -> (Ctx, RefIdx) {
+        // This desugars `l + r` to `+(l, r)`.
+        // Is it valid? We assume that later on during typeresolution
+        // and actual code generation/interpretation, a builtin method
+        // will be added to the interpreter:
+        //
+        // ```
+        // func +[L, R, O](lhs: L, rhs: R) -> O { /* builtin */ }
+        // ````
+        // FIXME: Is that valid?
+
+        let (ctx, l_id) = self.visit(lhs);
+        let (ctx, r_id) = ctx.visit(rhs);
+
+        let data = FlattenData {
+            symbol: Some(Symbol::from(match op {
+                ast::Operator::Add => "+",
+                ast::Operator::Sub => "-",
+                ast::Operator::Mul => "*",
+                ast::Operator::Div => "/",
+                ast::Operator::Lt => "<",
+                ast::Operator::Gt => ">",
+                ast::Operator::LtEq => "<=",
+                ast::Operator::GtEq => ">=",
+                ast::Operator::Equals => "==",
+                ast::Operator::NotEquals => "!=",
+            })),
+            location: Some(location.clone()),
+            // FIXME: Is that the correct scope? Add unit test
+            scope: ctx.scope,
+        };
+
+        // FIXME: Should this be a call? Is this a good idea?
+        let kind = Kind::Call {
+            to: RefIdx::Unresolved,
+            generics: vec![],
+            args: vec![l_id, r_id],
+        };
+
+        ctx.append(data, kind)
     }
 }
 
