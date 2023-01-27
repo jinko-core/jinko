@@ -28,6 +28,7 @@ name_resolve = { path = "name_resolve" }
 symbol = { path = "symbol" }
 error = { path = "error" }
 location = { path = "location" }
+include_code = { path = "include_code" }
 structopt = "0.3"
 colored = "2.0"
 nom = "7.0"
