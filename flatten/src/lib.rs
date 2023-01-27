@@ -446,10 +446,10 @@ impl Ctx {
                 self.visit_function(&ast.location, decl, block)
             }
             AstNode::Type {
-                name,
-                generics,
-                fields,
-                with,
+                name: _,
+                generics: _,
+                fields: _,
+                with: _,
             } => todo!(),
             AstNode::TypeInstantiation(_) => todo!(),
             AstNode::FunctionCall(call) => self.visit_fn_call(&ast.location, call),
@@ -459,14 +459,14 @@ impl Ctx {
             AstNode::BinaryOp(_, _, _) => todo!(),
             AstNode::FieldAccess(_, _) => todo!(),
             AstNode::IfElse {
-                if_condition,
-                if_block,
-                else_block,
+                if_condition: _,
+                if_block: _,
+                else_block: _,
             } => todo!(),
             AstNode::VarAssign {
-                mutable,
-                to_assign,
-                value,
+                mutable: _,
+                to_assign: _,
+                value: _,
             } => todo!(),
             AstNode::Var(_) => todo!(),
             AstNode::VarOrEmptyType(_) => todo!(),
