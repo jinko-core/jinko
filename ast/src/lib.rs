@@ -173,28 +173,41 @@ pub struct Ast {
 }
 
 // FIXME: Add documentation
-pub trait Visitor {
-    fn visit_incl(&mut self, location: SpanTuple, source: Symbol, as_path: Option<Symbol>) -> Ast {
+pub trait Visitor<E> {
+    fn visit_incl(
+        &mut self,
+        location: SpanTuple,
+        source: Symbol,
+        as_path: Option<Symbol>,
+    ) -> Result<Ast, E> {
         // This is a terminal visitor
-        Ast {
+        Ok(Ast {
             location,
             node: Node::Incl { source, as_path },
-        }
+        })
     }
 
-    fn visit_block(&mut self, location: SpanTuple, stmts: Vec<Ast>, last_is_expr: bool) -> Ast {
-        let stmts = stmts.into_iter().map(|stmt| self.visit(stmt)).collect();
+    fn visit_block(
+        &mut self,
+        location: SpanTuple,
+        stmts: Vec<Ast>,
+        last_is_expr: bool,
+    ) -> Result<Ast, E> {
+        let stmts = stmts
+            .into_iter()
+            .map(|stmt| self.visit(stmt))
+            .collect::<Result<Vec<Ast>, E>>()?;
 
-        Ast {
+        Ok(Ast {
             location,
             node: Node::Block {
                 stmts,
                 last_is_expr,
             },
-        }
+        })
     }
 
-    fn visit(&mut self, ast: Ast) -> Ast {
+    fn visit(&mut self, ast: Ast) -> Result<Ast, E> {
         match ast.node {
             Node::Block {
                 stmts,
@@ -235,7 +248,7 @@ pub trait Visitor {
             Node::Loop(_, _) => todo!(),
             Node::Return(_) => todo!(),
             Node::Constant(_) => todo!(),
-            Node::Empty => ast,
+            Node::Empty => Ok(ast),
         }
     }
 }
