@@ -9,18 +9,19 @@ use error::{ErrKind, Error};
 use location::{Source, SourceOwned, SpanTuple};
 use symbol::Symbol;
 
-pub trait IncludeCode {
-    fn resolve_includes(self) -> Self;
+pub trait IncludeCode: Sized {
+    fn resolve_includes(self) -> Result<Self, Error>;
 }
 
 impl IncludeCode for Ast {
-    fn resolve_includes(self) -> Ast {
+    fn resolve_includes(self) -> Result<Ast, Error> {
         let mut ctx = IncludeCtx {
             included: HashSet::new(),
         };
 
-        // Basically what we want to do is visit each node. When we see a `Node::Incl`, we simply fetch its content and return a new node.
-        // At this point, we assume the AST is valid. Right? No! We can return an Err::Incl if something goes south.
+        // Basically what we want to do is visit each node. When we see a
+        // [`Node::Incl`], we simply fetch its content and return a new node,
+        // if that path hasn't been previously included.
         ctx.visit(self)
     }
 }
@@ -101,52 +102,13 @@ fn get_base(location: &SpanTuple) -> PathBuf {
     }
 }
 
-// fn resolve_type(&mut self, ctx: &mut TypeCtx) -> Result<CheckedType, Error> {
-
-//     let final_path = match self.get_final_path(&base) {
-//         Ok(path) => path,
-//         Err((e1, e2)) => {
-//             ctx.error(e1);
-//             ctx.error(e2);
-//             return Err(Error::new(ErrKind::TypeChecker));
-//         }
-//     };
-
-//     if ctx.is_included(&final_path) {
-//         return Ok(CheckedType::Void);
-//     }
-
-//     let instructions = self.fetch_instructions(&final_path, ctx.reader())?;
-
-//     self.instructions = instructions;
-
-//     let old_path = ctx.path().cloned();
-//     ctx.include(final_path.clone());
-
-//     // Temporarily change the path of the context
-//     ctx.set_path(Some(final_path));
-
-//     self.instructions.iter_mut().for_each(|instr| {
-//         if let Err(e) = instr.type_of(ctx) {
-//             ctx.error(e);
-//         }
-//     });
-
-//     // Reset the old path before leaving the instruction
-//     ctx.set_path(old_path);
-
-//     Ok(CheckedType::Void)
-// }
-
-fn fetch_ast_node(path: &Path) -> Result<Ast, Error> {
-    let input = std::fs::read_to_string(path)?;
-    let ast = xparser::parse(&input, Source::Path(path))?;
-
-    Ok(ast)
-}
-
-impl Visitor for IncludeCtx {
-    fn visit_incl(&mut self, location: SpanTuple, source: Symbol, _as_path: Option<Symbol>) -> Ast {
+impl Visitor<Error> for IncludeCtx {
+    fn visit_incl(
+        &mut self,
+        location: SpanTuple,
+        source: Symbol,
+        _as_path: Option<Symbol>,
+    ) -> Result<Ast, Error> {
         let base = get_base(&location);
         let to_include = PathBuf::from(source.access());
 
@@ -155,19 +117,26 @@ impl Visitor for IncludeCtx {
             Err((e1, e2)) => {
                 e1.emit();
                 e2.emit();
-                PathBuf::new()
-                // return Err(Error::new(ErrKind::TypeChecker));
+                return Err(Error::new(ErrKind::Include));
             }
         };
 
         if self.included.contains(&final_path) {
-            return Ast {
+            return Ok(Ast {
                 location,
                 node: Node::Empty,
-            };
+            });
         }
 
-        // FIXME: No unwrap
-        fetch_ast_node(&final_path).unwrap()
+        let path: &Path = &final_path;
+        let input = std::fs::read_to_string(path)?;
+        let ast = xparser::parse(&input, Source::Path(path))?;
+
+        Ok(ast)
     }
+}
+
+#[cfg(test)]
+mod test {
+    // FIXME: Add some tests
 }
