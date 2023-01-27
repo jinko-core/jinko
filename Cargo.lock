@@ -189,6 +189,11 @@ checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 [[package]]
 name = "error"
 version = "0.1.0"
+dependencies = [
+ "colored",
+ "location",
+ "xparser",
+]
 
 [[package]]
 name = "fir"
@@ -255,6 +260,10 @@ name = "include_code"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "error",
+ "location",
+ "symbol",
+ "xparser",
 ]
 
 [[package]]
@@ -280,6 +289,7 @@ dependencies = [
  "nom_locate",
  "structopt",
  "symbol",
+ "xparser",
 ]
 
 [[package]]
@@ -817,3 +827,14 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "xparser"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "location",
+ "nom 7.1.1",
+ "nom_locate",
+ "symbol",
+]
