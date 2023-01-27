@@ -161,6 +161,7 @@ pub enum Node {
     Loop(LoopKind, Box<Ast>),
     Return(Option<Box<Ast>>),
     Constant(Value),
+    Empty,
 }
 
 /// The [`Ast`] structure is a wrapper around the [`AstNode`] sum type, which contains
@@ -234,6 +235,7 @@ pub trait Visitor {
             Node::Loop(_, _) => todo!(),
             Node::Return(_) => todo!(),
             Node::Constant(_) => todo!(),
+            Node::Empty => ast,
         }
     }
 }
