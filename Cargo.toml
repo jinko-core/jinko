@@ -18,6 +18,8 @@ members = [
   "fir",
   "flatten",
   "name_resolve",
+  "include_code",
+  "xparser",
 ]
 
 [dependencies]
@@ -29,6 +31,7 @@ symbol = { path = "symbol" }
 error = { path = "error" }
 location = { path = "location" }
 include_code = { path = "include_code" }
+xparser = { path = "xparser" }
 structopt = "0.3"
 colored = "2.0"
 nom = "7.0"
