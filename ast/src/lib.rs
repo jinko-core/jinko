@@ -193,6 +193,7 @@ pub trait Visitor<E> {
         stmts: Vec<Ast>,
         last_is_expr: bool,
     ) -> Result<Ast, E> {
+        // FIXME: An issue with this is that it short-circuits at the first error found :/
         let stmts = stmts
             .into_iter()
             .map(|stmt| self.visit(stmt))
