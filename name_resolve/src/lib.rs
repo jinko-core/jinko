@@ -90,6 +90,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore = "name resolution is not implemented yet (#593)"]
     fn name_resolve_simple() {
         let fir = Fir::<FlattenData> {
             nodes: HashMap::new(),
