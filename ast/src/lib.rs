@@ -70,8 +70,6 @@ pub enum Operator {
     GtEq,
     Equals,
     NotEquals,
-    LeftParenthesis,
-    RightParenthesis,
 }
 
 #[derive(Debug, Clone)]
