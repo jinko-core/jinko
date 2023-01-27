@@ -130,9 +130,11 @@ impl Visitor<Error> for IncludeCtx {
 
         let path: &Path = &final_path;
         let input = std::fs::read_to_string(path)?;
-        let ast = xparser::parse(&input, Source::Path(path))?;
 
-        Ok(ast)
+        let ast = xparser::parse(&input, Source::Path(path))?;
+        self.included.insert(final_path);
+
+        self.visit(ast)
     }
 }
 
