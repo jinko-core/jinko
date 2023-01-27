@@ -546,17 +546,17 @@ mod tests {
         let fir = block.flatten();
 
         assert!(matches!(
-            fir.nodes.get(&OriginIdx(0)).unwrap().kind,
-            Kind::Constant(_)
-        ));
-
-        assert!(matches!(
             fir.nodes.get(&OriginIdx(1)).unwrap().kind,
             Kind::Constant(_)
         ));
 
         assert!(matches!(
             fir.nodes.get(&OriginIdx(2)).unwrap().kind,
+            Kind::Constant(_)
+        ));
+
+        assert!(matches!(
+            fir.nodes.get(&OriginIdx(3)).unwrap().kind,
             Kind::Statements(_)
         ));
     }
