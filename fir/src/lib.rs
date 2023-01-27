@@ -3,7 +3,7 @@
 //! (no links, no references, no origin points in fact).
 //! Let's take the following jinko program:
 //!
-//! ```ignore
+//! ```text
 //! func f() { }
 //!
 //! f();
@@ -11,7 +11,7 @@
 //!
 //! The [`Fir`] might look something like this:
 //!
-//! ```ignore
+//! ```text
 //! [
 //!   {OriginIdx::1, Declaration(args: [], return_type: RefIdx::Unresolved)},
 //!   {OriginIdx::2, Call(to: RefIdx::Unresolved, args: [])}
@@ -20,7 +20,7 @@
 //!
 //! Once name resolution is performed, we want the following graph:
 //!
-//! ```ignore
+//! ```text
 //! [
 //!   {OriginIdx::1, Declaration(args: [], return_type: RefIdx::Unresolved)},
 //!   {OriginIdx::2, Call(to: RefIdx::Resolved(1), args: [])} // < here
@@ -30,7 +30,7 @@
 //! We still have no type information. Once the typecheckin pass is done, we want
 //! something like that:
 //!
-//! ```ignore
+//! ```text
 //! [
 //!   {OriginIdx::1, Declaration(args: [], return_type: RefIdx::Resolved(void_type)}, // < here
 //!   {OriginIdx::2, Call(to: RefIdx::Resolved(1), args: [])}
@@ -41,7 +41,7 @@
 //! `int`, `float`... so the graph would actually look something like that at this point,
 //! with builtin type nodes having been inserted before type-checking.
 //!
-//! ```ignore
+//! ```text
 //! [
 //!   {OriginIdx::1, Declaration(args: [], return_type: RefIdx::Resolved(3)}, // < here...
 //!   {OriginIdx::2, Call(to: RefIdx::Resolved(1), args: [])},
