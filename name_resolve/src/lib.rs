@@ -6,13 +6,14 @@ use symbol::Symbol;
 
 struct NameResolveCtx {
     current: OriginIdx,
-    mappings: HashMap<Symbol, OriginIdx>,
+    // FIXME: Use the field
+    _mappings: HashMap<Symbol, OriginIdx>,
 }
 
 impl NameResolveCtx {
     fn insert_nodes(&mut self, fir: &Fir<FlattenData>) {
         fir.nodes.iter().for_each(|kv| {
-            let (origin, node) = kv;
+            let (_origin, _node) = kv;
 
             // if let Kind::FnDeclaration { .. } = &node.kind {
             //     self.mappings.insert(node.data.clone(), *origin);
@@ -20,7 +21,7 @@ impl NameResolveCtx {
         });
     }
 
-    fn resolve_symbol(&self, sym: &FlattenData) -> RefIdx {
+    fn resolve_symbol(&self, _sym: &FlattenData) -> RefIdx {
         // match self.mappings.get(sym) {
         //     Some(idx) => RefIdx::Resolved(*idx),
         //     None => RefIdx::Unresolved,
@@ -77,7 +78,7 @@ impl NameResolve for Fir<FlattenData> {
     fn name_resolve(self) -> Fir {
         let mut ctx = NameResolveCtx {
             current: OriginIdx::default(),
-            mappings: HashMap::new(),
+            _mappings: HashMap::new(),
         };
 
         ctx.pass(self)
@@ -95,7 +96,11 @@ mod tests {
         }
         // we declare a function "a"
         .append(Node {
-            data: FlattenData(Some(Symbol::from("a")), None),
+            data: FlattenData {
+                symbol: Some(Symbol::from("a")),
+                location: None,
+                scope: 0,
+            },
             origin: OriginIdx(0),
             kind: Kind::Function {
                 generics: vec![],
@@ -106,7 +111,11 @@ mod tests {
         })
         // we add a call to "a"
         .append(Node {
-            data: FlattenData(Some(Symbol::from("a")), None),
+            data: FlattenData {
+                symbol: Some(Symbol::from("a")),
+                location: None,
+                scope: 0,
+            },
             origin: OriginIdx(1),
             kind: Kind::Call {
                 to: RefIdx::Unresolved,
