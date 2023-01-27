@@ -170,3 +170,70 @@ pub struct Ast {
     pub location: SpanTuple,
     pub node: Node,
 }
+
+// FIXME: Add documentation
+pub trait Visitor {
+    fn visit_incl(&mut self, location: SpanTuple, source: Symbol, as_path: Option<Symbol>) -> Ast {
+        // This is a terminal visitor
+        Ast {
+            location,
+            node: Node::Incl { source, as_path },
+        }
+    }
+
+    fn visit_block(&mut self, location: SpanTuple, stmts: Vec<Ast>, last_is_expr: bool) -> Ast {
+        let stmts = stmts.into_iter().map(|stmt| self.visit(stmt)).collect();
+
+        Ast {
+            location,
+            node: Node::Block {
+                stmts,
+                last_is_expr,
+            },
+        }
+    }
+
+    fn visit(&mut self, ast: Ast) -> Ast {
+        match ast.node {
+            Node::Block {
+                stmts,
+                last_is_expr,
+            } => self.visit_block(ast.location, stmts, last_is_expr),
+            Node::Incl { source, as_path } => self.visit_incl(ast.location, source, as_path),
+            Node::Function {
+                kind: _,
+                decl: _,
+                block: _,
+            } => todo!(),
+            Node::Type {
+                name: _,
+                generics: _,
+                fields: _,
+                with: _,
+            } => todo!(),
+            Node::TypeInstantiation(_) => todo!(),
+            Node::FunctionCall(_) => todo!(),
+            Node::MethodCall {
+                instance: _,
+                call: _,
+            } => todo!(),
+            Node::BinaryOp(_, _, _) => todo!(),
+            Node::FieldAccess(_, _) => todo!(),
+            Node::IfElse {
+                if_condition: _,
+                if_block: _,
+                else_block: _,
+            } => todo!(),
+            Node::VarAssign {
+                mutable: _,
+                to_assign: _,
+                value: _,
+            } => todo!(),
+            Node::Var(_) => todo!(),
+            Node::VarOrEmptyType(_) => todo!(),
+            Node::Loop(_, _) => todo!(),
+            Node::Return(_) => todo!(),
+            Node::Constant(_) => todo!(),
+        }
+    }
+}
