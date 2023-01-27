@@ -296,7 +296,7 @@ mod tests {
         let s = Location::new(1, 3);
         let e = Location::new(1, 6);
         let span = SpanTuple::with_source(
-            SourceOwned::Path(PathBuf::from("tests/fixtures/span_test/code.jk")),
+            SourceOwned::Path(PathBuf::from("../tests/fixtures/span_test/code.jk")),
             s,
             e,
         );
@@ -313,7 +313,7 @@ mod tests {
         let s = Location::new(1, 1);
         let e = Location::new(9, 1);
         let span = SpanTuple::with_source(
-            SourceOwned::Path(PathBuf::from("tests/fixtures/span_test/code.jk")),
+            SourceOwned::Path(PathBuf::from("../tests/fixtures/span_test/code.jk")),
             s,
             e,
         );
@@ -337,7 +337,7 @@ mod tests {
         let s = Location::new(9, 1);
         let e = Location::new(1, 1);
         let span = SpanTuple::with_source(
-            SourceOwned::Path(PathBuf::from("tests/fixtures/span_test/code.jk")),
+            SourceOwned::Path(PathBuf::from("../tests/fixtures/span_test/code.jk")),
             s,
             e,
         );
