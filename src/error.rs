@@ -337,3 +337,12 @@ impl std::convert::From<std::env::VarError> for Error {
 }
 
 impl std::error::Error for Error {}
+
+// FIXME: These need to appear in the `error` package as well!
+
+impl From<xparser::Error> for Error {
+    fn from(_err: xparser::Error) -> Error {
+        // FIXME: Missing bits and pieces
+        Error::new(ErrKind::Parsing)
+    }
+}

@@ -96,7 +96,7 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
 }
 
 fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
-    let ast = jinko::xperimental::parser::parse(input, Source::Path(file))?;
+    let ast = xparser::parse(input, Source::Path(file))?;
 
     let _fir = ast.flatten(); // .name_resolve();
     dbg!(&_fir);
