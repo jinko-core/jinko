@@ -55,7 +55,7 @@
 //! [`Ast`]. Let's go through it step by step:
 //!
 //! First, we visit a Block. We go through all of its statements (visit them) and then we will add the
-//! block to the [`Fir`]. We do this since a [`Kind::Block`] only contains *references* to the statements
+//! block to the [`Fir`]. We do this since a [`Kind::Statements`] only contains *references* to the statements
 //! it contains, meaning the statements have to be defined within the [`Fir`] before we define the block.
 //!
 //! Programmatically, this means something along the lines of `for stmt in block { fir = visit(fir, stmt) }; fir.append(block.to_node())`
