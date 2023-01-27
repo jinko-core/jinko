@@ -60,7 +60,11 @@ impl ErrorHandler {
 #[repr(u8)]
 pub enum ErrKind {
     Hint,
+    // Parsing pass
     Parsing,
+    // Include resolving pass
+    Include,
+    // FIXME: Remove this eventually
     Context,
     TypeChecker,
     Generics,
@@ -75,6 +79,7 @@ impl ErrKind {
         match self {
             ErrKind::Hint => "hint",
             ErrKind::Parsing => "parsing",
+            ErrKind::Include => "include",
             ErrKind::Context => "runtime",
             ErrKind::TypeChecker => "typechecker",
             ErrKind::Generics => "generics",
