@@ -7,6 +7,7 @@ mod repl;
 use colored::Colorize;
 
 use flatten::FlattenAst;
+use include_code::IncludeCode;
 // FIXME: Use
 // use name_resolve::NameResolve;
 
@@ -97,6 +98,18 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
 
 fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     let ast = xparser::parse(input, Source::Path(file))?;
+
+    dbg!(&ast);
+
+    let ast = ast.resolve_includes();
+
+    dbg!(&ast);
+
+    // FIXME: Once we switch everything to the `error` crate, this can be replaced by a `?`
+    let ast = match ast {
+        Ok(ast) => ast,
+        Err(_) => return Err(Error::new(ErrKind::Context)),
+    };
 
     let _fir = ast.flatten(); // .name_resolve();
     dbg!(&_fir);
