@@ -7,7 +7,7 @@ use nom::{
     branch::alt, bytes::complete::tag, bytes::complete::take_until, bytes::complete::take_while,
     bytes::complete::take_while1, character::complete::anychar, character::complete::char,
     character::is_alphanumeric, character::is_digit, combinator::not, combinator::opt,
-    combinator::peek, multi::many0, sequence::delimited, sequence::pair,
+    combinator::peek, multi::many0, sequence::pair,
 };
 
 use crate::error::{ErrKind, Error};
@@ -377,14 +377,6 @@ pub fn char_constant(input: ParseInput) -> ParseResult<ParseInput, char> {
     Ok((input, character))
 }
 
-/// Parse a string constant and return the characters between the double quotes
-pub fn string_constant(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    // FIXME: This does not allow for string escaping yet
-    let string = delimited(double_quote, take_until("\""), double_quote)(input)?;
-
-    Ok(string)
-}
-
 #[inline(always)]
 pub fn consume_multi_comment(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
     let (input, _) = comment_multi_start(input)?;
@@ -450,31 +442,32 @@ mod tests {
         assert!(char_constant(span!("'abc'")).is_err());
     }
 
-    #[test]
-    fn t_string_constant() {
-        // Simple string
-        assert_eq!(
-            frag_tuple!(string_constant(span!("\"a str\""))),
-            Ok(("", "a str"))
-        );
-        assert_eq!(
-            frag_tuple!(string_constant(span!("\"999 89 9\""))),
-            Ok(("", "999 89 9"))
-        );
-        assert_eq!(
-            frag_tuple!(string_constant(span!("\"4.01f\""))),
-            Ok(("", "4.01f"))
-        );
-        assert_eq!(frag_tuple!(string_constant(span!("\"\""))), Ok(("", "")));
+    // FIXME: Should these be moved to `constructs`?
+    // #[test]
+    // fn t_string_constant() {
+    //     // Simple string
+    //     assert_eq!(
+    //         frag_tuple!(string_constant(span!("\"a str\""))),
+    //         Ok(("", "a str"))
+    //     );
+    //     assert_eq!(
+    //         frag_tuple!(string_constant(span!("\"999 89 9\""))),
+    //         Ok(("", "999 89 9"))
+    //     );
+    //     assert_eq!(
+    //         frag_tuple!(string_constant(span!("\"4.01f\""))),
+    //         Ok(("", "4.01f"))
+    //     );
+    //     assert_eq!(frag_tuple!(string_constant(span!("\"\""))), Ok(("", "")));
 
-        // FIXME: Fix string escaping
-    }
+    //     // FIXME: Fix string escaping
+    // }
 
-    #[test]
-    fn t_string_constant_unclosed_quote() {
-        // Simple string
-        assert!(string_constant(span!("\"a str")).is_err());
-    }
+    // #[test]
+    // fn t_string_constant_unclosed_quote() {
+    //     // Simple string
+    //     assert!(string_constant(span!("\"a str")).is_err());
+    // }
 
     #[test]
     fn t_int_constant_valid() {
