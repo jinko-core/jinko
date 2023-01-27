@@ -7,7 +7,8 @@ mod repl;
 use colored::Colorize;
 
 use flatten::FlattenAst;
-use name_resolve::NameResolve;
+// FIXME: Use
+// use name_resolve::NameResolve;
 
 use jinko::context::Context;
 use jinko::error::{ErrKind, Error};
