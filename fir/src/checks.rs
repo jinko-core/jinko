@@ -59,13 +59,16 @@ impl<T: Debug> Fir<T> {
         self.nodes.iter().for_each(|kv| {
             let node = &kv.1;
             match &node.kind {
+                // FIXME: This is missing a bunch of valid "checks". For example, checking that a call's argument can
+                // point to an if-else expression. Basically, to anything that's an expression actually.
+                // Should we split the fir::Kind into fir::Kind::Stmt and fir::Kind::Expr? Or does that not make sense?
                 Kind::Constant(r) => check!(r => Kind::TypeReference(_), node),
-                Kind::TypeReference(to) => check!(to => Kind::TypeReference(_) | Kind::Generic { .. }, node),
                 Kind::TypedValue { value, ty } => {
                     check!(ty => Kind::Type { .. }, node);
                     // `value` can link to basically anything
                     check!(value => Kind::Call { .. } | Kind::Constant(_) | Kind::Instantiation { .. } | Kind::TypedValue { .. }, node);
                 }
+                Kind::TypeReference(to) => check!(to => Kind::TypeReference(_) | Kind::Generic { .. }, node),
                 Kind::Generic {
                     default: Some(default),
                 } => check!(default => Kind::Type { .. }, node),
@@ -87,7 +90,7 @@ impl<T: Debug> Fir<T> {
                 } => {
                     check!(to => Kind::Function { .. }, node);
                     check!(@generics => Kind::Type { .. }, node);
-                    check!(@args => Kind::TypedValue { .. } | Kind::Constant { .. }, node);
+                    check!(@args => Kind::TypedValue { .. } | Kind::Constant(_), node);
                 }
                 Kind::Type {
                     generics,
@@ -95,6 +98,10 @@ impl<T: Debug> Fir<T> {
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
                     check!(@fields => Kind::TypedValue { .. }, node);
+                }
+                Kind::Assignment { to, from: _ } => {
+                    check!(to => Kind::TypedValue { .. }, node);
+                    // FIXME: Check `from` as well
                 }
                 Kind::Instantiation {
                     to,
@@ -104,6 +111,16 @@ impl<T: Debug> Fir<T> {
                     check!(to => Kind::Type { .. }, node);
                     check!(@generics => Kind::Type { .. }, node);
                     check!(@fields => Kind::TypedValue { .. }, node);
+                }
+                Kind::TypeOffset { instance: _, .. } => {
+                    // can point to anything? FIXME
+                }
+                Kind::Conditional { .. /* FIXME: Missing condition, true_block and false_block */ } => {
+                    // check!(condition => Kind::Constant(_) | Kind::TypedValue { .. } | Kind::Call { .. }, node);
+                },
+                Kind::Loop { condition: _, block } => {
+                    // FIXME: Check condition?
+                    check!(block => Kind::Statements(_), node);
                 }
                 // Statements can point to anything
                 Kind::Statements(_) => {}
