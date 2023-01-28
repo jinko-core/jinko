@@ -194,12 +194,12 @@ pub fn div(input: ParseInput) -> ParseResult<ParseInput, Operator> {
     token(input, "/").map(|(input, _)| (input, Operator::Div))
 }
 
-pub fn left_parenthesis(input: ParseInput) -> ParseResult<ParseInput, Operator> {
-    token(input, "(").map(|(input, _)| (input, Operator::LeftParenthesis))
+pub fn left_parenthesis(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
+    token(input, "(")
 }
 
-pub fn right_parenthesis(input: ParseInput) -> ParseResult<ParseInput, Operator> {
-    token(input, ")").map(|(input, _)| (input, Operator::RightParenthesis))
+pub fn right_parenthesis(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
+    token(input, ")")
 }
 
 pub fn lt(input: ParseInput) -> ParseResult<ParseInput, Operator> {
