@@ -91,8 +91,6 @@ pub fn parse_operator(input: ParseInput) -> Operator {
         ">=" => Operator::GtEq,
         "==" => Operator::Equals,
         "!=" => Operator::NotEquals,
-        "(" => Operator::LeftParenthesis,
-        ")" => Operator::RightParenthesis,
         s => unreachable!("Invalid operator: {}", s),
     };
 
