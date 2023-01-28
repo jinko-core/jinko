@@ -284,6 +284,7 @@ dependencies = [
  "libloading",
  "linefeed",
  "location",
+ "loop_desugar",
  "name_resolve",
  "nom 7.1.1",
  "nom_locate",
@@ -351,6 +352,16 @@ version = "0.1.0"
 dependencies = [
  "nom 7.1.1",
  "nom_locate",
+]
+
+[[package]]
+name = "loop_desugar"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "error",
+ "location",
+ "symbol",
 ]
 
 [[package]]
