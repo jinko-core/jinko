@@ -43,7 +43,7 @@ lazy_static! {
     };
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Symbol(
     Arc<String>, /* FIXME: Switch to SmolStr or equivalent */
 );
