@@ -381,18 +381,15 @@ fn unit_loop(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, 
 }
 
 fn unit_for(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, Ast> {
-    let (input, (id, iterator_end_loc)) = spaced_identifier(input)?;
+    let (input, (id, _)) = spaced_identifier(input)?;
     let (input, _) = tokens::in_tok(input)?;
     let (input, expr) = expr(input)?;
     let (input, block) = block(input)?;
     let (input, end_loc) = position(input)?;
-    let var = Node::Var(Symbol::from(id));
+    let iterator = Symbol::from(id);
     let for_loop = Node::Loop(
         LoopKind::For {
-            iterator: Box::new(Ast {
-                location: pos_to_loc(input, start_loc.clone(), iterator_end_loc),
-                node: var,
-            }),
+            iterator,
             range: Box::new(expr),
         },
         Box::new(block),

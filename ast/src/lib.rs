@@ -30,7 +30,7 @@ pub struct TypeArgument {
 
 /// A value with its associated type. This is used for function arguments or type fields
 // FIXME: This needs a location right?
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TypedValue {
     pub location: SpanTuple,
     pub symbol: Symbol,
@@ -48,7 +48,7 @@ pub struct TypedValue {
 /// func id[T = int](value: T) -> T { value }
 /// //      ^^^^^^^
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GenericArgument {
     pub name: Symbol,
     pub default: Option<Symbol>,
@@ -56,7 +56,7 @@ pub struct GenericArgument {
     // FIXME: Missing location member
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Operator {
     // FIXME: Should this have location as well?
     Add,
@@ -73,7 +73,7 @@ pub enum Operator {
     RightParenthesis,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Declaration {
     pub name: Symbol,
     pub generics: Vec<GenericArgument>,
@@ -81,7 +81,7 @@ pub struct Declaration {
     pub return_type: Option<TypeArgument>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FunctionKind {
     Func,
     Test,
@@ -91,21 +91,21 @@ pub enum FunctionKind {
 
 /// Common parts of a "call", to a function, method, or a type. This does not differentiate between
 /// a function call or type instantiation and does not reflect the differences in syntax.
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct Call {
     pub to: Symbol,
     pub generics: Vec<TypeArgument>,
     pub args: Vec<Ast>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LoopKind {
     Infinite,
     While(Box<Ast>),
-    For { iterator: Box<Ast>, range: Box<Ast> },
+    For { iterator: Symbol, range: Box<Ast> },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Integer(i64),
     Float(f64),
@@ -117,7 +117,7 @@ pub enum Value {
 // FIXME: How to keep location in there? How to do it ergonomically?
 // As a "Smart pointer" type? E.g by having it implement `Deref<T = AstInner>`?
 // Would that even work? If it does, it is ergonomic but boy is it not idiomatic
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Node {
     Block {
         stmts: Vec<Ast>,
@@ -166,7 +166,7 @@ pub enum Node {
 
 /// The [`Ast`] structure is a wrapper around the [`AstNode`] sum type, which contains
 /// extra information such as the node's [`Location`]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ast {
     pub location: SpanTuple,
     pub node: Node,
@@ -208,6 +208,23 @@ pub trait Visitor<E> {
         })
     }
 
+    // This default visitor does not need `block` to be boxed, but further specializations
+    // may require it
+    #[allow(clippy::boxed_local)]
+    fn visit_loop(
+        &mut self,
+        location: SpanTuple,
+        kind: LoopKind,
+        block: Box<Ast>,
+    ) -> Result<Ast, E> {
+        let block = self.visit(*block)?;
+
+        Ok(Ast {
+            location,
+            node: Node::Loop(kind, Box::new(block)),
+        })
+    }
+
     fn visit(&mut self, ast: Ast) -> Result<Ast, E> {
         match ast.node {
             Node::Block {
@@ -246,7 +263,7 @@ pub trait Visitor<E> {
             } => todo!(),
             Node::Var(_) => todo!(),
             Node::VarOrEmptyType(_) => todo!(),
-            Node::Loop(_, _) => todo!(),
+            Node::Loop(kind, block) => self.visit_loop(ast.location, kind, block),
             Node::Return(_) => todo!(),
             Node::Constant(_) => todo!(),
             Node::Empty => Ok(ast),
