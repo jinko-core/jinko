@@ -15,7 +15,7 @@
 //! ```
 //! {
 //!     __#range = <range>;
-//!     while __#range.next().is_some() {
+//!     while __#range.has_next() {
 //!         <iter> = __#range.next().unpack();
 //!         <block>
 //!     }
@@ -67,6 +67,7 @@ fn handle_loop_loop(loc: SpanTuple, block: Box<Ast>) -> Ast {
     }
 }
 
+// TODO: Add macros to help generate AST fragments here
 fn handle_for_loop(loc: SpanTuple, iterator: Symbol, range: Box<Ast>, block: Box<Ast>) -> Ast {
     let range_var = "__#range";
     let (stmts, last_is_expr) = match block.node {
@@ -97,6 +98,7 @@ fn handle_for_loop(loc: SpanTuple, iterator: Symbol, range: Box<Ast>, block: Box
         };
         let kind = LoopKind::While(Box::new(range_has_next));
 
+        // FIXME: Missing call to `unpack`
         // __#range.next()
         let iter_next = Ast {
             location: loc.clone(),
