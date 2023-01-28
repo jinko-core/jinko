@@ -1,0 +1,12 @@
+[package]
+name = "loop_desugar"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ast = { path = "../ast" }
+error = { path = "../error" }
+location = { path = "../location" }
+symbol = { path = "../symbol" }
