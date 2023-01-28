@@ -89,7 +89,7 @@ pub enum FunctionKind {
 
 /// Common parts of a "call", to a function, method, or a type. This does not differentiate between
 /// a function call or type instantiation and does not reflect the differences in syntax.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Call {
     pub to: Symbol,
     pub generics: Vec<TypeArgument>,
@@ -131,6 +131,7 @@ pub enum Node {
         block: Option<Box<Ast>>,
     },
     Type {
+        // TODO: Can we use a `Declaration` here?
         name: Symbol,
         generics: Vec<GenericArgument>,
         fields: Vec<TypedValue>,
