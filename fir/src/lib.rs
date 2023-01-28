@@ -173,15 +173,32 @@ pub enum Kind {
         return_type: Option<RefIdx>, // to Kind::Type,
         block: Option<RefIdx>,       // to Kind::Statements
     },
+    Assignment {
+        to: RefIdx,   // to Kind::TypedValue
+        from: RefIdx, // to FIXME: Can be anything?
+    },
     Instantiation {
         to: RefIdx,            // to Kind::Type
         generics: Vec<RefIdx>, // to Kind::Type
         fields: Vec<RefIdx>,   // to Kind::TypedValue
     },
+    TypeOffset {
+        instance: RefIdx, // to Kind::TypedValue (and more! FIXME)
+        field: RefIdx,    // FIXME
+    },
     Call {
         to: RefIdx,            // to Kind::FnDeclaration
         generics: Vec<RefIdx>, // to Kind::Type
         args: Vec<RefIdx>,     // to Kind::TypedValue
+    },
+    Conditional {
+        condition: RefIdx, // FIXME
+        true_block: RefIdx,
+        false_block: Option<RefIdx>,
+    },
+    Loop {
+        condition: RefIdx, // FIXME
+        block: RefIdx,     // to Kind::Statements
     },
     Statements(Vec<RefIdx>), // to any kind
     Return(Option<RefIdx>),  // to any kind
