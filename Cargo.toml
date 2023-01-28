@@ -19,6 +19,7 @@ members = [
   "flatten",
   "name_resolve",
   "include_code",
+  "loop_desugar",
   "xparser",
 ]
 
@@ -31,6 +32,7 @@ symbol = { path = "symbol" }
 error = { path = "error" }
 location = { path = "location" }
 include_code = { path = "include_code" }
+loop_desugar = { path = "loop_desugar" }
 xparser = { path = "xparser" }
 structopt = "0.3"
 colored = "2.0"

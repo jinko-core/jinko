@@ -8,6 +8,7 @@ use colored::Colorize;
 
 use flatten::FlattenAst;
 use include_code::IncludeCode;
+use loop_desugar::DesugarLoops;
 // FIXME: Use
 // use name_resolve::NameResolve;
 
@@ -101,15 +102,23 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
 
     dbg!(&ast);
 
-    let ast = ast.resolve_includes();
-
-    dbg!(&ast);
-
+    let ast = ast.desugar_loops();
     // FIXME: Once we switch everything to the `error` crate, this can be replaced by a `?`
     let ast = match ast {
         Ok(ast) => ast,
         Err(_) => return Err(Error::new(ErrKind::Context)),
     };
+
+    dbg!(&ast);
+
+    let ast = ast.resolve_includes();
+    // FIXME: Once we switch everything to the `error` crate, this can be replaced by a `?`
+    let ast = match ast {
+        Ok(ast) => ast,
+        Err(_) => return Err(Error::new(ErrKind::Context)),
+    };
+
+    dbg!(&ast);
 
     let _fir = ast.flatten(); // .name_resolve();
     dbg!(&_fir);
