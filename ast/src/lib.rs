@@ -1,5 +1,6 @@
 //! Abstract Syntax Tree representation of jinko's source code
 
+use error::{ErrKind, Error};
 use location::SpanTuple;
 use symbol::Symbol;
 
@@ -172,14 +173,27 @@ pub struct Ast {
     pub node: Node,
 }
 
+#[doc(hidden)]
+trait VecExt<T> {
+    fn with(self, elt: T) -> Self;
+}
+
+impl<T> VecExt<T> for Vec<T> {
+    fn with(mut self, elt: T) -> Vec<T> {
+        self.push(elt);
+
+        self
+    }
+}
+
 // FIXME: Add documentation
-pub trait Visitor<E> {
+pub trait Visitor {
     fn visit_incl(
         &mut self,
         location: SpanTuple,
         source: Symbol,
         as_path: Option<Symbol>,
-    ) -> Result<Ast, E> {
+    ) -> Result<Ast, Error> {
         // This is a terminal visitor
         Ok(Ast {
             location,
@@ -192,20 +206,26 @@ pub trait Visitor<E> {
         location: SpanTuple,
         stmts: Vec<Ast>,
         last_is_expr: bool,
-    ) -> Result<Ast, E> {
-        // FIXME: An issue with this is that it short-circuits at the first error found :/
-        let stmts = stmts
-            .into_iter()
-            .map(|stmt| self.visit(stmt))
-            .collect::<Result<Vec<Ast>, E>>()?;
-
-        Ok(Ast {
-            location,
-            node: Node::Block {
-                stmts,
-                last_is_expr,
+    ) -> Result<Ast, Error> {
+        let (stmts, errs) = stmts.into_iter().map(|stmt| self.visit(stmt)).fold(
+            (Vec::new(), Vec::new()),
+            |(acc, err_acc), stmt| match stmt {
+                Ok(stmt) => (acc.with(stmt), err_acc),
+                Err(e) => (acc, err_acc.with(e)),
             },
-        })
+        );
+
+        if !errs.is_empty() {
+            Err(Error::new(ErrKind::Multiple(errs)))
+        } else {
+            Ok(Ast {
+                location,
+                node: Node::Block {
+                    stmts,
+                    last_is_expr,
+                },
+            })
+        }
     }
 
     // This default visitor does not need `block` to be boxed, but further specializations
@@ -216,7 +236,7 @@ pub trait Visitor<E> {
         location: SpanTuple,
         kind: LoopKind,
         block: Box<Ast>,
-    ) -> Result<Ast, E> {
+    ) -> Result<Ast, Error> {
         let block = self.visit(*block)?;
 
         Ok(Ast {
@@ -225,18 +245,39 @@ pub trait Visitor<E> {
         })
     }
 
-    fn visit(&mut self, ast: Ast) -> Result<Ast, E> {
+    #[allow(clippy::boxed_local)]
+    fn visit_function(
+        &mut self,
+        location: SpanTuple,
+        kind: FunctionKind,
+        decl: Declaration,
+        block: Option<Box<Ast>>,
+    ) -> Result<Ast, Error> {
+        let block = self.visit_optional(block)?;
+
+        Ok(Ast {
+            location,
+            node: Node::Function { kind, decl, block },
+        })
+    }
+
+    fn visit_optional(&mut self, ast: Option<Box<Ast>>) -> Result<Option<Box<Ast>>, Error> {
+        match ast {
+            Some(ast) => self.visit(*ast).map(|ast| Some(Box::new(ast))),
+            None => Ok(None),
+        }
+    }
+
+    fn visit(&mut self, ast: Ast) -> Result<Ast, Error> {
         match ast.node {
             Node::Block {
                 stmts,
                 last_is_expr,
             } => self.visit_block(ast.location, stmts, last_is_expr),
             Node::Incl { source, as_path } => self.visit_incl(ast.location, source, as_path),
-            Node::Function {
-                kind: _,
-                decl: _,
-                block: _,
-            } => todo!(),
+            Node::Function { kind, decl, block } => {
+                self.visit_function(ast.location, kind, decl, block)
+            }
             Node::Type {
                 name: _,
                 generics: _,
