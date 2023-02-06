@@ -207,25 +207,15 @@ pub trait Visitor {
         stmts: Vec<Ast>,
         last_is_expr: bool,
     ) -> Result<Ast, Error> {
-        let (stmts, errs) = stmts.into_iter().map(|stmt| self.visit(stmt)).fold(
-            (Vec::new(), Vec::new()),
-            |(acc, err_acc), stmt| match stmt {
-                Ok(stmt) => (acc.with(stmt), err_acc),
-                Err(e) => (acc, err_acc.with(e)),
-            },
-        );
+        let stmts = self.fold(stmts, Self::visit)?;
 
-        if !errs.is_empty() {
-            Err(Error::new(ErrKind::Multiple(errs)))
-        } else {
-            Ok(Ast {
-                location,
-                node: Node::Block {
-                    stmts,
-                    last_is_expr,
-                },
-            })
-        }
+        Ok(Ast {
+            location,
+            node: Node::Block {
+                stmts,
+                last_is_expr,
+            },
+        })
     }
 
     // This default visitor does not need `block` to be boxed, but further specializations
@@ -245,7 +235,6 @@ pub trait Visitor {
         })
     }
 
-    #[allow(clippy::boxed_local)]
     fn visit_function(
         &mut self,
         location: SpanTuple,
@@ -253,7 +242,7 @@ pub trait Visitor {
         decl: Declaration,
         block: Option<Box<Ast>>,
     ) -> Result<Ast, Error> {
-        let block = self.visit_optional(block)?;
+        let block = self.optional(block, Self::boxed)?;
 
         Ok(Ast {
             location,
@@ -261,11 +250,70 @@ pub trait Visitor {
         })
     }
 
-    fn visit_optional(&mut self, ast: Option<Box<Ast>>) -> Result<Option<Box<Ast>>, Error> {
-        match ast {
-            Some(ast) => self.visit(*ast).map(|ast| Some(Box::new(ast))),
-            None => Ok(None),
-        }
+    fn visit_type(
+        &mut self,
+        location: SpanTuple,
+        name: Symbol,
+        generics: Vec<GenericArgument>,
+        fields: Vec<TypedValue>,
+        with: Option<Box<Ast>>,
+    ) -> Result<Ast, Error> {
+        let with = self.optional(with, Self::boxed)?;
+
+        Ok(Ast {
+            location,
+            node: Node::Type {
+                name,
+                generics,
+                fields,
+                with,
+            },
+        })
+    }
+
+    fn visit_type_instantiation(
+        &mut self,
+        location: SpanTuple,
+        Call { to, generics, args }: Call,
+    ) -> Result<Ast, Error> {
+        let args = self.fold(args, Self::visit)?;
+
+        Ok(Ast {
+            location,
+            node: Node::TypeInstantiation(Call { to, generics, args }),
+        })
+    }
+
+    fn visit_function_call(
+        &mut self,
+        location: SpanTuple,
+        Call { to, generics, args }: Call,
+    ) -> Result<Ast, Error> {
+        let args = self.fold(args, Self::visit)?;
+
+        Ok(Ast {
+            location,
+            node: Node::FunctionCall(Call { to, generics, args }),
+        })
+    }
+
+    fn visit_method_call(
+        &mut self,
+        location: SpanTuple,
+        instance: Box<Ast>,
+        Call { to, generics, args }: Call,
+    ) -> Result<Ast, Error> {
+        // FIXME: Should this be an accumulating spot?
+        let instance = self.boxed(instance)?;
+        let args = self.fold(args, Self::visit)?;
+
+        Ok(Ast {
+            location,
+            node: Node::MethodCall {
+                instance,
+                call: Call { to, generics, args },
+            },
+        })
     }
 
     fn visit(&mut self, ast: Ast) -> Result<Ast, Error> {
@@ -279,17 +327,16 @@ pub trait Visitor {
                 self.visit_function(ast.location, kind, decl, block)
             }
             Node::Type {
-                name: _,
-                generics: _,
-                fields: _,
-                with: _,
-            } => todo!(),
-            Node::TypeInstantiation(_) => todo!(),
-            Node::FunctionCall(_) => todo!(),
-            Node::MethodCall {
-                instance: _,
-                call: _,
-            } => todo!(),
+                name,
+                generics,
+                fields,
+                with,
+            } => self.visit_type(ast.location, name, generics, fields, with),
+            Node::TypeInstantiation(call) => self.visit_type_instantiation(ast.location, call),
+            Node::FunctionCall(call) => self.visit_function_call(ast.location, call),
+            Node::MethodCall { instance, call } => {
+                self.visit_method_call(ast.location, instance, call)
+            }
             Node::BinaryOp(_, _, _) => todo!(),
             Node::FieldAccess(_, _) => todo!(),
             Node::IfElse {
@@ -308,6 +355,41 @@ pub trait Visitor {
             Node::Return(_) => todo!(),
             Node::Constant(_) => todo!(),
             Node::Empty => Ok(ast),
+        }
+    }
+
+    fn boxed(&mut self, ast: Box<Ast>) -> Result<Box<Ast>, Error> {
+        self.visit(*ast).map(|ast| Box::new(ast))
+    }
+
+    fn optional<T>(
+        &mut self,
+        opt: Option<T>,
+        mapper: impl FnOnce(&mut Self, T) -> Result<T, Error>,
+    ) -> Result<Option<T>, Error> {
+        match opt {
+            Some(v) => mapper(self, v).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    fn fold<T>(
+        &mut self,
+        values: Vec<T>,
+        mapper: impl Fn(&mut Self, T) -> Result<T, Error>,
+    ) -> Result<Vec<T>, Error> {
+        let (values, errs) = values.into_iter().map(|value| mapper(self, value)).fold(
+            (Vec::new(), Vec::new()),
+            |(acc, err_acc), value| match value {
+                Ok(v) => (acc.with(v), err_acc),
+                Err(e) => (acc, err_acc.with(e)),
+            },
+        );
+
+        if !errs.is_empty() {
+            Err(Error::new(ErrKind::Multiple(errs)))
+        } else {
+            Ok(values)
         }
     }
 }
