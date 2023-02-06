@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 location = { path = "../location" }
-xparser = { path = "../xparser" }
 colored = "2.0"
