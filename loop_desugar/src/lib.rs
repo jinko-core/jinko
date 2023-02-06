@@ -180,7 +180,7 @@ fn handle_for_loop(loc: SpanTuple, iterator: Symbol, range: Box<Ast>, block: Box
     }
 }
 
-impl Visitor<Error> for Ctx {
+impl Visitor for Ctx {
     fn visit_loop(
         &mut self,
         location: SpanTuple,
