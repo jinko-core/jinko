@@ -56,7 +56,7 @@ impl ErrorHandler {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum ErrKind {
     Hint,
@@ -72,6 +72,7 @@ pub enum ErrKind {
     IO,
     Debug,
     UTF8,
+    Multiple(Vec<Error>),
 }
 
 impl ErrKind {
@@ -87,6 +88,7 @@ impl ErrKind {
             ErrKind::ExternFunc => "external function",
             ErrKind::Debug => "debug",
             ErrKind::UTF8 => "UTF-8",
+            ErrKind::Multiple(_) => "multi",
         }
     }
 }
@@ -154,6 +156,11 @@ impl Error {
     }
 
     pub fn emit(&self) {
+        if let ErrKind::Multiple(errs) = &self.kind {
+            errs.iter().for_each(|e| e.emit());
+            return;
+        }
+
         if let Some(loc) = &self.loc {
             self.emit_full_loc(loc);
         } else if let Some(msg) = &self.msg {
@@ -241,11 +248,6 @@ impl Error {
             ..self
         }
     }
-
-    pub fn exit(&self) {
-        // The exit code depends on the kind of error
-        std::process::exit(self.kind as i32 + 1);
-    }
 }
 
 use std::convert::From;
@@ -288,13 +290,6 @@ impl std::convert::From<libloading::Error> for Error {
 impl std::convert::From<std::env::VarError> for Error {
     fn from(e: std::env::VarError) -> Self {
         Error::new(ErrKind::ExternFunc).with_msg(e.to_string())
-    }
-}
-
-impl From<xparser::Error> for Error {
-    fn from(_err: xparser::Error) -> Error {
-        // FIXME: Missing bits and pieces
-        Error::new(ErrKind::Parsing)
     }
 }
 
