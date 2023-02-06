@@ -34,12 +34,13 @@ struct IncludeCtx {
 const DEFAULT_INCL: &str = "lib.jk";
 
 fn check_base(base: &Path, location: &SpanTuple, path: &Path) -> Result<PathBuf, Error> {
-    let (mut dir_candidate, mut file_candidate) = (
-        PathBuf::from(base).join(path).join(DEFAULT_INCL),
-        PathBuf::from(base).join(path),
+    let (dir_candidate, file_candidate) = (
+        PathBuf::from(base)
+            .join(path)
+            .join(DEFAULT_INCL)
+            .with_extension("jk"),
+        PathBuf::from(base).join(path).with_extension("jk"),
     );
-    dir_candidate.set_extension("jk");
-    file_candidate.set_extension("jk");
 
     match (dir_candidate.is_file(), file_candidate.is_file()) {
         // We cannot have both <path>/lib.jk and <path>.jk be valid files
@@ -102,7 +103,17 @@ fn get_base(location: &SpanTuple) -> PathBuf {
     }
 }
 
-impl Visitor<Error> for IncludeCtx {
+trait ParseErrorExt {
+    fn to_error(self) -> Error;
+}
+
+impl ParseErrorExt for xparser::Error {
+    fn to_error(self) -> Error {
+        Error::new(ErrKind::Parsing)
+    }
+}
+
+impl Visitor for IncludeCtx {
     fn visit_incl(
         &mut self,
         location: SpanTuple,
@@ -131,7 +142,11 @@ impl Visitor<Error> for IncludeCtx {
         let path: &Path = &final_path;
         let input = std::fs::read_to_string(path)?;
 
-        let ast = xparser::parse(&input, Source::Path(path))?;
+        // TODO: Can this be done using `?`
+        let ast = match xparser::parse(&input, Source::Path(path)) {
+            Ok(ast) => ast,
+            Err(e) => return Err(e.to_error()),
+        };
         self.included.insert(final_path);
 
         self.visit(ast)
