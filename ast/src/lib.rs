@@ -154,6 +154,7 @@ pub enum Node {
     },
     VarAssign {
         mutable: bool,
+        // FIXME: Should this be a Box<Ast>?
         to_assign: Symbol,
         value: Box<Ast>,
     },
@@ -316,6 +317,117 @@ pub trait Visitor {
         })
     }
 
+    fn visit_binary_op(
+        &mut self,
+        location: SpanTuple,
+        op: Operator,
+        lhs: Box<Ast>,
+        rhs: Box<Ast>,
+    ) -> Result<Ast, Error> {
+        let lhs = self.boxed(lhs)?;
+        let rhs = self.boxed(rhs)?;
+
+        Ok(Ast {
+            location,
+            node: Node::BinaryOp(op, lhs, rhs),
+        })
+    }
+
+    fn visit_field_access(
+        &mut self,
+        location: SpanTuple,
+        instance: Box<Ast>,
+        field: Symbol,
+    ) -> Result<Ast, Error> {
+        let instance = self.boxed(instance)?;
+
+        Ok(Ast {
+            location,
+            node: Node::FieldAccess(instance, field),
+        })
+    }
+
+    fn visit_if_else(
+        &mut self,
+        location: SpanTuple,
+        if_condition: Box<Ast>,
+        if_block: Box<Ast>,
+        else_block: Option<Box<Ast>>,
+    ) -> Result<Ast, Error> {
+        let if_condition = self.boxed(if_condition)?;
+        let if_block = self.boxed(if_block)?;
+        let else_block = self.optional(else_block, Self::boxed)?;
+
+        Ok(Ast {
+            location,
+            node: Node::IfElse {
+                if_condition,
+                if_block,
+                else_block,
+            },
+        })
+    }
+
+    fn visit_var_assign(
+        &mut self,
+        location: SpanTuple,
+        mutable: bool,
+        to_assign: Symbol,
+        value: Box<Ast>,
+    ) -> Result<Ast, Error> {
+        let value = self.boxed(value)?;
+
+        Ok(Ast {
+            location,
+            node: Node::VarAssign {
+                mutable,
+                to_assign,
+                value,
+            },
+        })
+    }
+
+    fn visit_var(&mut self, location: SpanTuple, name: Symbol) -> Result<Ast, Error> {
+        Ok(Ast {
+            location,
+            node: Node::Var(name),
+        })
+    }
+
+    fn visit_var_or_empty_type(&mut self, location: SpanTuple, name: Symbol) -> Result<Ast, Error> {
+        Ok(Ast {
+            location,
+            node: Node::VarOrEmptyType(name),
+        })
+    }
+
+    fn visit_return(
+        &mut self,
+        location: SpanTuple,
+        to_return: Option<Box<Ast>>,
+    ) -> Result<Ast, Error> {
+        let to_return = self.optional(to_return, Self::boxed)?;
+
+        Ok(Ast {
+            location,
+            node: Node::Return(to_return),
+        })
+    }
+
+    fn visit_constant(&mut self, location: SpanTuple, value: Value) -> Result<Ast, Error> {
+        Ok(Ast {
+            location,
+            node: Node::Constant(value),
+        })
+    }
+
+    fn visit_empty(&mut self, location: SpanTuple) -> Result<Ast, Error> {
+        Ok(Ast {
+            location,
+            node: Node::Empty,
+        })
+    }
+
     fn visit(&mut self, ast: Ast) -> Result<Ast, Error> {
         match ast.node {
             Node::Block {
@@ -337,24 +449,26 @@ pub trait Visitor {
             Node::MethodCall { instance, call } => {
                 self.visit_method_call(ast.location, instance, call)
             }
-            Node::BinaryOp(_, _, _) => todo!(),
-            Node::FieldAccess(_, _) => todo!(),
+            Node::BinaryOp(op, lhs, rhs) => self.visit_binary_op(ast.location, op, lhs, rhs),
+            Node::FieldAccess(instance, field) => {
+                self.visit_field_access(ast.location, instance, field)
+            }
             Node::IfElse {
-                if_condition: _,
-                if_block: _,
-                else_block: _,
-            } => todo!(),
+                if_condition,
+                if_block,
+                else_block,
+            } => self.visit_if_else(ast.location, if_condition, if_block, else_block),
             Node::VarAssign {
-                mutable: _,
-                to_assign: _,
-                value: _,
-            } => todo!(),
-            Node::Var(_) => todo!(),
-            Node::VarOrEmptyType(_) => todo!(),
+                mutable,
+                to_assign,
+                value,
+            } => self.visit_var_assign(ast.location, mutable, to_assign, value),
+            Node::Var(name) => self.visit_var(ast.location, name),
+            Node::VarOrEmptyType(name) => self.visit_var_or_empty_type(ast.location, name),
             Node::Loop(kind, block) => self.visit_loop(ast.location, kind, block),
-            Node::Return(_) => todo!(),
-            Node::Constant(_) => todo!(),
-            Node::Empty => Ok(ast),
+            Node::Return(to_return) => self.visit_return(ast.location, to_return),
+            Node::Constant(value) => self.visit_constant(ast.location, value),
+            Node::Empty => self.visit_empty(ast.location),
         }
     }
 
