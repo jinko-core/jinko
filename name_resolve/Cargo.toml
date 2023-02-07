@@ -9,3 +9,6 @@ edition = "2021"
 fir = { path = "../fir" }
 symbol = { path = "../symbol" }
 flatten = { path = "../flatten" }
+error = { path = "../error" }
+location = { path = "../location" }
+distance = "0.4"
