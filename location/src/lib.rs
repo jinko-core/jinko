@@ -174,16 +174,11 @@ impl SpanTuple {
     }
 
     fn format_line<T: Display>(&self, separator: &T, line_number: usize, line: &str) -> String {
-        format!(
-            "{:5} {} {}",
-            self.start.line() + line_number,
-            separator,
-            line
-        )
+        format!("{:5} {separator} {line}", self.start.line() + line_number,)
     }
 
     fn format_free_line<T: Display>(&self, separator: &T, line: &str) -> String {
-        format!("      {} {}", separator, line)
+        format!("      {separator} {line}")
     }
 
     fn with_path<T1: Display, T2: Display>(
@@ -249,7 +244,7 @@ impl SpanTuple {
                 }
 
                 for _ in start_col..end_col {
-                    underline = format!("{}{}", underline, repetitor);
+                    underline = format!("{underline}{repetitor}");
                 }
 
                 result.push_str(&self.format_free_line(&' ', &underline));
