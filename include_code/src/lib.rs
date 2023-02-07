@@ -46,14 +46,12 @@ fn check_base(base: &Path, location: &SpanTuple, path: &Path) -> Result<PathBuf,
         // We cannot have both <path>/lib.jk and <path>.jk be valid files
         (true, true) => Err(Error::new(ErrKind::Context)
             .with_msg(format!(
-                "invalid include: `{:?}` and `{:?}` are both valid candidates",
-                dir_candidate, file_candidate
+                "invalid include: `{dir_candidate:?}` and `{file_candidate:?}` are both valid candidates"
             ))
             .with_loc(Some(location.clone()))),
         (false, false) => Err(Error::new(ErrKind::Context)
             .with_msg(format!(
-                "no candidate for include: `{:?}` and `{:?}` do not exist",
-                dir_candidate, file_candidate
+                "no candidate for include: `{dir_candidate:?}` and `{file_candidate:?}` do not exist"
             ))
             .with_loc(Some(location.clone()))),
         (false, true) => Ok(file_candidate),
@@ -63,7 +61,7 @@ fn check_base(base: &Path, location: &SpanTuple, path: &Path) -> Result<PathBuf,
 
 fn load_home_library(location: &SpanTuple, path: &Path) -> Result<PathBuf, Error> {
     let home = std::env::var("HOME")?;
-    let home_base = PathBuf::from(format!("{}/.jinko/libs/", home));
+    let home_base = PathBuf::from(format!("{home}/.jinko/libs/"));
 
     check_base(&home_base, location, path)
 }
