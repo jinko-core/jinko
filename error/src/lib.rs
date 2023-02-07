@@ -146,7 +146,7 @@ impl Error {
             );
         }
         if let Some(msg) = &self.msg {
-            eprintln!("{}", msg);
+            eprintln!("{msg}");
         }
         eprintln!();
 
@@ -164,7 +164,7 @@ impl Error {
         if let Some(loc) = &self.loc {
             self.emit_full_loc(loc);
         } else if let Some(msg) = &self.msg {
-            eprintln!("{}", msg)
+            eprintln!("{msg}")
         }
 
         if let Some(first_hint) = self.hints.first() {
@@ -201,7 +201,7 @@ impl Error {
             loc.emit(">".purple().bold(), "^".purple());
             after_ctx.emit('|', '_');
         } else if let Some(msg) = &self.msg {
-            eprintln!("{}: {}", dbg, msg)
+            eprintln!("{dbg}: {msg}")
         }
 
         if let Some(first_hint) = self.hints.first() {
