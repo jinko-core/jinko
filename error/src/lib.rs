@@ -68,6 +68,8 @@ pub enum ErrKind {
     Sanitizer,
     // FIXME: Remove this eventually
     Context,
+    // Name-resolution pass
+    NameResolution,
     TypeChecker,
     Generics,
     ExternFunc,
@@ -85,6 +87,7 @@ impl ErrKind {
             ErrKind::Parsing => "parsing",
             ErrKind::Include => "include",
             ErrKind::Context => "runtime",
+            ErrKind::NameResolution => "name-resolution",
             ErrKind::TypeChecker => "typechecker",
             ErrKind::Generics => "generics",
             ErrKind::IO => "i/o",
@@ -158,7 +161,6 @@ impl Error {
     }
 
     fn emit_hint(&self) {
-        eprintln!();
         eprint!("{}: ", "hint".black().on_green());
         if let Some(loc) = &self.loc {
             let path = get_path_str(loc);
