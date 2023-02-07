@@ -64,6 +64,8 @@ pub enum ErrKind {
     Parsing,
     // Include resolving pass
     Include,
+    // Various sanitizer errors
+    Sanitizer,
     // FIXME: Remove this eventually
     Context,
     TypeChecker,
@@ -79,6 +81,7 @@ impl ErrKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             ErrKind::Hint => "hint",
+            ErrKind::Sanitizer => "sanity",
             ErrKind::Parsing => "parsing",
             ErrKind::Include => "include",
             ErrKind::Context => "runtime",
@@ -133,6 +136,27 @@ impl Error {
         after_ctx.emit('|', '_');
     }
 
+    fn emit_sanity_error(&self) {
+        eprint!("{}: ", "sanity".black().on_blue());
+        if let Some(loc) = &self.loc {
+            let path = get_path_str(loc);
+            eprint!(
+                "{}:{}:{}: ",
+                path.blue(),
+                loc.start().line(),
+                loc.start().column()
+            );
+        }
+        if let Some(msg) = &self.msg {
+            eprintln!("{msg}");
+        }
+        eprintln!();
+
+        if let Some(loc) = &self.loc {
+            loc.emit("|".blue(), "^".blue());
+        }
+    }
+
     fn emit_hint(&self) {
         eprintln!();
         eprint!("{}: ", "hint".black().on_green());
@@ -156,22 +180,24 @@ impl Error {
     }
 
     pub fn emit(&self) {
-        if let ErrKind::Multiple(errs) = &self.kind {
-            errs.iter().for_each(|e| e.emit());
-            return;
-        }
+        match &self.kind {
+            ErrKind::Multiple(errs) => errs.iter().for_each(|e| e.emit()),
+            ErrKind::Hint => self.emit_hint(),
+            ErrKind::Sanitizer => self.emit_sanity_error(),
+            _ => {
+                if let Some(loc) = &self.loc {
+                    self.emit_full_loc(loc);
+                } else if let Some(msg) = &self.msg {
+                    eprintln!("{msg}")
+                }
 
-        if let Some(loc) = &self.loc {
-            self.emit_full_loc(loc);
-        } else if let Some(msg) = &self.msg {
-            eprintln!("{msg}")
-        }
+                if let Some(first_hint) = self.hints.first() {
+                    first_hint.emit_hint();
+                }
 
-        if let Some(first_hint) = self.hints.first() {
-            first_hint.emit_hint();
+                self.hints.iter().skip(1).for_each(|hint| hint.emit_hint());
+            }
         }
-
-        self.hints.iter().skip(1).for_each(|hint| hint.emit_hint());
     }
 
     /// Emit a debug interpreter error - this is only useful for debugging the
