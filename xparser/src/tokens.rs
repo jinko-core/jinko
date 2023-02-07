@@ -350,7 +350,7 @@ pub fn float_constant(input: ParseInput) -> ParseResult<ParseInput, f64> {
     let (input, _) = char('.')(input)?;
     let (input, decimal) = non_neg_num(input)?;
 
-    match format!("{}.{}", whole, decimal).parse::<f64>() {
+    match format!("{whole}.{decimal}").parse::<f64>() {
         Ok(value) => match negative_sign {
             Some(_) => Ok((input, -value)),
             None => Ok((input, value)),
