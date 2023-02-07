@@ -10,13 +10,13 @@ use nom_locate::LocatedSpan;
 
 // FIXME: This is missing location info
 // FIXME: Message info as well?
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Error;
 
 // TODO: Rename type?
 pub type ParseInput<'i> = LocatedSpan<&'i str, Source<'i>>;
 // TODO: Rename type?
-pub type ParseResult<T, I> = nom::IResult<T, I, Error>;
+pub type ParseResult<I, T> = nom::IResult<I, T, Error>;
 
 /// Parses the entire user input into a vector of instructions in the context
 pub fn parse(input: &str, source: Source) -> Result<Ast, Error> {

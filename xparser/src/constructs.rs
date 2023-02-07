@@ -23,7 +23,6 @@ use ast::FunctionKind;
 use ast::GenericArgument;
 use ast::LoopKind;
 use ast::Node;
-use ast::Operator;
 use ast::TypeArgument;
 use ast::TypeKind;
 use ast::TypedValue;
@@ -74,39 +73,6 @@ pub fn expr_semicolon(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     Ok((input, expr))
 }
 
-// FIXME: Rename, Rework
-#[deprecated]
-pub fn parse_operator(input: ParseInput) -> Operator {
-    let op = match *input.fragment() {
-        "+" => Operator::Add,
-        "-" => Operator::Sub,
-        "*" => Operator::Mul,
-        "/" => Operator::Div,
-        "<" => Operator::Lt,
-        ">" => Operator::Gt,
-        "<=" => Operator::LtEq,
-        ">=" => Operator::GtEq,
-        "==" => Operator::Equals,
-        "!=" => Operator::NotEquals,
-        "(" => Operator::LeftParenthesis,
-        ")" => Operator::RightParenthesis,
-        s => unreachable!("Invalid operator: {}", s),
-    };
-
-    op
-}
-
-#[deprecated]
-pub fn function_kind(input: ParseInput) -> FunctionKind {
-    match *input {
-        "func" => FunctionKind::Func,
-        "test" => FunctionKind::Test,
-        "mock" => FunctionKind::Mock,
-        "ext" => FunctionKind::Extern,
-        s => unreachable!("invalid function kind: {}", s),
-    }
-}
-
 // expr = cmp ( '<' cmp | '>' cmp | '<=' cmp | '>=' cmp | '==' cmp | '!=' cmp)*
 pub fn expr(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     let input = next(input);
@@ -126,7 +92,7 @@ pub fn expr(input: ParseInput) -> ParseResult<ParseInput, Ast> {
         input = new_input;
         let b_op = Ast {
             location: pos_to_loc(input, start_loc, end_loc),
-            node: Node::BinaryOp(parse_operator(op), Box::new(expr), Box::new(rhs)),
+            node: Node::BinaryOp(op, Box::new(expr), Box::new(rhs)),
         };
         expr = b_op;
     }
@@ -143,7 +109,7 @@ pub fn cmp(input: ParseInput) -> ParseResult<ParseInput, Ast> {
         input = new_input;
         let b_op = Ast {
             location: pos_to_loc(input, start_loc, end_loc),
-            node: Node::BinaryOp(parse_operator(op), Box::new(expr), Box::new(rhs)),
+            node: Node::BinaryOp(op, Box::new(expr), Box::new(rhs)),
         };
         expr = b_op;
     }
@@ -163,7 +129,7 @@ fn term(input: ParseInput) -> ParseResult<ParseInput, Ast> {
         input = new_input;
         let b_op = Ast {
             location: pos_to_loc(input, start_loc, end_loc),
-            node: Node::BinaryOp(parse_operator(op), Box::new(term), Box::new(rhs)),
+            node: Node::BinaryOp(op, Box::new(term), Box::new(rhs)),
         };
         term = b_op;
     }
@@ -404,13 +370,12 @@ fn unit_for(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, A
     ))
 }
 
-fn unit_func<'i>(
-    input: ParseInput<'i>,
-    kind: ParseInput<'i>,
+fn unit_func(
+    input: ParseInput,
+    kind: FunctionKind,
     start_loc: Location,
-) -> ParseResult<ParseInput<'i>, Ast> {
+) -> ParseResult<ParseInput, Ast> {
     let (input, decl) = func_declaration(input)?;
-    let kind = function_kind(kind);
     let input = next(input);
     let (input, block) = block(input)?;
     let (input, end_loc) = position(input)?;
@@ -1200,6 +1165,7 @@ mod tests {
     use crate::span;
 
     use ast::Node::*;
+    use ast::Operator;
     use ast::Value::*;
 
     #[test]
