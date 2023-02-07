@@ -119,13 +119,13 @@ impl ScopeMap {
 
     /// Add a function to the current scope if it hasn't been added before
     fn add_function(&mut self, name: Symbol, func: OriginIdx) -> Result<(), UniqueError> {
-        self.insert_unique(name.clone(), func, |scope| &mut scope.functions)
+        self.insert_unique(name, func, |scope| &mut scope.functions)
             .map_err(|existing| UniqueError(existing, "function"))
     }
 
     /// Add a type to the current scope if it hasn't been added before
     fn add_type(&mut self, name: Symbol, custom_type: OriginIdx) -> Result<(), UniqueError> {
-        self.insert_unique(name.clone(), custom_type, |scope| &mut scope.types)
+        self.insert_unique(name, custom_type, |scope| &mut scope.types)
             .map_err(|existing| UniqueError(existing, "type"))
     }
 }
@@ -296,7 +296,7 @@ impl NameResolveCtx {
     }
 }
 
-impl Pass<FlattenData, FlattenData> for NameResolveCtx {
+impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
     fn next_origin(&mut self) -> OriginIdx {
         let old = self.current;
         self.current = self.current.next();
@@ -309,25 +309,25 @@ impl Pass<FlattenData, FlattenData> for NameResolveCtx {
     fn post_condition(_fir: &Fir<FlattenData>) {}
 
     // This should return a result :<
-    fn transform(&mut self, fir: Fir<FlattenData>) -> Fir<FlattenData> {
+    fn transform(&mut self, fir: Fir<FlattenData>) -> Result<Fir<FlattenData>, Error> {
         // FIXME: Is that pipeline correct? seems weird and annoying
         let _ = self.insert_nodes(&fir);
 
         let fir = self.resolve_nodes(fir);
 
+        // TODO: can we do that in resolve_nodes?
         let _ = self.check_for_unresolved(&fir);
 
-        fir
+        Ok(fir)
     }
 }
 
 pub trait NameResolve {
-    fn name_resolve(self) -> Fir<FlattenData>;
+    fn name_resolve(self) -> Result<Fir<FlattenData>, Error>;
 }
 
 impl NameResolve for Fir<FlattenData> {
-    #[must_use]
-    fn name_resolve(self) -> Fir<FlattenData> {
+    fn name_resolve(self) -> Result<Fir<FlattenData>, Error> {
         let mut ctx = NameResolveCtx::default();
         ctx.mappings.enter();
 
@@ -375,7 +375,7 @@ mod tests {
             },
         });
 
-        let fir = fir.name_resolve();
+        let fir = fir.name_resolve().unwrap();
 
         let call = &fir.nodes[&OriginIdx(1)];
 
