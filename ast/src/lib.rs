@@ -472,8 +472,13 @@ pub trait Visitor {
         }
     }
 
+    // Sorry... but this is a convenience method. We need to do a lot of Box-unwrapping
+    // and Box-wrapping back and forth when visiting nodes. So to avoid always doing
+    // `self.visit(*ast).map(Box::new)` all the time, which looks even worse when
+    // the node to visit is an `Option<Box<Ast>>`, we have this convenience function.
+    #[allow(clippy::boxed_local)]
     fn boxed(&mut self, ast: Box<Ast>) -> Result<Box<Ast>, Error> {
-        self.visit(*ast).map(|ast| Box::new(ast))
+        self.visit(*ast).map(Box::new)
     }
 
     fn optional<T>(
