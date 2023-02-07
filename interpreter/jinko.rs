@@ -98,32 +98,29 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
 }
 
 fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
+    macro_rules! x_try {
+        ($r:expr) => {
+            match $r {
+                Ok(value) => value,
+                Err(e) => {
+                    e.emit();
+                    return Err(Error::new(ErrKind::Context));
+                }
+            }
+        };
+    }
+
     let ast = xparser::parse(input, Source::Path(file))?;
 
-    dbg!(&ast);
+    let ast = x_try!(ast.desugar_loops());
+    let ast = x_try!(ast_sanitizer::only_while_loops(ast));
 
-    let ast = ast.desugar_loops();
-    // FIXME: Once we switch everything to the `error` crate, this can be replaced by a `?`
-    let ast = match ast {
-        Ok(ast) => ast,
-        Err(_) => return Err(Error::new(ErrKind::Context)),
-    };
-
-    dbg!(&ast);
-
-    let ast = ast.resolve_includes();
-    // FIXME: Once we switch everything to the `error` crate, this can be replaced by a `?`
-    let ast = match ast {
-        Ok(ast) => ast,
-        Err(_) => return Err(Error::new(ErrKind::Context)),
-    };
-
-    dbg!(&ast);
+    let ast = x_try!(ast.resolve_includes());
+    let ast = x_try!(ast_sanitizer::no_incl(ast));
 
     let _fir = ast.flatten(); // .name_resolve();
-    dbg!(&_fir);
 
-    todo!()
+    todo!("experimental pipeline is not complete")
 }
 
 fn handle_input(args: &Args, file: &Path) -> InteractResult {

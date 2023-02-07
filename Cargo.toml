@@ -21,10 +21,12 @@ members = [
   "include_code",
   "loop_desugar",
   "xparser",
+  "ast-sanitizer",
 ]
 
 [dependencies]
 ast = { path = "ast" }
+ast-sanitizer = { path = "ast-sanitizer" }
 fir = { path = "fir" }
 flatten = { path = "flatten" }
 name_resolve = { path = "name_resolve" }

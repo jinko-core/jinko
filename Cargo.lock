@@ -45,6 +45,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ast-sanitizer"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "error",
+ "location",
+ "symbol",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -273,6 +283,7 @@ version = "0.3.0-jinx7"
 dependencies = [
  "anyhow",
  "ast",
+ "ast-sanitizer",
  "colored",
  "downcast-rs",
  "error",
