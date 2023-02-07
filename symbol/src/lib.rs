@@ -16,6 +16,7 @@
 // FIXME: The Symbol API should only take &str parameters, not Strings. Otherwise there's no point
 
 use std::collections::HashSet;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
@@ -85,6 +86,12 @@ impl From<String> for Symbol {
 impl From<&str> for Symbol {
     fn from(inner: &str) -> Symbol {
         Symbol::new(String::from(inner))
+    }
+}
+
+impl Display for Symbol {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}", self.access())
     }
 }
 
