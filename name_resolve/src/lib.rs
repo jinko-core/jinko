@@ -144,7 +144,7 @@ fn unique_error_to_error(
         .with_loc(offending_loc.clone())
         .with_hint(
             Error::hint()
-                .with_msg(format!("`{sym}` first defined here"))
+                .with_msg(format!("`{sym}` is also defined here"))
                 .with_loc(existing.data.location.clone()),
         )
 }
@@ -182,13 +182,10 @@ impl NameResolveCtx {
             }
         });
 
-        let is_error = !errs.is_empty();
-        errs.into_iter().for_each(|e| e.emit());
-
-        if is_error {
-            Err(Error::new(ErrKind::NameResolution))
-        } else {
+        if errs.is_empty() {
             Ok(())
+        } else {
+            Err(Error::new(ErrKind::Multiple(errs)))
         }
     }
 
@@ -272,7 +269,7 @@ impl NameResolveCtx {
         hints.fold(err, |e, hint| e.with_hint(hint))
     }
 
-    fn check_for_unresolved(&self, fir: &Fir<FlattenData>) -> bool {
+    fn check_for_unresolved(&self, fir: &Fir<FlattenData>) -> Result<(), Error> {
         let errs = fir
             .nodes
             .iter()
@@ -291,8 +288,11 @@ impl NameResolveCtx {
                 _ => errs,
             });
 
-        errs.iter().for_each(|e| e.emit());
-        errs.is_empty()
+        if errs.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::new(ErrKind::Multiple(errs)))
+        }
     }
 }
 
@@ -311,14 +311,25 @@ impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
     // This should return a result :<
     fn transform(&mut self, fir: Fir<FlattenData>) -> Result<Fir<FlattenData>, Error> {
         // FIXME: Is that pipeline correct? seems weird and annoying
-        let _ = self.insert_nodes(&fir);
+        let definition = self.insert_nodes(&fir);
 
         let fir = self.resolve_nodes(fir);
 
         // TODO: can we do that in resolve_nodes?
-        let _ = self.check_for_unresolved(&fir);
+        let usage = self.check_for_unresolved(&fir);
 
-        Ok(fir)
+        match (definition, usage) {
+            (Ok(_), Ok(_)) => Ok(fir),
+            (Ok(_), Err(e)) | (Err(e), Ok(_)) => {
+                e.emit();
+                Err(e)
+            }
+            (Err(e1), Err(e2)) => {
+                let multi_err = Error::new(ErrKind::Multiple(vec![e1, e2]));
+                multi_err.emit();
+                Err(multi_err)
+            }
+        }
     }
 }
 
