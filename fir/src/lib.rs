@@ -268,3 +268,145 @@ pub trait Pass<T: Debug, U: Debug, E> {
         })
     }
 }
+
+// FIXME: Documentation
+pub trait VisitError: Sized {
+    // FIXME: Documentation
+    fn simple() -> Self;
+
+    // FIXME: Documentation
+    fn aggregate(errs: Vec<Self>) -> Self;
+}
+
+/// All of the helpers and visitors call back into [`visit_node`]
+pub trait Visitor<T: Debug, E: VisitError> {
+    fn visit_constant(&mut self, fir: &Fir<T>, constant: &RefIdx) -> Result<(), E> {
+        self.reference(fir, constant)
+    }
+
+    fn visit_type_reference(&mut self, fir: &Fir<T>, reference: &RefIdx) -> Result<(), E> {
+        self.reference(fir, reference)
+    }
+
+    fn visit_typed_value(&mut self, fir: &Fir<T>, value: &RefIdx, ty: &RefIdx) -> Result<(), E> {
+        self.reference(fir, value)?;
+        self.reference(fir, ty)
+    }
+
+    fn visit_generic(&mut self, fir: &Fir<T>, default: &Option<RefIdx>) -> Result<(), E> {
+        self.opt(fir, default)
+    }
+
+    fn visit_type(
+        &mut self,
+        fir: &Fir<T>,
+        generics: &[RefIdx],
+        fields: &[RefIdx],
+    ) -> Result<(), E> {
+        self.fold(fir, generics)?;
+        self.fold(fir, fields)
+    }
+
+    fn visit_function(
+        &mut self,
+        fir: &Fir<T>,
+        generics: &[RefIdx],
+        args: &[RefIdx],
+        return_ty: &Option<RefIdx>,
+        block: &Option<RefIdx>,
+    ) -> Result<(), E> {
+        self.fold(fir, generics)?;
+        self.fold(fir, args)?;
+        self.opt(fir, return_ty)?;
+        self.opt(fir, block)
+    }
+
+    fn visit_instantiation(
+        &mut self,
+        fir: &Fir<T>,
+        to: &RefIdx,
+        generics: &[RefIdx],
+        fields: &[RefIdx],
+    ) -> Result<(), E> {
+        self.reference(fir, to)?;
+        self.fold(fir, generics)?;
+        self.fold(fir, fields)
+    }
+
+    fn visit_call(
+        &mut self,
+        fir: &Fir<T>,
+        to: &RefIdx,
+        generics: &[RefIdx],
+        args: &[RefIdx],
+    ) -> Result<(), E> {
+        self.reference(fir, to)?;
+        self.fold(fir, generics)?;
+        self.fold(fir, args)
+    }
+
+    fn visit_statements(&mut self, fir: &Fir<T>, stmts: &[RefIdx]) -> Result<(), E> {
+        self.fold(fir, stmts)
+    }
+
+    fn visit_return(&mut self, fir: &Fir<T>, expr: &Option<RefIdx>) -> Result<(), E> {
+        self.opt(fir, expr)
+    }
+
+    fn visit_node(&mut self, fir: &Fir<T>, node: &Node<T>) -> Result<(), E> {
+        match &node.kind {
+            Kind::Constant(c) => self.visit_constant(fir, c),
+            Kind::TypeReference(r) => self.visit_type_reference(fir, r),
+            Kind::TypedValue { value, ty } => self.visit_typed_value(fir, value, ty),
+            Kind::Generic { default } => self.visit_generic(fir, default),
+            Kind::Type { generics, fields } => self.visit_type(fir, generics, fields),
+            Kind::Function {
+                generics,
+                args,
+                return_type,
+                block,
+            } => self.visit_function(fir, generics, args, return_type, block),
+            Kind::Instantiation {
+                to,
+                generics,
+                fields,
+            } => self.visit_instantiation(fir, to, generics, fields),
+            Kind::Call { to, generics, args } => self.visit_call(fir, to, generics, args),
+            Kind::Statements(stmts) => self.visit_statements(fir, stmts),
+            Kind::Return(expr) => self.visit_return(fir, expr),
+        }
+    }
+
+    fn reference(&mut self, fir: &Fir<T>, idx: &RefIdx) -> Result<(), E> {
+        match idx {
+            RefIdx::Unresolved => Err(E::simple()),
+            RefIdx::Resolved(origin) => self.visit_node(fir, &fir.nodes[origin]),
+        }
+    }
+
+    fn opt(&mut self, fir: &Fir<T>, idx: &Option<RefIdx>) -> Result<(), E> {
+        match idx {
+            Some(idx) => self.reference(fir, idx),
+            None => Ok(()),
+        }
+    }
+
+    fn fold(&mut self, fir: &Fir<T>, indexes: &[RefIdx]) -> Result<(), E> {
+        let errs =
+            indexes
+                .iter()
+                .fold(Vec::new(), |mut errs, idx| match self.reference(fir, idx) {
+                    Ok(_) => errs,
+                    Err(e) => {
+                        errs.push(e);
+                        errs
+                    }
+                });
+
+        if errs.is_empty() {
+            Ok(())
+        } else {
+            Err(E::aggregate(errs))
+        }
+    }
+}
