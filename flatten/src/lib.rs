@@ -189,13 +189,13 @@ impl OriginExt for OriginIdx {
 pub struct FlattenData {
     pub symbol: Option<Symbol>,
     pub location: Option<SpanTuple>, // FIXME: Remove the option
-    pub scope: u64,
+    pub scope: usize,
 }
 
 struct Ctx {
     pub fir: Fir<FlattenData>,
     pub origin: OriginIdx,
-    pub scope: u64,
+    pub scope: usize,
 }
 
 impl Ctx {
