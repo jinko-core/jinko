@@ -185,7 +185,7 @@ impl OriginExt for OriginIdx {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct FlattenData {
     pub symbol: Option<Symbol>,
     pub location: Option<SpanTuple>, // FIXME: Remove the option
