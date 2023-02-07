@@ -13,7 +13,7 @@ fn main() -> Result<()> {
 
     loop {
         ctx.clear_errors();
-        print!("{}", prompt);
+        print!("{prompt}");
         stdout.flush()?;
 
         input.clear();
