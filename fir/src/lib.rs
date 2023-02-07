@@ -231,7 +231,7 @@ impl<T: Debug> Fir<T> {
     }
 }
 
-pub trait Pass<T: Debug = (), U: Debug = ()> {
+pub trait Pass<T: Debug, U: Debug, E> {
     /// Each implementer of [`Pass`] should keep its own [`OriginIdx`] counter in order to supply the [`Fir`]
     /// with new nodes. This can be done by keeping an [`OriginIdx`] as part of the context, and repeatedly
     /// calling [`OriginIdx::next`] on it.
@@ -247,22 +247,24 @@ pub trait Pass<T: Debug = (), U: Debug = ()> {
 
     /// The actual pass algorithm.
     // FIXME: Should this take an immutable context and return it?
-    fn transform(&mut self, fir: Fir<T>) -> Fir<U>;
+    fn transform(&mut self, fir: Fir<T>) -> Result<Fir<U>, E>;
 
     // FIXME: Add documentation
     // FIXME: Should this take an immutable context and return it?
     // FIXME: Should this return a Result<Fir<U>, E>?
-    fn pass(&mut self, fir: Fir<T>) -> Fir<U> {
+    fn pass(&mut self, fir: Fir<T>) -> Result<Fir<U>, E> {
         // FIXME: Add a #[cfg(not(release))] here
         Self::pre_condition(&fir);
 
-        let new_fir = self.transform(fir);
+        let fir = self.transform(fir);
 
         // FIXME: Add a #[cfg(not(release))] here
-        Self::post_condition(&new_fir);
-        // FIXME: Add a #[cfg(not(release))] here
-        new_fir.check();
+        // otherwise just return `fir`
+        fir.map(|fir| {
+            Self::post_condition(&fir);
+            fir.check();
 
-        new_fir
+            fir
+        })
     }
 }
