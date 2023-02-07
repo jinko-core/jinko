@@ -1,6 +1,4 @@
-use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::hash::Hash;
 
 use error::{ErrKind, Error};
 use fir::{Fallible, Fir, Kind, Node, OriginIdx, Pass, RefIdx, VisitError, Visitor};
@@ -42,16 +40,12 @@ struct ScopeMap {
 }
 
 impl ScopeMap {
-    fn get<'map, K, Q, U>(
-        &'map self,
-        key: &Q,
+    fn get(
+        &self,
+        key: &Symbol,
         scope: usize,
-        map_extractor: impl Fn(&Scope) -> &HashMap<K, U>,
-    ) -> Option<&U>
-    where
-        K: Borrow<Q> + Hash + Eq + 'map,
-        Q: Hash + Eq + ?Sized,
-    {
+        map_extractor: impl Fn(&Scope) -> &HashMap<Symbol, OriginIdx>,
+    ) -> Option<&OriginIdx> {
         self.scopes
             .get(scope)
             .map(|_| &self.scopes[0..scope])
@@ -63,16 +57,13 @@ impl ScopeMap {
             })
     }
 
-    fn insert_unique<K>(
+    fn insert_unique(
         &mut self,
-        key: K,
+        key: Symbol,
         value: OriginIdx,
         scope: usize,
-        map_extractor: impl Fn(&mut Scope) -> &mut HashMap<K, OriginIdx>,
-    ) -> Result<(), OriginIdx>
-    where
-        K: Hash + Eq,
-    {
+        map_extractor: impl Fn(&mut Scope) -> &mut HashMap<Symbol, OriginIdx>,
+    ) -> Result<(), OriginIdx> {
         let scope = match self.scopes.get_mut(scope) {
             Some(scope) => scope,
             None => {
@@ -199,6 +190,22 @@ impl Visitor<FlattenData, DefError> for NameResolveCtx {
     ) -> Fallible<DefError> {
         self.mappings
             .add_function(
+                node.data.symbol.as_ref().unwrap().clone(),
+                node.data.scope,
+                node.origin,
+            )
+            .map_err(|ue| unique_error_to_def_error(fir, &node.data.location, ue))
+    }
+
+    fn visit_type(
+        &mut self,
+        fir: &Fir<FlattenData>,
+        node: &Node<FlattenData>,
+        _: &[RefIdx],
+        _: &[RefIdx],
+    ) -> Fallible<DefError> {
+        self.mappings
+            .add_type(
                 node.data.symbol.as_ref().unwrap().clone(),
                 node.data.scope,
                 node.origin,
