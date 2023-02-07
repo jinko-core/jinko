@@ -175,8 +175,7 @@ impl TypeCheck for VarAssign {
         if var_ty != value_ty {
             return Err(Error::new(ErrKind::TypeChecker)
                 .with_msg(format!(
-                    "trying to assign value of type `{}` to variable of type `{}`",
-                    value_ty, var_ty
+                    "trying to assign value of type `{value_ty}` to variable of type `{var_ty}`"
                 ))
                 .with_loc(self.location.clone()));
         }

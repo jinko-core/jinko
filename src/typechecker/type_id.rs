@@ -197,7 +197,7 @@ impl Display for TypeId {
             generics
                 .iter()
                 .skip(1)
-                .try_for_each(|generic| write!(f, ", {}", generic))?;
+                .try_for_each(|generic| write!(f, ", {generic}"))?;
 
             write!(f, "]")?;
         }

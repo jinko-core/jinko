@@ -105,7 +105,7 @@ impl Instruction for TypeInstantiation {
             first_arg = false;
         }
 
-        format!("{})", base)
+        format!("{base})")
     }
 
     fn execute(&self, ctx: &mut Context) -> Option<ObjectInstance> {

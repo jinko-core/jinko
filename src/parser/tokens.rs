@@ -343,14 +343,13 @@ impl Token {
         let (input, _) = char('.')(input)?;
         let (input, decimal) = Token::non_neg_num(input)?;
 
-        match format!("{}.{}", whole, decimal).parse::<f64>() {
+        match format!("{whole}.{decimal}").parse::<f64>() {
             Ok(value) => match negative_sign {
                 Some(_) => Ok((input, -value)),
                 None => Ok((input, value)),
             },
             Err(_) => Err(NomError(Error::new(ErrKind::Parsing).with_msg(format!(
-                "invalid floating point number: {}.{}",
-                whole, decimal
+                "invalid floating point number: {whole}.{decimal}"
             )))),
         }
     }
@@ -365,7 +364,7 @@ impl Token {
                 None => Ok((input, value)),
             },
             Err(_) => Err(NomError(
-                Error::new(ErrKind::Parsing).with_msg(format!("invalid integer: {}", num)),
+                Error::new(ErrKind::Parsing).with_msg(format!("invalid integer: {num}")),
             )),
         }
     }
