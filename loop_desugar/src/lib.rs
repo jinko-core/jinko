@@ -6,13 +6,13 @@
 //!
 //! original form:
 //!
-//! ```
+//! ```text
 //! for <iter> in <range> <block>
 //! ```
 //!
 //! after desugar:
 //!
-//! ```
+//! ```text
 //! {
 //!     __#range = <range>;
 //!     while __#range.has_next() {
@@ -26,13 +26,13 @@
 //!
 //! original form:
 //!
-//! ```
+//! ```text
 //! loop <block>
 //! ```
 //!
 //! after desugar:
 //!
-//! ```
+//! ```text
 //! while true <block>
 //! ```
 
