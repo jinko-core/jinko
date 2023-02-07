@@ -1,36 +1,297 @@
+use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::hash::Hash;
 
+use error::{ErrKind, Error};
 use fir::{Fir, Kind, Node, OriginIdx, Pass, RefIdx};
 use flatten::FlattenData;
+use location::SpanTuple;
 use symbol::Symbol;
 
+// FIXME: Move into utils crate?
+#[doc(hidden)]
+trait VecExt<T> {
+    fn with(self, elt: T) -> Self;
+}
+
+impl<T> VecExt<T> for Vec<T> {
+    fn with(mut self, elt: T) -> Vec<T> {
+        self.push(elt);
+
+        self
+    }
+}
+
+/// Error reported when an item (variable, function, type) was already declared
+/// in the current scope.
+struct UniqueError(OriginIdx, &'static str);
+
+/// A scope contains a set of available variables, functions and types.
+#[derive(Clone, Default)]
+struct Scope {
+    variables: HashMap<Symbol, OriginIdx>,
+    functions: HashMap<Symbol, OriginIdx>,
+    types: HashMap<Symbol, OriginIdx>,
+}
+
+/// A scope stack is a reversed stack. This alias is made for code clarity
+type Stack<T> = std::collections::LinkedList<T>;
+
+/// A scope map keeps track of the currently available scopes and the current depth
+/// level.
+#[derive(Clone, Default)]
+struct ScopeMap {
+    scopes: Stack<Scope>,
+}
+
+impl ScopeMap {
+    /// Create a new empty scope map, at depth 0
+    fn new() -> ScopeMap {
+        ScopeMap {
+            scopes: Stack::new(),
+        }
+    }
+
+    /// Enter into a new scope
+    fn enter(&mut self) {
+        self.scopes.push_front(Scope::default());
+    }
+
+    /// Exit the last added scope
+    fn exit(&mut self) {
+        // We unwrap since we want the context to crash in case we pop an unexisting
+        // scope.
+        self.scopes.pop_front().unwrap();
+    }
+
+    fn get<'map, K, Q, U>(
+        &'map self,
+        key: &Q,
+        map_extractor: impl Fn(&Scope) -> &HashMap<K, U>,
+    ) -> Option<&U>
+    where
+        K: Borrow<Q> + Hash + Eq + 'map,
+        Q: Hash + Eq + ?Sized,
+    {
+        self.scopes
+            .iter()
+            .map(|scope| map_extractor(scope).get(key))
+            .find(|var| var.is_some())?
+    }
+
+    fn insert_unique<K>(
+        &mut self,
+        key: K,
+        value: OriginIdx,
+        map_extractor: impl Fn(&mut Scope) -> &mut HashMap<K, OriginIdx>,
+    ) -> Result<(), OriginIdx>
+    where
+        K: Hash + Eq,
+    {
+        // If there is no front scope, this is an error in the interpreter's
+        // logic
+        let top = self.scopes.front_mut().unwrap();
+        let map = map_extractor(top);
+
+        match map.get(&key) {
+            Some(existing) => Err(*existing),
+            None => {
+                map.insert(key, value);
+                Ok(())
+            }
+        }
+    }
+
+    /// Maybe get a variable in any available scopes
+    fn get_variable(&self, name: &Symbol) -> Option<&OriginIdx> {
+        self.get(name, |scope| &scope.variables)
+    }
+
+    /// Maybe get a function in any available scopes
+    fn get_function(&self, name: &Symbol) -> Option<&OriginIdx> {
+        self.get(name, |scope| &scope.functions)
+    }
+
+    /// Maybe get a type in any available scopes
+    fn get_type(&self, name: &Symbol) -> Option<&OriginIdx> {
+        self.get(name, |scope| &scope.types)
+    }
+
+    // FIXME: These are good but we need a way to return the OriginIdx to then emit the proper location and name
+    /// Add a variable to the current scope if it hasn't been added before
+    fn add_variable(&mut self, name: Symbol, var: OriginIdx) -> Result<(), UniqueError> {
+        self.insert_unique(name, var, |scope| &mut scope.variables)
+            .map_err(|existing| UniqueError(existing, "variable"))
+    }
+
+    /// Add a function to the current scope if it hasn't been added before
+    fn add_function(&mut self, name: Symbol, func: OriginIdx) -> Result<(), UniqueError> {
+        self.insert_unique(name.clone(), func, |scope| &mut scope.functions)
+            .map_err(|existing| UniqueError(existing, "function"))
+    }
+
+    /// Add a type to the current scope if it hasn't been added before
+    fn add_type(&mut self, name: Symbol, custom_type: OriginIdx) -> Result<(), UniqueError> {
+        self.insert_unique(name.clone(), custom_type, |scope| &mut scope.types)
+            .map_err(|existing| UniqueError(existing, "type"))
+    }
+}
+
+fn unique_error_to_error(
+    fir: &Fir<FlattenData>,
+    offending_loc: &Option<SpanTuple>,
+    UniqueError(origin, kind_str): UniqueError,
+) -> Error {
+    let existing = &fir.nodes[&origin];
+    let sym = existing.data.symbol.as_ref().unwrap();
+
+    Error::new(ErrKind::NameResolution)
+        .with_msg(format!("{kind_str} `{sym}` already defined in this scope"))
+        .with_loc(offending_loc.clone())
+        .with_hint(
+            Error::hint()
+                .with_msg(format!("`{sym}` first defined here"))
+                .with_loc(existing.data.location.clone()),
+        )
+}
+
+#[derive(Default)]
 struct NameResolveCtx {
     current: OriginIdx,
-    // FIXME: Use the field
-    _mappings: HashMap<Symbol, OriginIdx>,
+    mappings: ScopeMap,
 }
 
 impl NameResolveCtx {
-    fn insert_nodes(&mut self, fir: &Fir<FlattenData>) {
-        fir.nodes.iter().for_each(|kv| {
-            let (_origin, _node) = kv;
+    // FIXME: Is that really a result?
+    fn insert_nodes(&mut self, fir: &Fir<FlattenData>) -> Result<(), Error> {
+        let errs = fir.nodes.iter().fold(Vec::new(), |errs, (_, node)| {
+            let res = match &node.kind {
+                Kind::Function { .. } => self
+                    .mappings
+                    .add_function(node.data.symbol.as_ref().unwrap().clone(), node.origin)
+                    .map_err(|ue| unique_error_to_error(fir, &node.data.location, ue)),
+                _ => Ok(()),
+            };
 
-            // if let Kind::FnDeclaration { .. } = &node.kind {
-            //     self.mappings.insert(node.data.clone(), *origin);
-            // }
+            match res {
+                Ok(_) => errs,
+                Err(e) => errs.with(e),
+            }
         });
+
+        let is_error = !errs.is_empty();
+        errs.into_iter().for_each(|e| e.emit());
+
+        if is_error {
+            Err(Error::new(ErrKind::NameResolution))
+        } else {
+            Ok(())
+        }
     }
 
-    fn resolve_symbol(&self, _sym: &FlattenData) -> RefIdx {
-        // match self.mappings.get(sym) {
-        //     Some(idx) => RefIdx::Resolved(*idx),
-        //     None => RefIdx::Unresolved,
-        // }
-        todo!()
+    // FIXME: Should this return the Kind directly?
+    fn resolve_node(&self, sym: &Symbol, kind: &Kind) -> RefIdx {
+        match kind {
+            Kind::Call { .. } => self
+                .mappings
+                .get_function(sym)
+                .map_or(RefIdx::Unresolved, |origin| RefIdx::Resolved(*origin)),
+            _ => RefIdx::Unresolved,
+        }
+    }
+
+    fn resolve_nodes(&mut self, fir: Fir<FlattenData>) -> Fir<FlattenData> {
+        fir.nodes
+            .into_iter()
+            .fold(Fir::default(), |fir, (origin, node)| {
+                let kind = match node.kind {
+                    Kind::Call { .. } | Kind::TypeReference(_) => {
+                        let resolved = &node
+                            .data
+                            .symbol
+                            .as_ref()
+                            .map(|sym| self.resolve_node(sym, &node.kind))
+                            .unwrap();
+
+                        match node.kind {
+                            Kind::Call { generics, args, .. } => Kind::Call {
+                                to: *resolved,
+                                generics,
+                                args,
+                            },
+                            // nothing to do for other types of nodes
+                            kind => kind,
+                        }
+                    }
+                    kind => kind,
+                };
+
+                fir.append(Node {
+                    data: node.data,
+                    origin,
+                    kind,
+                })
+            })
+    }
+
+    fn error(&self, kind_str: &str, location: &Option<SpanTuple>, err_sym: &Symbol) -> Error {
+        let hints = vec![].into_iter(); // FIXME: Remove
+
+        // let hints = self.mappings.keys().filter_map(|key| {
+        //     if distance::levenshtein(key.symbol_unchecked().access(), err_sym.access()) < 2 {
+        //         Some(
+        //             Error::hint()
+        //                 .with_msg(format!(
+        //                     "maybe you meant to call `{}` instead?",
+        //                     key.symbol_unchecked()
+        //                 ))
+        //                 .with_loc(key.location().clone()),
+        //         )
+        //     } else {
+        //         None
+        //     }
+        // });
+
+        let err = Error::new(ErrKind::NameResolution)
+            .with_loc(location.clone())
+            .with_msg(format!("unresolved {kind_str}: `{err_sym}`"));
+
+        hints.fold(err, |e, hint| e.with_hint(hint))
+    }
+
+    fn check_for_unresolved(&self, fir: &Fir<FlattenData>) -> bool {
+        let errs = fir
+            .nodes
+            .iter()
+            .fold(Vec::<Error>::new(), |errs, (_, node)| match &node.kind {
+                Kind::Call {
+                    to,
+                    generics: _,
+                    args: _,
+                } => {
+                    if *to == RefIdx::Unresolved {
+                        errs.with(self.error(
+                            "function call",
+                            &node.data.location,
+                            node.data.symbol.as_ref().unwrap(),
+                        ))
+                    } else {
+                        errs
+                    }
+                }
+                _ => errs,
+            });
+
+        if errs.is_empty() {
+            true
+        } else {
+            errs.iter().for_each(|e| e.emit());
+            false
+        }
     }
 }
 
-impl Pass<FlattenData> for NameResolveCtx {
+impl Pass<FlattenData, FlattenData> for NameResolveCtx {
     fn next_origin(&mut self) -> OriginIdx {
         let old = self.current;
         self.current = self.current.next();
@@ -40,46 +301,27 @@ impl Pass<FlattenData> for NameResolveCtx {
 
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
-    fn post_condition(_fir: &Fir) {}
+    fn post_condition(_fir: &Fir<FlattenData>) {}
 
-    fn transform(&mut self, fir: Fir<FlattenData>) -> Fir {
-        self.insert_nodes(&fir);
+    fn transform(&mut self, fir: Fir<FlattenData>) -> Fir<FlattenData> {
+        self.insert_nodes(&fir).unwrap();
+        let fir = self.resolve_nodes(fir);
 
-        fir.nodes.into_iter().fold(Fir::default(), |fir, kv| {
-            let (origin, node) = kv;
+        self.check_for_unresolved(&fir);
 
-            let resolved = self.resolve_symbol(&node.data);
-
-            let new_kind = match node.kind {
-                Kind::Call { generics, args, .. } => Kind::Call {
-                    to: resolved,
-                    generics,
-                    args,
-                },
-                // nothing to do for other types of nodes
-                kind => kind,
-            };
-
-            fir.append(Node {
-                data: (),
-                origin,
-                kind: new_kind,
-            })
-        })
+        fir
     }
 }
 
 pub trait NameResolve {
-    fn name_resolve(self) -> Fir;
+    fn name_resolve(self) -> Fir<FlattenData>;
 }
 
 impl NameResolve for Fir<FlattenData> {
     #[must_use]
-    fn name_resolve(self) -> Fir {
-        let mut ctx = NameResolveCtx {
-            current: OriginIdx::default(),
-            _mappings: HashMap::new(),
-        };
+    fn name_resolve(self) -> Fir<FlattenData> {
+        let mut ctx = NameResolveCtx::default();
+        ctx.mappings.enter();
 
         ctx.pass(self)
     }
