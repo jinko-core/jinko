@@ -14,7 +14,7 @@ use std::fs;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 enum Column {
     EndOfLine,
     Precise(NonZeroUsize),
@@ -22,7 +22,7 @@ enum Column {
 
 /// Base type for the location of jinko instructions, generated during parsing
 /// phase.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Location {
     line: NonZeroUsize,
     column: Column,
@@ -95,7 +95,7 @@ impl Source<'_> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SpanTuple {
     source: SourceOwned,
     start: Location,
