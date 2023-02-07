@@ -45,13 +45,6 @@ struct ScopeMap {
 }
 
 impl ScopeMap {
-    /// Create a new empty scope map, at depth 0
-    fn new() -> ScopeMap {
-        ScopeMap {
-            scopes: Stack::new(),
-        }
-    }
-
     /// Enter into a new scope
     fn enter(&mut self) {
         self.scopes.push_front(Scope::default());
@@ -137,6 +130,7 @@ impl ScopeMap {
     }
 }
 
+// Compose a [`UniqueError`] into a proper [`Error`] of kind [`ErrKind::NameResolution`]
 fn unique_error_to_error(
     fir: &Fir<FlattenData>,
     offending_loc: &Option<SpanTuple>,
@@ -170,6 +164,15 @@ impl NameResolveCtx {
                     .mappings
                     .add_function(node.data.symbol.as_ref().unwrap().clone(), node.origin)
                     .map_err(|ue| unique_error_to_error(fir, &node.data.location, ue)),
+                Kind::Type { .. } => self
+                    .mappings
+                    .add_type(node.data.symbol.as_ref().unwrap().clone(), node.origin)
+                    .map_err(|ue| unique_error_to_error(fir, &node.data.location, ue)),
+                // FIXME: Is that valid? for both branches? How do we handle declaration vs usage?
+                Kind::TypedValue { .. } | Kind::Instantiation { .. } => self
+                    .mappings
+                    .add_variable(node.data.symbol.as_ref().unwrap().clone(), node.origin)
+                    .map_err(|ue| unique_error_to_error(fir, &node.data.location, ue)),
                 _ => Ok(()),
             };
 
@@ -195,6 +198,16 @@ impl NameResolveCtx {
             Kind::Call { .. } => self
                 .mappings
                 .get_function(sym)
+                .map_or(RefIdx::Unresolved, |origin| RefIdx::Resolved(*origin)),
+            // FIXME: Is that the correct node?
+            Kind::TypeReference { .. } => self
+                .mappings
+                .get_type(sym)
+                .map_or(RefIdx::Unresolved, |origin| RefIdx::Resolved(*origin)),
+            // FIXME: Is that the correct node?
+            Kind::TypedValue { .. } => self
+                .mappings
+                .get_variable(sym)
                 .map_or(RefIdx::Unresolved, |origin| RefIdx::Resolved(*origin)),
             _ => RefIdx::Unresolved,
         }
@@ -264,11 +277,7 @@ impl NameResolveCtx {
             .nodes
             .iter()
             .fold(Vec::<Error>::new(), |errs, (_, node)| match &node.kind {
-                Kind::Call {
-                    to,
-                    generics: _,
-                    args: _,
-                } => {
+                Kind::Call { to, .. } => {
                     if *to == RefIdx::Unresolved {
                         errs.with(self.error(
                             "function call",
@@ -282,12 +291,8 @@ impl NameResolveCtx {
                 _ => errs,
             });
 
-        if errs.is_empty() {
-            true
-        } else {
-            errs.iter().for_each(|e| e.emit());
-            false
-        }
+        errs.iter().for_each(|e| e.emit());
+        errs.is_empty()
     }
 }
 
@@ -303,11 +308,14 @@ impl Pass<FlattenData, FlattenData> for NameResolveCtx {
 
     fn post_condition(_fir: &Fir<FlattenData>) {}
 
+    // This should return a result :<
     fn transform(&mut self, fir: Fir<FlattenData>) -> Fir<FlattenData> {
-        self.insert_nodes(&fir).unwrap();
+        // FIXME: Is that pipeline correct? seems weird and annoying
+        let _ = self.insert_nodes(&fir);
+
         let fir = self.resolve_nodes(fir);
 
-        self.check_for_unresolved(&fir);
+        let _ = self.check_for_unresolved(&fir);
 
         fir
     }
