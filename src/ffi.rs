@@ -134,8 +134,7 @@ pub fn execute(
             }
             _ => {
                 errors.push(Error::new(ErrKind::ExternFunc).with_msg(format!(
-                    "ffi module does not support calls with arguments of type {} yet",
-                    arg_ty
+                    "ffi module does not support calls with arguments of type {arg_ty} yet"
                 )));
                 FfiJkArg::Error
             }
@@ -199,8 +198,7 @@ pub fn execute(
                     }
                     _ => {
                         ctx.error(Error::new(ErrKind::ExternFunc).with_msg(format!(
-                            "ffi module does not support {} as a return type",
-                            ty
+                            "ffi module does not support {ty} as a return type"
                         )));
                         return Err(Error::new(ErrKind::ExternFunc));
                     }

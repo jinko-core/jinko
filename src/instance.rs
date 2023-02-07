@@ -101,7 +101,7 @@ impl ObjectInstance {
             }
             Some(fields) => fields.get(field_name).map_or(
                 Err(Error::new(ErrKind::Context)
-                    .with_msg(format!("field `{}` does not exist on instance", field_name))),
+                    .with_msg(format!("field `{field_name}` does not exist on instance"))),
                 |FieldInstance(_, instance)| Ok(instance.clone()),
             ),
         }
@@ -128,13 +128,13 @@ impl ObjectInstance {
 
         match &instance.ty {
             CheckedType::Resolved(ty) => base = format!("{}{}type: {}\n", base, indent, ty.id()),
-            _ => base = format!("{}{}type: `no type`\n", base, indent),
+            _ => base = format!("{base}{indent}type: `no type`\n"),
         }
 
         base = format!("{}{}size: {}\n", base, indent, instance.size);
 
         if let Some(fields) = &instance.fields {
-            base = format!("{}{}fields:\n", base, indent);
+            base = format!("{base}{indent}fields:\n");
 
             for (name, FieldInstance(_, instance)) in fields {
                 base = format!(

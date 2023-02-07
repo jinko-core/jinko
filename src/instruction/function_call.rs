@@ -196,7 +196,7 @@ impl Instruction for FunctionCall {
             self.generics
                 .iter()
                 .skip(1)
-                .for_each(|generic| write!(base, "{}", generic).unwrap());
+                .for_each(|generic| write!(base, "{generic}").unwrap());
             base.push(']');
         }
 
@@ -306,8 +306,7 @@ impl TypeCheck for FunctionCall {
                 errors.push(
                     Error::new(ErrKind::TypeChecker)
                         .with_msg(format!(
-                            "invalid type used for function argument: expected `{}`, got `{}`",
-                            expected_ty, given_ty
+                            "invalid type used for function argument: expected `{expected_ty}`, got `{given_ty}`"
                         ))
                         .with_loc(given_arg.location().cloned())
                         .with_hint(

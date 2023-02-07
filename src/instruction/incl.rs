@@ -66,8 +66,7 @@ impl Incl {
             0 => Ok(instructions),
             _ => Err(Error::new(ErrKind::Parsing)
                 .with_msg(format!(
-                    "error when parsing included file: {:?},\non the following input:\n{}",
-                    formatted, remaining_input
+                    "error when parsing included file: {formatted:?},\non the following input:\n{remaining_input}"
                 ))
                 .with_loc(self.location.clone())),
         }
@@ -95,14 +94,12 @@ impl Incl {
             // We cannot have both <path>/lib.jk and <path>.jk be valid files
             (true, true) => Err(Error::new(ErrKind::Context)
                 .with_msg(format!(
-                    "invalid include: {:?} and {:?} are both valid candidates",
-                    dir_candidate, file_candidate
+                    "invalid include: {dir_candidate:?} and {file_candidate:?} are both valid candidates"
                 ))
                 .with_loc(self.location.clone())),
             (false, false) => Err(Error::new(ErrKind::Context)
                 .with_msg(format!(
-                    "no candidate for include: {:?} and {:?} do not exist",
-                    dir_candidate, file_candidate
+                    "no candidate for include: {dir_candidate:?} and {file_candidate:?} do not exist"
                 ))
                 .with_loc(self.location.clone())),
             (false, true) => Ok(file_candidate),
@@ -112,7 +109,7 @@ impl Incl {
 
     fn load_home_library(&self) -> Result<PathBuf, Error> {
         let home = std::env::var("HOME")?;
-        let home_base = PathBuf::from(format!("{}/.jinko/libs/", home));
+        let home_base = PathBuf::from(format!("{home}/.jinko/libs/"));
 
         self.check_base(&home_base)
     }
@@ -150,7 +147,7 @@ impl Instruction for Incl {
         let mut base = format!("incl {}", path.to_str().unwrap());
 
         base = match &self.alias {
-            Some(alias) => format!("{} as {}", base, alias),
+            Some(alias) => format!("{base} as {alias}"),
             None => base,
         };
 

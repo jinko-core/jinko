@@ -32,14 +32,14 @@ fn string_concat(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let lhs = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
     let rhs = JkString::from_instance(&args[1].execute(ctx).unwrap()).0;
 
-    Some(JkString::from(format!("{}{}", lhs, rhs)).to_instance())
+    Some(JkString::from(format!("{lhs}{rhs}")).to_instance())
 }
 
 fn string_display(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let s = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
     let add_newline = JkBool::from_instance(&args[1].execute(ctx).unwrap()).0;
 
-    print!("{}", s);
+    print!("{s}");
 
     if add_newline {
         println!()
@@ -52,7 +52,7 @@ fn string_display_err(ctx: &mut Context, args: Args) -> Option<ObjectInstance> {
     let s = JkString::from_instance(&args[0].execute(ctx).unwrap()).0;
     let add_newline = JkBool::from_instance(&args[1].execute(ctx).unwrap()).0;
 
-    eprint!("{}", s);
+    eprint!("{s}");
 
     if add_newline {
         eprintln!()

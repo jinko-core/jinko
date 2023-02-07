@@ -97,8 +97,7 @@ impl TypeCheck for IfElse {
         if cond_ty != bool_checkedtype {
             return Err(Error::new(ErrKind::TypeChecker)
                 .with_msg(format!(
-                    "if condition should be a boolean, not a `{}`",
-                    cond_ty
+                    "if condition should be a boolean, not a `{cond_ty}`"
                 ))
                 .with_loc(self.condition.location().cloned()));
         }
@@ -116,8 +115,7 @@ impl TypeCheck for IfElse {
                 if if_ty != else_ty {
                     Err(Error::new(ErrKind::TypeChecker)
                         .with_msg(format!(
-                            "incompatible types for `if` and `else` block: {} and {}",
-                            if_ty, else_ty,
+                            "incompatible types for `if` and `else` block: {if_ty} and {else_ty}",
                         ))
                         .with_loc(self.location.clone()))
                 } else {
@@ -126,8 +124,7 @@ impl TypeCheck for IfElse {
             }
             (if_ty, None) => Err(Error::new(ErrKind::TypeChecker)
                 .with_msg(format!(
-                    "`if` block has a return type ({}) but no else block to match it",
-                    if_ty
+                    "`if` block has a return type ({if_ty}) but no else block to match it"
                 ))
                 .with_loc(self.location.clone())),
         }

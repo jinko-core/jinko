@@ -39,7 +39,7 @@ impl Default for CheckedType {
 impl Display for CheckedType {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
-            CheckedType::Resolved(ty) => write!(f, "{}", ty),
+            CheckedType::Resolved(ty) => write!(f, "{ty}"),
             CheckedType::Void => write!(f, "{}", "void".purple()),
             CheckedType::Error => write!(f, "{}", "!!unknown!!".red()),
             // This should never happen

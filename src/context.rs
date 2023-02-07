@@ -387,7 +387,7 @@ impl Context {
 impl<V: Instruction, F: Instruction, T: Instruction> Display for ScopeMap<V, Rc<F>, Rc<T>> {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         for stack in self.scopes() {
-            writeln!(f, "{}", stack)?;
+            writeln!(f, "{stack}")?;
         }
 
         Ok(())

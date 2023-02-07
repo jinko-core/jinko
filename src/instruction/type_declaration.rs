@@ -89,7 +89,7 @@ impl Instruction for TypeDec {
                 .fields
                 .iter()
                 .skip(1)
-                .fold(String::new(), |acc, field| format!("{}, {}", acc, field));
+                .fold(String::new(), |acc, field| format!("{acc}, {field}"));
             base.push_str(&arg_str);
             base.push(')');
         }

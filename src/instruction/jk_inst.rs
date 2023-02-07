@@ -37,7 +37,7 @@ impl JkInst {
             // FIXME: Fix location
             _ => {
                 return Err(Error::new(ErrKind::Parsing)
-                    .with_msg(format!("unknown ctx directive @{}", func_name)))
+                    .with_msg(format!("unknown ctx directive @{func_name}")))
             }
         };
 

@@ -214,7 +214,7 @@ impl Instruction for FunctionDec {
                 .args
                 .iter()
                 .skip(1)
-                .fold(String::new(), |acc, field| format!("{}, {}", acc, field));
+                .fold(String::new(), |acc, field| format!("{acc}, {field}"));
             base.push_str(&arg_str);
         }
         base.push(')');
@@ -226,7 +226,7 @@ impl Instruction for FunctionDec {
 
         match &self.block {
             Some(block) => format!("{} {}", base, block.print()),
-            None => format!("{} {{}}", base),
+            None => format!("{base} {{}}"),
         }
     }
 
