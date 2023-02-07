@@ -2,6 +2,7 @@
 //! the language, so that { a + b } gets recognized into LEFT_BRACKET ID ADD ID RIGHT_BRACKET
 //! and so on. This module consists of a lot of uninteresting helper/wrapper functions
 
+use ast::{FunctionKind, Operator};
 use nom::Err::Error as NomError;
 use nom::{
     branch::alt, bytes::complete::tag, bytes::complete::take_until, bytes::complete::take_while,
@@ -112,20 +113,20 @@ pub fn at_sign(input: ParseInput) -> ParseResult<ParseInput, char> {
     specific_char(input, '@')
 }
 
-pub fn func_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    specific_token(input, "func")
+pub fn func_tok(input: ParseInput) -> ParseResult<ParseInput, FunctionKind> {
+    specific_token(input, "func").map(|(input, _)| (input, FunctionKind::Func))
 }
 
-pub fn ext_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    specific_token(input, "ext")
+pub fn ext_tok(input: ParseInput) -> ParseResult<ParseInput, FunctionKind> {
+    specific_token(input, "ext").map(|(input, _)| (input, FunctionKind::Extern))
 }
 
-pub fn test_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    specific_token(input, "test")
+pub fn test_tok(input: ParseInput) -> ParseResult<ParseInput, FunctionKind> {
+    specific_token(input, "test").map(|(input, _)| (input, FunctionKind::Test))
 }
 
-pub fn mock_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    specific_token(input, "mock")
+pub fn mock_tok(input: ParseInput) -> ParseResult<ParseInput, FunctionKind> {
+    specific_token(input, "mock").map(|(input, _)| (input, FunctionKind::Mock))
 }
 
 pub fn loop_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
@@ -177,57 +178,58 @@ pub fn backslash(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
     token(input, "\\")
 }
 
-pub fn add(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "+")
+pub fn add(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, "+").map(|(input, _)| (input, Operator::Add))
 }
 
-pub fn sub(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "-")
+pub fn sub(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, "-").map(|(input, _)| (input, Operator::Sub))
 }
 
-pub fn mul(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "*")
+pub fn mul(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, "*").map(|(input, _)| (input, Operator::Mul))
 }
 
-pub fn div(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "/")
+pub fn div(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, "/").map(|(input, _)| (input, Operator::Div))
 }
 
-pub fn left_parenthesis(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "(")
+pub fn left_parenthesis(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, "(").map(|(input, _)| (input, Operator::LeftParenthesis))
 }
 
-pub fn right_parenthesis(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, ")")
+pub fn right_parenthesis(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, ")").map(|(input, _)| (input, Operator::RightParenthesis))
 }
 
-pub fn lt(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "<")
+pub fn lt(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, "<").map(|(input, _)| (input, Operator::Lt))
 }
 
-pub fn gt(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, ">")
+pub fn gt(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, ">").map(|(input, _)| (input, Operator::Gt))
 }
 
-pub fn lt_eq(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "<=")
+pub fn lt_eq(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, "<=").map(|(input, _)| (input, Operator::LtEq))
 }
 
-pub fn gt_eq(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, ">=")
+pub fn gt_eq(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, ">=").map(|(input, _)| (input, Operator::GtEq))
 }
 
-pub fn equals(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "==")
+pub fn equals(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, "==").map(|(input, _)| (input, Operator::Equals))
 }
 
-pub fn not_equals(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "!=")
+pub fn not_equals(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+    token(input, "!=").map(|(input, _)| (input, Operator::NotEquals))
 }
 
-pub fn _left_shift(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    token(input, "<<")
-}
+// TODO: Add left and right shift
+// pub fn _left_shift(input: ParseInput) -> ParseResult<ParseInput, Operator> {
+//     token(input, "<<").map(|(input, _)| (input, Operator::LeftShift))
+// }
 
 pub fn true_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
     let (input, t) = specific_token(input, "true")?;
