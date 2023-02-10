@@ -100,6 +100,9 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 mod checks;
+mod iter;
+
+pub use iter::{IterError, Mapper, MultiMapper, Visitor};
 
 /// A reference to another [`Node`] in the [`Fir`]. These references can be either resolved or unresolved, based
 /// on the state of the [`Fir`].
@@ -139,7 +142,7 @@ trait WithHashMap<K: Hash + Eq, V> {
     fn with(self, key: K, value: V) -> Self;
 }
 
-impl<K: Hash + Eq + Debug, V: Debug> WithHashMap<K, V> for HashMap<K, V> {
+impl<K: Hash + Eq + Debug, V> WithHashMap<K, V> for HashMap<K, V> {
     fn with(mut self, key: K, value: V) -> HashMap<K, V> {
         if self.insert(key, value).is_some() {
             unreachable!("re-using already insert OriginIdx");
@@ -212,7 +215,7 @@ pub enum Kind {
 }
 
 #[derive(Debug, Clone)]
-pub struct Node<T: Debug = ()> {
+pub struct Node<T = ()> {
     pub data: T,
     pub origin: OriginIdx,
     pub kind: Kind,
@@ -220,11 +223,11 @@ pub struct Node<T: Debug = ()> {
 
 /// An instance of [`Fir`] is similar to a graph, containing [`Node`]s and relationships binding them together.
 #[derive(Default, Debug)]
-pub struct Fir<T: Debug = ()> {
+pub struct Fir<T = ()> {
     pub nodes: HashMap<OriginIdx, Node<T>>,
 }
 
-impl<T: Debug> Fir<T> {
+impl<T> Fir<T> {
     /// Append a new node to the [`Fir`]
     pub fn append(self, node: Node<T>) -> Fir<T> {
         Fir {
@@ -268,363 +271,5 @@ pub trait Pass<T: Debug, U: Debug, E> {
 
             fir
         })
-    }
-}
-
-// FIXME: Documentation
-pub trait VisitError: Sized {
-    // FIXME: Documentation
-    fn simple() -> Self;
-
-    // FIXME: Documentation
-    fn aggregate(errs: Vec<Self>) -> Self;
-}
-
-/// All of the helpers and visitors call back into [`visit_node`]
-pub trait Visitor<T: Debug, E: VisitError> {
-    fn visit_constant(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _constant: &RefIdx,
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_type_reference(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _reference: &RefIdx,
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_typed_value(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _value: &RefIdx,
-        _ty: &RefIdx,
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_generic(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _default: &Option<RefIdx>,
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_type(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _generics: &[RefIdx],
-        _fields: &[RefIdx],
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_function(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _generics: &[RefIdx],
-        _args: &[RefIdx],
-        _return_ty: &Option<RefIdx>,
-        _block: &Option<RefIdx>,
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_instantiation(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _to: &RefIdx,
-        _generics: &[RefIdx],
-        _fields: &[RefIdx],
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_call(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _to: &RefIdx,
-        _generics: &[RefIdx],
-        _args: &[RefIdx],
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_statements(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _stmts: &[RefIdx],
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_return(
-        &mut self,
-        _fir: &Fir<T>,
-        _node: &Node<T>,
-        _expr: &Option<RefIdx>,
-    ) -> Fallible<E> {
-        Ok(())
-    }
-
-    fn visit_node(&mut self, fir: &Fir<T>, node: &Node<T>) -> Fallible<E> {
-        match &node.kind {
-            Kind::Constant(c) => self.visit_constant(fir, node, c),
-            Kind::TypeReference(r) => self.visit_type_reference(fir, node, r),
-            Kind::TypedValue { value, ty } => self.visit_typed_value(fir, node, value, ty),
-            Kind::Generic { default } => self.visit_generic(fir, node, default),
-            Kind::Type { generics, fields } => self.visit_type(fir, node, generics, fields),
-            Kind::Function {
-                generics,
-                args,
-                return_type,
-                block,
-            } => self.visit_function(fir, node, generics, args, return_type, block),
-            Kind::Instantiation {
-                to,
-                generics,
-                fields,
-            } => self.visit_instantiation(fir, node, to, generics, fields),
-            Kind::Call { to, generics, args } => self.visit_call(fir, node, to, generics, args),
-            Kind::Statements(stmts) => self.visit_statements(fir, node, stmts),
-            Kind::Return(expr) => self.visit_return(fir, node, expr),
-        }
-    }
-
-    fn visit(&mut self, fir: &Fir<T>) -> Fallible<E> {
-        let errs = fir
-            .nodes
-            .values()
-            .fold(Vec::new(), |mut errs: Vec<E>, node| {
-                match self.visit_node(fir, node) {
-                    Ok(_) => errs,
-                    Err(e) => {
-                        errs.push(e);
-                        errs
-                    }
-                }
-            });
-
-        if errs.is_empty() {
-            Ok(())
-        } else {
-            Err(E::aggregate(errs))
-        }
-    }
-}
-
-// TODO: Probably the last Fir trait we need is a `MultiMapper` trait which returns `Result<Vec<Node<U>>, E>`s
-pub trait Mapper<T: Debug, U: Debug + Default, E: VisitError> {
-    fn map_constant(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        constant: RefIdx,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::Constant(constant),
-        })
-    }
-
-    fn map_type_reference(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        reference: RefIdx,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::TypeReference(reference),
-        })
-    }
-
-    fn map_typed_value(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        value: RefIdx,
-        ty: RefIdx,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::TypedValue { value, ty },
-        })
-    }
-
-    fn map_generic(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        default: Option<RefIdx>,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::Generic { default },
-        })
-    }
-
-    fn map_type(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        generics: Vec<RefIdx>,
-        fields: Vec<RefIdx>,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::Type { generics, fields },
-        })
-    }
-
-    fn map_function(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        generics: Vec<RefIdx>,
-        args: Vec<RefIdx>,
-        return_type: Option<RefIdx>,
-        block: Option<RefIdx>,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::Function {
-                generics,
-                args,
-                return_type,
-                block,
-            },
-        })
-    }
-
-    fn map_instantiation(
-        &mut self,
-
-        _data: T,
-        origin: OriginIdx,
-        to: RefIdx,
-        generics: Vec<RefIdx>,
-        fields: Vec<RefIdx>,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::Instantiation {
-                to,
-                generics,
-                fields,
-            },
-        })
-    }
-
-    fn map_call(
-        &mut self,
-
-        _data: T,
-        origin: OriginIdx,
-        to: RefIdx,
-        generics: Vec<RefIdx>,
-        args: Vec<RefIdx>,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::Call { to, generics, args },
-        })
-    }
-
-    fn map_statements(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        stmts: Vec<RefIdx>,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::Statements(stmts),
-        })
-    }
-
-    fn map_return(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        expr: Option<RefIdx>,
-    ) -> Result<Node<U>, E> {
-        Ok(Node {
-            data: U::default(),
-            origin,
-            kind: Kind::Return(expr),
-        })
-    }
-
-    fn map_node(&mut self, node: Node<T>) -> Result<Node<U>, E> {
-        match node.kind {
-            Kind::Constant(c) => self.map_constant(node.data, node.origin, c),
-            Kind::TypeReference(r) => self.map_type_reference(node.data, node.origin, r),
-            Kind::TypedValue { value, ty } => {
-                self.map_typed_value(node.data, node.origin, value, ty)
-            }
-            Kind::Generic { default } => self.map_generic(node.data, node.origin, default),
-            Kind::Type { generics, fields } => {
-                self.map_type(node.data, node.origin, generics, fields)
-            }
-            Kind::Function {
-                generics,
-                args,
-                return_type,
-                block,
-            } => self.map_function(node.data, node.origin, generics, args, return_type, block),
-            Kind::Instantiation {
-                to,
-                generics,
-                fields,
-            } => self.map_instantiation(node.data, node.origin, to, generics, fields),
-            Kind::Call { to, generics, args } => {
-                self.map_call(node.data, node.origin, to, generics, args)
-            }
-            Kind::Statements(stmts) => self.map_statements(node.data, node.origin, stmts),
-            Kind::Return(expr) => self.map_return(node.data, node.origin, expr),
-        }
-    }
-
-    fn map(&mut self, fir: Fir<T>) -> Result<Fir<U>, E> {
-        let (fir, errs) = fir.nodes.into_values().fold(
-            (Fir::default(), Vec::new()),
-            |(new_fir, mut errs), node| match self.map_node(node) {
-                Ok(node) => (new_fir.append(node), errs),
-                Err(e) => {
-                    errs.push(e);
-                    (new_fir, errs)
-                }
-            },
-        );
-
-        if errs.is_empty() {
-            Ok(fir)
-        } else {
-            Err(E::aggregate(errs))
-        }
     }
 }
