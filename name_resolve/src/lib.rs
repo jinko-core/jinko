@@ -166,6 +166,8 @@ struct NameResolveCtx {
 /// Extension type of [`Error`] to be able to implement [`VisitError`].
 struct DefError(Error);
 
+struct Declarator<'ctx>(&'ctx mut NameResolveCtx);
+
 impl VisitError for DefError {
     fn simple() -> Self {
         DefError(Error::new(ErrKind::NameResolution))
@@ -178,7 +180,7 @@ impl VisitError for DefError {
     }
 }
 
-impl Visitor<FlattenData, DefError> for NameResolveCtx {
+impl<'ctx> Visitor<FlattenData, DefError> for Declarator<'ctx> {
     fn visit_function(
         &mut self,
         fir: &Fir<FlattenData>,
@@ -188,7 +190,8 @@ impl Visitor<FlattenData, DefError> for NameResolveCtx {
         _return_ty: &Option<RefIdx>,
         _block: &Option<RefIdx>,
     ) -> Fallible<DefError> {
-        self.mappings
+        self.0
+            .mappings
             .add_function(
                 node.data.symbol.as_ref().unwrap().clone(),
                 node.data.scope,
@@ -204,7 +207,8 @@ impl Visitor<FlattenData, DefError> for NameResolveCtx {
         _: &[RefIdx],
         _: &[RefIdx],
     ) -> Fallible<DefError> {
-        self.mappings
+        self.0
+            .mappings
             .add_type(
                 node.data.symbol.as_ref().unwrap().clone(),
                 node.data.scope,
@@ -214,80 +218,14 @@ impl Visitor<FlattenData, DefError> for NameResolveCtx {
     }
 }
 
+struct Resolver<'ctx>(&'ctx mut NameResolveCtx);
+
+impl<'ctx> Visitor<FlattenData, DefError> for Resolver<'ctx> {}
+
 impl NameResolveCtx {
     fn insert_definitions(&mut self, fir: &Fir<FlattenData>) -> Fallible<DefError> {
-        let errs = fir.nodes.values().fold(Vec::new(), |errs, value| {
-            match self.visit_node(fir, value) {
-                Ok(_) => errs,
-                Err(e) => errs.with(e),
-            }
-        });
-
-        if errs.is_empty() {
-            Ok(())
-        } else {
-            Err(DefError::aggregate(errs))
-        }
+        Declarator(self).visit(fir)
     }
-
-    // // FIXME: Should be in fir?
-    // fn visit_ref(&mut self, fir: &Fir<FlattenData>, idx: RefIdx) -> Result<(), Error> {
-    //     match idx {
-    //         RefIdx::Resolved(origin) => self.insert_node(fir, &fir.nodes[&origin]),
-    //         RefIdx::Unresolved => Err(Error::new(ErrKind::NameResolution)),
-    //     }
-    // }
-
-    // // FIXME: Should be in fir?
-    // fn visit_opt(
-    //     &mut self,
-    //     fir: &Fir<FlattenData>,
-    //     idx: Option<RefIdx>,
-    // ) -> Result<Option<()>, Error> {
-    //     match idx {
-    //         Some(idx) => self.visit_ref(fir, idx).map(Some),
-    //         None => Ok(None),
-    //     }
-    // }
-
-    // FIXME: Should be in fir? Within a visitor or equivalent?
-    // fn insert_node(
-    //     &mut self,
-    //     fir: &Fir<FlattenData>,
-    //     node: &Node<FlattenData>,
-    // ) -> Result<(), Error> {
-    //     match &node.kind {
-    //         // Kind::Function { block, args, .. } => {}
-    //         Kind::Type { .. } => self
-    //             .mappings
-    //             .add_type(node.data.symbol.as_ref().unwrap().clone(), node.origin)
-    //             .map_err(|ue| unique_error_to_def_error(fir, &node.data.location, ue)),
-    //         // FIXME: Is that valid? for both branches? How do we handle declaration vs usage?
-    //         Kind::TypedValue { .. } | Kind::Instantiation { .. } => self
-    //             .mappings
-    //             .add_variable(node.data.symbol.as_ref().unwrap().clone(), node.origin)
-    //             .map_err(|ue| unique_error_to_def_error(fir, &node.data.location, ue)),
-    //         _ => Ok(()),
-    //     }
-    // }
-
-    // FIXME: Is that really a result?
-    // fn insert_nodes(&mut self, fir: &Fir<FlattenData>) -> Result<(), Error> {
-    //     let errs = fir.nodes.iter().fold(Vec::new(), |errs, (_, node)| {
-    //         let res = self.insert_node(fir, node);
-
-    //         match res {
-    //             Ok(_) => errs,
-    //             Err(e) => errs.with(e),
-    //         }
-    //     });
-
-    //     if errs.is_empty() {
-    //         Ok(())
-    //     } else {
-    //         Err(Error::new(ErrKind::Multiple(errs)))
-    //     }
-    // }
 
     // FIXME: Should this return the Kind directly?
     fn resolve_node(&self, sym: &Symbol, scope: usize, kind: &Kind) -> RefIdx {
