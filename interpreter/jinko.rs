@@ -9,8 +9,7 @@ use colored::Colorize;
 use flatten::FlattenAst;
 use include_code::IncludeCode;
 use loop_desugar::DesugarLoops;
-// FIXME: Use
-// use name_resolve::NameResolve;
+use name_resolve::NameResolve;
 
 use jinko::context::Context;
 use jinko::error::{ErrKind, Error};
@@ -99,9 +98,9 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
 
 fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     macro_rules! x_try {
-        ($r:expr) => {
-            match $r {
-                Ok(value) => value,
+        ($res:expr) => {
+            match $res {
+                Ok(inner) => inner,
                 Err(e) => {
                     e.emit();
                     return Err(Error::new(ErrKind::Context));
@@ -118,7 +117,8 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     let ast = x_try!(ast.resolve_includes());
     let ast = x_try!(ast_sanitizer::no_incl(ast));
 
-    let _fir = ast.flatten(); // .name_resolve();
+    let fir = ast.flatten();
+    let fir = x_try!(fir.name_resolve());
 
     todo!("experimental pipeline is not complete")
 }
