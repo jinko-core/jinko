@@ -92,7 +92,6 @@ pub trait Mapper<T, U: Default, E: IterError> {
 
     fn map_instantiation(
         &mut self,
-
         _data: T,
         origin: OriginIdx,
         to: RefIdx,
@@ -112,7 +111,6 @@ pub trait Mapper<T, U: Default, E: IterError> {
 
     fn map_call(
         &mut self,
-
         _data: T,
         origin: OriginIdx,
         to: RefIdx,
