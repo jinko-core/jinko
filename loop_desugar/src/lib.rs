@@ -14,9 +14,9 @@
 //!
 //! ```text
 //! {
-//!     __#range = <range>;
+//!     where __#range = <range>;
 //!     while __#range.has_next() {
-//!         <iter> = __#range.next().unpack();
+//!         where <iter> = __#range.next().unpack();
 //!         <block>
 //!     }
 //! }
@@ -82,12 +82,12 @@ fn method(loc: &SpanTuple, instance: Box<Ast>, call: Call) -> Ast {
     }
 }
 
-fn var_assign<S: Into<Symbol>>(loc: &SpanTuple, to_assign: S, value: Box<Ast>) -> Ast {
+fn var_declare<S: Into<Symbol>>(loc: &SpanTuple, to_declare: S, value: Box<Ast>) -> Ast {
     Ast {
         location: loc.clone(),
-        node: Node::VarAssign {
+        node: Node::VarDeclaration {
             mutable: false,
-            to_assign: to_assign.into(),
+            to_declare: to_declare.into(),
             value,
         },
     }
@@ -139,11 +139,11 @@ fn handle_for_loop(loc: SpanTuple, iterator: Symbol, range: Box<Ast>, loop_block
         // __#range.next()
         let iter_next = method(loc, range, call("next", vec![]));
 
-        // <iterator> = __#range.next();
-        let assignment = var_assign(loc, iterator, Box::new(iter_next));
+        // where <iterator> = __#range.next();
+        let assignment = var_declare(loc, iterator, Box::new(iter_next));
 
         // {
-        //     <iterator> = __#range.next();
+        //     where <iterator> = __#range.next();
         //     <stmts>
         // }
         let mut new_stmts = vec![assignment];
@@ -156,8 +156,8 @@ fn handle_for_loop(loc: SpanTuple, iterator: Symbol, range: Box<Ast>, loop_block
         }
     }
 
-    // __#range = <range>;
-    let range_create = var_assign(&loc, range_var, range);
+    // where __#range = <range>;
+    let range_create = var_declare(&loc, range_var, range);
 
     // __#range
     let new_range = var(&loc, range_var);
