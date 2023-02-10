@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use error::{ErrKind, Error};
-use fir::{Fallible, Fir, Kind, Node, OriginIdx, Pass, RefIdx, VisitError, Visitor};
+use fir::{Fallible, Fir, IterError, Kind, Node, OriginIdx, Pass, RefIdx, Visitor};
 use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
@@ -163,12 +163,12 @@ struct NameResolveCtx {
     mappings: ScopeMap,
 }
 
-/// Extension type of [`Error`] to be able to implement [`VisitError`].
+/// Extension type of [`Error`] to be able to implement [`IterError`].
 struct DefError(Error);
 
 struct Declarator<'ctx>(&'ctx mut NameResolveCtx);
 
-impl VisitError for DefError {
+impl IterError for DefError {
     fn simple() -> Self {
         DefError(Error::new(ErrKind::NameResolution))
     }
