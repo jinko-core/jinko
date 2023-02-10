@@ -262,8 +262,8 @@ fn unit(input: ParseInput) -> ParseResult<ParseInput, Ast> {
         unit_incl(input, start_loc.into())
     } else if let Ok((input, _)) = tokens::type_tok(input) {
         unit_type_decl(input, start_loc.into())
-    } else if let Ok((input, _)) = tokens::mut_tok(input) {
-        unit_mut_var(input)
+    } else if let Ok((input, _)) = tokens::where_tok(input) {
+        unit_var_decl(input)
     } else if let Ok((input, _)) = tokens::at_sign(input) {
         unit_jk_inst(input, start_loc.into())
     } else if let Ok((input, _)) = tokens::ext_tok(input) {
@@ -513,16 +513,20 @@ fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseIn
     ))
 }
 
-/// spaced_identifier '=' expr
-fn unit_mut_var(input: ParseInput) -> ParseResult<ParseInput, Ast> {
+/// mut? [`spaced_identifier`] '=' expr
+fn unit_var_decl(input: ParseInput) -> ParseResult<ParseInput, Ast> {
+    let input = next(input);
+    let (input, mutable) = opt(tokens::mut_tok)(input)?;
+    let mutable = mutable.is_some();
+
     let (input, (symbol, start_loc)) = spaced_identifier(input)?;
     let (input, _) = tokens::equal(input)?;
     let (input, value) = expr(input)?;
     let (input, end_loc) = position(input)?;
 
-    let assignment = Node::VarAssign {
-        mutable: true,
-        to_assign: Symbol::from(symbol),
+    let assignment = Node::VarDeclaration {
+        mutable,
+        to_declare: Symbol::from(symbol),
         value: Box::new(value),
     };
 
@@ -776,7 +780,6 @@ fn func_type_or_var(
         let (input, value) = expr(input)?;
         let (input, end_loc) = position(input)?;
         let var_assign = Node::VarAssign {
-            mutable: false,
             to_assign: Symbol::from(id),
             value: Box::new(value),
         };
@@ -824,7 +827,6 @@ fn func_or_type_inst_args(
             Ast {
                 location: pos_to_loc(input, first_attr_start_loc, first_attr_end_loc),
                 node: Node::VarAssign {
-                    mutable: false,
                     to_assign: Symbol::from(first_attr),
                     value: Box::new(first_attr_val),
                 },
@@ -957,7 +959,6 @@ fn type_inst_arg(input: ParseInput) -> ParseResult<ParseInput, Ast> {
 
     let location = pos_to_loc(input, start_loc, end_loc);
     let node = Node::VarAssign {
-        mutable: false,
         to_assign: Symbol::from(id),
         value: Box::new(value),
     };
@@ -2173,5 +2174,26 @@ mod tests {
         let input = span!("\"Rust Transmute \\a Task Force\"");
 
         assert!(string_constant(input).is_err());
+    }
+
+    #[test]
+    fn immutable_declaration() {
+        let input = span!("where x = 14");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn mutable_declaration() {
+        let input = span!("where mut x = 14");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn mutable_declaration_complex() {
+        let input = span!("where mut x = if value { 14 } else { 15 }");
+
+        assert!(expr(input).is_ok());
     }
 }
