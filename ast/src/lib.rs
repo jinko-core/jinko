@@ -150,9 +150,12 @@ pub enum Node {
         if_block: Box<Ast>,
         else_block: Option<Box<Ast>>,
     },
-    VarAssign {
+    VarDeclaration {
         mutable: bool,
-        // FIXME: Should this be a Box<Ast>?
+        to_declare: Symbol,
+        value: Box<Ast>,
+    },
+    VarAssign {
         to_assign: Symbol,
         value: Box<Ast>,
     },
@@ -366,10 +369,28 @@ pub trait Visitor {
         })
     }
 
-    fn visit_var_assign(
+    fn visit_var_declaration(
         &mut self,
         location: SpanTuple,
         mutable: bool,
+        to_declare: Symbol,
+        value: Box<Ast>,
+    ) -> Result<Ast, Error> {
+        let value = self.boxed(value)?;
+
+        Ok(Ast {
+            location,
+            node: Node::VarDeclaration {
+                mutable,
+                to_declare,
+                value,
+            },
+        })
+    }
+
+    fn visit_var_assign(
+        &mut self,
+        location: SpanTuple,
         to_assign: Symbol,
         value: Box<Ast>,
     ) -> Result<Ast, Error> {
@@ -377,11 +398,7 @@ pub trait Visitor {
 
         Ok(Ast {
             location,
-            node: Node::VarAssign {
-                mutable,
-                to_assign,
-                value,
-            },
+            node: Node::VarAssign { to_assign, value },
         })
     }
 
@@ -456,11 +473,14 @@ pub trait Visitor {
                 if_block,
                 else_block,
             } => self.visit_if_else(ast.location, if_condition, if_block, else_block),
-            Node::VarAssign {
+            Node::VarDeclaration {
                 mutable,
-                to_assign,
+                to_declare,
                 value,
-            } => self.visit_var_assign(ast.location, mutable, to_assign, value),
+            } => self.visit_var_declaration(ast.location, mutable, to_declare, value),
+            Node::VarAssign { to_assign, value } => {
+                self.visit_var_assign(ast.location, to_assign, value)
+            }
             Node::Var(name) => self.visit_var(ast.location, name),
             Node::VarOrEmptyType(name) => self.visit_var_or_empty_type(ast.location, name),
             Node::Loop(kind, block) => self.visit_loop(ast.location, kind, block),
@@ -503,10 +523,10 @@ pub trait Visitor {
             },
         );
 
-        if !errs.is_empty() {
-            Err(Error::new(ErrKind::Multiple(errs)))
-        } else {
+        if errs.is_empty() {
             Ok(values)
+        } else {
+            Err(Error::new(ErrKind::Multiple(errs)))
         }
     }
 }
