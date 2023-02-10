@@ -603,15 +603,38 @@ impl Ctx {
         self.append(data, kind)
     }
 
-    fn visit_var_assign(
+    fn visit_var_declaration(
         self,
         location: &SpanTuple,
         _mutable: &bool,
+        to_declare: &Symbol,
+        value: &Ast,
+    ) -> (Ctx, RefIdx) {
+        let (ctx, to) = self.visit_var(location, to_declare);
+        let (ctx, _from) = ctx.visit(value);
+
+        let data = FlattenData {
+            symbol: None,
+            location: Some(location.clone()),
+            scope: ctx.scope,
+        };
+
+        // FIXME: Need Declaratoin
+        let kind = Kind::Instantiation {
+            to,
+            generics: vec![],
+            fields: vec![],
+        };
+
+        ctx.append(data, kind)
+    }
+
+    fn visit_var_assign(
+        self,
+        location: &SpanTuple,
         to_assign: &Symbol,
         value: &Ast,
     ) -> (Ctx, RefIdx) {
-        // FIXME: How do we deal with the `mutable` field? We need to keep it somewhere, right?
-
         let (ctx, to) = self.visit_var(location, to_assign);
         let (ctx, from) = ctx.visit(value);
 
@@ -694,11 +717,12 @@ impl Ctx {
                 if_block,
                 else_block,
             } => self.visit_if_else(loc, if_condition, if_block, else_block),
-            AstNode::VarAssign {
+            AstNode::VarDeclaration {
                 mutable,
-                to_assign,
+                to_declare,
                 value,
-            } => self.visit_var_assign(loc, mutable, to_assign, value),
+            } => self.visit_var_declaration(loc, mutable, to_declare, value),
+            AstNode::VarAssign { to_assign, value } => self.visit_var_assign(loc, to_assign, value),
             AstNode::Var(sym) => self.visit_var(loc, sym),
             AstNode::VarOrEmptyType(sym) => self.visit_var_or_empty_type(loc, sym),
             AstNode::Loop(kind, block) => self.visit_loop(loc, kind, block),
