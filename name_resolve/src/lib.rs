@@ -1,7 +1,8 @@
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use error::{ErrKind, Error};
-use fir::{Fallible, Fir, IterError, Kind, Node, OriginIdx, Pass, RefIdx, Visitor};
+use fir::{Fallible, Fir, IterError, Kind, Mapper, Node, OriginIdx, Pass, RefIdx, Visitor};
 use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
@@ -136,27 +137,6 @@ impl ScopeMap {
     }
 }
 
-// Compose a [`UniqueError`] into a proper [`Error`] of kind [`ErrKind::NameResolution`]
-fn unique_error_to_def_error(
-    fir: &Fir<FlattenData>,
-    offending_loc: &Option<SpanTuple>,
-    UniqueError(origin, kind_str): UniqueError,
-) -> DefError {
-    let existing = &fir.nodes[&origin];
-    let sym = existing.data.symbol.as_ref().unwrap();
-
-    DefError(
-        Error::new(ErrKind::NameResolution)
-            .with_msg(format!("{kind_str} `{sym}` already defined in this scope"))
-            .with_loc(offending_loc.clone())
-            .with_hint(
-                Error::hint()
-                    .with_msg(format!("`{sym}` is also defined here"))
-                    .with_loc(existing.data.location.clone()),
-            ),
-    )
-}
-
 #[derive(Default)]
 struct NameResolveCtx {
     current: OriginIdx,
@@ -164,126 +144,61 @@ struct NameResolveCtx {
 }
 
 /// Extension type of [`Error`] to be able to implement [`IterError`].
-struct DefError(Error);
+struct NameResolutionError(Error);
 
-struct Declarator<'ctx>(&'ctx mut NameResolveCtx);
-
-impl IterError for DefError {
-    fn simple() -> Self {
-        DefError(Error::new(ErrKind::NameResolution))
-    }
-
-    fn aggregate(errs: Vec<Self>) -> Self {
-        DefError(Error::new(ErrKind::Multiple(
-            errs.into_iter().map(|e| e.0).collect(),
-        )))
-    }
+enum UnresolvedKind {
+    Call,
+    Type,
+    Var,
 }
 
-impl<'ctx> Visitor<FlattenData, DefError> for Declarator<'ctx> {
-    fn visit_function(
-        &mut self,
-        fir: &Fir<FlattenData>,
-        node: &Node<FlattenData>,
-        _generics: &[RefIdx],
-        _args: &[RefIdx],
-        _return_ty: &Option<RefIdx>,
-        _block: &Option<RefIdx>,
-    ) -> Fallible<DefError> {
-        self.0
-            .mappings
-            .add_function(
-                node.data.symbol.as_ref().unwrap().clone(),
-                node.data.scope,
-                node.origin,
-            )
-            .map_err(|ue| unique_error_to_def_error(fir, &node.data.location, ue))
-    }
-
-    fn visit_type(
-        &mut self,
-        fir: &Fir<FlattenData>,
-        node: &Node<FlattenData>,
-        _: &[RefIdx],
-        _: &[RefIdx],
-    ) -> Fallible<DefError> {
-        self.0
-            .mappings
-            .add_type(
-                node.data.symbol.as_ref().unwrap().clone(),
-                node.data.scope,
-                node.origin,
-            )
-            .map_err(|ue| unique_error_to_def_error(fir, &node.data.location, ue))
-    }
-}
-
-struct Resolver<'ctx>(&'ctx mut NameResolveCtx);
-
-impl<'ctx> Visitor<FlattenData, DefError> for Resolver<'ctx> {}
-
-impl NameResolveCtx {
-    fn insert_definitions(&mut self, fir: &Fir<FlattenData>) -> Fallible<DefError> {
-        Declarator(self).visit(fir)
-    }
-
-    // FIXME: Should this return the Kind directly?
-    fn resolve_node(&self, sym: &Symbol, scope: usize, kind: &Kind) -> RefIdx {
-        match kind {
-            Kind::Call { .. } => self
-                .mappings
-                .get_function(sym, scope)
-                .map_or(RefIdx::Unresolved, |origin| RefIdx::Resolved(*origin)),
-            // FIXME: Is that the correct node?
-            Kind::TypeReference { .. } => self
-                .mappings
-                .get_type(sym, scope)
-                .map_or(RefIdx::Unresolved, |origin| RefIdx::Resolved(*origin)),
-            // FIXME: Is that the correct node?
-            Kind::TypedValue { .. } => self
-                .mappings
-                .get_variable(sym, scope)
-                .map_or(RefIdx::Unresolved, |origin| RefIdx::Resolved(*origin)),
-            _ => RefIdx::Unresolved,
+impl Display for UnresolvedKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            UnresolvedKind::Call => write!(f, "call"),
+            UnresolvedKind::Type => write!(f, "type"),
+            UnresolvedKind::Var => write!(f, "var"),
         }
     }
+}
 
-    fn resolve_nodes(&mut self, fir: Fir<FlattenData>) -> Fir<FlattenData> {
-        fir.nodes
-            .into_iter()
-            .fold(Fir::default(), |fir, (origin, node)| {
-                let kind = match node.kind {
-                    Kind::Call { .. } | Kind::TypeReference(_) => {
-                        let resolved = &node
-                            .data
-                            .symbol
-                            .as_ref()
-                            .map(|sym| self.resolve_node(sym, node.data.scope, &node.kind))
-                            .unwrap();
+impl NameResolutionError {
+    /// Compose a [`UniqueError`] into a proper [`Error`] of kind [`ErrKind::NameResolution`]
+    fn non_unique(
+        fir: &Fir<FlattenData>,
+        offending_loc: &Option<SpanTuple>,
+        UniqueError(origin, kind_str): UniqueError,
+    ) -> NameResolutionError {
+        let existing = &fir.nodes[&origin];
+        let sym = existing.data.symbol.as_ref().unwrap();
 
-                        match node.kind {
-                            Kind::Call { generics, args, .. } => Kind::Call {
-                                to: *resolved,
-                                generics,
-                                args,
-                            },
-                            // nothing to do for other types of nodes
-                            kind => kind,
-                        }
-                    }
-                    kind => kind,
-                };
-
-                fir.append(Node {
-                    data: node.data,
-                    origin,
-                    kind,
-                })
-            })
+        NameResolutionError(
+            Error::new(ErrKind::NameResolution)
+                .with_msg(format!("{kind_str} `{sym}` already defined in this scope"))
+                .with_loc(offending_loc.clone())
+                .with_hint(
+                    Error::hint()
+                        .with_msg(format!("`{sym}` is also defined here"))
+                        .with_loc(existing.data.location.clone()),
+                ),
+        )
     }
 
-    fn error(&self, kind_str: &str, location: &Option<SpanTuple>, err_sym: &Symbol) -> Error {
-        let hints = vec![].into_iter(); // FIXME: Remove
+    fn unresolved(
+        kind: UnresolvedKind,
+        _mappings: &ScopeMap,
+        sym: &Option<Symbol>,
+        location: &Option<SpanTuple>,
+    ) -> NameResolutionError {
+        let sym = sym.as_ref().unwrap();
+
+        // Extract possible values based on `kind` and `sym`
+
+        // let map = match kind {
+        //     UnresolvedKind::Call => todo!(),
+        //     UnresolvedKind::Type => todo!(),
+        //     UnresolvedKind::Var => todo!(),
+        // }
 
         // let hints = self.mappings.keys().filter_map(|key| {
         //     if distance::levenshtein(key.symbol_unchecked().access(), err_sym.access()) < 2 {
@@ -300,37 +215,209 @@ impl NameResolveCtx {
         //     }
         // });
 
-        let err = Error::new(ErrKind::NameResolution)
-            .with_loc(location.clone())
-            .with_msg(format!("unresolved {kind_str}: `{err_sym}`"));
+        NameResolutionError(
+            Error::new(ErrKind::NameResolution)
+                .with_msg(format!("unresolved {kind} to {sym}"))
+                .with_loc(location.clone()),
+        )
+    }
+}
 
-        hints.fold(err, |e, hint| e.with_hint(hint))
+impl IterError for NameResolutionError {
+    fn simple() -> Self {
+        NameResolutionError(Error::new(ErrKind::NameResolution))
     }
 
-    fn check_for_unresolved(&self, fir: &Fir<FlattenData>) -> Result<(), Error> {
-        let errs = fir
-            .nodes
-            .iter()
-            .fold(Vec::<Error>::new(), |errs, (_, node)| match &node.kind {
-                Kind::Call { to, .. } => {
-                    if *to == RefIdx::Unresolved {
-                        errs.with(self.error(
-                            "function call",
-                            &node.data.location,
-                            node.data.symbol.as_ref().unwrap(),
-                        ))
-                    } else {
-                        errs
-                    }
-                }
-                _ => errs,
-            });
+    fn aggregate(errs: Vec<Self>) -> Self {
+        NameResolutionError(Error::new(ErrKind::Multiple(
+            errs.into_iter().map(|e| e.0).collect(),
+        )))
+    }
+}
 
-        if errs.is_empty() {
-            Ok(())
-        } else {
-            Err(Error::new(ErrKind::Multiple(errs)))
+struct Declarator<'ctx>(&'ctx mut NameResolveCtx);
+
+impl<'ctx> Visitor<FlattenData, NameResolutionError> for Declarator<'ctx> {
+    fn visit_function(
+        &mut self,
+        fir: &Fir<FlattenData>,
+        node: &Node<FlattenData>,
+        _generics: &[RefIdx],
+        _args: &[RefIdx],
+        _return_ty: &Option<RefIdx>,
+        _block: &Option<RefIdx>,
+    ) -> Fallible<NameResolutionError> {
+        self.0
+            .mappings
+            .add_function(
+                node.data.symbol.as_ref().unwrap().clone(),
+                node.data.scope,
+                node.origin,
+            )
+            .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
+    }
+
+    fn visit_type(
+        &mut self,
+        fir: &Fir<FlattenData>,
+        node: &Node<FlattenData>,
+        _: &[RefIdx],
+        _: &[RefIdx],
+    ) -> Fallible<NameResolutionError> {
+        self.0
+            .mappings
+            .add_type(
+                node.data.symbol.as_ref().unwrap().clone(),
+                node.data.scope,
+                node.origin,
+            )
+            .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
+    }
+
+    fn visit_instantiation(
+        &mut self,
+        fir: &Fir<FlattenData>,
+        node: &Node<FlattenData>,
+        _to: &RefIdx,
+        _generics: &[RefIdx],
+        _fields: &[RefIdx],
+    ) -> Fallible<NameResolutionError> {
+        self.0
+            .mappings
+            .add_variable(
+                node.data.symbol.as_ref().unwrap().clone(),
+                node.data.scope,
+                node.origin,
+            )
+            .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
+    }
+}
+
+struct Resolver<'ctx>(&'ctx mut NameResolveCtx);
+
+impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'ctx> {
+    fn map_call(
+        &mut self,
+        data: FlattenData,
+        origin: OriginIdx,
+        _to: RefIdx,
+        generics: Vec<RefIdx>,
+        args: Vec<RefIdx>,
+    ) -> Result<Node<FlattenData>, NameResolutionError> {
+        // FIXME: Is it fine to unwrap here?
+        let definition = self
+            .0
+            .mappings
+            .get_function(data.symbol.as_ref().unwrap(), data.scope)
+            .map_or_else(
+                || {
+                    Err(NameResolutionError::unresolved(
+                        UnresolvedKind::Call,
+                        &self.0.mappings,
+                        &data.symbol,
+                        &data.location,
+                    ))
+                },
+                |def| Ok(*def),
+            )?;
+
+        Ok(Node {
+            data,
+            origin,
+            kind: Kind::Call {
+                to: RefIdx::Resolved(definition),
+                generics,
+                args,
+            },
+        })
+    }
+
+    fn map_typed_value(
+        &mut self,
+        data: FlattenData,
+        origin: OriginIdx,
+        value: RefIdx,
+        ty: RefIdx,
+    ) -> Result<Node<FlattenData>, NameResolutionError> {
+        // nothing to do if there's no symbol
+        if data.symbol.is_none() {
+            return Ok(Node {
+                data,
+                origin,
+                kind: Kind::TypedValue { value, ty },
+            });
         }
+
+        let definition = self
+            .0
+            .mappings
+            // Unwrapping is okay here but ugly
+            .get_variable(data.symbol.as_ref().unwrap(), data.scope)
+            .map_or_else(
+                || {
+                    Err(NameResolutionError::unresolved(
+                        UnresolvedKind::Var,
+                        &self.0.mappings,
+                        &data.symbol,
+                        &data.location,
+                    ))
+                },
+                |def| Ok(*def),
+            )?;
+
+        Ok(Node {
+            data,
+            origin,
+            kind: Kind::TypedValue {
+                value: RefIdx::Resolved(definition),
+                ty,
+            },
+        })
+    }
+
+    fn map_type_reference(
+        &mut self,
+        data: FlattenData,
+        origin: OriginIdx,
+        _reference: RefIdx,
+    ) -> Result<Node<FlattenData>, NameResolutionError> {
+        let definition = self
+            .0
+            .mappings
+            // Unwrapping is okay here but ugly
+            .get_type(data.symbol.as_ref().unwrap(), data.scope)
+            .map_or_else(
+                || {
+                    Err(NameResolutionError::unresolved(
+                        UnresolvedKind::Type,
+                        &self.0.mappings,
+                        &data.symbol,
+                        &data.location,
+                    ))
+                },
+                |def| Ok(*def),
+            )?;
+
+        Ok(Node {
+            data,
+            origin,
+            kind: Kind::TypeReference(RefIdx::Resolved(definition)),
+        })
+    }
+}
+
+impl NameResolveCtx {
+    fn insert_definitions(&mut self, fir: &Fir<FlattenData>) -> Fallible<NameResolutionError> {
+        Declarator(self).visit(fir)
+    }
+
+    fn resolve_nodes(
+        &mut self,
+        fir: Fir<FlattenData>,
+    ) -> Result<Fir<FlattenData>, NameResolutionError> {
+        let mut resolver = Resolver(self);
+
+        resolver.map(fir)
     }
 }
 
@@ -348,26 +435,21 @@ impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
 
     // This should return a result :<
     fn transform(&mut self, fir: Fir<FlattenData>) -> Result<Fir<FlattenData>, Error> {
-        // FIXME: Is that pipeline correct? seems weird and annoying
         let definition = self.insert_definitions(&fir);
+        let resolution = self.resolve_nodes(fir);
 
-        let fir = self.resolve_nodes(fir);
-
-        // TODO: can we do that in resolve_nodes?
-        let usage = self.check_for_unresolved(&fir);
-
-        match (definition, usage) {
-            (Ok(_), Ok(_)) => Ok(fir),
-            (Ok(_), Err(e)) => {
+        match (definition, resolution) {
+            (Ok(_), Ok(fir)) => Ok(fir),
+            (Ok(_), Err(NameResolutionError(e))) => {
                 e.emit();
                 Err(e)
             }
-            (Err(e), Ok(_)) => {
-                e.0.emit();
-                Err(e.0)
+            (Err(NameResolutionError(e)), Ok(_)) => {
+                e.emit();
+                Err(e)
             }
-            (Err(e1), Err(e2)) => {
-                let multi_err = Error::new(ErrKind::Multiple(vec![e1.0, e2]));
+            (Err(NameResolutionError(e1)), Err(NameResolutionError(e2))) => {
+                let multi_err = Error::new(ErrKind::Multiple(vec![e1, e2]));
                 multi_err.emit();
                 Err(multi_err)
             }
