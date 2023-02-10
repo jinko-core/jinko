@@ -17,7 +17,7 @@ use super::{ParseInput, ParseResult};
 /// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: &[&str] = &[
     "func", "test", "mock", "type", "ext", "for", "while", "loop", "mut", "true", "false", "incl",
-    "as", "return",
+    "as", "return", "where",
 ];
 
 /// Function used to recognize a specific character such as '[' or '>'. A function
@@ -172,6 +172,10 @@ pub fn incl_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
 // Parse the `as` token. Rename it so clippy does not complain
 pub fn az_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
     specific_token(input, "as")
+}
+
+pub fn where_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
+    specific_token(input, "where")
 }
 
 pub fn backslash(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
