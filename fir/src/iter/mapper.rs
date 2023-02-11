@@ -109,6 +109,34 @@ pub trait Mapper<T, U: Default, E: IterError> {
         })
     }
 
+    fn map_type_offset(
+        &mut self,
+        _data: T,
+        origin: OriginIdx,
+        instance: RefIdx,
+        field: RefIdx,
+    ) -> Result<Node<U>, E> {
+        Ok(Node {
+            data: U::default(),
+            origin,
+            kind: Kind::TypeOffset { instance, field },
+        })
+    }
+
+    fn map_assignment(
+        &mut self,
+        _data: T,
+        origin: OriginIdx,
+        to: RefIdx,
+        from: RefIdx,
+    ) -> Result<Node<U>, E> {
+        Ok(Node {
+            data: U::default(),
+            origin,
+            kind: Kind::Assignment { to, from },
+        })
+    }
+
     fn map_call(
         &mut self,
         _data: T,
@@ -134,6 +162,39 @@ pub trait Mapper<T, U: Default, E: IterError> {
             data: U::default(),
             origin,
             kind: Kind::Statements(stmts),
+        })
+    }
+
+    fn map_condition(
+        &mut self,
+        _data: T,
+        origin: OriginIdx,
+        condition: RefIdx,
+        true_block: RefIdx,
+        false_block: Option<RefIdx>,
+    ) -> Result<Node<U>, E> {
+        Ok(Node {
+            data: U::default(),
+            origin,
+            kind: Kind::Conditional {
+                condition,
+                true_block,
+                false_block,
+            },
+        })
+    }
+
+    fn map_loop(
+        &mut self,
+        _data: T,
+        origin: OriginIdx,
+        condition: RefIdx,
+        block: RefIdx,
+    ) -> Result<Node<U>, E> {
+        Ok(Node {
+            data: U::default(),
+            origin,
+            kind: Kind::Loop { condition, block },
         })
     }
 
@@ -172,10 +233,22 @@ pub trait Mapper<T, U: Default, E: IterError> {
                 generics,
                 fields,
             } => self.map_instantiation(node.data, node.origin, to, generics, fields),
+            Kind::TypeOffset { instance, field } => {
+                self.map_type_offset(node.data, node.origin, instance, field)
+            }
+            Kind::Assignment { to, from } => self.map_assignment(node.data, node.origin, to, from),
             Kind::Call { to, generics, args } => {
                 self.map_call(node.data, node.origin, to, generics, args)
             }
             Kind::Statements(stmts) => self.map_statements(node.data, node.origin, stmts),
+            Kind::Conditional {
+                condition,
+                true_block,
+                false_block,
+            } => self.map_condition(node.data, node.origin, condition, true_block, false_block),
+            Kind::Loop { condition, block } => {
+                self.map_loop(node.data, node.origin, condition, block)
+            }
             Kind::Return(expr) => self.map_return(node.data, node.origin, expr),
         }
     }
