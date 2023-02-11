@@ -217,7 +217,7 @@ impl NameResolutionError {
 
         NameResolutionError(
             Error::new(ErrKind::NameResolution)
-                .with_msg(format!("unresolved {kind} to {sym}"))
+                .with_msg(format!("unresolved {kind}: `{sym}`"))
                 .with_loc(location.clone()),
         )
     }
