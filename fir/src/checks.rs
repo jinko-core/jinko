@@ -99,6 +99,9 @@ impl<T: Debug> Fir<T> {
                     check!(@generics => Kind::Generic { .. }, node);
                     check!(@fields => Kind::TypedValue { .. }, node);
                 }
+                Kind::Binding { to: _ } => {
+                    // FIXME: Check `to` as well
+                }
                 Kind::Assignment { to, from: _ } => {
                     check!(to => Kind::TypedValue { .. }, node);
                     // FIXME: Check `from` as well

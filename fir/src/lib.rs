@@ -173,6 +173,11 @@ pub enum Kind {
         return_type: Option<RefIdx>, // to Kind::Type,
         block: Option<RefIdx>,       // to Kind::Statements
     },
+    /// A binding is immutable, however there can be multiple bindings. Assigning to a mutable
+    /// variable can be thought of a second binding.
+    Binding {
+        to: RefIdx, // to Kind::{TypedValue, Instantiation, any expr?},
+    },
     Assignment {
         to: RefIdx,   // to Kind::TypedValue
         from: RefIdx, // to FIXME: Can be anything?
