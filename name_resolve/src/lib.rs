@@ -146,18 +146,19 @@ struct NameResolveCtx {
 /// Extension type of [`Error`] to be able to implement [`IterError`].
 struct NameResolutionError(Error);
 
-enum UnresolvedKind {
+#[derive(Clone, Copy)]
+enum ResolveKind {
     Call,
     Type,
     Var,
 }
 
-impl Display for UnresolvedKind {
+impl Display for ResolveKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
-            UnresolvedKind::Call => write!(f, "call"),
-            UnresolvedKind::Type => write!(f, "type"),
-            UnresolvedKind::Var => write!(f, "var"),
+            ResolveKind::Call => write!(f, "call"),
+            ResolveKind::Type => write!(f, "type"),
+            ResolveKind::Var => write!(f, "var"),
         }
     }
 }
@@ -185,7 +186,7 @@ impl NameResolutionError {
     }
 
     fn unresolved(
-        kind: UnresolvedKind,
+        kind: ResolveKind,
         _mappings: &ScopeMap,
         sym: &Option<Symbol>,
         location: &Option<SpanTuple>,
@@ -293,75 +294,86 @@ impl<'ctx> Visitor<FlattenData, NameResolutionError> for Declarator<'ctx> {
 
 struct Resolver<'ctx>(&'ctx mut NameResolveCtx);
 
+impl<'ctx> Resolver<'ctx> {
+    fn get_definition(
+        &self,
+        kind: ResolveKind,
+        sym: &Option<Symbol>,
+        location: &Option<SpanTuple>,
+        scope: usize,
+    ) -> Result<OriginIdx, NameResolutionError> {
+        let symbol = sym
+            .as_ref()
+            .expect("attempting to get definition for non existent symbol - interpreter bug");
+
+        let mappings = &self.0.mappings;
+        let origin = match kind {
+            ResolveKind::Call => mappings.get_function(symbol, scope),
+            ResolveKind::Type => mappings.get_type(symbol, scope),
+            ResolveKind::Var => mappings.get_variable(symbol, scope),
+        };
+
+        origin.map_or_else(
+            || {
+                Err(NameResolutionError::unresolved(
+                    kind,
+                    &self.0.mappings,
+                    sym,
+                    location,
+                ))
+            },
+            |def| Ok(*def),
+        )
+    }
+}
+
 impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'ctx> {
     fn map_call(
         &mut self,
         data: FlattenData,
         origin: OriginIdx,
-        _to: RefIdx,
+        to: RefIdx,
         generics: Vec<RefIdx>,
         args: Vec<RefIdx>,
     ) -> Result<Node<FlattenData>, NameResolutionError> {
-        // FIXME: Is it fine to unwrap here?
-        let definition = self
-            .0
-            .mappings
-            .get_function(data.symbol.as_ref().unwrap(), data.scope)
-            .map_or_else(
-                || {
-                    Err(NameResolutionError::unresolved(
-                        UnresolvedKind::Call,
-                        &self.0.mappings,
-                        &data.symbol,
-                        &data.location,
-                    ))
-                },
-                |def| Ok(*def),
-            )?;
+        // if there's no symbol, we're probably mapping a call to a function returned by a function
+        // or similar, e.g `get_curried_fn(arg1)(arg2)`.
+        match &data.symbol {
+            None => Ok(Node {
+                data,
+                origin,
+                kind: Kind::Call { to, generics, args },
+            }),
+            Some(_) => {
+                let definition = self.get_definition(
+                    ResolveKind::Call,
+                    &data.symbol,
+                    &data.location,
+                    data.scope,
+                )?;
 
-        Ok(Node {
-            data,
-            origin,
-            kind: Kind::Call {
-                to: RefIdx::Resolved(definition),
-                generics,
-                args,
-            },
-        })
+                Ok(Node {
+                    data,
+                    origin,
+                    kind: Kind::Call {
+                        to: RefIdx::Resolved(definition),
+                        generics,
+                        args,
+                    },
+                })
+            }
+        }
     }
 
     fn map_typed_value(
         &mut self,
         data: FlattenData,
         origin: OriginIdx,
-        value: RefIdx,
+        _value: RefIdx,
         ty: RefIdx,
     ) -> Result<Node<FlattenData>, NameResolutionError> {
-        // nothing to do if there's no symbol
-        if data.symbol.is_none() {
-            return Ok(Node {
-                data,
-                origin,
-                kind: Kind::TypedValue { value, ty },
-            });
-        }
-
-        let definition = self
-            .0
-            .mappings
-            // Unwrapping is okay here but ugly
-            .get_variable(data.symbol.as_ref().unwrap(), data.scope)
-            .map_or_else(
-                || {
-                    Err(NameResolutionError::unresolved(
-                        UnresolvedKind::Var,
-                        &self.0.mappings,
-                        &data.symbol,
-                        &data.location,
-                    ))
-                },
-                |def| Ok(*def),
-            )?;
+        let definition =
+            self.get_definition(ResolveKind::Var, &data.symbol, &data.location, data.scope)?;
 
         Ok(Node {
             data,
@@ -379,22 +391,8 @@ impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'c
         origin: OriginIdx,
         _reference: RefIdx,
     ) -> Result<Node<FlattenData>, NameResolutionError> {
-        let definition = self
-            .0
-            .mappings
-            // Unwrapping is okay here but ugly
-            .get_type(data.symbol.as_ref().unwrap(), data.scope)
-            .map_or_else(
-                || {
-                    Err(NameResolutionError::unresolved(
-                        UnresolvedKind::Type,
-                        &self.0.mappings,
-                        &data.symbol,
-                        &data.location,
-                    ))
-                },
-                |def| Ok(*def),
-            )?;
+        let definition =
+            self.get_definition(ResolveKind::Type, &data.symbol, &data.location, data.scope)?;
 
         Ok(Node {
             data,
