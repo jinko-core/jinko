@@ -1,25 +1,16 @@
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use error::{ErrKind, Error};
-use fir::{Fallible, Fir, IterError, Kind, Mapper, Node, OriginIdx, Pass, RefIdx, Visitor};
+use fir::{Fallible, Fir, IterError, Mapper, OriginIdx, Pass, Visitor};
 use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
 
-// FIXME: Move into utils crate?
-#[doc(hidden)]
-trait VecExt<T> {
-    fn with(self, elt: T) -> Self;
-}
+mod declarator;
+mod resolver;
 
-impl<T> VecExt<T> for Vec<T> {
-    fn with(mut self, elt: T) -> Vec<T> {
-        self.push(elt);
-
-        self
-    }
-}
+use declarator::Declarator;
+use resolver::{ResolveKind, Resolver};
 
 /// Error reported when an item (variable, function, type) was already declared
 /// in the current scope.
@@ -102,7 +93,6 @@ impl ScopeMap {
         self.get(name, scope, |scope| &scope.types)
     }
 
-    // FIXME: These are good but we need a way to return the OriginIdx to then emit the proper location and name
     /// Add a variable to the current scope if it hasn't been added before
     fn add_variable(
         &mut self,
@@ -139,29 +129,11 @@ impl ScopeMap {
 
 #[derive(Default)]
 struct NameResolveCtx {
-    current: OriginIdx,
     mappings: ScopeMap,
 }
 
 /// Extension type of [`Error`] to be able to implement [`IterError`].
 struct NameResolutionError(Error);
-
-#[derive(Clone, Copy)]
-enum ResolveKind {
-    Call,
-    Type,
-    Var,
-}
-
-impl Display for ResolveKind {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        match self {
-            ResolveKind::Call => write!(f, "call"),
-            ResolveKind::Type => write!(f, "type"),
-            ResolveKind::Var => write!(f, "var"),
-        }
-    }
-}
 
 impl NameResolutionError {
     /// Compose a [`UniqueError`] into a proper [`Error`] of kind [`ErrKind::NameResolution`]
@@ -236,172 +208,6 @@ impl IterError for NameResolutionError {
     }
 }
 
-struct Declarator<'ctx>(&'ctx mut NameResolveCtx);
-
-impl<'ctx> Visitor<FlattenData, NameResolutionError> for Declarator<'ctx> {
-    fn visit_function(
-        &mut self,
-        fir: &Fir<FlattenData>,
-        node: &Node<FlattenData>,
-        _generics: &[RefIdx],
-        _args: &[RefIdx],
-        _return_ty: &Option<RefIdx>,
-        _block: &Option<RefIdx>,
-    ) -> Fallible<NameResolutionError> {
-        self.0
-            .mappings
-            .add_function(
-                node.data.symbol.as_ref().unwrap().clone(),
-                node.data.scope,
-                node.origin,
-            )
-            .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
-    }
-
-    fn visit_type(
-        &mut self,
-        fir: &Fir<FlattenData>,
-        node: &Node<FlattenData>,
-        _: &[RefIdx],
-        _: &[RefIdx],
-    ) -> Fallible<NameResolutionError> {
-        self.0
-            .mappings
-            .add_type(
-                node.data.symbol.as_ref().unwrap().clone(),
-                node.data.scope,
-                node.origin,
-            )
-            .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
-    }
-
-    fn visit_binding(
-        &mut self,
-        fir: &Fir<FlattenData>,
-        node: &Node<FlattenData>,
-        _to: &RefIdx,
-    ) -> Fallible<NameResolutionError> {
-        self.0
-            .mappings
-            .add_variable(
-                node.data.symbol.as_ref().unwrap().clone(),
-                node.data.scope,
-                node.origin,
-            )
-            .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
-    }
-}
-
-struct Resolver<'ctx>(&'ctx mut NameResolveCtx);
-
-impl<'ctx> Resolver<'ctx> {
-    fn get_definition(
-        &self,
-        kind: ResolveKind,
-        sym: &Option<Symbol>,
-        location: &Option<SpanTuple>,
-        scope: usize,
-    ) -> Result<OriginIdx, NameResolutionError> {
-        let symbol = sym
-            .as_ref()
-            .expect("attempting to get definition for non existent symbol - interpreter bug");
-
-        let mappings = &self.0.mappings;
-        let origin = match kind {
-            ResolveKind::Call => mappings.get_function(symbol, scope),
-            ResolveKind::Type => mappings.get_type(symbol, scope),
-            ResolveKind::Var => mappings.get_variable(symbol, scope),
-        };
-
-        origin.map_or_else(
-            || {
-                Err(NameResolutionError::unresolved(
-                    kind,
-                    &self.0.mappings,
-                    sym,
-                    location,
-                ))
-            },
-            |def| Ok(*def),
-        )
-    }
-}
-
-impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'ctx> {
-    fn map_call(
-        &mut self,
-        data: FlattenData,
-        origin: OriginIdx,
-        to: RefIdx,
-        generics: Vec<RefIdx>,
-        args: Vec<RefIdx>,
-    ) -> Result<Node<FlattenData>, NameResolutionError> {
-        // if there's no symbol, we're probably mapping a call to a function returned by a function
-        // or similar, e.g `get_curried_fn(arg1)(arg2)`.
-        match &data.symbol {
-            None => Ok(Node {
-                data,
-                origin,
-                kind: Kind::Call { to, generics, args },
-            }),
-            Some(_) => {
-                let definition = self.get_definition(
-                    ResolveKind::Call,
-                    &data.symbol,
-                    &data.location,
-                    data.scope,
-                )?;
-
-                Ok(Node {
-                    data,
-                    origin,
-                    kind: Kind::Call {
-                        to: RefIdx::Resolved(definition),
-                        generics,
-                        args,
-                    },
-                })
-            }
-        }
-    }
-
-    fn map_typed_value(
-        &mut self,
-        data: FlattenData,
-        origin: OriginIdx,
-        _value: RefIdx,
-        ty: RefIdx,
-    ) -> Result<Node<FlattenData>, NameResolutionError> {
-        let definition =
-            self.get_definition(ResolveKind::Var, &data.symbol, &data.location, data.scope)?;
-
-        Ok(Node {
-            data,
-            origin,
-            kind: Kind::TypedValue {
-                value: RefIdx::Resolved(definition),
-                ty,
-            },
-        })
-    }
-
-    fn map_type_reference(
-        &mut self,
-        data: FlattenData,
-        origin: OriginIdx,
-        _reference: RefIdx,
-    ) -> Result<Node<FlattenData>, NameResolutionError> {
-        let definition =
-            self.get_definition(ResolveKind::Type, &data.symbol, &data.location, data.scope)?;
-
-        Ok(Node {
-            data,
-            origin,
-            kind: Kind::TypeReference(RefIdx::Resolved(definition)),
-        })
-    }
-}
-
 impl NameResolveCtx {
     fn insert_definitions(&mut self, fir: &Fir<FlattenData>) -> Fallible<NameResolutionError> {
         Declarator(self).visit(fir)
@@ -416,11 +222,9 @@ impl NameResolveCtx {
 }
 
 impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
+    // FIXME: This should be removed from Pass and added to MultiMapper
     fn next_origin(&mut self) -> OriginIdx {
-        let old = self.current;
-        self.current = self.current.next();
-
-        old
+        OriginIdx(0)
     }
 
     fn pre_condition(_fir: &Fir<FlattenData>) {}
@@ -459,6 +263,7 @@ impl NameResolve for Fir<FlattenData> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fir::{Kind, RefIdx};
 
     macro_rules! fir {
         ($($tok:tt)*) => {
