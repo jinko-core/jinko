@@ -769,33 +769,20 @@ pub trait FlattenAst: Sized {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast::Value;
-    use location::{Location, Source};
 
-    macro_rules! fake_loc {
-        () => {
-            SpanTuple::with_source_ref(Source::Empty, Location::new(1, 1), Location::new(1, 1))
-        };
+    macro_rules! ast {
+        ($($tok:tt)*) => {
+            xparser::parse(
+                stringify!($($tok)*),
+                location::Source::Input(stringify!($($tok)*)))
+            .unwrap()
+        }
     }
 
     #[test]
     fn block_order() {
-        // { 14; 15; }
-        let block = Ast {
-            location: fake_loc!(),
-            node: AstNode::Block {
-                stmts: vec![
-                    Ast {
-                        location: fake_loc!(),
-                        node: AstNode::Constant(Value::Integer(14)),
-                    },
-                    Ast {
-                        location: fake_loc!(),
-                        node: AstNode::Constant(Value::Integer(15)),
-                    },
-                ],
-                last_is_expr: false,
-            },
+        let block = ast! {
+            { 14; 15; }
         };
 
         let fir = block.flatten();
@@ -818,16 +805,8 @@ mod tests {
 
     #[test]
     fn block_expr() {
-        // { 15 }
-        let block = Ast {
-            location: fake_loc!(),
-            node: AstNode::Block {
-                stmts: vec![Ast {
-                    location: fake_loc!(),
-                    node: AstNode::Constant(Value::Integer(15)),
-                }],
-                last_is_expr: true,
-            },
+        let block = ast! {
+            { 15 }
         };
 
         let fir = block.flatten();
@@ -846,5 +825,26 @@ mod tests {
             fir.nodes.get(&ret_idx).unwrap().kind,
             Kind::Return(_),
         ))
+    }
+
+    #[test]
+    fn where_expr() {
+        let fir = ast! {
+            where x = 15;
+            where mut y = x;
+        }
+        .flatten();
+
+        let fifteen = &fir.nodes.get(&OriginIdx(1)).unwrap().kind;
+        let x = &fir.nodes.get(&OriginIdx(2)).unwrap().kind;
+
+        assert!(matches!(fifteen, Kind::Constant(_)));
+        assert!(matches!(x, Kind::Binding { .. }));
+
+        let x = &fir.nodes.get(&OriginIdx(3)).unwrap().kind;
+        let y = &fir.nodes.get(&OriginIdx(4)).unwrap().kind;
+
+        assert!(matches!(x, Kind::TypedValue { .. }));
+        assert!(matches!(y, Kind::Binding { .. }));
     }
 }
