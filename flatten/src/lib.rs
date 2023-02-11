@@ -587,22 +587,6 @@ impl Ctx {
         ctx.append(data, kind)
     }
 
-    fn visit_var(self, location: &SpanTuple, sym: &Symbol) -> (Ctx, RefIdx) {
-        // A variable access is a terminal, and will always be typed.
-
-        let data = FlattenData {
-            symbol: Some(sym.clone()),
-            location: Some(location.clone()),
-            scope: self.scope,
-        };
-        let kind = Kind::TypedValue {
-            value: RefIdx::Unresolved, /* FIXME: Is that valid? */
-            ty: RefIdx::Unresolved,
-        };
-
-        self.append(data, kind)
-    }
-
     fn visit_var_declaration(
         self,
         location: &SpanTuple,
@@ -633,7 +617,9 @@ impl Ctx {
         to_assign: &Symbol,
         value: &Ast,
     ) -> (Ctx, RefIdx) {
-        let (ctx, to) = self.visit_var(location, to_assign);
+        // visit a variable or an empty type, but it's not possible to have an
+        // empty type here.
+        let (ctx, to) = self.visit_var_or_empty_type(location, to_assign);
         let (ctx, from) = ctx.visit(value);
 
         let data = FlattenData {
@@ -721,7 +707,6 @@ impl Ctx {
                 value,
             } => self.visit_var_declaration(loc, mutable, to_declare, value),
             AstNode::VarAssign { to_assign, value } => self.visit_var_assign(loc, to_assign, value),
-            AstNode::Var(sym) => self.visit_var(loc, sym),
             AstNode::VarOrEmptyType(sym) => self.visit_var_or_empty_type(loc, sym),
             AstNode::Loop(kind, block) => self.visit_loop(loc, kind, block),
             AstNode::Return(value) => self.visit_return(value, loc),
