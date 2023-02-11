@@ -66,7 +66,11 @@ impl<T: Debug> Fir<T> {
                 Kind::TypedValue { value, ty } => {
                     check!(ty => Kind::Type { .. }, node);
                     // `value` can link to basically anything
-                    check!(value => Kind::Call { .. } | Kind::Constant(_) | Kind::Instantiation { .. } | Kind::TypedValue { .. }, node);
+                    check!(value => Kind::Call { .. }
+                        | Kind::Constant(_)
+                        | Kind::Instantiation { .. }
+                        | Kind::TypedValue { .. }
+                        | Kind::Binding { .. }, node);
                 }
                 Kind::TypeReference(to) => check!(to => Kind::TypeReference(_) | Kind::Generic { .. }, node),
                 Kind::Generic {
