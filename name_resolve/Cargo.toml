@@ -12,3 +12,6 @@ flatten = { path = "../flatten" }
 error = { path = "../error" }
 location = { path = "../location" }
 distance = "0.4"
+
+[dev-dependencies]
+xparser = { path = "../xparser" }
