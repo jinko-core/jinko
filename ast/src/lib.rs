@@ -159,7 +159,6 @@ pub enum Node {
         to_assign: Symbol,
         value: Box<Ast>,
     },
-    Var(Symbol),
     VarOrEmptyType(Symbol),
     Loop(LoopKind, Box<Ast>),
     Return(Option<Box<Ast>>),
@@ -402,13 +401,6 @@ pub trait Visitor {
         })
     }
 
-    fn visit_var(&mut self, location: SpanTuple, name: Symbol) -> Result<Ast, Error> {
-        Ok(Ast {
-            location,
-            node: Node::Var(name),
-        })
-    }
-
     fn visit_var_or_empty_type(&mut self, location: SpanTuple, name: Symbol) -> Result<Ast, Error> {
         Ok(Ast {
             location,
@@ -481,7 +473,6 @@ pub trait Visitor {
             Node::VarAssign { to_assign, value } => {
                 self.visit_var_assign(ast.location, to_assign, value)
             }
-            Node::Var(name) => self.visit_var(ast.location, name),
             Node::VarOrEmptyType(name) => self.visit_var_or_empty_type(ast.location, name),
             Node::Loop(kind, block) => self.visit_loop(ast.location, kind, block),
             Node::Return(to_return) => self.visit_return(ast.location, to_return),
