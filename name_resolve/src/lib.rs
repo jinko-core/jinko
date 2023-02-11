@@ -462,50 +462,64 @@ impl NameResolve for Fir<FlattenData> {
 mod tests {
     use super::*;
 
+    macro_rules! fir {
+        ($($tok:tt)*) => {
+            {
+                let ast = xparser::parse(
+                    stringify!($($tok)*),
+                    location::Source::Input(stringify!($($tok)*)))
+                .unwrap();
+
+                flatten::FlattenAst::flatten(&ast)
+            }
+        }
+    }
+
     #[test]
-    #[ignore = "name resolution is not implemented yet (#593)"]
-    fn name_resolve_simple() {
-        let fir = Fir::<FlattenData> {
-            nodes: HashMap::new(),
+    fn declaration() {
+        let fir = fir! {
+            where a = 15;
+            where b = a;
         }
-        // we declare a function "a"
-        .append(Node {
-            data: FlattenData {
-                symbol: Some(Symbol::from("a")),
-                location: None,
-                scope: 0,
-            },
-            origin: OriginIdx(0),
-            kind: Kind::Function {
-                generics: vec![],
-                args: vec![],
-                return_type: None,
-                block: None,
-            },
-        })
-        // we add a call to "a"
-        .append(Node {
-            data: FlattenData {
-                symbol: Some(Symbol::from("a")),
-                location: None,
-                scope: 0,
-            },
-            origin: OriginIdx(1),
-            kind: Kind::Call {
-                to: RefIdx::Unresolved,
-                generics: vec![],
-                args: vec![],
-            },
-        });
+        .name_resolve()
+        .unwrap();
 
-        let fir = fir.name_resolve().unwrap();
+        let a = &fir.nodes[&OriginIdx(2)];
+        let a_reference = &fir.nodes[&OriginIdx(3)];
 
-        let call = &fir.nodes[&OriginIdx(1)];
+        assert!(matches!(a_reference.kind, Kind::TypedValue { .. }));
+        let a_reference = match a_reference.kind {
+            Kind::TypedValue { value, .. } => value,
+            _ => unreachable!(),
+        };
 
-        if let Kind::Call { to, .. } = call.kind {
-            assert_eq!(to, RefIdx::Resolved(OriginIdx(0)))
-        } else {
-            panic!()
+        assert_eq!(a_reference, RefIdx::Resolved(a.origin));
+    }
+
+    #[test]
+    fn function_call() {
+        let fir = fir! {
+            func a() {}
+
+            a();
         }
+        .name_resolve()
+        .unwrap();
+
+        // find the unique call and definition
+        let def = fir
+            .nodes
+            .values()
+            .find(|node| matches!(node.kind, Kind::Function { .. }));
+        let call = fir
+            .nodes
+            .values()
+            .find(|node| matches!(node.kind, Kind::Call { .. }))
+            .map(|node| match node.kind {
+                Kind::Call { to, .. } => to,
+                _ => unreachable!(),
+            });
+
+        assert_eq!(call.unwrap(), RefIdx::Resolved(def.unwrap().origin));
     }
 }
