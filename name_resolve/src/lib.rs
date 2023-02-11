@@ -26,7 +26,7 @@ impl<T> VecExt<T> for Vec<T> {
 struct UniqueError(OriginIdx, &'static str);
 
 /// A scope contains a set of available variables, functions and types.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 struct Scope {
     variables: HashMap<Symbol, OriginIdx>,
     functions: HashMap<Symbol, OriginIdx>,
@@ -35,7 +35,7 @@ struct Scope {
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 struct ScopeMap {
     scopes: Vec<Scope>,
 }
@@ -49,7 +49,7 @@ impl ScopeMap {
     ) -> Option<&OriginIdx> {
         self.scopes
             .get(scope)
-            .map(|_| &self.scopes[0..scope])
+            .map(|_| &self.scopes[0..=scope])
             .and_then(|scopes| {
                 scopes
                     .iter()
@@ -274,13 +274,11 @@ impl<'ctx> Visitor<FlattenData, NameResolutionError> for Declarator<'ctx> {
             .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
     }
 
-    fn visit_instantiation(
+    fn visit_binding(
         &mut self,
         fir: &Fir<FlattenData>,
         node: &Node<FlattenData>,
         _to: &RefIdx,
-        _generics: &[RefIdx],
-        _fields: &[RefIdx],
     ) -> Fallible<NameResolutionError> {
         self.0
             .mappings
@@ -415,9 +413,7 @@ impl NameResolveCtx {
         &mut self,
         fir: Fir<FlattenData>,
     ) -> Result<Fir<FlattenData>, NameResolutionError> {
-        let mut resolver = Resolver(self);
-
-        resolver.map(fir)
+        Resolver(self).map(fir)
     }
 }
 
@@ -440,17 +436,10 @@ impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
 
         match (definition, resolution) {
             (Ok(_), Ok(fir)) => Ok(fir),
-            (Ok(_), Err(NameResolutionError(e))) => {
-                e.emit();
-                Err(e)
-            }
-            (Err(NameResolutionError(e)), Ok(_)) => {
-                e.emit();
-                Err(e)
-            }
+            (Ok(_), Err(NameResolutionError(e))) => Err(e),
+            (Err(NameResolutionError(e)), Ok(_)) => Err(e),
             (Err(NameResolutionError(e1)), Err(NameResolutionError(e2))) => {
                 let multi_err = Error::new(ErrKind::Multiple(vec![e1, e2]));
-                multi_err.emit();
                 Err(multi_err)
             }
         }
