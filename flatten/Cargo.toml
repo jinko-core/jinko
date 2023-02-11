@@ -10,3 +10,6 @@ ast = { path = "../ast" }
 fir = { path = "../fir" }
 symbol = { path = "../symbol" }
 location = { path = "../location" }
+
+[dev-dependencies]
+xparser = { path = "../xparser" }
