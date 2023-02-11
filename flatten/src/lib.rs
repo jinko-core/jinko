@@ -610,21 +610,19 @@ impl Ctx {
         to_declare: &Symbol,
         value: &Ast,
     ) -> (Ctx, RefIdx) {
-        let (ctx, to) = self.visit_var(location, to_declare);
-        let (ctx, _from) = ctx.visit(value);
+        // A declaration consists of two things
+        // 1. Instantiating the value which we'll assign
+        // 2. Creating the first reference to that value - "binding" it
+
+        let (ctx, to_bind) = self.visit(value);
 
         let data = FlattenData {
-            symbol: None,
+            symbol: Some(to_declare.clone()),
             location: Some(location.clone()),
             scope: ctx.scope,
         };
 
-        // FIXME: Need Declaratoin
-        let kind = Kind::Instantiation {
-            to,
-            generics: vec![],
-            fields: vec![],
-        };
+        let kind = Kind::Binding { to: to_bind };
 
         ctx.append(data, kind)
     }
