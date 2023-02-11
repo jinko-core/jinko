@@ -241,6 +241,9 @@ impl Ctx {
             location: None, // FIXME: Invalid
             scope: ctx.scope,
         };
+
+        // FIXME: This should be a type reference probably, not a `Type`. Or `visit_function` uses `handle_ty_node` when
+        // it shouldn't for its return type
         let kind = Kind::Type {
             generics,
             fields: vec![],
@@ -420,7 +423,10 @@ impl Ctx {
             let data = FlattenData {
                 symbol: Some(name.clone()),
                 location: Some(location.clone()),
-                scope: ctx.scope,
+                scope: ctx.scope - 1,
+                // we set the scope to the one "outside" the `scoped` method - the function
+                // lives where it is defined, not in its own scope. This will never trigger
+                // an underflow as scoped() indicates `ctx.scope` is at least incremented by one.
             };
             let kind = Kind::Function {
                 generics,
