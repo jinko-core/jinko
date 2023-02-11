@@ -90,6 +90,14 @@ pub trait Mapper<T, U: Default, E: IterError> {
         })
     }
 
+    fn map_binding(&mut self, _data: T, origin: OriginIdx, to: RefIdx) -> Result<Node<U>, E> {
+        Ok(Node {
+            data: U::default(),
+            origin,
+            kind: Kind::Binding { to },
+        })
+    }
+
     fn map_instantiation(
         &mut self,
         _data: T,
@@ -228,6 +236,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
                 return_type,
                 block,
             } => self.map_function(node.data, node.origin, generics, args, return_type, block),
+            Kind::Binding { to } => self.map_binding(node.data, node.origin, to),
             Kind::Instantiation {
                 to,
                 generics,

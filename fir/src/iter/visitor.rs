@@ -63,6 +63,10 @@ pub trait Visitor<T: Debug, E: IterError> {
         Ok(())
     }
 
+    fn visit_binding(&mut self, _fir: &Fir<T>, _node: &Node<T>, _to: &RefIdx) -> Fallible<E> {
+        Ok(())
+    }
+
     fn visit_instantiation(
         &mut self,
         _fir: &Fir<T>,
@@ -158,6 +162,7 @@ pub trait Visitor<T: Debug, E: IterError> {
                 block,
             } => self.visit_function(fir, node, generics, args, return_type, block),
             Kind::Assignment { to, from } => self.visit_assignment(fir, node, to, from),
+            Kind::Binding { to } => self.visit_binding(fir, node, to),
             Kind::Instantiation {
                 to,
                 generics,
