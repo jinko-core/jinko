@@ -106,7 +106,7 @@ fn block(loc: &SpanTuple, stmts: Vec<Ast>, last_is_expr: bool) -> Ast {
 fn var<S: Into<Symbol>>(loc: &SpanTuple, name: S) -> Ast {
     Ast {
         location: loc.clone(),
-        node: Node::Var(name.into()),
+        node: Node::VarOrEmptyType(name.into()),
     }
 }
 
