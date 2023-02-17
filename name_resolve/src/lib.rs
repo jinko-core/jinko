@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use error::{ErrKind, Error};
-use fir::{Fallible, Fir, IterError, Mapper, OriginIdx, Pass, Visitor};
+use fir::{Fallible, Fir, IterError, Mapper, OriginIdx, Pass, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
