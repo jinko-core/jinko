@@ -1,11 +1,11 @@
-use fir::{Fallible, Fir, Node, RefIdx, Visitor};
+use fir::{Fallible, Fir, Node, RefIdx, Traversal};
 use flatten::FlattenData;
 
 use crate::{NameResolutionError, NameResolveCtx};
 
 pub(crate) struct Declarator<'ctx>(pub(crate) &'ctx mut NameResolveCtx);
 
-impl<'ctx> Visitor<FlattenData, NameResolutionError> for Declarator<'ctx> {
+impl<'ctx> Traversal<FlattenData, NameResolutionError> for Declarator<'ctx> {
     fn visit_function(
         &mut self,
         fir: &Fir<FlattenData>,
