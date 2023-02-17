@@ -101,7 +101,7 @@ impl ScopeMap {
         var: OriginIdx,
     ) -> Result<(), UniqueError> {
         self.insert_unique(name, var, scope, |scope| &mut scope.variables)
-            .map_err(|existing| UniqueError(existing, "variable"))
+            .map_err(|existing| UniqueError(existing, "binding"))
     }
 
     /// Add a function to the current scope if it hasn't been added before
@@ -132,38 +132,61 @@ struct NameResolveCtx {
     mappings: ScopeMap,
 }
 
+type Pair<T> = (T, T);
+
 /// Extension type of [`Error`] to be able to implement [`IterError`].
-struct NameResolutionError(Error);
+enum NameResolutionError {
+    NonUnique(SpanTuple, OriginIdx, &'static str),
+    Unresolved(ResolveKind, Symbol, SpanTuple),
+    // this needs to be binding specific
+    AmbiguousBinding(Pair<(ResolveKind, OriginIdx)>, SpanTuple),
+    // and this as well
+    UnresolvedBinding(Symbol, SpanTuple),
+    Multiple(Vec<NameResolutionError>),
+}
 
 impl NameResolutionError {
+    fn finalize(self, mappings: &ScopeMap) -> Error {
+        // we need the FIR... how do we access nodes otherwise??
+        match self {
+            NameResolutionError::Multiple(errs) => Error::new(ErrKind::Multiple(
+                errs.into_iter().map(|e| e.finalize(mappings)).collect(),
+            )),
+            _ => todo!(),
+        }
+    }
+
     /// Compose a [`UniqueError`] into a proper [`Error`] of kind [`ErrKind::NameResolution`]
     fn non_unique(
-        fir: &Fir<FlattenData>,
         offending_loc: &Option<SpanTuple>,
         UniqueError(origin, kind_str): UniqueError,
     ) -> NameResolutionError {
-        let existing = &fir.nodes[&origin];
-        let sym = existing.data.symbol.as_ref().unwrap();
+        // let existing = &fir.nodes[&origin];
+        // let sym = existing.data.symbol.as_ref().unwrap();
+        let location = offending_loc.clone().unwrap();
 
-        NameResolutionError(
-            Error::new(ErrKind::NameResolution)
-                .with_msg(format!("{kind_str} `{sym}` already defined in this scope"))
-                .with_loc(offending_loc.clone())
-                .with_hint(
-                    Error::hint()
-                        .with_msg(format!("`{sym}` is also defined here"))
-                        .with_loc(existing.data.location.clone()),
-                ),
+        NameResolutionError::NonUnique(
+            location, origin,
+            kind_str,
+            // Error::new(ErrKind::NameResolution)
+            //     .with_msg(format!("{kind_str} `{sym}` already defined in this scope"))
+            //     .with_loc(offending_loc.clone())
+            //     .with_hint(
+            //         Error::hint()
+            //             .with_msg(format!("`{sym}` is also defined here"))
+            //             .with_loc(existing.data.location.clone()),
+            //     ),
         )
     }
 
     fn unresolved(
         kind: ResolveKind,
-        _mappings: &ScopeMap,
+        // _mappings: &ScopeMap,
         sym: &Option<Symbol>,
         location: &Option<SpanTuple>,
     ) -> NameResolutionError {
-        let sym = sym.as_ref().unwrap();
+        let sym = sym.clone().unwrap();
+        let location = location.clone().unwrap();
 
         // Extract possible values based on `kind` and `sym`
 
@@ -188,29 +211,58 @@ impl NameResolutionError {
         //     }
         // });
 
-        NameResolutionError(
-            Error::new(ErrKind::NameResolution)
-                .with_msg(format!("unresolved {kind}: `{sym}`"))
-                .with_loc(location.clone()),
+        NameResolutionError::Unresolved(
+            kind, sym,
+            location,
+            // Error::new(ErrKind::NameResolution)
+            //     .with_msg(format!("unresolved {kind}: `{sym}`"))
+            //     .with_loc(location.clone()),
         )
+    }
+
+    fn ambiguous(
+        l_kind: ResolveKind,
+        lhs: OriginIdx,
+        r_kind: ResolveKind,
+        rhs: OriginIdx,
+        location: &Option<SpanTuple>,
+    ) -> NameResolutionError {
+        let location = location.clone().unwrap();
+        // let lhs = &fir.nodes[&lhs].data;
+        // let rhs = &fir.nodes[&rhs].data;
+
+        NameResolutionError::AmbiguousBinding(
+            ((l_kind, lhs), (r_kind, rhs)),
+            location, // Error::new(ErrKind::NameResolution)
+                      //     .with_msg(format!("resolution of `{sym}` is ambiguous"))
+                      //     .with_loc(location.clone())
+                      //     .with_hint(
+                      //         Error::hint()
+                      //             .with_msg(format!("could point to this {l_kind}..."))
+                      //             .with_loc(lhs.location.clone()),
+                      //     )
+                      //     .with_hint(
+                      //         Error::hint()
+                      //             .with_msg(format!("...or this {r_kind}"))
+                      //             .with_loc(rhs.location.clone()),
+                      //     ),
+        )
+    }
+
+    fn both_unresolved(sym: &Option<Symbol>, location: &Option<SpanTuple>) -> NameResolutionError {
+        todo!()
     }
 }
 
 impl IterError for NameResolutionError {
-    fn simple() -> Self {
-        NameResolutionError(Error::new(ErrKind::NameResolution))
-    }
-
     fn aggregate(errs: Vec<Self>) -> Self {
-        NameResolutionError(Error::new(ErrKind::Multiple(
-            errs.into_iter().map(|e| e.0).collect(),
-        )))
+        NameResolutionError::Multiple(errs)
     }
 }
 
 impl NameResolveCtx {
     fn insert_definitions(&mut self, fir: &Fir<FlattenData>) -> Fallible<NameResolutionError> {
-        Declarator(self).visit(fir)
+        Declarator(self).traverse(fir)
     }
 
     fn resolve_nodes(
@@ -238,10 +290,11 @@ impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
 
         match (definition, resolution) {
             (Ok(_), Ok(fir)) => Ok(fir),
-            (Ok(_), Err(NameResolutionError(e))) => Err(e),
-            (Err(NameResolutionError(e)), Ok(_)) => Err(e),
-            (Err(NameResolutionError(e1)), Err(NameResolutionError(e2))) => {
-                let multi_err = Error::new(ErrKind::Multiple(vec![e1, e2]));
+            (Ok(_), Err(e)) => Err(e.finalize(&self.mappings)),
+            (Err(e), Ok(_)) => Err(e.finalize(&self.mappings)),
+            (Err(e1), Err(e2)) => {
+                let multi_err =
+                    NameResolutionError::Multiple(vec![e1, e2]).finalize(&self.mappings);
                 Err(multi_err)
             }
         }
