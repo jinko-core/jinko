@@ -177,7 +177,7 @@ impl NameResolutionError {
                 //         Some(
                 //             Error::hint()
                 //                 .with_msg(format!(
-                //                     "maybe you meant to call `{}` instead?",
+                //                     "maybe you meant `{}`?",
                 //                     key.symbol_unchecked()
                 //                 ))
                 //                 .with_loc(key.location().clone()),
@@ -288,6 +288,7 @@ impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
     fn transform(&mut self, fir: Fir<FlattenData>) -> Result<Fir<FlattenData>, Error> {
         let definition = self.insert_definitions(&fir);
         let definition = definition.map_err(|e| e.finalize(&fir, &self.mappings));
+
         let resolution = self.resolve_nodes(fir);
 
         match (definition, resolution) {
@@ -420,5 +421,33 @@ mod tests {
         .name_resolve();
 
         assert!(fir.is_err())
+    }
+
+    #[test]
+    fn function_argument() {
+        let fir = fir! {
+            func id(x: int) -> int { x }
+        }
+        .name_resolve();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn complex() {
+        let fir = fir! {
+            func id(x: int) -> int {
+                x
+            }
+
+            type Id(value: int);
+
+            where x = Id(value: 15);
+            where y = 14;
+            where z = id(y);
+        }
+        .name_resolve();
+
+        assert!(fir.is_ok());
     }
 }
