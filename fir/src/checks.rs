@@ -70,7 +70,9 @@ impl<T: Debug> Fir<T> {
                         | Kind::Constant(_)
                         | Kind::Instantiation { .. }
                         | Kind::TypedValue { .. }
-                        | Kind::Binding { .. }, node);
+                        | Kind::Binding { .. }
+                        | Kind::Type { .. } // for empty types // FIXME: Is that allowed?
+                        , node);
                 }
                 Kind::TypeReference(to) => check!(to => Kind::TypeReference(_) | Kind::Generic { .. }, node),
                 Kind::Generic {
