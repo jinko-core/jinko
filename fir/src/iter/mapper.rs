@@ -1,4 +1,4 @@
-use crate::{Fir, IterError, Kind, Node, OriginIdx, RefIdx};
+use crate::{Fir, Incomplete, IterError, Kind, Node, OriginIdx, RefIdx};
 
 // TODO: Probably the last Fir trait we need is a `MultiMapper` trait which returns `Result<Vec<Node<U>>, E>`s
 pub trait Mapper<T, U: Default, E: IterError> {
@@ -262,7 +262,10 @@ pub trait Mapper<T, U: Default, E: IterError> {
         }
     }
 
-    fn map(&mut self, fir: Fir<T>) -> Result<Fir<U>, E> {
+    /// In the [`Err`] case, this returns an incomplete [`Fir`] which contains
+    /// all valid mapped nodes. This allows an interpreter to keep trying
+    /// passes and emit as many errors as possible
+    fn map(&mut self, fir: Fir<T>) -> Result<Fir<U>, Incomplete<U, E>> {
         let (fir, errs) = fir.nodes.into_values().fold(
             (Fir::default(), Vec::new()),
             |(new_fir, mut errs), node| match self.map_node(node) {
@@ -277,7 +280,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         if errs.is_empty() {
             Ok(fir)
         } else {
-            Err(E::aggregate(errs))
+            Err(Incomplete(fir, E::aggregate(errs)))
         }
     }
 }

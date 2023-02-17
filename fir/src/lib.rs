@@ -95,14 +95,14 @@
 // Does that make sense? Does that indicate that for all types we must first keep a Option<Ty> which is set to None?
 // Is this going to cause problems?
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 
 mod checks;
 mod iter;
 
-pub use iter::{IterError, Mapper, MultiMapper, Traversal};
+pub use iter::{Incomplete, IterError, Mapper, MultiMapper, Traversal};
 
 /// A reference to another [`Node`] in the [`Fir`]. These references can be either resolved or unresolved, based
 /// on the state of the [`Fir`].
@@ -124,7 +124,7 @@ pub enum RefIdx {
 /// call points or to emit errors.
 /// An origin point - this is where a variable, type or function is defined. Later uses of that
 /// object (variable, type or function) are resolved to [`RefIdx::Resolved`]s.
-#[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OriginIdx(pub u64);
 
 impl OriginIdx {
@@ -138,12 +138,12 @@ impl OriginIdx {
 pub type Fallible<E> = Result<(), E>;
 
 /// Helper trait to enable an immutable pattern on the [`Fir`]
-trait WithHashMap<K: Hash + Eq, V> {
+trait WithMap<K: Hash + Eq, V> {
     fn with(self, key: K, value: V) -> Self;
 }
 
-impl<K: Hash + Eq + Debug, V> WithHashMap<K, V> for HashMap<K, V> {
-    fn with(mut self, key: K, value: V) -> HashMap<K, V> {
+impl<K: Hash + Ord + Eq + Debug, V> WithMap<K, V> for BTreeMap<K, V> {
+    fn with(mut self, key: K, value: V) -> BTreeMap<K, V> {
         if self.insert(key, value).is_some() {
             unreachable!("re-using already insert OriginIdx");
         };
@@ -224,7 +224,7 @@ pub struct Node<T = ()> {
 /// An instance of [`Fir`] is similar to a graph, containing [`Node`]s and relationships binding them together.
 #[derive(Default, Debug)]
 pub struct Fir<T = ()> {
-    pub nodes: HashMap<OriginIdx, Node<T>>,
+    pub nodes: BTreeMap<OriginIdx, Node<T>>,
 }
 
 impl<T> Fir<T> {
