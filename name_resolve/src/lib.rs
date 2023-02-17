@@ -325,4 +325,43 @@ mod tests {
 
         assert_eq!(call.unwrap(), RefIdx::Resolved(def.unwrap().origin));
     }
+
+    #[test]
+    fn type_def() {
+        let fir = fir! {
+            type Tango;
+
+            where x = Tango;
+        }
+        .name_resolve()
+        .unwrap();
+
+        // find the unique call and definition
+        let def = fir
+            .nodes
+            .values()
+            .find(|node| matches!(node.kind, Kind::Type { .. }));
+        let (value, ty) = fir
+            .nodes
+            .values()
+            .find(|node| matches!(node.kind, Kind::TypedValue { .. }))
+            .map(|node| match node.kind {
+                Kind::TypedValue { value, ty } => (value, ty),
+                _ => unreachable!(),
+            })
+            .unwrap();
+
+        assert_eq!(value, RefIdx::Resolved(def.unwrap().origin));
+        assert_eq!(ty, RefIdx::Resolved(def.unwrap().origin));
+    }
+
+    #[test]
+    fn ambiguous_var() {
+        let fir = fir! {
+            where x = X;
+        }
+        .name_resolve();
+
+        assert!(fir.is_err())
+    }
 }

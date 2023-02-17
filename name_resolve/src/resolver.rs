@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
+use error::{ErrKind, Error};
 use fir::{Kind, Mapper, Node, OriginIdx, RefIdx};
 use flatten::FlattenData;
 use location::SpanTuple;
@@ -19,7 +20,7 @@ impl Display for ResolveKind {
         match self {
             ResolveKind::Call => write!(f, "call"),
             ResolveKind::Type => write!(f, "type"),
-            ResolveKind::Var => write!(f, "var"),
+            ResolveKind::Var => write!(f, "binding"),
         }
     }
 }
@@ -57,6 +58,10 @@ impl<'ctx> Resolver<'ctx> {
             |def| Ok(*def),
         )
     }
+}
+
+fn get_symbol_unchecked(data: &FlattenData) -> &Symbol {
+    data.symbol.as_ref().unwrap()
 }
 
 impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'ctx> {
@@ -104,8 +109,41 @@ impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'c
         _value: RefIdx,
         ty: RefIdx,
     ) -> Result<Node<FlattenData>, NameResolutionError> {
-        let definition =
-            self.get_definition(ResolveKind::Var, &data.symbol, &data.location, data.scope)?;
+        let var_def =
+            self.get_definition(ResolveKind::Var, &data.symbol, &data.location, data.scope);
+        let ty_def =
+            self.get_definition(ResolveKind::Type, &data.symbol, &data.location, data.scope);
+
+        // If we're dealing with a type definition, we can "early typecheck"
+        // to the empty type's definition
+        let ty = match &ty_def {
+            Ok(def) => RefIdx::Resolved(*def),
+            Err(_) => ty,
+        };
+
+        let definition = match (var_def, ty_def) {
+            (Ok(def), Err(_)) | (Err(_), Ok(def)) => Ok(def),
+            (Ok(_var_def), Ok(_ty_def)) => Err(NameResolutionError(
+                // FIXME: Add hints about definitions in var_def and ty_def
+                Error::new(ErrKind::NameResolution)
+                    .with_msg(format!(
+                        "ambiguous use of symbol {}",
+                        get_symbol_unchecked(&data)
+                    ))
+                    .with_loc(data.location.clone()),
+            )),
+            (Err(e1), Err(e2)) => Err(NameResolutionError(
+                Error::new(ErrKind::NameResolution)
+                    .with_msg(format!(
+                        "could not resolve `{}` to either a binding or type",
+                        // FIXME: No unwrap
+                        get_symbol_unchecked(&data)
+                    ))
+                    .with_loc(data.location.clone())
+                    .with_hint(e1.0)
+                    .with_hint(e2.0),
+            )),
+        }?;
 
         Ok(Node {
             data,
