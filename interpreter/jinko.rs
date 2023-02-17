@@ -118,7 +118,7 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     let ast = x_try!(ast_sanitizer::no_incl(ast));
 
     let fir = ast.flatten();
-    let fir = x_try!(fir.name_resolve());
+    let _fir = x_try!(fir.name_resolve());
 
     todo!("experimental pipeline is not complete")
 }
