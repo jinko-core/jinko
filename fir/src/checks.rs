@@ -119,7 +119,7 @@ impl<T: Debug> Fir<T> {
                 } => {
                     check!(to => Kind::Type { .. }, node);
                     check!(@generics => Kind::Type { .. }, node);
-                    check!(@fields => Kind::TypedValue { .. }, node);
+                    check!(@fields => Kind::Assignment { .. }, node);
                 }
                 Kind::TypeOffset { instance: _, .. } => {
                     // can point to anything? FIXME
