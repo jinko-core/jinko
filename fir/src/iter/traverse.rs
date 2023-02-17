@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 /// All of the helpers and visitors call back into [`visit_node`]
 pub trait Traversal<T: Debug, E: IterError> {
-    fn visit_constant(
+    fn traverse_constant(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -13,7 +13,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_type_reference(
+    fn traverse_type_reference(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -22,7 +22,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_typed_value(
+    fn traverse_typed_value(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -32,7 +32,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_generic(
+    fn traverse_generic(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -41,7 +41,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_type(
+    fn traverse_type(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -51,7 +51,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_function(
+    fn traverse_function(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -63,11 +63,11 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_binding(&mut self, _fir: &Fir<T>, _node: &Node<T>, _to: &RefIdx) -> Fallible<E> {
+    fn traverse_binding(&mut self, _fir: &Fir<T>, _node: &Node<T>, _to: &RefIdx) -> Fallible<E> {
         Ok(())
     }
 
-    fn visit_instantiation(
+    fn traverse_instantiation(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -78,7 +78,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_type_offset(
+    fn traverse_type_offset(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -88,7 +88,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_assignment(
+    fn traverse_assignment(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -98,7 +98,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_call(
+    fn traverse_call(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -109,7 +109,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_statements(
+    fn traverse_statements(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -118,7 +118,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_condition(
+    fn traverse_condition(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -129,7 +129,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_loop(
+    fn traverse_loop(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -139,7 +139,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_return(
+    fn traverse_return(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
@@ -148,47 +148,47 @@ pub trait Traversal<T: Debug, E: IterError> {
         Ok(())
     }
 
-    fn visit_node(&mut self, fir: &Fir<T>, node: &Node<T>) -> Fallible<E> {
+    fn traverse_node(&mut self, fir: &Fir<T>, node: &Node<T>) -> Fallible<E> {
         match &node.kind {
-            Kind::Constant(c) => self.visit_constant(fir, node, c),
-            Kind::TypeReference(r) => self.visit_type_reference(fir, node, r),
-            Kind::TypedValue { value, ty } => self.visit_typed_value(fir, node, value, ty),
-            Kind::Generic { default } => self.visit_generic(fir, node, default),
-            Kind::Type { generics, fields } => self.visit_type(fir, node, generics, fields),
+            Kind::Constant(c) => self.traverse_constant(fir, node, c),
+            Kind::TypeReference(r) => self.traverse_type_reference(fir, node, r),
+            Kind::TypedValue { value, ty } => self.traverse_typed_value(fir, node, value, ty),
+            Kind::Generic { default } => self.traverse_generic(fir, node, default),
+            Kind::Type { generics, fields } => self.traverse_type(fir, node, generics, fields),
             Kind::Function {
                 generics,
                 args,
                 return_type,
                 block,
-            } => self.visit_function(fir, node, generics, args, return_type, block),
-            Kind::Assignment { to, from } => self.visit_assignment(fir, node, to, from),
-            Kind::Binding { to } => self.visit_binding(fir, node, to),
+            } => self.traverse_function(fir, node, generics, args, return_type, block),
+            Kind::Assignment { to, from } => self.traverse_assignment(fir, node, to, from),
+            Kind::Binding { to } => self.traverse_binding(fir, node, to),
             Kind::Instantiation {
                 to,
                 generics,
                 fields,
-            } => self.visit_instantiation(fir, node, to, generics, fields),
+            } => self.traverse_instantiation(fir, node, to, generics, fields),
             Kind::TypeOffset { instance, field } => {
-                self.visit_type_offset(fir, node, instance, field)
+                self.traverse_type_offset(fir, node, instance, field)
             }
-            Kind::Call { to, generics, args } => self.visit_call(fir, node, to, generics, args),
-            Kind::Statements(stmts) => self.visit_statements(fir, node, stmts),
+            Kind::Call { to, generics, args } => self.traverse_call(fir, node, to, generics, args),
+            Kind::Statements(stmts) => self.traverse_statements(fir, node, stmts),
             Kind::Conditional {
                 condition,
                 true_block,
                 false_block,
-            } => self.visit_condition(fir, node, condition, true_block, false_block),
-            Kind::Loop { condition, block } => self.visit_loop(fir, node, condition, block),
-            Kind::Return(expr) => self.visit_return(fir, node, expr),
+            } => self.traverse_condition(fir, node, condition, true_block, false_block),
+            Kind::Loop { condition, block } => self.traverse_loop(fir, node, condition, block),
+            Kind::Return(expr) => self.traverse_return(fir, node, expr),
         }
     }
 
-    fn visit(&mut self, fir: &Fir<T>) -> Fallible<E> {
+    fn traverse(&mut self, fir: &Fir<T>) -> Fallible<E> {
         let errs = fir
             .nodes
             .values()
             .fold(Vec::new(), |mut errs: Vec<E>, node| {
-                match self.visit_node(fir, node) {
+                match self.traverse_node(fir, node) {
                     Ok(_) => errs,
                     Err(e) => {
                         errs.push(e);
