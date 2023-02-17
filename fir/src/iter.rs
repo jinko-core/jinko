@@ -9,8 +9,5 @@ pub use traverse::Traversal;
 // FIXME: Documentation
 pub trait IterError: Sized {
     // FIXME: Documentation
-    fn simple() -> Self;
-
-    // FIXME: Documentation
     fn aggregate(errs: Vec<Self>) -> Self;
 }
