@@ -47,14 +47,7 @@ impl<'ctx> Resolver<'ctx> {
         };
 
         origin.map_or_else(
-            || {
-                Err(NameResolutionError::unresolved(
-                    kind,
-                    &self.0.mappings,
-                    sym,
-                    location,
-                ))
-            },
+            || Err(NameResolutionError::unresolved(kind, sym, location)),
             |def| Ok(*def),
         )
     }
@@ -123,26 +116,26 @@ impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'c
 
         let definition = match (var_def, ty_def) {
             (Ok(def), Err(_)) | (Err(_), Ok(def)) => Ok(def),
-            (Ok(_var_def), Ok(_ty_def)) => Err(NameResolutionError(
-                // FIXME: Add hints about definitions in var_def and ty_def
-                Error::new(ErrKind::NameResolution)
-                    .with_msg(format!(
-                        "ambiguous use of symbol {}",
-                        get_symbol_unchecked(&data)
-                    ))
-                    .with_loc(data.location.clone()),
-            )),
-            (Err(e1), Err(e2)) => Err(NameResolutionError(
-                Error::new(ErrKind::NameResolution)
-                    .with_msg(format!(
-                        "could not resolve `{}` to either a binding or type",
-                        // FIXME: No unwrap
-                        get_symbol_unchecked(&data)
-                    ))
-                    .with_loc(data.location.clone())
-                    .with_hint(e1.0)
-                    .with_hint(e2.0),
-            )),
+            (Ok(var_def), Ok(ty_def)) => Err(NameResolutionError::ambiguous(ResolveKind::Var, var_def, ResolveKind::Type, ty_def, &data.location)),
+            //     // FIXME: Add hints about definitions in var_def and ty_def
+            //     Error::new(ErrKind::NameResolution)
+            //         .with_msg(format!(
+            //             "ambiguous use of symbol {}",
+            //             get_symbol_unchecked(&data)
+            //         ))
+            //         .with_loc(data.location.clone()),
+            // )),
+            (Err(_e1), Err(_e2)) => Err(NameResolutionError::unresolved(ResolveKind::Type, &data.symbol, &data.location))
+                // Error::new(ErrKind::NameResolution)
+                //     .with_msg(format!(
+                //         "could not resolve `{}` to either a binding or type",
+                //         // FIXME: No unwrap
+                //         get_symbol_unchecked(&data)
+                //     ))
+                //     .with_loc(data.location.clone())
+                //     .with_hint(e1.0)
+                //     .with_hint(e2.0),
+            // )),
         }?;
 
         Ok(Node {

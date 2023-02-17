@@ -6,9 +6,9 @@ use crate::{NameResolutionError, NameResolveCtx};
 pub(crate) struct Declarator<'ctx>(pub(crate) &'ctx mut NameResolveCtx);
 
 impl<'ctx> Traversal<FlattenData, NameResolutionError> for Declarator<'ctx> {
-    fn visit_function(
+    fn traverse_function(
         &mut self,
-        fir: &Fir<FlattenData>,
+        _fir: &Fir<FlattenData>,
         node: &Node<FlattenData>,
         _generics: &[RefIdx],
         _args: &[RefIdx],
@@ -22,12 +22,12 @@ impl<'ctx> Traversal<FlattenData, NameResolutionError> for Declarator<'ctx> {
                 node.data.scope,
                 node.origin,
             )
-            .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
+            .map_err(|ue| NameResolutionError::non_unique(&node.data.location, ue))
     }
 
-    fn visit_type(
+    fn traverse_type(
         &mut self,
-        fir: &Fir<FlattenData>,
+        _fir: &Fir<FlattenData>,
         node: &Node<FlattenData>,
         _: &[RefIdx],
         _: &[RefIdx],
@@ -39,12 +39,12 @@ impl<'ctx> Traversal<FlattenData, NameResolutionError> for Declarator<'ctx> {
                 node.data.scope,
                 node.origin,
             )
-            .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
+            .map_err(|ue| NameResolutionError::non_unique(&node.data.location, ue))
     }
 
-    fn visit_binding(
+    fn traverse_binding(
         &mut self,
-        fir: &Fir<FlattenData>,
+        _fir: &Fir<FlattenData>,
         node: &Node<FlattenData>,
         _to: &RefIdx,
     ) -> Fallible<NameResolutionError> {
@@ -55,6 +55,6 @@ impl<'ctx> Traversal<FlattenData, NameResolutionError> for Declarator<'ctx> {
                 node.data.scope,
                 node.origin,
             )
-            .map_err(|ue| NameResolutionError::non_unique(fir, &node.data.location, ue))
+            .map_err(|ue| NameResolutionError::non_unique(&node.data.location, ue))
     }
 }
