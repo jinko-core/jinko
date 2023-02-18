@@ -154,6 +154,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "debug-fir"
+version = "0.1.0"
+dependencies = [
+ "colored",
+ "fir",
+]
+
+[[package]]
 name = "dirs"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -284,6 +292,7 @@ dependencies = [
  "ast",
  "ast-sanitizer",
  "colored",
+ "debug-fir",
  "downcast-rs",
  "error",
  "fir",
@@ -416,6 +425,7 @@ dependencies = [
 name = "name_resolve"
 version = "0.1.0"
 dependencies = [
+ "debug-fir",
  "distance",
  "error",
  "fir",
