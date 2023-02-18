@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use error::{ErrKind, Error};
-use fir::{Fallible, Fir, Incomplete, IterError, Mapper, OriginIdx, Pass, Traversal};
+use fir::{Fallible, Fir, Incomplete, Mapper, OriginIdx, Pass, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
@@ -40,7 +40,8 @@ impl ScopeMap {
     ) -> Option<&OriginIdx> {
         self.scopes
             .get(scope)
-            .map(|_| &self.scopes[0..=scope])
+            .map_or(Some(self.scopes.len() - 1), |_| Some(scope))
+            .map(|last| &self.scopes[0..=last])
             .and_then(|scopes| {
                 scopes
                     .iter()
@@ -256,14 +257,8 @@ impl NameResolutionError {
     }
 }
 
-impl IterError for NameResolutionError {
-    fn aggregate(errs: Vec<Self>) -> Self {
-        NameResolutionError::Multiple(errs)
-    }
-}
-
 impl NameResolveCtx {
-    fn insert_definitions(&mut self, fir: &Fir<FlattenData>) -> Fallible<NameResolutionError> {
+    fn insert_definitions(&mut self, fir: &Fir<FlattenData>) -> Fallible<Vec<NameResolutionError>> {
         Declarator(self).traverse(fir)
     }
 
@@ -287,18 +282,21 @@ impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
 
     fn transform(&mut self, fir: Fir<FlattenData>) -> Result<Fir<FlattenData>, Error> {
         let definition = self.insert_definitions(&fir);
-        let definition = definition.map_err(|e| e.finalize(&fir, &self.mappings));
+        let definition = definition
+            .map_err(|errs| NameResolutionError::Multiple(errs).finalize(&fir, &self.mappings));
 
         let resolution = self.resolve_nodes(fir);
 
         match (definition, resolution) {
             (Ok(_), Ok(fir)) => Ok(fir),
-            (Ok(_), Err(Incomplete(fir, e))) => Err(e.finalize(&fir, &self.mappings)),
+            (Ok(_), Err(Incomplete { carcass, errs })) => {
+                Err(NameResolutionError::Multiple(errs).finalize(&carcass, &self.mappings))
+            }
             (Err(e), Ok(_fir)) => Err(e),
-            (Err(e1), Err(Incomplete(fir, e2))) => {
+            (Err(e1), Err(Incomplete { carcass, errs })) => {
                 let multi_err = Error::new(ErrKind::Multiple(vec![
                     e1,
-                    e2.finalize(&fir, &self.mappings),
+                    NameResolutionError::Multiple(errs).finalize(&carcass, &self.mappings),
                 ]));
                 Err(multi_err)
             }
@@ -387,9 +385,9 @@ mod tests {
     #[test]
     fn type_def() {
         let fir = fir! {
-            type Tango;
+            type T;
 
-            where x = Tango;
+            where x = T;
         }
         .name_resolve()
         .unwrap();
@@ -436,6 +434,8 @@ mod tests {
     #[test]
     fn complex() {
         let fir = fir! {
+            type int;
+
             func id(x: int) -> int {
                 x
             }
@@ -449,5 +449,54 @@ mod tests {
         .name_resolve();
 
         assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn builtin_type() {
+        let fir = fir! {
+            type bool;
+            type true;
+            type false;
+
+            func foo() -> bool { true }
+        }
+        .name_resolve();
+
+        if let Err(e) = &fir {
+            e.emit();
+        }
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn scoped_resolution() {
+        let fir = fir! {
+            type Marker;
+
+            {
+                type Marker;
+                where x = Marker;
+            }
+        }
+        .name_resolve()
+        .unwrap();
+
+        let x_value = &fir.nodes[&OriginIdx(3)];
+        let marker_1 = &fir.nodes[&OriginIdx(2)];
+        let marker_2 = &fir.nodes[&OriginIdx(1)];
+
+        assert!(matches!(x_value.kind, Kind::TypedValue { .. }));
+        assert!(matches!(marker_1.kind, Kind::Type { .. }));
+        assert!(matches!(marker_2.kind, Kind::Type { .. }));
+
+        match x_value.kind {
+            Kind::TypedValue { value, ty } => {
+                assert_eq!(value, ty);
+                assert_eq!(ty, RefIdx::Resolved(marker_2.origin));
+                assert_eq!(value, RefIdx::Resolved(marker_2.origin));
+            }
+            _ => unreachable!(),
+        }
     }
 }
