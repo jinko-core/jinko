@@ -1,7 +1,7 @@
-use crate::{Fir, Incomplete, IterError, Kind, Node, OriginIdx, RefIdx};
+use crate::{Fir, Incomplete, Kind, Node, OriginIdx, RefIdx};
 
 // TODO: Probably the last Fir trait we need is a `MultiMapper` trait which returns `Result<Vec<Node<U>>, E>`s
-pub trait Mapper<T, U: Default, E: IterError> {
+pub trait Mapper<T, U: Default + From<T>, E> {
     fn map_constant(
         &mut self,
         _data: T,
@@ -9,7 +9,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         constant: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Constant(constant),
         })
@@ -22,7 +22,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         reference: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::TypeReference(reference),
         })
@@ -36,7 +36,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         ty: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::TypedValue { value, ty },
         })
@@ -49,7 +49,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         default: Option<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Generic { default },
         })
@@ -63,7 +63,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         fields: Vec<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Type { generics, fields },
         })
@@ -79,7 +79,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         block: Option<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Function {
                 generics,
@@ -92,7 +92,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
 
     fn map_binding(&mut self, _data: T, origin: OriginIdx, to: RefIdx) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Binding { to },
         })
@@ -107,7 +107,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         fields: Vec<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Instantiation {
                 to,
@@ -125,7 +125,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         field: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::TypeOffset { instance, field },
         })
@@ -139,7 +139,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         from: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Assignment { to, from },
         })
@@ -154,7 +154,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         args: Vec<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Call { to, generics, args },
         })
@@ -167,7 +167,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         stmts: Vec<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Statements(stmts),
         })
@@ -182,7 +182,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         false_block: Option<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Conditional {
                 condition,
@@ -200,7 +200,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         block: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Loop { condition, block },
         })
@@ -213,7 +213,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         expr: Option<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::default(),
+            data: U::from(_data),
             origin,
             kind: Kind::Return(expr),
         })
@@ -280,7 +280,7 @@ pub trait Mapper<T, U: Default, E: IterError> {
         if errs.is_empty() {
             Ok(fir)
         } else {
-            Err(Incomplete(fir, E::aggregate(errs)))
+            Err(Incomplete { carcass: fir, errs })
         }
     }
 }

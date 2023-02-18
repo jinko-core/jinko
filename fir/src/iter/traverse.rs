@@ -1,9 +1,9 @@
-use crate::{Fallible, Fir, IterError, Kind, Node, RefIdx};
+use crate::{Fallible, Fir, Kind, Node, RefIdx};
 
 use std::fmt::Debug;
 
 /// All of the helpers and visitors call back into [`visit_node`]
-pub trait Traversal<T: Debug, E: IterError> {
+pub trait Traversal<T: Debug, E> {
     fn traverse_constant(
         &mut self,
         _fir: &Fir<T>,
@@ -183,7 +183,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         }
     }
 
-    fn traverse(&mut self, fir: &Fir<T>) -> Fallible<E> {
+    fn traverse(&mut self, fir: &Fir<T>) -> Fallible<Vec<E>> {
         let errs = fir
             .nodes
             .values()
@@ -200,7 +200,7 @@ pub trait Traversal<T: Debug, E: IterError> {
         if errs.is_empty() {
             Ok(())
         } else {
-            Err(E::aggregate(errs))
+            Err(errs)
         }
     }
 }
