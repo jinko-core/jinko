@@ -6,7 +6,7 @@ mod repl;
 
 use colored::Colorize;
 
-use flatten::FlattenAst;
+use flatten::{FlattenAst, FlattenData};
 use include_code::IncludeCode;
 use loop_desugar::DesugarLoops;
 use name_resolve::NameResolve;
@@ -22,6 +22,7 @@ use args::Args;
 #[cfg(feature = "repl")]
 use repl::Repl;
 use std::{fs, path::Path};
+use symbol::Symbol;
 
 // FIXME: Add documentation
 pub type InteractResult = Result<(Option<ObjectInstance>, Context), Error>;
@@ -97,6 +98,8 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
 }
 
 fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
+    use debug_fir::FirDebug;
+
     macro_rules! x_try {
         ($res:expr) => {
             match $res {
@@ -117,8 +120,27 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     let ast = x_try!(ast.resolve_includes());
     let ast = x_try!(ast_sanitizer::no_incl(ast));
 
+    let data_fmt = |data: &FlattenData| {
+        format!(
+            "{} @ scope {}",
+            data.symbol
+                .as_ref()
+                .map_or(String::new(), |s| format!("`{}`", Symbol::access(s))),
+            data.scope
+        )
+    };
+
     let fir = ast.flatten();
-    let _fir = x_try!(fir.name_resolve());
+    FirDebug::default()
+        .header("flattened")
+        .show_data(data_fmt)
+        .display(&fir);
+
+    let fir = x_try!(fir.name_resolve());
+    FirDebug::default()
+        .header("name_resolved")
+        .show_data(data_fmt)
+        .display(&fir);
 
     todo!("experimental pipeline is not complete")
 }

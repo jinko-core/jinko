@@ -7,6 +7,7 @@ pub struct FirDebug<T, F>
 where
     F: Fn(&T) -> String,
 {
+    header: Option<&'static str>,
     show_data: bool,
     data_fmt: Option<F>,
     _phantom: Option<PhantomData<T>>,
@@ -15,6 +16,7 @@ where
 impl<T, F: Fn(&T) -> String> Default for FirDebug<T, F> {
     fn default() -> FirDebug<T, F> {
         FirDebug {
+            header: None,
             show_data: false,
             data_fmt: None,
             _phantom: None,
@@ -59,6 +61,13 @@ fn fmt_slice(refidxes: &[RefIdx]) -> String {
 }
 
 impl<T, F: Fn(&T) -> String> FirDebug<T, F> {
+    pub fn header(self, header: &'static str) -> FirDebug<T, F> {
+        FirDebug {
+            header: Some(header),
+            ..self
+        }
+    }
+
     pub fn show_data(self, formatter: F) -> FirDebug<T, F> {
         FirDebug {
             show_data: true,
@@ -178,7 +187,12 @@ impl<T, F: Fn(&T) -> String> FirDebug<T, F> {
     }
 
     pub fn display(&self, fir: &Fir<T>) {
-        eprintln!("{}: [", "Fir".purple());
+        eprintln!(
+            "{}{}: [",
+            "Fir".purple(),
+            self.header
+                .map_or(String::new(), |header| format!(" ({header})"))
+        );
         fir.nodes.iter().for_each(|(_, node)| {
             self.display_node(node);
         });
