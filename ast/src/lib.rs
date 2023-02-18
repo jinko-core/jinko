@@ -24,9 +24,9 @@ pub enum TypeKind {
 /// ```
 #[derive(Debug, Clone)]
 pub struct TypeArgument {
+    pub location: SpanTuple,
     pub generics: Vec<TypeArgument>,
     pub kind: TypeKind,
-    // FIXME: Missing location member
 }
 
 /// A value with its associated type. This is used for function arguments or type fields
