@@ -102,7 +102,7 @@ use std::hash::Hash;
 mod checks;
 mod iter;
 
-pub use iter::{Incomplete, IterError, Mapper, MultiMapper, Traversal};
+pub use iter::{Incomplete, Mapper, MultiMapper, Traversal};
 
 /// A reference to another [`Node`] in the [`Fir`]. These references can be either resolved or unresolved, based
 /// on the state of the [`Fir`].

@@ -64,7 +64,8 @@ impl<T: Debug> Fir<T> {
                 // Should we split the fir::Kind into fir::Kind::Stmt and fir::Kind::Expr? Or does that not make sense?
                 Kind::Constant(r) => check!(r => Kind::TypeReference(_), node),
                 Kind::TypedValue { value, ty } => {
-                    check!(ty => Kind::Type { .. }, node);
+                    // FIXME: Is pointing to `Type` here valid?
+                    check!(ty => Kind::Type { .. } | Kind::TypeReference(_), node);
                     // `value` can link to basically anything
                     check!(value => Kind::Call { .. }
                         | Kind::Constant(_)
@@ -74,10 +75,11 @@ impl<T: Debug> Fir<T> {
                         | Kind::Type { .. } // for empty types // FIXME: Is that allowed?
                         , node);
                 }
-                Kind::TypeReference(to) => check!(to => Kind::TypeReference(_) | Kind::Generic { .. }, node),
+                // FIXME: Is that okay?
+                Kind::TypeReference(to) => check!(to => Kind::Type { .. } | Kind::Generic { .. }, node),
                 Kind::Generic {
                     default: Some(default),
-                } => check!(default => Kind::Type { .. }, node),
+                } => check!(default => Kind::TypeReference { .. }, node),
                 Kind::Function {
                     generics,
                     args,
@@ -86,7 +88,7 @@ impl<T: Debug> Fir<T> {
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
                     check!(@args => Kind::TypedValue { .. }, node);
-                    check!(return_type => Some(Kind::Type { .. }), node);
+                    check!(return_type => Some(Kind::TypeReference { .. }), node);
                     check!(block => Some(Kind::Statements(_)), node);
                 }
                 Kind::Call {
@@ -95,7 +97,7 @@ impl<T: Debug> Fir<T> {
                     args,
                 } => {
                     check!(to => Kind::Function { .. }, node);
-                    check!(@generics => Kind::Type { .. }, node);
+                    check!(@generics => Kind::TypeReference { .. }, node);
                     check!(@args => Kind::TypedValue { .. } | Kind::Constant(_), node);
                 }
                 Kind::Type {
@@ -118,7 +120,7 @@ impl<T: Debug> Fir<T> {
                     fields,
                 } => {
                     check!(to => Kind::Type { .. }, node);
-                    check!(@generics => Kind::Type { .. }, node);
+                    check!(@generics => Kind::TypeReference { .. }, node);
                     check!(@fields => Kind::Assignment { .. }, node);
                 }
                 Kind::TypeOffset { instance: _, .. } => {
