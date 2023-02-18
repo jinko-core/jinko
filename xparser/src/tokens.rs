@@ -16,8 +16,8 @@ use super::{ParseInput, ParseResult};
 
 /// Reserved Keywords by jinko
 const RESERVED_KEYWORDS: &[&str] = &[
-    "func", "test", "mock", "type", "ext", "for", "while", "loop", "mut", "true", "false", "incl",
-    "as", "return", "where",
+    "func", "test", "mock", "type", "ext", "for", "while", "loop", "mut", "incl", "as", "return",
+    "where",
 ];
 
 /// Function used to recognize a specific character such as '[' or '>'. A function

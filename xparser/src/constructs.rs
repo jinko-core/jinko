@@ -395,7 +395,7 @@ fn unit_func(
 }
 
 fn unit_incl(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, Ast> {
-    let (input, (path, id_loc)) = spaced_identifier(input)?;
+    let (input, (path, (_, end_loc))) = spaced_identifier(input)?;
     if let Ok((input, _)) = tokens::az_tok(input) {
         let (input, alias) = preceded(nom_next, tokens::identifier)(input)?;
         let (input, end_loc) = position(input)?;
@@ -412,7 +412,6 @@ fn unit_incl(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, 
             },
         ))
     } else {
-        let end_loc = Location::new(id_loc.line(), id_loc.column() + path.len());
         let incl = Node::Incl {
             source: Symbol::from(path),
             as_path: None,
@@ -451,22 +450,45 @@ fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
     }
 
     let input = next(input);
+    let (input, start_loc) = position(input)?;
     if let Ok((input, _)) = tokens::func_tok(input) {
         let (input, generics) = maybe_generic_application(input)?;
         let (input, _) = tokens::left_parenthesis(input)?;
         let (input, args) = arg_types(input)?;
         let (input, ret_ty) = opt(return_type)(input)?;
+        let (input, end_loc) = position(input)?;
 
         let kind = TypeKind::FunctionLike(args, ret_ty.map(Box::new));
 
-        Ok((input, TypeArgument { kind, generics }))
+        Ok((
+            input,
+            TypeArgument {
+                kind,
+                generics,
+                location: pos_to_loc(input, start_loc, end_loc),
+            },
+        ))
     } else {
-        let (input, (id, _)) = spaced_identifier(input)?;
+        let (input, (id, (start_loc, end_loc))) = spaced_identifier(input)?;
         let kind = TypeKind::Ty(Symbol::from(id));
 
         let (input, generics) = maybe_generic_application(input)?;
 
-        Ok((input, TypeArgument { kind, generics }))
+        // FIXME: Refactor
+        let end_loc = if !generics.is_empty() {
+            position(input)?.1.into()
+        } else {
+            end_loc
+        };
+
+        Ok((
+            input,
+            TypeArgument {
+                kind,
+                generics,
+                location: pos_to_loc(input, start_loc, end_loc),
+            },
+        ))
     }
 }
 
@@ -519,7 +541,7 @@ fn unit_var_decl(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     let (input, mutable) = opt(tokens::mut_tok)(input)?;
     let mutable = mutable.is_some();
 
-    let (input, (symbol, start_loc)) = spaced_identifier(input)?;
+    let (input, (symbol, (start_loc, _))) = spaced_identifier(input)?;
     let (input, _) = tokens::equal(input)?;
     let (input, value) = expr(input)?;
     let (input, end_loc) = position(input)?;
@@ -930,7 +952,7 @@ fn multi_type(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
 
 /// typed_arg = spaced_identifier ':' spaced_identifier
 fn typed_arg(input: ParseInput) -> ParseResult<ParseInput, TypedValue> {
-    let (input, (id, start_loc)) = spaced_identifier(input)?;
+    let (input, (id, (start_loc, _))) = spaced_identifier(input)?;
     let (input, _) = tokens::colon(input)?;
     let input = next(input);
     let (input, ty) = multi_type(input)?;
@@ -966,13 +988,14 @@ fn type_inst_arg(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     Ok((input, Ast { location, node }))
 }
 
-fn spaced_identifier(input: ParseInput) -> ParseResult<ParseInput, (String, Location)> {
+fn spaced_identifier(input: ParseInput) -> ParseResult<ParseInput, (String, (Location, Location))> {
     let input = next(input);
-    let (input, loc) = position(input)?;
+    let (input, start_loc) = position(input)?;
     let (input, id) = tokens::identifier(input)?;
+    let (input, end_loc) = position(input)?;
     let input = next(input);
 
-    Ok((input, (id, loc.into())))
+    Ok((input, (id, (start_loc.into(), end_loc.into()))))
 }
 
 /// next = extra*
