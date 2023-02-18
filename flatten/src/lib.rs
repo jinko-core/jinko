@@ -231,22 +231,46 @@ impl Ctx {
     }
 
     fn handle_ty_node(self, ty: &TypeArgument) -> (Ctx, RefIdx) {
-        let (ctx, generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_ty_node);
+        let (ctx, _generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_ty_node);
 
         let data = FlattenData {
             symbol: match &ty.kind {
                 ast::TypeKind::Ty(s) => Some(s.clone()),
                 ast::TypeKind::FunctionLike(_, _) => Some(Symbol::from("func")), // FIXME: Invalid but w/ever for now
             },
-            location: None, // FIXME: Invalid
+            location: Some(ty.location.clone()),
             scope: ctx.scope,
         };
 
         // FIXME: This should be a type reference probably, not a `Type`. Or `visit_function` uses `handle_ty_node` when
         // it shouldn't for its return type
-        let kind = Kind::Type {
-            generics,
-            fields: vec![],
+        let kind = Kind::TypeReference(RefIdx::Unresolved);
+
+        // FIXME: where do we put the generics?
+        // In the flatten data? Basically we're flattening all of the generics of the
+        // type and putting them... nowhere? Should `TypeReference` keep a `generics: Vec<RefIdx>` or no?
+        // or is the goal to instantiate a proper monomorphized type down the line and have
+        // typereference point to it?
+        //  {
+        //     generics,
+        //     fields: vec![],
+        // };
+
+        ctx.append(data, kind)
+    }
+
+    fn handle_declaration_argument(self, arg: &TypedValue) -> (Ctx, RefIdx) {
+        let (ctx, ty) = self.handle_ty_node(&arg.ty);
+
+        let data = FlattenData {
+            symbol: Some(arg.symbol.clone()),
+            location: Some(arg.location.clone()),
+            scope: ctx.scope,
+        };
+
+        let kind = Kind::Assignment {
+            to: RefIdx::Unresolved,
+            from: RefIdx::Unresolved,
         };
 
         ctx.append(data, kind)
@@ -416,6 +440,7 @@ impl Ctx {
     ) -> (Ctx, RefIdx) {
         self.scoped(|ctx| {
             let (ctx, generics) = ctx.visit_fold(generics.iter(), Ctx::handle_generic_node);
+            // let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::handle_declaration_argument);
             let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit_typed_value);
             let (ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_ty_node);
             let (ctx, block) = ctx.visit_opt(block.as_deref(), Ctx::visit);
