@@ -9,10 +9,7 @@ pub use traverse::Traversal;
 use crate::Fir;
 
 // FIXME: Documentation
-pub trait IterError: Sized {
-    // FIXME: Documentation
-    fn aggregate(errs: Vec<Self>) -> Self;
+pub struct Incomplete<T, E> {
+    pub carcass: Fir<T>,
+    pub errs: Vec<E>,
 }
-
-// FIXME: Documentation
-pub struct Incomplete<T, E>(pub Fir<T>, pub E);
