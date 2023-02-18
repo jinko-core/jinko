@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 fir = { path = "../fir" }
+debug-fir = { path = "../debug-fir" }
 symbol = { path = "../symbol" }
 flatten = { path = "../flatten" }
 error = { path = "../error" }
