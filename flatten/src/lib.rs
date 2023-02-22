@@ -268,10 +268,13 @@ impl Ctx {
             scope: ctx.scope,
         };
 
-        let kind = Kind::Assignment {
-            to: RefIdx::Unresolved,
-            from: RefIdx::Unresolved,
+        let value = Kind::TypedValue {
+            value: RefIdx::Unresolved,
+            ty,
         };
+        let (ctx, to) = ctx.append(data.clone(), value);
+
+        let kind = Kind::Binding { to };
 
         ctx.append(data, kind)
     }
@@ -440,8 +443,7 @@ impl Ctx {
     ) -> (Ctx, RefIdx) {
         self.scoped(|ctx| {
             let (ctx, generics) = ctx.visit_fold(generics.iter(), Ctx::handle_generic_node);
-            // let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::handle_declaration_argument);
-            let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit_typed_value);
+            let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::handle_declaration_argument);
             let (ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_ty_node);
             let (ctx, block) = ctx.visit_opt(block.as_deref(), Ctx::visit);
 
@@ -580,7 +582,7 @@ impl Ctx {
         _with: &Option<Box<Ast>>,
     ) -> (Ctx, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
-        let (ctx, fields) = ctx.visit_fold(fields.iter(), Ctx::visit_typed_value);
+        let (ctx, fields) = ctx.visit_fold(fields.iter(), Ctx::handle_declaration_argument);
 
         // FIXME: Handle `with` properly
 
@@ -591,29 +593,6 @@ impl Ctx {
         };
 
         let kind = Kind::Type { generics, fields };
-
-        ctx.append(data, kind)
-    }
-
-    fn visit_typed_value(
-        self,
-        TypedValue {
-            location,
-            symbol,
-            ty,
-        }: &TypedValue,
-    ) -> (Ctx, RefIdx) {
-        let (ctx, ty) = self.handle_ty_node(ty);
-
-        let data = FlattenData {
-            symbol: Some(symbol.clone()),
-            location: Some(location.clone()),
-            scope: ctx.scope,
-        };
-        let kind = Kind::TypedValue {
-            value: RefIdx::Unresolved, // FIXME: That's not valid, right?
-            ty,
-        };
 
         ctx.append(data, kind)
     }
