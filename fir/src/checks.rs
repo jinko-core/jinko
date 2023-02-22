@@ -87,7 +87,7 @@ impl<T: Debug> Fir<T> {
                     block,
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
-                    check!(@args => Kind::TypedValue { .. }, node);
+                    check!(@args => Kind::Binding { .. }, node);
                     check!(return_type => Some(Kind::TypeReference { .. }), node);
                     check!(block => Some(Kind::Statements(_)), node);
                 }
@@ -105,7 +105,7 @@ impl<T: Debug> Fir<T> {
                     fields,
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
-                    check!(@fields => Kind::TypedValue { .. }, node);
+                    check!(@fields => Kind::Binding { .. }, node);
                 }
                 Kind::Binding { to: _ } => {
                     // FIXME: Check `to` as well
