@@ -10,3 +10,4 @@ ast = { path = "../ast" }
 error = { path = "../error" }
 symbol = { path = "../symbol" }
 location = { path = "../location" }
+xparser = { path = "../xparser" }

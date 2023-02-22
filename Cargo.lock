@@ -364,6 +364,7 @@ dependencies = [
  "error",
  "location",
  "symbol",
+ "xparser",
 ]
 
 [[package]]

@@ -1,6 +1,9 @@
 mod constructs;
 mod tokens;
 
+pub use constructs::*;
+pub use tokens::*;
+
 use ast::Ast;
 use location::Source;
 
