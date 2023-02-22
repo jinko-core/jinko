@@ -357,6 +357,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "interpolate"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "error",
+ "location",
+ "symbol",
+]
+
+[[package]]
 name = "jinko"
 version = "0.3.0-jinx7"
 dependencies = [
@@ -372,6 +382,7 @@ dependencies = [
  "fire",
  "flatten",
  "include_code",
+ "interpolate",
  "lazy_static",
  "libc",
  "libffi",
