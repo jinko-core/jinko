@@ -424,6 +424,8 @@ mod tests {
     #[test]
     fn function_argument() {
         let fir = fir! {
+            type int;
+
             func id(x: int) -> int { x }
         }
         .name_resolve();
