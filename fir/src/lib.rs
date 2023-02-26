@@ -237,11 +237,6 @@ impl<T> Fir<T> {
 }
 
 pub trait Pass<T: Debug, U: Debug, E> {
-    /// Each implementer of [`Pass`] should keep its own [`OriginIdx`] counter in order to supply the [`Fir`]
-    /// with new nodes. This can be done by keeping an [`OriginIdx`] as part of the context, and repeatedly
-    /// calling [`OriginIdx::next`] on it.
-    fn next_origin(&mut self) -> OriginIdx;
-
     /// This function should panic if a condition fails to be upheld
     // FIXME: Add a #[cfg(not(release))] here
     fn pre_condition(fir: &Fir<T>);

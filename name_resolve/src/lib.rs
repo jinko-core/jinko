@@ -271,11 +271,6 @@ impl NameResolveCtx {
 }
 
 impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
-    // FIXME: This should be removed from Pass and added to MultiMapper
-    fn next_origin(&mut self) -> OriginIdx {
-        OriginIdx(0)
-    }
-
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
     fn post_condition(_fir: &Fir<FlattenData>) {}
