@@ -1,6 +1,5 @@
 use crate::{Fir, Incomplete, Kind, Node, OriginIdx, RefIdx};
 
-// TODO: Probably the last Fir trait we need is a `MultiMapper` trait which returns `Result<Vec<Node<U>>, E>`s
 pub trait Mapper<T, U: Default + From<T>, E> {
     fn map_constant(
         &mut self,
