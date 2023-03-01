@@ -11,3 +11,5 @@ error = { path = "../error" }
 symbol = { path = "../symbol" }
 location = { path = "../location" }
 xparser = { path = "../xparser" }
+nom = "7.0"
+nom_locate = "4.0"

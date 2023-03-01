@@ -363,6 +363,8 @@ dependencies = [
  "ast",
  "error",
  "location",
+ "nom 7.1.1",
+ "nom_locate",
  "symbol",
  "xparser",
 ]

@@ -1,10 +1,34 @@
 use ast::{Ast, Node, Value, Visitor};
 use error::{ErrKind, Error};
-use location::SpanTuple;
+use location::{Source, SpanTuple};
+use xparser::{ParseInput, ParseResult};
+
+use nom::bytes::complete::take_until;
+use nom::character::complete::char;
+use nom_locate::{position, LocatedSpan};
 
 struct Ctx;
 
+fn parse_expr(to_parse: ParseInput) -> ParseResult<ParseInput, Ast> {
+    let (input, _) = char('{')(to_parse)?;
+    let (input, expr) = xparser::expr(input)?;
+    let (input, _) = char('}')(input)?;
+
+    Ok((input, expr))
+}
+
+fn parse_str(to_parse: ParseInput) -> ParseResult<ParseInput, ParseInput> {
+    // how to handle reaching the end of the string?
+    take_until("{")(to_parse)
+}
+
+fn parse_inner(to_parse: &str) -> ParseResult<ParseInput, Ast> {
+    todo!()
+}
+
+/// This function parses the following grammar:  `double_quote ( .* ( '{' expr '}' )* )* double_quote`
 fn parse_format_string(to_parse: &str) -> Result<Vec<Ast>, Error> {
+    let input = LocatedSpan::new_extra(to_parse, Source::Input(to_parse));
     todo!()
 }
 
