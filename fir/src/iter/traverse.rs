@@ -1,9 +1,8 @@
 use crate::{Fallible, Fir, Kind, Node, RefIdx};
 
-use std::fmt::Debug;
-
-/// All of the helpers and visitors call back into [`visit_node`]
-pub trait Traversal<T: Debug, E> {
+/// All of the helpers and visitors call back into [`Traversal::traverse_node`] which then dispatches
+/// to the proper subfunctions.
+pub trait Traversal<T, E> {
     fn traverse_constant(
         &mut self,
         _fir: &Fir<T>,

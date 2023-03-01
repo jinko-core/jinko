@@ -100,9 +100,9 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 mod checks;
-mod iter;
+pub mod iter;
 
-pub use iter::{Incomplete, Mapper, MultiMapper, Traversal};
+pub use iter::{Fallible, Incomplete, Mapper, MultiMapper, Traversal};
 
 /// A reference to another [`Node`] in the [`Fir`]. These references can be either resolved or unresolved, based
 /// on the state of the [`Fir`].
@@ -134,8 +134,6 @@ impl OriginIdx {
         OriginIdx(self.0 + 1)
     }
 }
-
-pub type Fallible<E> = Result<(), E>;
 
 /// Helper trait to enable an immutable pattern on the [`Fir`]
 trait WithMap<K: Hash + Eq, V> {
@@ -224,6 +222,7 @@ pub struct Node<T = ()> {
 /// An instance of [`Fir`] is similar to a graph, containing [`Node`]s and relationships binding them together.
 #[derive(Default, Debug)]
 pub struct Fir<T = ()> {
+    // TODO: Is a simple Vector better? a HashMap?
     pub nodes: BTreeMap<OriginIdx, Node<T>>,
 }
 
@@ -245,13 +244,18 @@ pub trait Pass<T: Debug, U: Debug, E> {
     // FIXME: Add a #[cfg(not(release))] here
     fn post_condition(fir: &Fir<U>);
 
-    /// The actual pass algorithm.
-    // FIXME: Should this take an immutable context and return it?
+    /// The actual pass algorithm which transforms the [`Fir`] and returns a new one.
     fn transform(&mut self, fir: Fir<T>) -> Result<Fir<U>, E>;
 
-    // FIXME: Add documentation
-    // FIXME: Should this take an immutable context and return it?
-    // FIXME: Should this return a Result<Fir<U>, E>?
+    /// The [`pass`] function is implemented by default in the [`Pass`] trait. It calls into the
+    /// [`pre_condition`] function, then executes the [`transform`] one, before finally executing
+    /// the [`post_condition`] one.
+    ///
+    /// ## Return value
+    ///
+    /// The fallible traits in the Fir's `iter` module return an instance of the [`Incomplete`] type
+    /// on error. Should you want to return this incomplete [`Fir`], make sure to return it in the
+    /// [`Ok`] case. This trait is to be used as high level interface into your [`Fir`] pass.
     fn pass(&mut self, fir: Fir<T>) -> Result<Fir<U>, E> {
         // FIXME: Add a #[cfg(not(release))] here
         Self::pre_condition(&fir);
