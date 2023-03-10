@@ -321,4 +321,10 @@ impl std::convert::From<std::env::VarError> for Error {
     }
 }
 
+impl From<Vec<Error>> for Error {
+    fn from(errs: Vec<Error>) -> Self {
+        Error::new(ErrKind::Multiple(errs))
+    }
+}
+
 impl std::error::Error for Error {}
