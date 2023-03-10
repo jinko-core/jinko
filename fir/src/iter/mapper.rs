@@ -1,14 +1,9 @@
 use crate::{Fir, Incomplete, Kind, Node, OriginIdx, RefIdx};
 
 pub trait Mapper<T, U: Default + From<T>, E> {
-    fn map_constant(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        constant: RefIdx,
-    ) -> Result<Node<U>, E> {
+    fn map_constant(&mut self, data: T, origin: OriginIdx, constant: RefIdx) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Constant(constant),
         })
@@ -16,12 +11,12 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_type_reference(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         reference: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::TypeReference(reference),
         })
@@ -29,13 +24,13 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_typed_value(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         value: RefIdx,
         ty: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::TypedValue { value, ty },
         })
@@ -43,12 +38,12 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_generic(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         default: Option<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Generic { default },
         })
@@ -56,13 +51,13 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_type(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         generics: Vec<RefIdx>,
         fields: Vec<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Type { generics, fields },
         })
@@ -70,7 +65,7 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_function(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         generics: Vec<RefIdx>,
         args: Vec<RefIdx>,
@@ -78,7 +73,7 @@ pub trait Mapper<T, U: Default + From<T>, E> {
         block: Option<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Function {
                 generics,
@@ -89,9 +84,9 @@ pub trait Mapper<T, U: Default + From<T>, E> {
         })
     }
 
-    fn map_binding(&mut self, _data: T, origin: OriginIdx, to: RefIdx) -> Result<Node<U>, E> {
+    fn map_binding(&mut self, data: T, origin: OriginIdx, to: RefIdx) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Binding { to },
         })
@@ -99,14 +94,14 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_instantiation(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         to: RefIdx,
         generics: Vec<RefIdx>,
         fields: Vec<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Instantiation {
                 to,
@@ -118,13 +113,13 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_type_offset(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         instance: RefIdx,
         field: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::TypeOffset { instance, field },
         })
@@ -132,13 +127,13 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_assignment(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         to: RefIdx,
         from: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Assignment { to, from },
         })
@@ -146,14 +141,14 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_call(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         to: RefIdx,
         generics: Vec<RefIdx>,
         args: Vec<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Call { to, generics, args },
         })
@@ -161,12 +156,12 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_statements(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         stmts: Vec<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Statements(stmts),
         })
@@ -174,14 +169,14 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_condition(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         condition: RefIdx,
         true_block: RefIdx,
         false_block: Option<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Conditional {
                 condition,
@@ -193,13 +188,13 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_loop(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         condition: RefIdx,
         block: RefIdx,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Loop { condition, block },
         })
@@ -207,12 +202,12 @@ pub trait Mapper<T, U: Default + From<T>, E> {
 
     fn map_return(
         &mut self,
-        _data: T,
+        data: T,
         origin: OriginIdx,
         expr: Option<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
-            data: U::from(_data),
+            data: U::from(data),
             origin,
             kind: Kind::Return(expr),
         })
