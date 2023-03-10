@@ -34,6 +34,7 @@ use crate::Fir;
 /// which enables you to still perform error reporting, hinting, or to keep going with more
 /// operations. You can also access the errors emitted by the mapping pass. This vector of
 /// errors is guaranteed to not be empty.
+#[derive(Debug)]
 pub struct Incomplete<T, E> {
     pub carcass: Fir<T>,
     pub errs: Vec<E>,
