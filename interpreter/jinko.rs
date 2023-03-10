@@ -23,6 +23,7 @@ use args::Args;
 use repl::Repl;
 use std::{fs, path::Path};
 use symbol::Symbol;
+use typecheck::TypeCheck;
 
 // FIXME: Add documentation
 pub type InteractResult = Result<(Option<ObjectInstance>, Context), Error>;
@@ -141,6 +142,8 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
         .header("name_resolved")
         .show_data(data_fmt)
         .display(&fir);
+
+    x_try!(fir.type_check());
 
     todo!("experimental pipeline is not complete")
 }
