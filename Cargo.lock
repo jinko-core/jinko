@@ -758,7 +758,9 @@ dependencies = [
  "fir",
  "flatten",
  "location",
+ "name_resolve",
  "symbol",
+ "xparser",
 ]
 
 [[package]]

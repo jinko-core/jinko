@@ -1,3 +1,8 @@
+// TODO: At the moment, the main issue with this typechecker is that it isn't *flat*. It does
+// not benefit from all of the cool stuff of the Fir and ends up doing recursive calls to figure
+// out the proper type of something. Is there a way to circumvent this or not? Or is that how we
+// are supposed to do things?
+
 use error::{ErrKind, Error};
 use fir::{Fallible, Fir, Kind, Mapper, Node, OriginIdx, Pass, RefIdx, Traversal};
 use flatten::FlattenData;
@@ -86,13 +91,11 @@ impl TypeData {
                     // if we're in a `Use` case again, recursively flatten. Otherwise,
                     // we've reached the leaf node (the actual declaration this type refers to)
                     match refers_to.data.ty {
-                        Some(Ty::Use(inner)) => TypeData {
-                            ty: Some(Ty::Use(inner)),
-                            symbol: None,
-                            loc: None,
-                        }
-                        .actual_type(fir),
-                        Some(Ty::Dec(_)) => Some(refers_to.origin),
+                        Some(Ty::Use(_)) => refers_to.data.actual_type(fir),
+                        Some(Ty::Dec(declared_ty)) => declared_ty.map(|idx| match idx {
+                            RefIdx::Unresolved => panic!("interpreter error!"),
+                            RefIdx::Resolved(idx) => idx,
+                        }),
                         None => None,
                         Some(Ty::Unknown) => panic!("this is an interpreter error!"),
                     }
@@ -128,6 +131,8 @@ impl Mapper<FlattenData, TypeData, Error> for TypeCtx {
         // TODO: We need data from the AST at this point. Either the node or what kind of
         // constant it is (if it is one)
         Ok(Node {
+            // For constants, how will we look up the basic primitive type nodes before assigning them
+            // here? Just a traversal and we do that based on name? Or will they need to be builtin at this point?
             data: TypeData::from(data).declares(None /* FIXME: Wrong */),
             origin,
             kind: Kind::Constant(constant),
@@ -374,15 +379,17 @@ impl Mapper<FlattenData, TypeData, Error> for TypeCtx {
 fn type_mismatch(
     loc: &Option<SpanTuple>,
     fir: &Fir<TypeData>,
-    expected: &OriginIdx,
-    got: &OriginIdx,
+    expected: &Option<OriginIdx>,
+    got: &Option<OriginIdx>,
 ) -> Error {
-    let expected_ty = fir.nodes[expected].data.symbol.as_ref().unwrap();
-    let got_ty = fir.nodes[got].data.symbol.as_ref().unwrap();
+    let get_symbol = |idx| fir.nodes[&idx].data.symbol.clone().unwrap();
+
+    let expected_ty = expected.map_or(Symbol::from("void"), get_symbol);
+    let got_ty = got.map_or(Symbol::from("void"), get_symbol);
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
-            "type mismatch found: expected `{expected_ty}`, got `{got_ty}``"
+            "type mismatch found: expected `{expected_ty}`, got `{got_ty}`"
         ))
         .with_loc(loc.clone()) // FIXME: Missing hint
 }
@@ -399,18 +406,31 @@ impl Traversal<TypeData, Error> for TypeCtx {
         return_ty: &Option<RefIdx>,
         block: &Option<RefIdx>,
     ) -> Fallible<Error> {
+        // TODO: Make this whole block return an Option<Error> instead?
         match (return_ty, block) {
+            (None, Some(RefIdx::Resolved(block_ty))) => {
+                let block_ty = fir.nodes[block_ty].data.actual_type(fir);
+
+                if block_ty.is_some() {
+                    Err(type_mismatch(&node.data.loc, fir, &None, &block_ty))
+                } else {
+                    Ok(())
+                }
+            }
             (Some(RefIdx::Resolved(return_ty)), Some(RefIdx::Resolved(block_ty))) => {
                 let return_ty = fir.nodes[return_ty].data.actual_type(fir);
                 let block_ty = fir.nodes[block_ty].data.actual_type(fir);
 
+                dbg!(return_ty);
+                dbg!(block_ty);
+                dbg!(&fir.nodes[&return_ty.unwrap()]);
+                dbg!(&fir.nodes[&block_ty.unwrap()]);
+
+                // this compares `RefIdx` which isn't valid especially with the current setup which
+                // duplicates a lot of nodes. We should either compare *nodes* or add deduplication.
+                // or is there another error which causes this?
                 if return_ty != block_ty {
-                    Err(type_mismatch(
-                        &node.data.loc,
-                        fir,
-                        &return_ty.unwrap(),
-                        &block_ty.unwrap(),
-                    ))
+                    Err(type_mismatch(&node.data.loc, fir, &return_ty, &block_ty))
                 } else {
                     Ok(())
                 }
@@ -437,4 +457,63 @@ impl Pass<FlattenData, TypeData, Error> for TypeCtx {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+
+    macro_rules! fir {
+        ($($tok:tt)*) => {
+            {
+                let ast = xparser::parse(
+                    stringify!($($tok)*),
+                    location::Source::Input(stringify!($($tok)*)))
+                .unwrap();
+
+                let fir = flatten::FlattenAst::flatten(&ast);
+                name_resolve::NameResolve::name_resolve(fir).unwrap()
+            }
+        }
+    }
+
+    #[test]
+    fn easy() {
+        let fir = fir! {
+            type Marker0;
+
+            func foo() -> Marker0 {
+                Marker0
+            }
+        }
+        .type_check();
+
+        // TODO: Add assertions making sure that the type of the block and block's last stmt are typerefs to Marker0;
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn mismatch() {
+        let fir = fir! {
+            type Marker0;
+            type Marker1;
+
+            func foo() -> Marker0 {
+                Marker1
+            }
+        }
+        .type_check();
+
+        assert!(fir.is_err());
+    }
+
+    #[test]
+    fn nested_call() {
+        let fir = fir! {
+            type Marker0;
+
+            func foo() -> Marker0 { Marker0 }
+            func bar() -> Marker0 { foo() }
+        }
+        .type_check();
+
+        assert!(fir.is_ok());
+    }
+}
