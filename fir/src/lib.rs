@@ -235,6 +235,8 @@ impl<T> Fir<T> {
     }
 }
 
+// FIXME: The `pass` function should return an Incomplete Fir. How to make it so that we can chain Fir operations
+// nicely?
 pub trait Pass<T: Debug, U: Debug, E> {
     /// This function should panic if a condition fails to be upheld
     // FIXME: Add a #[cfg(not(release))] here
