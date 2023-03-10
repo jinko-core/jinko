@@ -23,6 +23,7 @@ members = [
   "xparser",
   "ast-sanitizer",
   "debug-fir",
+  "typecheck",
 ]
 
 [dependencies]
@@ -38,6 +39,7 @@ location = { path = "location" }
 include_code = { path = "include_code" }
 loop_desugar = { path = "loop_desugar" }
 xparser = { path = "xparser" }
+typecheck = { path = "typecheck" }
 structopt = "0.3"
 colored = "2.0"
 nom = "7.0"
