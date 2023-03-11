@@ -48,6 +48,7 @@ impl Traversal<FlattenData, Error> for Typer<'_> {
         // For constants, how will we look up the basic primitive type nodes before assigning them
         // here? Just a traversal and we do that based on name? Or will they need to be builtin at this point?
         // Some types, like string, int, char, are builtin multi types and will *need* to be builtin.
+        // `bool` on the other hand, can be a multi type implemented within the standard library.
         self.ty(node, None)
     }
 
