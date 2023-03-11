@@ -12,6 +12,7 @@ use symbol::Symbol;
 pub struct TypeCtx;
 
 pub trait TypeCheck<T>: Sized {
+    #[deprecated = "experimental recursive typecheck algorithm"]
     fn type_check(self) -> Result<T, Error>;
 }
 
@@ -81,6 +82,7 @@ impl TypeData {
     // that types match? And we don't have to do memoization for now, but could
     // by keeping a hashmap within the TypeCtx?
     fn actual_type(&self, fir: &Fir<TypeData>) -> Option<OriginIdx> {
+        dbg!(&self.ty);
         match &self.ty {
             // declarations are void
             Some(Ty::Dec(_)) | None => None,
@@ -421,14 +423,8 @@ impl Traversal<TypeData, Error> for TypeCtx {
                 let return_ty = fir.nodes[return_ty].data.actual_type(fir);
                 let block_ty = fir.nodes[block_ty].data.actual_type(fir);
 
-                dbg!(return_ty);
-                dbg!(block_ty);
-                dbg!(&fir.nodes[&return_ty.unwrap()]);
-                dbg!(&fir.nodes[&block_ty.unwrap()]);
-
-                // this compares `RefIdx` which isn't valid especially with the current setup which
-                // duplicates a lot of nodes. We should either compare *nodes* or add deduplication.
-                // or is there another error which causes this?
+                // This has an issue with the `nested_call` testcase, as one resolves to the type declaration and another
+                // to the type reference which refers that declaration.
                 if return_ty != block_ty {
                     Err(type_mismatch(&node.data.loc, fir, &return_ty, &block_ty))
                 } else {
