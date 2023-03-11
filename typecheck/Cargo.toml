@@ -1,0 +1,17 @@
+[package]
+name = "typecheck"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+fir = { path = "../fir" }
+flatten = { path = "../flatten" }
+error = { path = "../error" }
+symbol = { path = "../symbol" }
+location = { path = "../location" }
+
+[dev-dependencies]
+xparser = { path = "../xparser" }
+name_resolve = { path = "../name_resolve" }

@@ -23,6 +23,7 @@ members = [
   "xparser",
   "ast-sanitizer",
   "debug-fir",
+  "typecheck",
   "recursive_typecheck",
 ]
 
@@ -39,6 +40,7 @@ location = { path = "location" }
 include_code = { path = "include_code" }
 loop_desugar = { path = "loop_desugar" }
 xparser = { path = "xparser" }
+typecheck = { path = "typecheck" }
 recursive_typecheck = { path = "recursive_typecheck" }
 structopt = "0.3"
 colored = "2.0"
