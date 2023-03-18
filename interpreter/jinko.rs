@@ -19,11 +19,11 @@ use jinko::typechecker::CheckedType;
 use jinko::value::{JkBool, JkFloat, JkInt};
 
 use args::Args;
-use recursive_typecheck::TypeCheck;
 #[cfg(feature = "repl")]
 use repl::Repl;
 use std::{fs, path::Path};
 use symbol::Symbol;
+use typecheck::TypeCheck;
 
 // FIXME: Add documentation
 pub type InteractResult = Result<(Option<ObjectInstance>, Context), Error>;
