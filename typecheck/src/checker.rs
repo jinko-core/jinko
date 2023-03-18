@@ -8,6 +8,8 @@ use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
 
+use colored::Colorize;
+
 use crate::{Type, TypeCtx};
 
 // TODO: We need a way to fetch common type nodes used during typechecking, such as `bool` for example,
@@ -28,19 +30,23 @@ fn type_mismatch(
     expected: Option<Type>,
     got: Option<Type>,
 ) -> Error {
-    // FIXME: is "void" what we want? wouldn't it be better to use something like "no type"
-    let void = Symbol::from("void");
     let get_symbol = |ty| {
         let Type::One(idx) = ty;
         fir.nodes[&idx.unwrap()].data.symbol.clone().unwrap()
     };
+    let name_fmt = |ty: Option<Symbol>| match ty {
+        Some(ty) => format!("`{}`", ty.access().purple()),
+        None => format!("{}", "no type".green()),
+    };
 
-    let expected_ty = expected.map_or(void.clone(), get_symbol);
-    let got_ty = got.map_or(void, get_symbol);
+    let expected_ty = expected.map(get_symbol);
+    let got_ty = got.map(get_symbol);
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
-            "type mismatch found: expected `{expected_ty}`, got `{got_ty}`"
+            "type mismatch found: expected {}, got {}",
+            name_fmt(expected_ty),
+            name_fmt(got_ty)
         ))
         .with_loc(loc.clone()) // FIXME: Missing hint
 }
@@ -58,18 +64,46 @@ impl<'ctx> Traversal<FlattenData, Error> for Checker<'ctx> {
         let ret_ty = return_ty.as_ref().and_then(|b| self.get_type(b));
         let block_ty = block.as_ref().and_then(|b| self.get_type(b));
 
-        match (ret_ty, block_ty) {
-            // All functions which do not have a return type are by definition
-            // typed correctly
-            (_, None) => Ok(()),
-            // if a function should return void, but returns
-            (ret_ty, block_ty) => {
-                if ret_ty != block_ty {
-                    Err(type_mismatch(&node.data.location, fir, ret_ty, block_ty))
-                } else {
-                    Ok(())
-                }
-            }
+        if ret_ty != block_ty {
+            let err = type_mismatch(&node.data.location, fir, ret_ty, block_ty);
+            let err = match (ret_ty, block_ty) {
+                (None, Some(_)) => err
+                    .with_hint(Error::hint().with_msg(String::from(
+                        "this function is not expected to return any value but does",
+                    )))
+                    .with_hint(Error::hint().with_msg(String::from(
+                        "you might have meant to ignore the last expression?",
+                    ))),
+                (Some(_), None) => err
+                    .with_hint(Error::hint().with_msg(String::from(
+                        "this function's block does not return any value",
+                    )))
+                    .with_hint(Error::hint().with_msg(String::from(
+                        "you might have added an extra semicolon or forgotten an expression?",
+                    ))),
+                _ => err,
+            };
+
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn traverse_assignment(
+        &mut self,
+        fir: &Fir<FlattenData>,
+        node: &Node<FlattenData>,
+        to: &RefIdx,
+        from: &RefIdx,
+    ) -> Fallible<Error> {
+        let to = self.get_type(to);
+        let from = self.get_type(from);
+
+        if to != from {
+            Err(type_mismatch(&node.data.location, fir, to, from))
+        } else {
+            Ok(())
         }
     }
 }

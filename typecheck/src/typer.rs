@@ -64,7 +64,7 @@ impl Traversal<FlattenData, Error> for Typer<'_> {
             // These nodes all refer to other nodes, type references or typed values. They will need
             // to be flattened later on.
             fir::Kind::TypeReference(ty)
-            | fir::Kind::TypedValue { ty, .. }
+            | fir::Kind::TypedValue { value: ty, .. }
             | fir::Kind::Instantiation { to: ty, .. }
             | fir::Kind::Call { to: ty, .. }
             | fir::Kind::Conditional { true_block: ty, .. } => self.ty(node, Some(ty)),
