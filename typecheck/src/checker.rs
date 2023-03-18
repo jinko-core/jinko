@@ -16,10 +16,9 @@ pub(crate) struct Checker<'ctx>(pub(crate) &'ctx mut TypeCtx);
 
 impl<'ctx> Checker<'ctx> {
     fn get_type(&self, of: &RefIdx) -> Option<Type> {
-        match of {
-            RefIdx::Resolved(of) => *self.0.types.get(of).unwrap(),
-            RefIdx::Unresolved => unreachable!("unresolved node in `Fir`"),
-        }
+        // if at this point, the reference is unresolved, or if we haven't seen that node yet, it's
+        // an interpreter error
+        *self.0.types.get(&of.unwrap()).unwrap()
     }
 }
 
@@ -29,10 +28,11 @@ fn type_mismatch(
     expected: Option<Type>,
     got: Option<Type>,
 ) -> Error {
+    // FIXME: is "void" what we want? wouldn't it be better to use something like "no type"
     let void = Symbol::from("void");
-    let get_symbol = |ty| match ty {
-        Type::One(RefIdx::Resolved(idx)) => fir.nodes[&idx].data.symbol.clone().unwrap(),
-        _ => unreachable!("unresolved pattern"),
+    let get_symbol = |ty| {
+        let Type::One(idx) = ty;
+        fir.nodes[&idx.unwrap()].data.symbol.clone().unwrap()
     };
 
     let expected_ty = expected.map_or(void.clone(), get_symbol);

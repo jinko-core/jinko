@@ -811,10 +811,7 @@ mod tests {
             Kind::Statements(stmts) => stmts,
             _ => unreachable!(),
         };
-        let ret_idx = match stmts[0] {
-            RefIdx::Resolved(i) => i,
-            RefIdx::Unresolved => unreachable!(),
-        };
+        let ret_idx = stmts[0].unwrap();
 
         assert!(matches!(
             fir.nodes.get(&ret_idx).unwrap().kind,

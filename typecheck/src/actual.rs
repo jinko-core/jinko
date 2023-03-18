@@ -10,11 +10,7 @@ use crate::{Type, TypeCtx};
 pub(crate) struct Actual<'ctx>(pub(crate) &'ctx mut TypeCtx);
 
 fn innermost_type(fir: &Fir<FlattenData>, linked_node: RefIdx) -> Option<Type> {
-    let linked_node = match linked_node {
-        RefIdx::Unresolved => unreachable!(),
-        RefIdx::Resolved(r) => r,
-    };
-    let linked_node = &fir.nodes[&linked_node];
+    let linked_node = &fir.nodes[&linked_node.unwrap()];
 
     let inner_opt = |fir, opt| match opt {
         Some(opt) => innermost_type(fir, opt),
