@@ -18,10 +18,7 @@ impl<'ctx> Typer<'ctx> {
     /// of each node in the [`Fir`]. This is however done in another traversal on the [`Fir`] called "Actual" and defined
     /// in another module.
     fn ty(&mut self, node: &Node<FlattenData>, ty: Option<&RefIdx>) -> Fallible<Error> {
-        let ty = match ty {
-            Some(ty) => Type::One(*ty),
-            None => Type::Void,
-        };
+        let ty = ty.map(|refidx| Type::One(*refidx));
 
         // Having non-unique ids in the Fir is an interpreter error
         // Or should we return an error here?

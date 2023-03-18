@@ -8,17 +8,19 @@ use error::Error;
 use fir::{Fir, OriginIdx, Pass, RefIdx, Traversal};
 use flatten::FlattenData;
 
+use actual::Actual;
+use checker::Checker;
 use typer::Typer;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Type {
-    Void,
     One(RefIdx),
 }
 
 #[derive(Default)]
 pub(crate) struct TypeCtx {
     // mapping from declaration to type
-    pub(crate) types: HashMap<OriginIdx, Type>,
+    pub(crate) types: HashMap<OriginIdx, Option<Type>>,
 }
 
 pub trait TypeCheck<T>: Sized {
@@ -38,14 +40,11 @@ impl Pass<FlattenData, FlattenData, Error> for TypeCtx {
 
     fn transform(&mut self, fir: Fir<FlattenData>) -> Result<Fir<FlattenData>, Error> {
         // Typing pass
-        Typer(self).traverse(&fir).unwrap(); /* FIXME: No unwrap */
+        Typer(self).traverse(&fir)?;
+        Actual(self).traverse(&fir)?;
+        Checker(self).traverse(&fir)?;
 
-        // Checking pass
-        // self.traverse(&typed_fir)?;
-
-        // Ok(typed_fir)
-
-        todo!()
+        Ok(fir)
     }
 }
 
@@ -108,5 +107,22 @@ mod tests {
         .type_check();
 
         assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn invalid_nested() {
+        let fir = fir! {
+            type Marker0;
+            type Marker1;
+
+            func foo() -> Marker0 { Marker0 }
+            func bar() -> Marker0 { foo() }
+            func baz() -> Marker1 { bar() }
+
+            func qux() -> Marker0 { baz() }
+        }
+        .type_check();
+
+        assert!(fir.is_err());
     }
 }
