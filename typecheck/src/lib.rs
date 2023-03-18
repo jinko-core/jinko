@@ -125,4 +125,34 @@ mod tests {
 
         assert!(fir.is_err());
     }
+
+    #[test]
+    fn assignment_valid() {
+        let fir = fir! {
+            type Marker0;
+
+            where mut a = Marker0;
+            a = Marker0;
+
+            where mut b = Marker0;
+            b = a;
+        }
+        .type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn assignment_invalid() {
+        let fir = fir! {
+            type Marker0;
+            type Marker1;
+
+            where mut a = Marker0;
+            a = Marker1;
+        }
+        .type_check();
+
+        assert!(fir.is_err());
+    }
 }
