@@ -113,10 +113,21 @@ pub use iter::{Fallible, Incomplete, Mapper, MultiMapper, Traversal};
 pub enum RefIdx {
     /// An unresolved index into the [`Fir`]. This indicates a step that has not been done yet: Either a
     /// declaration/origin point has not been visited yet, or a reference to a declaration has not been resolved
-    /// yet
+    /// yet.
     Unresolved,
-    /// A resolved reference to a definition/origin point.
+    /// A resolved reference to a definition/origin point. If you are certain that a [`RefIdx`] points to a valid
+    /// [`OriginIdx`], you can use [`RefIdx::unwrap`].
     Resolved(OriginIdx),
+}
+
+impl RefIdx {
+    #[track_caller]
+    pub fn unwrap(&self) -> OriginIdx {
+        match self {
+            RefIdx::Resolved(idx) => *idx,
+            RefIdx::Unresolved => unreachable!("unexpected `RefIdx::Unresolved` in `Fir`"),
+        }
+    }
 }
 
 /// Each [`Node`] in the [`Fir`] is its own [`OriginIdx`], which is an origin point. This is a bit wasteful
