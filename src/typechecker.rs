@@ -21,19 +21,14 @@ use std::{
 /// The [`CheckedType`] enum contains three possible states about the type. Either the
 /// type has been properly resolved to something, or it corresponds to a Void type. If the
 /// type has not been resolved yet, it can be unknown.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub enum CheckedType {
     Resolved(TypeId),
     // Should we remove this for Resolved(TypeId::void())?
     Void,
-    Error,
     Later,
-}
-
-impl Default for CheckedType {
-    fn default() -> CheckedType {
-        CheckedType::Error
-    }
+    #[default]
+    Error,
 }
 
 impl Display for CheckedType {
