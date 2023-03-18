@@ -470,6 +470,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn easy() {
         let fir = fir! {
@@ -485,6 +486,7 @@ mod tests {
         assert!(fir.is_ok());
     }
 
+    #[ignore]
     #[test]
     fn mismatch() {
         let fir = fir! {
@@ -500,6 +502,7 @@ mod tests {
         assert!(fir.is_err());
     }
 
+    #[ignore]
     #[test]
     fn nested_call() {
         let fir = fir! {

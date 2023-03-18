@@ -60,9 +60,7 @@ impl ScopeMap {
         let scope = match self.scopes.get_mut(scope) {
             Some(scope) => scope,
             None => {
-                (self.scopes.len()..=scope)
-                    .into_iter()
-                    .for_each(|_| self.scopes.push(Scope::default()));
+                (self.scopes.len()..=scope).for_each(|_| self.scopes.push(Scope::default()));
 
                 &mut self.scopes[scope]
             }
