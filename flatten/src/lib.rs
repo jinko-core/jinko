@@ -153,7 +153,8 @@
 //! ```
 
 use ast::{
-    Ast, Call, Declaration, GenericArgument, LoopKind, Node as AstNode, TypeArgument, TypedValue,
+    Ast, Call, Declaration, GenericArgument, LoopKind, Node as AstNode, TypeArgument, TypeKind,
+    TypedValue,
 };
 use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
 use location::SpanTuple;
@@ -186,21 +187,21 @@ impl OriginExt for OriginIdx {
 }
 
 #[derive(Clone, Debug)]
-pub struct FlattenData /* <'ast> */ {
+pub struct FlattenData<'ast> {
     pub symbol: Option<Symbol>,
     pub location: Option<SpanTuple>, // FIXME: Remove the option
     pub scope: usize,
-    // pub ast: &'ast Ast,
+    pub ast: Option<&'ast Ast>,
 }
 
-struct Ctx {
-    pub fir: Fir<FlattenData>,
+struct Ctx<'ast> {
+    pub fir: Fir<FlattenData<'ast>>,
     pub origin: OriginIdx,
     pub scope: usize,
 }
 
-impl Ctx {
-    fn append(mut self, data: FlattenData, kind: Kind) -> (Ctx, RefIdx) {
+impl<'ast> Ctx<'ast> {
+    fn append(mut self, data: FlattenData<'ast>, kind: Kind) -> (Ctx<'ast>, RefIdx) {
         let next = self.origin.increment();
         let node = Node {
             data,
@@ -217,7 +218,7 @@ impl Ctx {
         )
     }
 
-    fn handle_generic_node(self, generic: &GenericArgument) -> (Ctx, RefIdx) {
+    fn handle_generic_node(self, generic: &GenericArgument) -> (Ctx<'ast>, RefIdx) {
         // FIXME: Needs AST to be fixed
         // let (ctx, default_ty) = self.handle_ty_node(generic.ty);
 
@@ -225,22 +226,24 @@ impl Ctx {
             symbol: Some(generic.name.clone()),
             location: None, // FIXME
             scope: self.scope,
+            ast: None,
         };
         let kind = Kind::Generic { default: None }; // FIXME: Invalid
 
         self.append(data, kind)
     }
 
-    fn handle_ty_node(self, ty: &TypeArgument) -> (Ctx, RefIdx) {
+    fn handle_ty_node(self, ty: &TypeArgument) -> (Ctx<'ast>, RefIdx) {
         let (ctx, _generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_ty_node);
 
         let data = FlattenData {
             symbol: match &ty.kind {
-                ast::TypeKind::Ty(s) => Some(s.clone()),
-                ast::TypeKind::FunctionLike(_, _) => Some(Symbol::from("func")), // FIXME: Invalid but w/ever for now
+                TypeKind::Ty(s) => Some(s.clone()),
+                TypeKind::FunctionLike(_, _) => Some(Symbol::from("func")), // FIXME: Invalid but w/ever for now
             },
             location: Some(ty.location.clone()),
             scope: ctx.scope,
+            ast: None,
         };
 
         // FIXME: This should be a type reference probably, not a `Type`. Or `visit_function` uses `handle_ty_node` when
@@ -260,13 +263,14 @@ impl Ctx {
         ctx.append(data, kind)
     }
 
-    fn handle_declaration_argument(self, arg: &TypedValue) -> (Ctx, RefIdx) {
+    fn handle_declaration_argument(self, arg: &TypedValue) -> (Ctx<'ast>, RefIdx) {
         let (ctx, ty) = self.handle_ty_node(&arg.ty);
 
         let data = FlattenData {
             symbol: Some(arg.symbol.clone()),
             location: Some(arg.location.clone()),
             scope: ctx.scope,
+            ast: None,
         };
 
         let value = Kind::TypedValue {
@@ -280,7 +284,7 @@ impl Ctx {
         ctx.append(data, kind)
     }
 
-    fn scoped(mut self, f: impl Fn(Ctx) -> (Ctx, RefIdx)) -> (Ctx, RefIdx) {
+    fn scoped(mut self, f: impl Fn(Ctx<'ast>) -> (Ctx<'ast>, RefIdx)) -> (Ctx<'ast>, RefIdx) {
         self.scope += 1;
 
         let (mut ctx, idx) = f(self);
@@ -292,11 +296,12 @@ impl Ctx {
 
     fn visit_binary_op(
         self,
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
         op: &ast::Operator,
-        lhs: &Ast,
-        rhs: &Ast,
-    ) -> (Ctx, RefIdx) {
+        lhs: &'ast Ast,
+        rhs: &'ast Ast,
+    ) -> (Ctx<'ast>, RefIdx) {
         // This desugars `l + r` to `+(l, r)`.
         // Is it valid? We assume that later on during type resolution
         // and actual code generation/interpretation, a builtin method
@@ -326,6 +331,7 @@ impl Ctx {
             location: Some(location.clone()),
             // FIXME: Is that the correct scope? Add unit test
             scope: ctx.scope,
+            ast,
         };
 
         // FIXME: Should this be a call? Is this a good idea?
@@ -338,7 +344,13 @@ impl Ctx {
         ctx.append(data, kind)
     }
 
-    fn visit_block(self, location: &SpanTuple, stmts: &[Ast], last_is_expr: bool) -> (Ctx, RefIdx) {
+    fn visit_block(
+        self,
+        ast: Option<&'ast Ast>,
+        location: &SpanTuple,
+        stmts: &'ast [Ast],
+        last_is_expr: bool,
+    ) -> (Ctx<'ast>, RefIdx) {
         self.scoped(|ctx| {
             let (ctx, refs) = if let Some((maybe_return, nodes)) = stmts.split_last() {
                 let (ctx, refs) = ctx.visit_fold(nodes.iter(), Ctx::visit);
@@ -350,6 +362,7 @@ impl Ctx {
                         symbol: None,
                         location: Some(maybe_return.location.clone()),
                         scope: ctx.scope,
+                        ast: stmts.last(),
                     };
                     let kind = Kind::Return(Some(idx));
 
@@ -367,6 +380,7 @@ impl Ctx {
                 symbol: None,
                 location: Some(location.clone()),
                 scope: ctx.scope,
+                ast,
             };
             let kind = Kind::Statements(refs);
 
@@ -376,10 +390,11 @@ impl Ctx {
 
     fn visit_field_access(
         self,
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
-        instance: &Ast,
+        instance: &'ast Ast,
         field_name: &Symbol,
-    ) -> (Ctx, RefIdx) {
+    ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, instance) = self.visit(instance);
 
         let data = FlattenData {
@@ -387,6 +402,7 @@ impl Ctx {
             symbol: Some(field_name.clone()),
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
 
         let kind = Kind::TypeOffset {
@@ -399,9 +415,10 @@ impl Ctx {
 
     fn visit_function_call(
         self,
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
-        Call { to, generics, args }: &Call,
-    ) -> (Ctx, RefIdx) {
+        Call { to, generics, args }: &'ast Call,
+    ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_ty_node);
         let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit);
 
@@ -409,6 +426,7 @@ impl Ctx {
             symbol: Some(to.clone()),
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
         let kind = Kind::Call {
             to: RefIdx::Unresolved,
@@ -422,8 +440,8 @@ impl Ctx {
     fn visit_fold<T>(
         self,
         iter: impl Iterator<Item = T>,
-        visitor: impl Fn(Ctx, T) -> (Ctx, RefIdx),
-    ) -> (Ctx, Vec<RefIdx>) {
+        visitor: impl Fn(Ctx<'ast>, T) -> (Ctx<'ast>, RefIdx),
+    ) -> (Ctx<'ast>, Vec<RefIdx>) {
         iter.fold((self, vec![]), |(ctx, refs), node| {
             let (ctx, new_ref) = visitor(ctx, node);
 
@@ -433,6 +451,7 @@ impl Ctx {
 
     fn visit_function(
         self,
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
         Declaration {
             name,
@@ -440,8 +459,8 @@ impl Ctx {
             args,
             return_type,
         }: &Declaration,
-        block: &Option<Box<Ast>>,
-    ) -> (Ctx, RefIdx) {
+        block: &'ast Option<Box<Ast>>,
+    ) -> (Ctx<'ast>, RefIdx) {
         self.scoped(|ctx| {
             let (ctx, generics) = ctx.visit_fold(generics.iter(), Ctx::handle_generic_node);
             let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::handle_declaration_argument);
@@ -452,6 +471,7 @@ impl Ctx {
                 symbol: Some(name.clone()),
                 location: Some(location.clone()),
                 scope: ctx.scope - 1,
+                ast,
                 // we set the scope to the one "outside" the `scoped` method - the function
                 // lives where it is defined, not in its own scope. This will never trigger
                 // an underflow as scoped() indicates `ctx.scope` is at least incremented by one.
@@ -469,11 +489,12 @@ impl Ctx {
 
     fn visit_if_else(
         self,
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
-        condition: &Ast,
-        if_block: &Ast,
-        else_block: &Option<Box<Ast>>,
-    ) -> (Ctx, RefIdx) {
+        condition: &'ast Ast,
+        if_block: &'ast Ast,
+        else_block: &'ast Option<Box<Ast>>,
+    ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, condition) = self.visit(condition);
         let (ctx, true_block) = ctx.visit(if_block);
         let (ctx, false_block) = ctx.visit_opt(else_block.as_deref(), Ctx::visit);
@@ -482,6 +503,7 @@ impl Ctx {
             symbol: None,
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
 
         let kind = Kind::Conditional {
@@ -493,7 +515,13 @@ impl Ctx {
         ctx.append(data, kind)
     }
 
-    fn visit_loop(self, location: &SpanTuple, kind: &LoopKind, block: &Ast) -> (Ctx, RefIdx) {
+    fn visit_loop(
+        self,
+        ast: Option<&'ast Ast>,
+        location: &SpanTuple,
+        kind: &'ast LoopKind,
+        block: &'ast Ast,
+    ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, condition) = match kind {
             // At this point, only `while` loops remain: `for` loops and `loop` loops will
             // have been desugared by an earlier pass on the AST itself.
@@ -514,6 +542,7 @@ impl Ctx {
             symbol: None,
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
 
         let kind = Kind::Loop { condition, block };
@@ -523,10 +552,11 @@ impl Ctx {
 
     fn visit_method_call(
         self,
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
-        instance: &Ast,
-        Call { to, generics, args }: &Call,
-    ) -> (Ctx, RefIdx) {
+        instance: &'ast Ast,
+        Call { to, generics, args }: &'ast Call,
+    ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, idx) = self.visit(instance);
         let (ctx, generics) = ctx.visit_fold(generics.iter(), Ctx::handle_ty_node);
         let (ctx, mut args) = ctx.visit_fold(args.iter(), Ctx::visit);
@@ -537,6 +567,7 @@ impl Ctx {
             symbol: Some(to.clone()),
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
         let kind = Kind::Call {
             to: RefIdx::Unresolved,
@@ -550,8 +581,8 @@ impl Ctx {
     fn visit_opt<T>(
         self,
         node: Option<T>,
-        visitor: impl Fn(Ctx, T) -> (Ctx, RefIdx),
-    ) -> (Ctx, Option<RefIdx>) {
+        visitor: impl Fn(Ctx<'ast>, T) -> (Ctx<'ast>, RefIdx),
+    ) -> (Ctx<'ast>, Option<RefIdx>) {
         match node {
             Some(node) => {
                 let (ctx, idx) = visitor(self, node);
@@ -561,13 +592,19 @@ impl Ctx {
         }
     }
 
-    fn visit_return(self, to_return: &Option<Box<Ast>>, location: &SpanTuple) -> (Ctx, RefIdx) {
+    fn visit_return(
+        self,
+        ast: Option<&'ast Ast>,
+        location: &SpanTuple,
+        to_return: &'ast Option<Box<Ast>>,
+    ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, idx) = self.visit_opt(to_return.as_deref(), Ctx::visit);
 
         let data = FlattenData {
             symbol: None,
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
         let kind = Kind::Return(idx);
 
@@ -576,12 +613,14 @@ impl Ctx {
 
     fn visit_type(
         self,
+
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
         name: &Symbol,
         generics: &[GenericArgument],
         fields: &[TypedValue],
         _with: &Option<Box<Ast>>,
-    ) -> (Ctx, RefIdx) {
+    ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
         let (ctx, fields) = ctx.visit_fold(fields.iter(), Ctx::handle_declaration_argument);
 
@@ -591,6 +630,7 @@ impl Ctx {
             symbol: Some(name.clone()),
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
 
         let kind = Kind::Type { generics, fields };
@@ -600,11 +640,12 @@ impl Ctx {
 
     fn visit_var_declaration(
         self,
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
         _mutable: &bool,
         to_declare: &Symbol,
-        value: &Ast,
-    ) -> (Ctx, RefIdx) {
+        value: &'ast Ast,
+    ) -> (Ctx<'ast>, RefIdx) {
         // A declaration consists of two things
         // 1. Instantiating the value which we'll assign
         // 2. Creating the first reference to that value - "binding" it
@@ -615,6 +656,7 @@ impl Ctx {
             symbol: Some(to_declare.clone()),
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
 
         let kind = Kind::Binding { to: to_bind };
@@ -624,19 +666,21 @@ impl Ctx {
 
     fn visit_var_assign(
         self,
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
         to_assign: &Symbol,
-        value: &Ast,
-    ) -> (Ctx, RefIdx) {
+        value: &'ast Ast,
+    ) -> (Ctx<'ast>, RefIdx) {
         // visit a variable or an empty type, but it's not possible to have an
         // empty type here.
-        let (ctx, to) = self.visit_var_or_empty_type(location, to_assign);
+        let (ctx, to) = self.visit_var_or_empty_type(ast, location, to_assign);
         let (ctx, from) = ctx.visit(value);
 
         let data = FlattenData {
             symbol: None,
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
 
         let kind = Kind::Assignment { to, from };
@@ -644,11 +688,17 @@ impl Ctx {
         ctx.append(data, kind)
     }
 
-    fn visit_var_or_empty_type(self, location: &SpanTuple, sym: &Symbol) -> (Ctx, RefIdx) {
+    fn visit_var_or_empty_type(
+        self,
+        ast: Option<&'ast Ast>,
+        location: &SpanTuple,
+        sym: &Symbol,
+    ) -> (Ctx<'ast>, RefIdx) {
         let data = FlattenData {
             symbol: Some(sym.clone()),
             location: Some(location.clone()),
             scope: self.scope,
+            ast,
         };
 
         let kind = Kind::TypedValue {
@@ -661,13 +711,14 @@ impl Ctx {
 
     fn visit_type_instantiation(
         self,
+        ast: Option<&'ast Ast>,
         location: &SpanTuple,
         Call {
             to,
             generics,
             args: fields,
-        }: &Call,
-    ) -> (Ctx, RefIdx) {
+        }: &'ast Call,
+    ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_ty_node);
         let (ctx, fields) = ctx.visit_fold(fields.iter(), Ctx::visit);
 
@@ -675,6 +726,7 @@ impl Ctx {
             symbol: Some(to.clone()),
             location: Some(location.clone()),
             scope: ctx.scope,
+            ast,
         };
         let kind = Kind::Instantiation {
             to: RefIdx::Unresolved,
@@ -685,48 +737,54 @@ impl Ctx {
         ctx.append(data, kind)
     }
 
-    fn visit(self, ast: &Ast) -> (Ctx, RefIdx) {
+    fn visit(self, ast: &'ast Ast) -> (Ctx<'ast>, RefIdx) {
         let loc = &ast.location;
+        let node = Some(ast);
 
         match &ast.node {
             AstNode::Block {
                 stmts,
                 last_is_expr,
-            } => self.visit_block(loc, stmts, *last_is_expr),
-            AstNode::Function { decl, block, .. } => self.visit_function(loc, decl, block),
+            } => self.visit_block(node, loc, stmts, *last_is_expr),
+            AstNode::Function { decl, block, .. } => self.visit_function(node, loc, decl, block),
             AstNode::Type {
                 name,
                 generics,
                 fields,
                 with,
-            } => self.visit_type(loc, name, generics, fields, with),
-            AstNode::TypeInstantiation(call) => self.visit_type_instantiation(loc, call),
-            AstNode::FunctionCall(call) => self.visit_function_call(loc, call),
-            AstNode::MethodCall { instance, call } => self.visit_method_call(loc, instance, call),
-            AstNode::BinaryOp(op, lhs, rhs) => self.visit_binary_op(loc, op, lhs, rhs),
+            } => self.visit_type(node, loc, name, generics, fields, with),
+            AstNode::TypeInstantiation(call) => self.visit_type_instantiation(node, loc, call),
+            AstNode::FunctionCall(call) => self.visit_function_call(node, loc, call),
+            AstNode::MethodCall { instance, call } => {
+                self.visit_method_call(node, loc, instance, call)
+            }
+            AstNode::BinaryOp(op, lhs, rhs) => self.visit_binary_op(node, loc, op, lhs, rhs),
             AstNode::FieldAccess(instance, field_name) => {
-                self.visit_field_access(loc, instance, field_name)
+                self.visit_field_access(node, loc, instance, field_name)
             }
             AstNode::IfElse {
                 if_condition,
                 if_block,
                 else_block,
-            } => self.visit_if_else(loc, if_condition, if_block, else_block),
+            } => self.visit_if_else(node, loc, if_condition, if_block, else_block),
             AstNode::VarDeclaration {
                 mutable,
                 to_declare,
                 value,
-            } => self.visit_var_declaration(loc, mutable, to_declare, value),
-            AstNode::VarAssign { to_assign, value } => self.visit_var_assign(loc, to_assign, value),
-            AstNode::VarOrEmptyType(sym) => self.visit_var_or_empty_type(loc, sym),
-            AstNode::Loop(kind, block) => self.visit_loop(loc, kind, block),
-            AstNode::Return(value) => self.visit_return(value, loc),
+            } => self.visit_var_declaration(node, loc, mutable, to_declare, value),
+            AstNode::VarAssign { to_assign, value } => {
+                self.visit_var_assign(node, loc, to_assign, value)
+            }
+            AstNode::VarOrEmptyType(sym) => self.visit_var_or_empty_type(node, loc, sym),
+            AstNode::Loop(kind, block) => self.visit_loop(node, loc, kind, block),
+            AstNode::Return(value) => self.visit_return(node, loc, value),
             // Leaf node
             AstNode::Constant(_) => {
                 let data = FlattenData {
                     symbol: None,
                     location: Some(ast.location.clone()),
                     scope: self.scope,
+                    ast: node,
                 };
                 // FIXME: Aren't we losing the actual constant here?
                 let kind = Kind::Constant(RefIdx::Unresolved);
@@ -822,11 +880,12 @@ mod tests {
 
     #[test]
     fn where_expr() {
-        let fir = ast! {
+        let ast = ast! {
             where x = 15;
             where mut y = x;
-        }
-        .flatten();
+        };
+
+        let fir = ast.flatten();
 
         let fifteen = &fir.nodes.get(&OriginIdx(1)).unwrap().kind;
         let x = &fir.nodes.get(&OriginIdx(2)).unwrap().kind;
