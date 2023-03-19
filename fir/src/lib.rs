@@ -238,6 +238,13 @@ pub struct Fir<T = ()> {
 }
 
 impl<T> Fir<T> {
+    /// Create a new and empty [`Fir`]
+    pub fn new() -> Fir<T> {
+        Fir {
+            nodes: BTreeMap::new(),
+        }
+    }
+
     /// Append a new node to the [`Fir`]
     pub fn append(self, node: Node<T>) -> Fir<T> {
         Fir {

@@ -185,11 +185,12 @@ impl OriginExt for OriginIdx {
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct FlattenData {
+#[derive(Clone, Debug)]
+pub struct FlattenData /* <'ast> */ {
     pub symbol: Option<Symbol>,
     pub location: Option<SpanTuple>, // FIXME: Remove the option
     pub scope: usize,
+    // pub ast: &'ast Ast,
 }
 
 struct Ctx {
@@ -743,7 +744,7 @@ impl Ctx {
 impl FlattenAst for ast::Ast {
     fn flatten(&self) -> Fir<FlattenData> {
         let ctx = Ctx {
-            fir: Fir::default(),
+            fir: Fir::new(),
             origin: OriginIdx::default(),
             scope: 0,
         };
