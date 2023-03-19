@@ -1,6 +1,6 @@
 use crate::{Fir, Incomplete, Kind, Node, OriginIdx, RefIdx};
 
-pub trait Mapper<T, U: Default + From<T>, E> {
+pub trait Mapper<T, U: From<T>, E> {
     fn map_constant(&mut self, data: T, origin: OriginIdx, constant: RefIdx) -> Result<Node<U>, E> {
         Ok(Node {
             data: U::from(data),
@@ -260,16 +260,19 @@ pub trait Mapper<T, U: Default + From<T>, E> {
     /// all valid mapped nodes. This allows an interpreter to keep trying
     /// passes and emit as many errors as possible
     fn map(&mut self, fir: Fir<T>) -> Result<Fir<U>, Incomplete<U, E>> {
-        let (fir, errs) = fir.nodes.into_values().fold(
-            (Fir::default(), Vec::new()),
-            |(new_fir, mut errs), node| match self.map_node(node) {
-                Ok(node) => (new_fir.append(node), errs),
-                Err(e) => {
-                    errs.push(e);
-                    (new_fir, errs)
-                }
-            },
-        );
+        let (fir, errs) =
+            fir.nodes
+                .into_values()
+                .fold(
+                    (Fir::new(), Vec::new()),
+                    |(new_fir, mut errs), node| match self.map_node(node) {
+                        Ok(node) => (new_fir.append(node), errs),
+                        Err(e) => {
+                            errs.push(e);
+                            (new_fir, errs)
+                        }
+                    },
+                );
 
         if errs.is_empty() {
             Ok(fir)
