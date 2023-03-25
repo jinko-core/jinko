@@ -254,6 +254,7 @@ impl Error {
         Error::new(ErrKind::Hint)
     }
 
+    // TODO: This should take an Into<String> so we can pass strings, format!(), &str...
     pub fn with_msg(self, msg: String) -> Error {
         Error {
             msg: Some(msg),
@@ -262,8 +263,16 @@ impl Error {
     }
 
     // FIXME: Should this really take an Option<Location>?
-    pub fn with_loc(self, loc: Option<SpanTuple>) -> Error {
+    #[deprecated]
+    pub fn with_opt_loc(self, loc: Option<SpanTuple>) -> Error {
         Error { loc, ..self }
+    }
+
+    pub fn with_loc(self, loc: SpanTuple) -> Error {
+        Error {
+            loc: Some(loc),
+            ..self
+        }
     }
 
     // Add a hint to emit alongside the error
