@@ -209,6 +209,7 @@ impl<'ast> AstInfo<'ast> {
                 | AstNode::FieldAccess(_, _)
                 | AstNode::Loop(..)
                 | AstNode::Return(..)
+                // FIXME: Is that valid?
                 | AstNode::Constant(..)
                 | AstNode::IfElse { .. }
                 | AstNode::VarAssign { .. }
