@@ -124,7 +124,8 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     let data_fmt = |data: &FlattenData| {
         format!(
             "{} @ scope {}",
-            data.symbol
+            data.ast
+                .symbol()
                 .as_ref()
                 .map_or(String::new(), |s| format!("`{}`", Symbol::access(s))),
             data.scope
