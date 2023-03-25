@@ -48,12 +48,12 @@ fn check_base(base: &Path, location: &SpanTuple, path: &Path) -> Result<PathBuf,
             .with_msg(format!(
                 "invalid include: `{dir_candidate:?}` and `{file_candidate:?}` are both valid candidates"
             ))
-            .with_loc(Some(location.clone()))),
+            .with_loc(location.clone())),
         (false, false) => Err(Error::new(ErrKind::Context)
             .with_msg(format!(
                 "no candidate for include: `{dir_candidate:?}` and `{file_candidate:?}` do not exist"
             ))
-            .with_loc(Some(location.clone()))),
+            .with_loc(location.clone())),
         (false, true) => Ok(file_candidate),
         (true, false) => Ok(dir_candidate),
     }
