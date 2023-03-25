@@ -1,7 +1,7 @@
 use ast::{Node as AstNode, Value};
 use error::Error;
-use fir::{Fallible, Fir, Node, RefIdx, Traversal};
-use flatten::{AstInfo, FlattenData};
+use fir::{Kind, Mapper, Node, OriginIdx, RefIdx};
+use flatten::FlattenData;
 
 use crate::{Type, TypeCtx};
 
@@ -18,56 +18,63 @@ impl<'ctx> Typer<'ctx> {
     /// it will call. You can see how we'll go down this list of type to figure out the actual, final type
     /// of each node in the [`Fir`]. This is however done in another traversal on the [`Fir`] called "Actual" and defined
     /// in another module.
-    fn ty(&mut self, node: &Node<FlattenData>, ty: Option<&RefIdx>) -> Fallible<Error> {
-        let ty = ty.map(|refidx| Type::One(*refidx));
+    fn ty<'ast>(
+        &mut self,
+        node: Node<FlattenData<'ast>>,
+        ty: Option<RefIdx>,
+    ) -> Result<Node<FlattenData<'ast>>, Error> {
+        let ty = ty.map(Type::One);
 
         // Having non-unique ids in the Fir is an interpreter error
         // Or should we return an error here?
         assert!(self.0.types.insert(node.origin, ty).is_none());
 
-        Ok(())
+        Ok(node)
     }
 }
 
-impl Traversal<FlattenData<'_>, Error> for Typer<'_> {
-    fn traverse_constant(
+impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
+    fn map_constant(
         &mut self,
-        _fir: &Fir<FlattenData>,
-        node: &Node<FlattenData>,
-        _constant: &RefIdx,
-    ) -> Fallible<Error> {
-        let ast = node.data.ast.node();
+        data: FlattenData<'ast>,
+        origin: OriginIdx,
+        _constant: RefIdx,
+    ) -> Result<Node<FlattenData<'ast>>, Error> {
+        let ast = data.ast.node();
 
-        match &ast.node {
-            AstNode::Constant(Value::Bool(value)) => {}
-            AstNode::Constant(Value::Char(value)) => {}
-            AstNode::Constant(Value::Integer(value)) => {}
-            AstNode::Constant(Value::Float(value)) => {}
-            AstNode::Constant(Value::Str(value)) => {}
+        let ty = match &ast.node {
+            AstNode::Constant(Value::Bool(_)) => self.0.primitives.bool_type,
+            AstNode::Constant(Value::Char(_)) => self.0.primitives.char_type,
+            AstNode::Constant(Value::Integer(_)) => self.0.primitives.int_type,
+            AstNode::Constant(Value::Float(_)) => self.0.primitives.float_type,
+            AstNode::Constant(Value::Str(_)) => self.0.primitives.string_type,
             _ => unreachable!(),
-        }
-
-        // switch on the constant's kind - and this is a *declare* spot, so we must use
-        // TypeData::from(data).declares(ty). This way, things like blocks returning constants can simply
-        // depend on the type returned by the constant.
-        // TODO: Is that all we need?
-        // TODO: We need data from the AST at this point. Either the node or what kind of
-        // constant it is (if it is one)
+        };
 
         // For constants, how will we look up the basic primitive type nodes before assigning them
         // here? Just a traversal and we do that based on name? Or will they need to be builtin at this point?
         // Some types, like string, int, char, are builtin multi types and will *need* to be builtin.
         // `bool` on the other hand, can be a multi type implemented within the standard library.
-        self.ty(node, None)
+
+        // FIXME: Technically, in jinko, all constants are simply... types of themselves. Which then resolves to
+        // the proper primitive multitype. We need to implement this.
+
+        // FIXME: How do we get a TypeReference here? Or should we actually do that operation in the checker?
+        let new_node = Node {
+            data,
+            origin,
+            kind: Kind::Constant(RefIdx::Resolved(ty)),
+        };
+
+        self.ty(new_node, Some(RefIdx::Resolved(ty)))
     }
 
-    fn traverse_node(
+    fn map_node(
         &mut self,
-        fir: &Fir<FlattenData>,
-        node: &Node<FlattenData>,
-    ) -> Fallible<Error> {
-        match &node.kind {
-            fir::Kind::Constant(c) => self.traverse_constant(fir, node, c),
+        node: Node<FlattenData<'ast>>,
+    ) -> Result<Node<FlattenData<'ast>>, Error> {
+        match node.kind {
+            fir::Kind::Constant(c) => self.map_constant(node.data, node.origin, c),
             // Declarations and assignments are void
             fir::Kind::Type { .. }
             | fir::Kind::Function { .. }
@@ -81,12 +88,15 @@ impl Traversal<FlattenData<'_>, Error> for Typer<'_> {
             | fir::Kind::Call { to: ty, .. }
             | fir::Kind::Conditional { true_block: ty, .. } => self.ty(node, Some(ty)),
             // Returns are a bit special as they can already be void
-            fir::Kind::Return(ty) => self.ty(node, ty.as_ref()),
+            fir::Kind::Return(ty) => self.ty(node, ty),
             // Blocks are the same type as their last stmt, or void if it does not exist
-            fir::Kind::Statements(stmts) => self.ty(node, stmts.last()),
+            fir::Kind::Statements(ref stmts) => {
+                let last = stmts.last().copied();
+                self.ty(node, last)
+            }
             // TODO: Figure out what to do with these
             fir::Kind::Generic { .. } | fir::Kind::TypeOffset { .. } | fir::Kind::Loop { .. } => {
-                Ok(())
+                Ok(node)
             }
         }
     }

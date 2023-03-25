@@ -5,8 +5,8 @@ mod typer;
 
 use std::collections::HashMap;
 
-use error::Error;
-use fir::{Fir, OriginIdx, Pass, RefIdx, Traversal};
+use error::{ErrKind, Error};
+use fir::{Fir, Incomplete, Mapper, OriginIdx, Pass, RefIdx, Traversal};
 use flatten::FlattenData;
 
 use actual::Actual;
@@ -50,11 +50,25 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx {
 
     fn transform(&mut self, fir: Fir<FlattenData<'ast>>) -> Result<Fir<FlattenData<'ast>>, Error> {
         // Typing pass
-        Typer(self).traverse(&fir)?;
+        let fir = Typer(self).map(fir);
+
+        let mut type_errs = None;
+
+        let fir = match fir {
+            Ok(fir) => fir,
+            Err(Incomplete { carcass, errs }) => {
+                type_errs = Some(Error::new(ErrKind::Multiple(errs)));
+                carcass
+            }
+        };
+
         Actual(self).traverse(&fir)?;
         Checker(self).traverse(&fir)?;
 
-        Ok(fir)
+        match type_errs {
+            Some(e) => Err(e),
+            None => Ok(fir),
+        }
     }
 }
 
@@ -63,7 +77,20 @@ mod tests {
     use super::*;
     use flatten::FlattenAst;
     use name_resolve::NameResolve;
-    use xparser::ast;
+
+    // helper macro which declares our primitive types and calls into [`xparser::ast`]
+    macro_rules! ast {
+        ($($toks:tt)*) => {
+            xparser::ast!(
+                type char;
+                type bool;
+                type int;
+                type float;
+                type string;
+                $($toks)*
+            )
+        }
+    }
 
     macro_rules! fir {
         ($ast:expr) => {
@@ -159,5 +186,42 @@ mod tests {
         let fir = fir!(ast).type_check();
 
         assert!(fir.is_err());
+    }
+
+    #[test]
+    fn constant_bool() {
+        let ast = ast! {
+            func foo() -> bool { true }
+            func bar() -> bool { false }
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn constant_int() {
+        let ast = ast! {
+            func foo() -> int { 15 }
+            func bar() -> int { foo() }
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn constants() {
+        let ast = ast! {
+            func foo() -> char { 'a' }
+            func bar() -> string { "multichars" }
+            func baz() -> float { 14.4 }
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
     }
 }

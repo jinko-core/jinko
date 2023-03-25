@@ -62,7 +62,7 @@ impl<T: Debug> Fir<T> {
                 // FIXME: This is missing a bunch of valid "checks". For example, checking that a call's argument can
                 // point to an if-else expression. Basically, to anything that's an expression actually.
                 // Should we split the fir::Kind into fir::Kind::Stmt and fir::Kind::Expr? Or does that not make sense?
-                Kind::Constant(r) => check!(r => Kind::TypeReference(_), node),
+                Kind::Constant(r) => check!(r => Kind::Type { .. }, node),
                 Kind::TypedValue { value, ty } => {
                     // FIXME: Is pointing to `Type` here valid?
                     check!(ty => Kind::Type { .. } | Kind::TypeReference(_), node);
