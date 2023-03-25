@@ -27,18 +27,18 @@ pub trait TypeCheck<T>: Sized {
     fn type_check(self) -> Result<T, Error>;
 }
 
-impl TypeCheck<Fir<FlattenData>> for Fir<FlattenData> {
-    fn type_check(self) -> Result<Fir<FlattenData>, Error> {
+impl<'ast> TypeCheck<Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
+    fn type_check(self) -> Result<Fir<FlattenData<'ast>>, Error> {
         TypeCtx::default().pass(self)
     }
 }
 
-impl Pass<FlattenData, FlattenData, Error> for TypeCtx {
+impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx {
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
     fn post_condition(_fir: &Fir<FlattenData>) {}
 
-    fn transform(&mut self, fir: Fir<FlattenData>) -> Result<Fir<FlattenData>, Error> {
+    fn transform(&mut self, fir: Fir<FlattenData<'ast>>) -> Result<Fir<FlattenData<'ast>>, Error> {
         // Typing pass
         Typer(self).traverse(&fir)?;
         Actual(self).traverse(&fir)?;
@@ -51,31 +51,26 @@ impl Pass<FlattenData, FlattenData, Error> for TypeCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use flatten::FlattenAst;
+    use name_resolve::NameResolve;
+    use xparser::ast;
 
     macro_rules! fir {
-        ($($tok:tt)*) => {
-            {
-                let ast = xparser::parse(
-                    stringify!($($tok)*),
-                    location::Source::Input(stringify!($($tok)*)))
-                .unwrap();
-
-                let fir = flatten::FlattenAst::flatten(&ast);
-                name_resolve::NameResolve::name_resolve(fir).unwrap()
-            }
-        }
+        ($ast:expr) => {
+            $ast.flatten().name_resolve().unwrap()
+        };
     }
 
     #[test]
     fn easy() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker0;
 
             func foo() -> Marker0 {
                 Marker0
             }
-        }
-        .type_check();
+        };
+        let fir = fir!(ast).type_check();
 
         // TODO: Add assertions making sure that the type of the block and block's last stmt are typerefs to Marker0;
         assert!(fir.is_ok());
@@ -83,35 +78,35 @@ mod tests {
 
     #[test]
     fn mismatch() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker0;
             type Marker1;
 
             func foo() -> Marker0 {
                 Marker1
             }
-        }
-        .type_check();
+        };
+        let fir = fir!(ast).type_check();
 
         assert!(fir.is_err());
     }
 
     #[test]
     fn nested_call() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker0;
 
             func foo() -> Marker0 { Marker0 }
             func bar() -> Marker0 { foo() }
-        }
-        .type_check();
+        };
+        let fir = fir!(ast).type_check();
 
         assert!(fir.is_ok());
     }
 
     #[test]
     fn invalid_nested() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker0;
             type Marker1;
 
@@ -120,15 +115,15 @@ mod tests {
             func baz() -> Marker1 { bar() }
 
             func qux() -> Marker0 { baz() }
-        }
-        .type_check();
+        };
+        let fir = fir!(ast).type_check();
 
         assert!(fir.is_err());
     }
 
     #[test]
     fn assignment_valid() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker0;
 
             where mut a = Marker0;
@@ -136,22 +131,22 @@ mod tests {
 
             where mut b = Marker0;
             b = a;
-        }
-        .type_check();
+        };
+        let fir = fir!(ast).type_check();
 
         assert!(fir.is_ok());
     }
 
     #[test]
     fn assignment_invalid() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker0;
             type Marker1;
 
             where mut a = Marker0;
             a = Marker1;
-        }
-        .type_check();
+        };
+        let fir = fir!(ast).type_check();
 
         assert!(fir.is_err());
     }

@@ -57,7 +57,7 @@ impl<'ctx> Actual<'ctx> {
     }
 }
 
-impl<'ctx> Traversal<FlattenData, Error> for Actual<'ctx> {
+impl<'ctx> Traversal<FlattenData<'_>, Error> for Actual<'ctx> {
     fn traverse_node(
         &mut self,
         fir: &Fir<FlattenData>,

@@ -28,7 +28,7 @@ impl<'ctx> Typer<'ctx> {
     }
 }
 
-impl Traversal<FlattenData, Error> for Typer<'_> {
+impl Traversal<FlattenData<'_>, Error> for Typer<'_> {
     fn traverse_constant(
         &mut self,
         _fir: &Fir<FlattenData>,
