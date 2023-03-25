@@ -1,5 +1,6 @@
 mod actual;
 mod checker;
+mod primitives;
 mod typer;
 
 use std::collections::HashMap;
@@ -12,13 +13,16 @@ use actual::Actual;
 use checker::Checker;
 use typer::Typer;
 
+use primitives::PrimitiveTypes;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Type {
     One(RefIdx),
 }
 
-#[derive(Default)]
 pub(crate) struct TypeCtx {
+    // primitive type declaration
+    pub(crate) primitives: PrimitiveTypes,
     // mapping from declaration to type
     pub(crate) types: HashMap<OriginIdx, Option<Type>>,
 }
@@ -29,7 +33,13 @@ pub trait TypeCheck<T>: Sized {
 
 impl<'ast> TypeCheck<Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
     fn type_check(self) -> Result<Fir<FlattenData<'ast>>, Error> {
-        TypeCtx::default().pass(self)
+        let primitives = primitives::find(&self)?;
+
+        TypeCtx {
+            primitives,
+            types: HashMap::new(),
+        }
+        .pass(self)
     }
 }
 

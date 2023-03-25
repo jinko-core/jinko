@@ -1,6 +1,7 @@
+use ast::{Node as AstNode, Value};
 use error::Error;
 use fir::{Fallible, Fir, Node, RefIdx, Traversal};
-use flatten::FlattenData;
+use flatten::{AstInfo, FlattenData};
 
 use crate::{Type, TypeCtx};
 
@@ -35,6 +36,17 @@ impl Traversal<FlattenData<'_>, Error> for Typer<'_> {
         node: &Node<FlattenData>,
         _constant: &RefIdx,
     ) -> Fallible<Error> {
+        let ast = node.data.ast.node();
+
+        match &ast.node {
+            AstNode::Constant(Value::Bool(value)) => {}
+            AstNode::Constant(Value::Char(value)) => {}
+            AstNode::Constant(Value::Integer(value)) => {}
+            AstNode::Constant(Value::Float(value)) => {}
+            AstNode::Constant(Value::Str(value)) => {}
+            _ => unreachable!(),
+        }
+
         // switch on the constant's kind - and this is a *declare* spot, so we must use
         // TypeData::from(data).declares(ty). This way, things like blocks returning constants can simply
         // depend on the type returned by the constant.

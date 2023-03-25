@@ -12,6 +12,7 @@ flatten = { path = "../flatten" }
 error = { path = "../error" }
 symbol = { path = "../symbol" }
 location = { path = "../location" }
+ast = { path = "../ast" }
 
 [dev-dependencies]
 xparser = { path = "../xparser" }
