@@ -40,7 +40,18 @@ impl ScopeMap {
     ) -> Option<&OriginIdx> {
         self.scopes
             .get(scope)
-            .map_or(Some(self.scopes.len() - 1), |_| Some(scope))
+            // FIXME: This is buggy if there aren't any scopes, so if we get without having inserted first. e.g with the following code
+            // ```jinko
+            // name = "jinko"; // no declaration, just a binding, so we "get" without having created the scope first
+            // ```
+            .map_or(
+                // This is a workaround for now but Wow! it's super fucking ugly
+                match scope {
+                    1 => None,
+                    _ => Some(self.scopes.len() - 1),
+                },
+                |_| Some(scope),
+            )
             .map(|last| &self.scopes[0..=last])
             .and_then(|scopes| {
                 scopes
@@ -133,10 +144,10 @@ struct NameResolveCtx {
 
 /// Extension type of [`Error`] to be able to implement [`IterError`].
 enum NameResolutionError {
-    NonUnique(Option<SpanTuple>, OriginIdx, &'static str),
-    Unresolved(ResolveKind, Symbol, Option<SpanTuple>),
-    AmbiguousBinding(OriginIdx, OriginIdx, Option<SpanTuple>),
-    UnresolvedBinding(Symbol, Option<SpanTuple>),
+    NonUnique(SpanTuple, OriginIdx, &'static str),
+    Unresolved(ResolveKind, Symbol, SpanTuple),
+    AmbiguousBinding(OriginIdx, OriginIdx, SpanTuple),
+    UnresolvedBinding(Symbol, SpanTuple),
     Multiple(Vec<NameResolutionError>),
 }
 
@@ -151,7 +162,7 @@ impl NameResolutionError {
             )),
             NameResolutionError::NonUnique(loc, origin, kind_str) => {
                 let existing = &fir.nodes[&origin].data;
-                let sym = existing.symbol.as_ref().unwrap();
+                let sym = existing.ast.symbol().unwrap();
 
                 Error::new(ErrKind::NameResolution)
                     .with_msg(format!("{kind_str} `{sym}` already defined in this scope"))
@@ -159,7 +170,7 @@ impl NameResolutionError {
                     .with_hint(
                         Error::hint()
                             .with_msg(format!("`{sym}` is also defined here"))
-                            .with_loc(existing.location.clone()),
+                            .with_loc(existing.ast.location().clone()),
                     )
             }
             NameResolutionError::Unresolved(kind, sym, location) => {
@@ -193,7 +204,7 @@ impl NameResolutionError {
             NameResolutionError::AmbiguousBinding(lhs, rhs, location) => {
                 let lhs = &fir.nodes[&lhs].data;
                 let rhs = &fir.nodes[&rhs].data;
-                let sym = lhs.symbol.as_ref().unwrap();
+                let sym = lhs.ast.symbol().unwrap();
 
                 Error::new(ErrKind::NameResolution)
                     .with_msg(format!("resolution of `{sym}` is ambiguous"))
@@ -201,12 +212,12 @@ impl NameResolutionError {
                     .with_hint(
                         Error::hint()
                             .with_msg(String::from("could point to this binding..."))
-                            .with_loc(lhs.location.clone()),
+                            .with_loc(lhs.ast.location().clone()),
                     )
                     .with_hint(
                         Error::hint()
                             .with_msg(String::from("...or this empty type"))
-                            .with_loc(rhs.location.clone()),
+                            .with_loc(rhs.ast.location().clone()),
                     )
             }
             NameResolutionError::UnresolvedBinding(sym, location) => {
@@ -225,7 +236,7 @@ impl NameResolutionError {
 
     /// Compose a [`UniqueError`] into a proper [`Error`] of kind [`ErrKind::NameResolution`]
     fn non_unique(
-        location: &Option<SpanTuple>,
+        location: &SpanTuple,
         UniqueError(origin, kind_str): UniqueError,
     ) -> NameResolutionError {
         NameResolutionError::NonUnique(location.clone(), origin, kind_str)
@@ -233,25 +244,22 @@ impl NameResolutionError {
 
     fn unresolved(
         kind: ResolveKind,
-        sym: &Option<Symbol>,
-        location: &Option<SpanTuple>,
+        sym: Option<&Symbol>,
+        location: &SpanTuple,
     ) -> NameResolutionError {
-        NameResolutionError::Unresolved(kind, sym.clone().unwrap(), location.clone())
+        NameResolutionError::Unresolved(kind, sym.cloned().unwrap(), location.clone())
     }
 
     fn ambiguous_binding(
         lhs: OriginIdx,
         rhs: OriginIdx,
-        location: &Option<SpanTuple>,
+        location: &SpanTuple,
     ) -> NameResolutionError {
         NameResolutionError::AmbiguousBinding(lhs, rhs, location.clone())
     }
 
-    fn unresolved_binding(
-        sym: &Option<Symbol>,
-        location: &Option<SpanTuple>,
-    ) -> NameResolutionError {
-        NameResolutionError::UnresolvedBinding(sym.clone().unwrap(), location.clone())
+    fn unresolved_binding(sym: Option<&Symbol>, location: &SpanTuple) -> NameResolutionError {
+        NameResolutionError::UnresolvedBinding(sym.cloned().unwrap(), location.clone())
     }
 }
 
@@ -260,20 +268,20 @@ impl NameResolveCtx {
         Declarator(self).traverse(fir)
     }
 
-    fn resolve_nodes(
+    fn resolve_nodes<'ast>(
         &mut self,
-        fir: Fir<FlattenData>,
-    ) -> Result<Fir<FlattenData>, Incomplete<FlattenData, NameResolutionError>> {
+        fir: Fir<FlattenData<'ast>>,
+    ) -> Result<Fir<FlattenData<'ast>>, Incomplete<FlattenData<'ast>, NameResolutionError>> {
         Resolver(self).map(fir)
     }
 }
 
-impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
+impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for NameResolveCtx {
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
     fn post_condition(_fir: &Fir<FlattenData>) {}
 
-    fn transform(&mut self, fir: Fir<FlattenData>) -> Result<Fir<FlattenData>, Error> {
+    fn transform(&mut self, fir: Fir<FlattenData<'ast>>) -> Result<Fir<FlattenData<'ast>>, Error> {
         let definition = self.insert_definitions(&fir);
         let definition = definition
             .map_err(|errs| NameResolutionError::Multiple(errs).finalize(&fir, &self.mappings));
@@ -297,12 +305,12 @@ impl Pass<FlattenData, FlattenData, Error> for NameResolveCtx {
     }
 }
 
-pub trait NameResolve {
-    fn name_resolve(self) -> Result<Fir<FlattenData>, Error>;
+pub trait NameResolve<'ast> {
+    fn name_resolve(self) -> Result<Fir<FlattenData<'ast>>, Error>;
 }
 
-impl NameResolve for Fir<FlattenData> {
-    fn name_resolve(self) -> Result<Fir<FlattenData>, Error> {
+impl<'ast> NameResolve<'ast> for Fir<FlattenData<'ast>> {
+    fn name_resolve(self) -> Result<Fir<FlattenData<'ast>>, Error> {
         let mut ctx = NameResolveCtx::default();
 
         ctx.pass(self)
@@ -313,8 +321,9 @@ impl NameResolve for Fir<FlattenData> {
 mod tests {
     use super::*;
     use fir::{Kind, RefIdx};
+    use flatten::FlattenAst;
 
-    macro_rules! fir {
+    macro_rules! ast {
         ($($tok:tt)*) => {
             {
                 let ast = xparser::parse(
@@ -322,19 +331,20 @@ mod tests {
                     location::Source::Input(stringify!($($tok)*)))
                 .unwrap();
 
-                flatten::FlattenAst::flatten(&ast)
+                // flatten::FlattenAst::flatten(&ast)
+                ast
             }
         }
     }
 
     #[test]
     fn declaration() {
-        let fir = fir! {
+        let ast = ast! {
             where a = 15;
             where b = a;
-        }
-        .name_resolve()
-        .unwrap();
+        };
+
+        let fir = ast.flatten().name_resolve().unwrap();
 
         let a = &fir.nodes[&OriginIdx(2)];
         let a_reference = &fir.nodes[&OriginIdx(3)];
@@ -350,13 +360,13 @@ mod tests {
 
     #[test]
     fn function_call() {
-        let fir = fir! {
+        let ast = ast! {
             func a() {}
 
             a();
-        }
-        .name_resolve()
-        .unwrap();
+        };
+
+        let fir = ast.flatten().name_resolve().unwrap();
 
         // find the unique call and definition
         let def = fir
@@ -377,13 +387,13 @@ mod tests {
 
     #[test]
     fn type_def() {
-        let fir = fir! {
+        let ast = ast! {
             type T;
 
             where x = T;
-        }
-        .name_resolve()
-        .unwrap();
+        };
+
+        let fir = ast.flatten().name_resolve().unwrap();
 
         // find the unique call and definition
         let def = fir
@@ -406,29 +416,31 @@ mod tests {
 
     #[test]
     fn ambiguous_var() {
-        let fir = fir! {
+        let ast = ast! {
             where x = X;
-        }
-        .name_resolve();
+        };
+
+        let fir = ast.flatten().name_resolve();
 
         assert!(fir.is_err())
     }
 
     #[test]
     fn function_argument() {
-        let fir = fir! {
+        let ast = ast! {
             type int;
 
             func id(x: int) -> int { x }
-        }
-        .name_resolve();
+        };
+
+        let fir = ast.flatten().name_resolve();
 
         assert!(fir.is_ok());
     }
 
     #[test]
     fn complex() {
-        let fir = fir! {
+        let ast = ast! {
             type int;
 
             func id(x: int) -> int {
@@ -440,22 +452,24 @@ mod tests {
             where x = Id(value: 15);
             where y = 14;
             where z = id(y);
-        }
-        .name_resolve();
+        };
+
+        let fir = ast.flatten().name_resolve();
 
         assert!(fir.is_ok());
     }
 
     #[test]
     fn builtin_type() {
-        let fir = fir! {
+        let ast = ast! {
             type bool;
             type true;
             type false;
 
             func foo() -> bool { true }
-        }
-        .name_resolve();
+        };
+
+        let fir = ast.flatten().name_resolve();
 
         if let Err(e) = &fir {
             e.emit();
@@ -466,16 +480,16 @@ mod tests {
 
     #[test]
     fn scoped_resolution() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker;
 
             {
                 type Marker;
                 where x = Marker;
             }
-        }
-        .name_resolve()
-        .unwrap();
+        };
+
+        let fir = ast.flatten().name_resolve().unwrap();
 
         let x_value = &fir.nodes[&OriginIdx(3)];
         let marker_1 = &fir.nodes[&OriginIdx(2)];
