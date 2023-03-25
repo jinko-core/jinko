@@ -8,7 +8,7 @@ struct NoInclCtx;
 impl Visitor for NoInclCtx {
     fn visit_incl(&mut self, loc: SpanTuple, _: Symbol, _: Option<Symbol>) -> Result<Ast, Error> {
         Err(Error::new(ErrKind::Sanitizer)
-            .with_loc(Some(loc))
+            .with_loc(loc)
             .with_msg("include expression detected when none should exist".to_string()))
     }
 }
@@ -24,7 +24,7 @@ impl Visitor for OnlyWhileCtx {
     ) -> Result<Ast, Error> {
         match kind {
             LoopKind::Infinite | LoopKind::For { .. } => Err(Error::new(ErrKind::Sanitizer)
-                .with_loc(Some(location))
+                .with_loc(location)
                 .with_msg("`for` loop or `loop` loop did not get desugared correctly".to_string())),
             _ => Ok(Ast {
                 location,
