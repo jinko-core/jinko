@@ -30,13 +30,12 @@ impl<'ctx> Resolver<'ctx> {
     fn get_definition(
         &self,
         kind: ResolveKind,
-        sym: &Option<Symbol>,
-        location: &Option<SpanTuple>,
+        sym: Option<&Symbol>,
+        location: &SpanTuple,
         scope: usize,
     ) -> Result<OriginIdx, NameResolutionError> {
-        let symbol = sym
-            .as_ref()
-            .expect("attempting to get definition for non existent symbol - interpreter bug");
+        let symbol =
+            sym.expect("attempting to get definition for non existent symbol - interpreter bug");
 
         let mappings = &self.0.mappings;
         let origin = match kind {
@@ -52,18 +51,20 @@ impl<'ctx> Resolver<'ctx> {
     }
 }
 
-impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'ctx> {
+impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameResolutionError>
+    for Resolver<'ctx>
+{
     fn map_call(
         &mut self,
-        data: FlattenData,
+        data: FlattenData<'ast>,
         origin: OriginIdx,
         to: RefIdx,
         generics: Vec<RefIdx>,
         args: Vec<RefIdx>,
-    ) -> Result<Node<FlattenData>, NameResolutionError> {
+    ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
         // if there's no symbol, we're probably mapping a call to a function returned by a function
         // or similar, e.g `get_curried_fn(arg1)(arg2)`.
-        match &data.symbol {
+        match &data.ast.symbol() {
             None => Ok(Node {
                 data,
                 origin,
@@ -72,8 +73,8 @@ impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'c
             Some(_) => {
                 let definition = self.get_definition(
                     ResolveKind::Call,
-                    &data.symbol,
-                    &data.location,
+                    data.ast.symbol(),
+                    data.ast.location(),
                     data.scope,
                 )?;
 
@@ -92,15 +93,23 @@ impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'c
 
     fn map_typed_value(
         &mut self,
-        data: FlattenData,
+        data: FlattenData<'ast>,
         origin: OriginIdx,
         _value: RefIdx,
         ty: RefIdx,
-    ) -> Result<Node<FlattenData>, NameResolutionError> {
-        let var_def =
-            self.get_definition(ResolveKind::Var, &data.symbol, &data.location, data.scope);
-        let ty_def =
-            self.get_definition(ResolveKind::Type, &data.symbol, &data.location, data.scope);
+    ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
+        let var_def = self.get_definition(
+            ResolveKind::Var,
+            data.ast.symbol(),
+            data.ast.location(),
+            data.scope,
+        );
+        let ty_def = self.get_definition(
+            ResolveKind::Type,
+            data.ast.symbol(),
+            data.ast.location(),
+            data.scope,
+        );
 
         // If we're dealing with a type definition, we can "early typecheck"
         // to the empty type's definition
@@ -114,11 +123,11 @@ impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'c
             (Ok(var_def), Ok(ty_def)) => Err(NameResolutionError::ambiguous_binding(
                 var_def,
                 ty_def,
-                &data.location,
+                data.ast.location(),
             )),
             (Err(_), Err(_)) => Err(NameResolutionError::unresolved_binding(
-                &data.symbol,
-                &data.location,
+                data.ast.symbol(),
+                data.ast.location(),
             )),
         }?;
 
@@ -134,12 +143,16 @@ impl<'ctx> Mapper<FlattenData, FlattenData, NameResolutionError> for Resolver<'c
 
     fn map_type_reference(
         &mut self,
-        data: FlattenData,
+        data: FlattenData<'ast>,
         origin: OriginIdx,
         _reference: RefIdx,
-    ) -> Result<Node<FlattenData>, NameResolutionError> {
-        let definition =
-            self.get_definition(ResolveKind::Type, &data.symbol, &data.location, data.scope)?;
+    ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
+        let definition = self.get_definition(
+            ResolveKind::Type,
+            data.ast.symbol(),
+            data.ast.location(),
+            data.scope,
+        )?;
 
         Ok(Node {
             data,
