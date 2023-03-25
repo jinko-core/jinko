@@ -25,12 +25,14 @@ members = [
   "debug-fir",
   "typecheck",
   "recursive_typecheck",
+  "fire",
 ]
 
 [dependencies]
 ast = { path = "ast" }
 ast-sanitizer = { path = "ast-sanitizer" }
 fir = { path = "fir" }
+fire = { path = "fire" }
 debug-fir = { path = "debug-fir" }
 flatten = { path = "flatten" }
 name_resolve = { path = "name_resolve" }
