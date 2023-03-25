@@ -322,20 +322,7 @@ mod tests {
     use super::*;
     use fir::{Kind, RefIdx};
     use flatten::FlattenAst;
-
-    macro_rules! ast {
-        ($($tok:tt)*) => {
-            {
-                let ast = xparser::parse(
-                    stringify!($($tok)*),
-                    location::Source::Input(stringify!($($tok)*)))
-                .unwrap();
-
-                // flatten::FlattenAst::flatten(&ast)
-                ast
-            }
-        }
-    }
+    use xparser::ast;
 
     #[test]
     fn declaration() {
