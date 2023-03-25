@@ -230,6 +230,22 @@ impl<'ast> AstInfo<'ast> {
             AstInfo::Helper(symbol, _) => Some(symbol),
         }
     }
+
+    /// Fetch the [`AstInfo::Node`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is actually an [`AstInfo::Helper`]
+    pub fn node(&self) -> &Ast {
+        match self {
+            AstInfo::Node(node) => node,
+            AstInfo::Helper(_, _) => unreachable!("asked for AST node from an `AstInfo::Helper`"),
+        }
+    }
+
+    /// Fetch the [`AstInfo::Helper`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is actually an [`AstInfo::Node`]
+    pub fn helper(&self) -> (&Symbol, &SpanTuple) {
+        match self {
+            AstInfo::Helper(sym, loc) => (sym, loc),
+            AstInfo::Node(_) => unreachable!("asked for Helper from an `AstInfo::Node`"),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
