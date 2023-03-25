@@ -97,3 +97,18 @@ impl<'i> nom::error::ParseError<ParseInput<'i>> for Error {
         Error
     }
 }
+
+/// Parse a list of token trees to a jinko [`ast::Ast`]
+#[macro_export]
+macro_rules! ast {
+        ($($tok:tt)*) => {
+            {
+                let ast = xparser::parse(
+                    stringify!($($tok)*),
+                    location::Source::Input(stringify!($($tok)*)))
+                .unwrap();
+
+                ast
+            }
+        }
+    }
