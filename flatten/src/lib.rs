@@ -205,16 +205,15 @@ impl<'ast> AstInfo<'ast> {
                 AstNode::Block { .. }
                 | AstNode::Incl { .. }
                 | AstNode::BinaryOp(_, _, _)
-                | AstNode::Function { .. }
                 | AstNode::FieldAccess(_, _)
                 | AstNode::Loop(..)
                 | AstNode::Return(..)
                 // FIXME: Is that valid?
                 | AstNode::Constant(..)
                 | AstNode::IfElse { .. }
-                | AstNode::VarAssign { .. }
                 | AstNode::Empty => None,
-                AstNode::Type { name: sym, .. }
+                AstNode::Function { decl: Declaration { name: sym, .. }, .. }
+                | AstNode::Type { name: sym, .. }
                 | AstNode::FunctionCall(Call { to: sym, .. })
                 | AstNode::TypeInstantiation(Call { to: sym, .. })
                 | AstNode::MethodCall {
@@ -223,6 +222,7 @@ impl<'ast> AstInfo<'ast> {
                     ..
                 }
                 | AstNode::VarOrEmptyType(sym)
+                | AstNode::VarAssign { to_assign: sym, .. }
                 | AstNode::VarDeclaration {
                     to_declare: sym, ..
                 } => Some(sym),
