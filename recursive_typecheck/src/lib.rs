@@ -16,7 +16,7 @@ pub trait TypeCheck<T>: Sized {
     fn type_check(self) -> Result<T, Error>;
 }
 
-impl TypeCheck<Fir<TypeData>> for Fir<FlattenData> {
+impl TypeCheck<Fir<TypeData>> for Fir<FlattenData<'_>> {
     fn type_check(self) -> Result<Fir<TypeData>, Error> {
         TypeCtx.pass(self)
     }
@@ -41,20 +41,20 @@ enum Ty {
     Unknown,
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct TypeData {
     // FIXME: Does this need to be an option?
     ty: Option<Ty>,
     symbol: Option<Symbol>,
-    loc: Option<SpanTuple>,
+    loc: SpanTuple,
 }
 
-impl From<FlattenData> for TypeData {
+impl From<FlattenData<'_>> for TypeData {
     fn from(value: FlattenData) -> Self {
         TypeData {
             ty: None,
-            symbol: value.symbol,
-            loc: value.location,
+            symbol: value.ast.symbol().cloned(),
+            loc: value.ast.location().clone(),
         }
     }
 }
@@ -119,7 +119,7 @@ impl TypeData {
 // type is void, but it returns `int` and calls to it should return `int` as well"
 // This is a "typing" pass, so it should maybe be named accordingly? And it happens before the
 // "checking" pass.
-impl Mapper<FlattenData, TypeData, Error> for TypeCtx {
+impl Mapper<FlattenData<'_>, TypeData, Error> for TypeCtx {
     fn map_constant(
         &mut self,
         data: FlattenData,
@@ -379,7 +379,7 @@ impl Mapper<FlattenData, TypeData, Error> for TypeCtx {
 }
 
 fn type_mismatch(
-    loc: &Option<SpanTuple>,
+    loc: &SpanTuple,
     fir: &Fir<TypeData>,
     expected: &Option<OriginIdx>,
     got: &Option<OriginIdx>,
@@ -436,7 +436,7 @@ impl Traversal<TypeData, Error> for TypeCtx {
     }
 }
 
-impl Pass<FlattenData, TypeData, Error> for TypeCtx {
+impl Pass<FlattenData<'_>, TypeData, Error> for TypeCtx {
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
     fn post_condition(_fir: &Fir<TypeData>) {}
@@ -455,32 +455,27 @@ impl Pass<FlattenData, TypeData, Error> for TypeCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use flatten::FlattenAst;
+    use name_resolve::NameResolve;
+    use xparser::ast;
 
     macro_rules! fir {
-        ($($tok:tt)*) => {
-            {
-                let ast = xparser::parse(
-                    stringify!($($tok)*),
-                    location::Source::Input(stringify!($($tok)*)))
-                .unwrap();
-
-                let fir = flatten::FlattenAst::flatten(&ast);
-                name_resolve::NameResolve::name_resolve(fir).unwrap()
-            }
-        }
+        ($ast:expr) => {
+            $ast.flatten().name_resolve().unwrap()
+        };
     }
 
     #[ignore]
     #[test]
     fn easy() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker0;
 
             func foo() -> Marker0 {
                 Marker0
             }
-        }
-        .type_check();
+        };
+        let fir = fir!(ast).type_check();
 
         // TODO: Add assertions making sure that the type of the block and block's last stmt are typerefs to Marker0;
         assert!(fir.is_ok());
@@ -489,15 +484,15 @@ mod tests {
     #[ignore]
     #[test]
     fn mismatch() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker0;
             type Marker1;
 
             func foo() -> Marker0 {
                 Marker1
             }
-        }
-        .type_check();
+        };
+        let fir = fir!(ast).type_check();
 
         assert!(fir.is_err());
     }
@@ -505,13 +500,13 @@ mod tests {
     #[ignore]
     #[test]
     fn nested_call() {
-        let fir = fir! {
+        let ast = ast! {
             type Marker0;
 
             func foo() -> Marker0 { Marker0 }
             func bar() -> Marker0 { foo() }
-        }
-        .type_check();
+        };
+        let fir = fir!(ast).type_check();
 
         assert!(fir.is_ok());
     }
