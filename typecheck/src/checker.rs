@@ -25,16 +25,16 @@ impl<'ctx> Checker<'ctx> {
 }
 
 fn type_mismatch(
-    loc: &Option<SpanTuple>,
+    loc: &SpanTuple,
     fir: &Fir<FlattenData>,
     expected: Option<Type>,
     got: Option<Type>,
 ) -> Error {
     let get_symbol = |ty| {
         let Type::One(idx) = ty;
-        fir.nodes[&idx.unwrap()].data.symbol.clone().unwrap()
+        fir.nodes[&idx.unwrap()].data.ast.symbol().unwrap()
     };
-    let name_fmt = |ty: Option<Symbol>| match ty {
+    let name_fmt = |ty: Option<&Symbol>| match ty {
         Some(ty) => format!("`{}`", ty.access().purple()),
         None => format!("{}", "no type".green()),
     };
@@ -51,7 +51,7 @@ fn type_mismatch(
         .with_loc(loc.clone()) // FIXME: Missing hint
 }
 
-impl<'ctx> Traversal<FlattenData, Error> for Checker<'ctx> {
+impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
     fn traverse_function(
         &mut self,
         fir: &Fir<FlattenData>,
@@ -65,7 +65,7 @@ impl<'ctx> Traversal<FlattenData, Error> for Checker<'ctx> {
         let block_ty = block.as_ref().and_then(|b| self.get_type(b));
 
         if ret_ty != block_ty {
-            let err = type_mismatch(&node.data.location, fir, ret_ty, block_ty);
+            let err = type_mismatch(node.data.ast.location(), fir, ret_ty, block_ty);
             let err = match (ret_ty, block_ty) {
                 (None, Some(_)) => err
                     .with_hint(Error::hint().with_msg(String::from(
@@ -101,7 +101,7 @@ impl<'ctx> Traversal<FlattenData, Error> for Checker<'ctx> {
         let from = self.get_type(from);
 
         if to != from {
-            Err(type_mismatch(&node.data.location, fir, to, from))
+            Err(type_mismatch(node.data.ast.location(), fir, to, from))
         } else {
             Ok(())
         }
