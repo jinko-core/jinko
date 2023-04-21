@@ -25,6 +25,7 @@ members = [
   "debug-fir",
   "typecheck",
   "recursive_typecheck",
+  "fire",
 ]
 
 [dependencies]
@@ -42,6 +43,7 @@ loop_desugar = { path = "loop_desugar" }
 xparser = { path = "xparser" }
 typecheck = { path = "typecheck" }
 recursive_typecheck = { path = "recursive_typecheck" }
+fire = { path = "fire" }
 structopt = "0.3"
 colored = "2.0"
 nom = "7.1"

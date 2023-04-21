@@ -6,6 +6,7 @@ mod repl;
 
 use colored::Colorize;
 
+use fire::Interpret;
 use flatten::{FlattenAst, FlattenData};
 use include_code::IncludeCode;
 use loop_desugar::DesugarLoops;
@@ -144,7 +145,8 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
         .show_data(data_fmt)
         .display(&fir);
 
-    x_try!(fir.type_check());
+    let fir = x_try!(fir.type_check());
+    x_try!(fir.interpret());
 
     todo!("experimental pipeline is not complete")
 }
