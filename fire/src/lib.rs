@@ -44,11 +44,61 @@ struct Fire {
     values: HashMap<OriginIdx, Instance>,
 }
 
+impl Fire {
+    fn perform_extern_call(
+        &self,
+        _fir: &Fir<FlattenData<'_>>,
+        node: &Node<FlattenData<'_>>,
+        args: &[RefIdx],
+    ) -> Result<Option<Instance>, Error> {
+        let ast = node.data.ast.node();
+        let name = match &ast.node {
+            ast::Node::Function {
+                decl: ast::Declaration { name, .. },
+                ..
+            } => name,
+            other => {
+                dbg!(other);
+                unreachable!()
+            }
+        };
+
+        if name.access() == "println" {
+            args.iter().for_each(|arg| {
+                let value = self.values.get(&arg.unwrap()).unwrap();
+                // FIXME: Ugly as SIN
+                println!("{}", unsafe {
+                    String::from_utf8_unchecked(value.data.clone())
+                });
+            })
+        }
+
+        Ok(None)
+    }
+}
+
 // is this a Mapper or a Traverse? Traverse probably
 // or can it be a Mapper?
 impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Fire {}
 
 impl Traversal<FlattenData<'_>, Error> for Fire {
+    fn traverse_call(
+        &mut self,
+        _fir: &Fir<FlattenData<'_>>,
+        _node: &Node<FlattenData<'_>>,
+        _to: &RefIdx,
+        _generics: &[RefIdx],
+        args: &[RefIdx],
+    ) -> Fallible<Error> {
+        let def = &_fir.nodes[&_to.unwrap()];
+        let _block = match &def.kind {
+            Kind::Function { block: None, .. } => self.perform_extern_call(_fir, def, args),
+            _ => unreachable!(),
+        };
+
+        Ok(())
+    }
+
     fn traverse_constant(
         &mut self,
         _fir: &Fir<FlattenData<'_>>,
@@ -87,7 +137,12 @@ impl Traversal<FlattenData<'_>, Error> for Fire {
         let tyref = &fir.nodes[&ty.unwrap()];
         let fields = match &tyref.kind {
             Kind::Type { fields, .. } => fields,
-            _ => unreachable!(),
+            // FIXME: here we need to decide part of our copy/move semantics
+            Kind::TypeReference(_) => return Ok(()),
+            other => {
+                dbg!(other);
+                unreachable!()
+            }
         };
 
         // TODO: can we just check if value == ty?
@@ -111,8 +166,6 @@ impl Traversal<FlattenData<'_>, Error> for Fire {
         fir: &Fir<FlattenData<'_>>,
         node: &Node<FlattenData<'_>>,
     ) -> Fallible<Error> {
-        dbg!(&self.values);
-
         match &node.kind {
             Kind::Constant(c) => self.traverse_constant(fir, node, c),
             Kind::TypeReference(r) => self.traverse_type_reference(fir, node, r),
