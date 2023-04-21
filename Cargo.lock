@@ -217,6 +217,17 @@ name = "fir"
 version = "0.1.0"
 
 [[package]]
+name = "fire"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "error",
+ "fir",
+ "flatten",
+ "symbol",
+]
+
+[[package]]
 name = "flatten"
 version = "0.1.0"
 dependencies = [
@@ -296,6 +307,7 @@ dependencies = [
  "downcast-rs",
  "error",
  "fir",
+ "fire",
  "flatten",
  "include_code",
  "lazy_static",
