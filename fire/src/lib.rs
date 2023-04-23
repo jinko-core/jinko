@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
 // FIXME: Execution is very tree-like, isn't it
+// FIXME: How do we get the last value of a Statements?
+// FIXME: How do Returns work in this system?
+// FIXME: How do we use the value returned by a function call for example?
+// where x = id(15);
 
 use error::{ErrKind, Error};
 use fir::{Fallible, Fir, Kind, Mapper, Node, OriginIdx, RefIdx, Traversal};
