@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use error::Error;
+// FIXME: Execution is very tree-like, isn't it
+
+use error::{ErrKind, Error};
 use fir::{Fallible, Fir, Kind, Mapper, Node, OriginIdx, RefIdx, Traversal};
 use flatten::FlattenData;
 
@@ -26,19 +28,24 @@ impl Interpret for Fir<FlattenData<'_>> {
 //     what's the hash of a type?
 // for a string -> the hash of this string
 // for a char/int/bool -> the actual value (an i64)
-// for a float -> eeeeeeeh?
+// for a float -> eeeeeeeh? typecheck error?
+//     introduce a safe-float type in the stdlib?
 // for other types -> needs to be a unique hash -> based on source location and FirId?
 type Type = &'static str;
 
 // an instance needs to be unique
 // needs to be hashable
 // we need the type of the value - it needs to be known at all times
+// FIXME: We can probably improve this type by specializing it more - turning it into a sum type differentiating between
 #[derive(PartialEq, Eq, Debug)]
 struct Instance {
     pub(crate) ty: Type,
     pub(crate) data: Vec<u8>,
 }
 
+// FIXME: How do we deal with the fact that we're acting on a Flat representation?
+// FIXME: Is the [`Fir`] stable? Can we just access the last node as the entry point to the [`Fir`]?
+// then it makes everything super easy actually
 struct Fire {
     // this will also take care of garbage collection so we must be careful
     values: HashMap<OriginIdx, Instance>,
@@ -75,24 +82,67 @@ impl Fire {
 
         Ok(None)
     }
+
+    fn execute_stmts(
+        &mut self,
+        fir: &Fir<FlattenData<'_>>,
+        node: &RefIdx,
+    ) -> Result<Option<Instance>, Error> {
+        let stmts = &fir.nodes[&node.unwrap()];
+        let stmts = match &stmts.kind {
+            Kind::Statements(stmts) => stmts,
+            _ => unreachable!(),
+        };
+
+        let errs = stmts.iter().fold(Vec::new(), |mut errs, node| {
+            let node = &fir.nodes[&node.unwrap()];
+            match self.traverse_node(fir, node) {
+                Ok(_) => errs,
+                Err(e) => {
+                    errs.push(e);
+                    errs
+                }
+            }
+        });
+
+        if errs.is_empty() {
+            // FIXME: Invalid
+            Ok(None)
+        } else {
+            Err(Error::new(ErrKind::Multiple(errs)))
+        }
+    }
+
+    // TODO: It would be good to have a "copy/move" function which actually performs the behavior we want (copy or move)
+    // and we could call it on the sites where it matters
 }
 
 // is this a Mapper or a Traverse? Traverse probably
-// or can it be a Mapper?
+// or can it be a Mapper? -> has to be a traverse because we can reuse nodes I think?
 impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Fire {}
 
 impl Traversal<FlattenData<'_>, Error> for Fire {
     fn traverse_call(
         &mut self,
-        _fir: &Fir<FlattenData<'_>>,
+        fir: &Fir<FlattenData<'_>>,
         _node: &Node<FlattenData<'_>>,
         _to: &RefIdx,
         _generics: &[RefIdx],
         args: &[RefIdx],
     ) -> Fallible<Error> {
-        let def = &_fir.nodes[&_to.unwrap()];
+        let def = &fir.nodes[&_to.unwrap()];
+
+        args.iter()
+            .for_each(|arg| self.traverse_node(fir, &fir.nodes[&arg.unwrap()]).unwrap());
+
         let _block = match &def.kind {
-            Kind::Function { block: None, .. } => self.perform_extern_call(_fir, def, args),
+            Kind::Function { block: None, .. } => self.perform_extern_call(fir, def, args),
+            Kind::Function {
+                block: Some(block), ..
+            } => {
+                self.execute_stmts(fir, block)
+                // self.perform_extern_call(_fir, def, args),
+            }
             _ => unreachable!(),
         };
 
@@ -161,42 +211,29 @@ impl Traversal<FlattenData<'_>, Error> for Fire {
         Ok(())
     }
 
-    fn traverse_node(
-        &mut self,
-        fir: &Fir<FlattenData<'_>>,
-        node: &Node<FlattenData<'_>>,
-    ) -> Fallible<Error> {
-        match &node.kind {
-            Kind::Constant(c) => self.traverse_constant(fir, node, c),
-            Kind::TypeReference(r) => self.traverse_type_reference(fir, node, r),
-            Kind::TypedValue { value, ty } => self.traverse_typed_value(fir, node, value, ty),
-            Kind::Generic { default } => self.traverse_generic(fir, node, default),
-            Kind::Type { generics, fields } => self.traverse_type(fir, node, generics, fields),
-            Kind::Function {
-                generics,
-                args,
-                return_type,
-                block,
-            } => self.traverse_function(fir, node, generics, args, return_type, block),
-            Kind::Assignment { to, from } => self.traverse_assignment(fir, node, to, from),
-            Kind::Binding { to } => self.traverse_binding(fir, node, to),
-            Kind::Instantiation {
-                to,
-                generics,
-                fields,
-            } => self.traverse_instantiation(fir, node, to, generics, fields),
-            Kind::TypeOffset { instance, field } => {
-                self.traverse_type_offset(fir, node, instance, field)
+    fn traverse(&mut self, fir: &Fir<FlattenData<'_>>) -> Fallible<Vec<Error>> {
+        // FIXME: No unwrap here
+        let entry_point = fir.nodes.last_key_value().unwrap();
+        let stmts = match &entry_point.1.kind {
+            Kind::Statements(stmts) => stmts,
+            _ => unreachable!(),
+        };
+
+        let errs = stmts.iter().fold(Vec::new(), |mut errs, node| {
+            let node = &fir.nodes[&node.unwrap()];
+            match self.traverse_node(fir, node) {
+                Ok(_) => errs,
+                Err(e) => {
+                    errs.push(e);
+                    errs
+                }
             }
-            Kind::Call { to, generics, args } => self.traverse_call(fir, node, to, generics, args),
-            Kind::Statements(stmts) => self.traverse_statements(fir, node, stmts),
-            Kind::Conditional {
-                condition,
-                true_block,
-                false_block,
-            } => self.traverse_condition(fir, node, condition, true_block, false_block),
-            Kind::Loop { condition, block } => self.traverse_loop(fir, node, condition, block),
-            Kind::Return(expr) => self.traverse_return(fir, node, expr),
+        });
+
+        if errs.is_empty() {
+            Ok(())
+        } else {
+            Err(errs)
         }
     }
 }
