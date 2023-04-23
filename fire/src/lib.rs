@@ -6,7 +6,7 @@ use std::collections::HashMap;
 // FIXME: How do we use the value returned by a function call for example?
 // where x = id(15);
 
-use error::{ErrKind, Error};
+use error::Error;
 use fir::{Fallible, Fir, Kind, Mapper, Node, OriginIdx, RefIdx, Traversal};
 use flatten::FlattenData;
 
@@ -41,7 +41,8 @@ type Type = &'static str;
 // needs to be hashable
 // we need the type of the value - it needs to be known at all times
 // FIXME: We can probably improve this type by specializing it more - turning it into a sum type differentiating between
-#[derive(PartialEq, Eq, Debug)]
+// FIXME: We need to be very careful about what a "Clone" means here
+#[derive(PartialEq, Eq, Debug, Clone)]
 struct Instance {
     pub(crate) ty: Type,
     pub(crate) data: Vec<u8>,
@@ -56,12 +57,26 @@ struct Fire {
 }
 
 impl Fire {
+    fn allocate(&mut self, key: OriginIdx, value: Instance) {
+        // if we allocate the same value twice, this is an interpreter error
+        assert!(self.values.insert(key, value).is_none());
+    }
+
+    fn copy(&mut self, to_copy: &RefIdx, key: OriginIdx) {
+        // if we haven't allocated this value beforehand, this is an interpreter error
+        let value = self.values.get(&to_copy.unwrap()).unwrap();
+
+        // FIXME: This is very invalid - we should not be cloning the instance here.
+        // this all depends on the copy/move/persistent semantics we'll choose
+        self.allocate(key, value.clone());
+    }
+
     fn perform_extern_call(
         &self,
         _fir: &Fir<FlattenData<'_>>,
         node: &Node<FlattenData<'_>>,
         args: &[RefIdx],
-    ) -> Result<Option<Instance>, Error> {
+    ) -> Option<Instance> {
         let ast = node.data.ast.node();
         let name = match &ast.node {
             ast::Node::Function {
@@ -84,18 +99,19 @@ impl Fire {
             })
         }
 
-        Ok(None)
+        None
     }
 
-    fn execute_stmts(
-        &mut self,
-        fir: &Fir<FlattenData<'_>>,
-        node: &RefIdx,
-    ) -> Result<Option<Instance>, Error> {
+    // FIXME: Sholud this return a Result<Option<Instance>, Error>?
+    fn run_block(&mut self, fir: &Fir<FlattenData<'_>>, node: &RefIdx) -> Option<Instance> {
         let stmts = &fir.nodes[&node.unwrap()];
         let stmts = match &stmts.kind {
             Kind::Statements(stmts) => stmts,
-            _ => unreachable!(),
+            _ => unreachable!(
+                "{}:{}: expected list of statements for node {node:?}. this is an interpreter error.",
+                file!(),
+                line!(),
+            ),
         };
 
         let errs = stmts.iter().fold(Vec::new(), |mut errs, node| {
@@ -109,12 +125,9 @@ impl Fire {
             }
         });
 
-        if errs.is_empty() {
-            // FIXME: Invalid
-            Ok(None)
-        } else {
-            Err(Error::new(ErrKind::Multiple(errs)))
-        }
+        // FIXME: This is invalid, isn't it?
+        // FIXME: or should we just return () here?
+        None
     }
 
     // TODO: It would be good to have a "copy/move" function which actually performs the behavior we want (copy or move)
@@ -135,20 +148,21 @@ impl Traversal<FlattenData<'_>, Error> for Fire {
         args: &[RefIdx],
     ) -> Fallible<Error> {
         let def = &fir.nodes[&_to.unwrap()];
-
-        args.iter()
-            .for_each(|arg| self.traverse_node(fir, &fir.nodes[&arg.unwrap()]).unwrap());
-
-        let _block = match &def.kind {
-            Kind::Function { block: None, .. } => self.perform_extern_call(fir, def, args),
-            Kind::Function {
-                block: Some(block), ..
-            } => {
-                self.execute_stmts(fir, block)
-                // self.perform_extern_call(_fir, def, args),
-            }
+        let (block, def_args) = match &def.kind {
+            Kind::Function { block, args, .. } => (block, args),
             _ => unreachable!(),
         };
+
+        args.iter().enumerate().for_each(|(i, arg)| {
+            self.traverse_node(fir, &fir.nodes[&arg.unwrap()]).unwrap();
+            self.copy(arg, def_args[i].unwrap());
+        });
+
+        match block {
+            None => self.perform_extern_call(fir, def, args),
+            Some(block) => self.run_block(fir, block),
+        };
+        // FIXME: We need to add bindings here between the function's variables and the arguments given to the call
 
         Ok(())
     }
@@ -176,7 +190,7 @@ impl Traversal<FlattenData<'_>, Error> for Fire {
         };
 
         // FIXME: Handle result here
-        self.values.insert(node.origin, instance);
+        self.allocate(node.origin, instance);
 
         Ok(())
     }
@@ -210,11 +224,24 @@ impl Traversal<FlattenData<'_>, Error> for Fire {
         };
 
         // FIXME: Handle result here
-        self.values.insert(node.origin, instance);
+        self.allocate(node.origin, instance);
 
         Ok(())
     }
 
+    fn traverse_binding(
+        &mut self,
+        _fir: &Fir<FlattenData<'_>>,
+        node: &Node<FlattenData<'_>>,
+        to: &RefIdx,
+    ) -> Fallible<Error> {
+        // FIXME: This is very invalid
+        self.copy(to, node.origin);
+
+        Ok(())
+    }
+
+    // FIXME: Remove this function. Use Fire::run_block instead
     fn traverse(&mut self, fir: &Fir<FlattenData<'_>>) -> Fallible<Vec<Error>> {
         // FIXME: No unwrap here
         let entry_point = fir.nodes.last_key_value().unwrap();
