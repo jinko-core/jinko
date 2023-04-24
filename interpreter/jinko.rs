@@ -146,9 +146,9 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
         .display(&fir);
 
     let fir = x_try!(fir.type_check());
-    x_try!(fir.interpret());
+    let _result = fir.interpret();
 
-    todo!("experimental pipeline is not complete")
+    todo!("unfinished experimental pipeline: use result as exit code and display it")
 }
 
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
