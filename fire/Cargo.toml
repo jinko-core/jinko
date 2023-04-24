@@ -8,6 +8,4 @@ edition = "2021"
 [dependencies]
 ast = { path = "../ast" }
 fir = { path = "../fir" }
-error = { path = "../error" }
-symbol = { path = "../symbol" }
 flatten = { path = "../flatten" }
