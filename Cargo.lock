@@ -223,6 +223,10 @@ dependencies = [
  "ast",
  "fir",
  "flatten",
+ "location",
+ "name_resolve",
+ "typecheck",
+ "xparser",
 ]
 
 [[package]]

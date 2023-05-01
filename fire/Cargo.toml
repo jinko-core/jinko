@@ -9,3 +9,9 @@ edition = "2021"
 ast = { path = "../ast" }
 fir = { path = "../fir" }
 flatten = { path = "../flatten" }
+
+[dev-dependencies]
+name_resolve = { path = "../name_resolve" }
+typecheck = { path = "../typecheck" }
+xparser = { path = "../xparser" }
+location = { path = "../location" }
