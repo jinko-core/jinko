@@ -236,6 +236,8 @@ impl Fire {
     // -> we perform the call, allocate data, and then look it up when accessing `x`? Is `x` a reference to call()? a move? that ties in the move semantics right?
     // where we would "move" the value from the call's OriginId to x's OriginId
     fn fire_node(&mut self, fir: &Fir<FlattenData<'_>>, node: &Node<FlattenData<'_>>) {
+        dbg!(&node.data.ast);
+
         match &node.kind {
             Kind::Constant(c) => self.fire_constant(fir, node, c),
             Kind::Statements(stmts) => self.fire_block(fir, node, stmts),
@@ -295,4 +297,39 @@ impl Fire {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+    use flatten::FlattenAst;
+    use name_resolve::NameResolve;
+    use typecheck::TypeCheck;
+
+    macro_rules! ast {
+        ($($toks:tt)*) => {
+            xparser::ast!(
+                type char;
+                type bool;
+                type int;
+                type float;
+                type string;
+                $($toks)*
+            )
+        }
+    }
+
+    macro_rules! fir {
+        ($ast:expr) => {
+            $ast.flatten().name_resolve().unwrap().type_check().unwrap()
+        };
+    }
+
+    #[test]
+    fn call() {
+        let ast = ast! {
+            func id(x: int) -> int { x }
+
+            id(15)
+        };
+
+        let result = fir!(ast).interpret();
+    }
+}
