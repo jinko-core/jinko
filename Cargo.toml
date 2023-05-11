@@ -44,7 +44,7 @@ typecheck = { path = "typecheck" }
 recursive_typecheck = { path = "recursive_typecheck" }
 structopt = "0.3"
 colored = "2.0"
-nom = "7.0"
+nom = "7.1"
 nom_locate = "4.0"
 linefeed = { version = "0.6", optional = true }
 downcast-rs = "1.2"
