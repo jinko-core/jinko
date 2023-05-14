@@ -31,8 +31,8 @@ pub fn parse(input: &str, source: Source) -> Result<Ast, Error> {
         location: constructs::pos_to_loc(input, start, end),
         node: Node::Block {
             stmts,
-            last_is_expr: false,
-        }, // FIXME: Invalid
+            last_is_expr: true,
+        }, // FIXME: Is that valid?
     })
 }
 
