@@ -1,11 +1,10 @@
+pub mod instance;
+
 use std::collections::HashMap;
 
+use instance::Instance;
+
 // FIXME: Missing doc
-// FIXME: Execution is very tree-like, isn't it
-// FIXME: How do we get the last value of a Statements?
-// FIXME: How do Returns work in this system?
-// FIXME: How do we use the value returned by a function call for example?
-// where x = id(15);
 
 use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
 use flatten::FlattenData;
@@ -23,28 +22,6 @@ impl Interpret for Fir<FlattenData<'_>> {
         // Start the fire >:)
         fire.start(self)
     }
-}
-
-// FIXME: This is invalid
-// what's a type? at runtime?
-// just the hash of the type? -> that's good enough
-//     what's the hash of a type?
-// for a string -> the hash of this string
-// for a char/int/bool -> the actual value (an i64)
-// for a float -> eeeeeeeh? typecheck error?
-//     introduce a safe-float type in the stdlib?
-// for other types -> needs to be a unique hash -> based on source location and FirId?
-type Type = &'static str;
-
-// an instance needs to be unique
-// needs to be hashable
-// we need the type of the value - it needs to be known at all times
-// FIXME: We can probably improve this type by specializing it more - turning it into a sum type differentiating between
-// FIXME: We need to be very careful about what a "Clone" means here
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub struct Instance {
-    pub(crate) ty: Type,
-    pub(crate) data: Vec<u8>,
 }
 
 // FIXME: How do we deal with the fact that we're acting on a Flat representation?
@@ -100,7 +77,7 @@ impl Fire {
                 let value = self.values.get(&arg.unwrap()).unwrap();
                 // FIXME: Ugly as SIN
                 println!("{}", unsafe {
-                    String::from_utf8_unchecked(value.data.clone())
+                    String::from_utf8_unchecked(value.data().into())
                 });
             })
         }
@@ -110,11 +87,10 @@ impl Fire {
         // None
     }
 
-    // FIXME: Sholud this return a Result<Option<Instance>, Error>?
     fn fire_block(
         &mut self,
         fir: &Fir<FlattenData<'_>>,
-        _node: &Node<FlattenData<'_>>,
+        node: &Node<FlattenData<'_>>,
         stmts: &[RefIdx],
     ) {
         // How do we deal with returns in this system?
@@ -123,33 +99,20 @@ impl Fire {
             self.fire_node(fir, node);
         });
 
-        // FIXME: This is invalid, isn't it?
-        // FIXME: or should we just return () here?
-        // FIXME: If the last value is a return, we need to have this node's ID refer to the value as well
+        if let Some(last_stmt) = stmts.last() {
+            if let Kind::Return(_) = &fir.nodes[&last_stmt.unwrap()].kind {
+                self.transfer(last_stmt, node.origin)
+            }
+        }
     }
 
-    // FIXME: This can return an Instance, right?
-    // FIXME: Does this need "self"?
-    // FIXME: Does this need "fir"?
-    fn fire_constant(
-        &mut self,
-        _fir: &Fir<FlattenData<'_>>,
-        node: &Node<FlattenData<'_>>,
-        _c: &RefIdx,
-    ) {
+    // FIXME: Does this need "_c"?
+    fn fire_constant(&mut self, node: &Node<FlattenData<'_>>, _c: &RefIdx) {
         let ast = node.data.ast.node();
 
         let instance = match &ast.node {
-            ast::Node::Constant(ast::Value::Integer(value)) => Instance {
-                ty: "int",
-                // origin: node.origin,
-                data: value.to_le_bytes().to_vec(),
-            },
-            ast::Node::Constant(ast::Value::Str(s)) => Instance {
-                ty: "string",
-                // orgin: node.origin,
-                data: s.clone().into_bytes(),
-            },
+            ast::Node::Constant(ast::Value::Integer(value)) => Instance::from(*value),
+            ast::Node::Constant(ast::Value::Str(s)) => Instance::from(s),
             _ => unreachable!(),
         };
 
@@ -212,10 +175,7 @@ impl Fire {
 
         // TODO: can we just check if value == ty?
         let instance = if fields.is_empty() {
-            Instance {
-                ty: "empty type",
-                data: Vec::new(),
-            }
+            Instance::empty()
         } else {
             unreachable!()
         };
@@ -225,21 +185,28 @@ impl Fire {
         self.allocate(node.origin, instance);
     }
 
+    fn fire_return(
+        &mut self,
+        fir: &Fir<FlattenData<'_>>,
+        node: &Node<FlattenData<'_>>,
+        expr: &Option<RefIdx>,
+    ) {
+        if let Some(returned) = expr {
+            self.fire_node_ref(fir, returned);
+
+            self.transfer(returned, node.origin);
+        } // FIXME: Allocate None otherwise?
+    }
+
     fn fire_node_ref(&mut self, fir: &Fir<FlattenData<'_>>, node_ref: &RefIdx) {
         let node = &fir.nodes[&node_ref.unwrap()];
 
         self.fire_node(fir, node)
     }
 
-    // FIXME: Do we actually need to return an `Instance` here? We should just be able to lookup the rvalue's id or w/ever in the ctx
-    // `where x = call()`
-    // -> we perform the call, allocate data, and then look it up when accessing `x`? Is `x` a reference to call()? a move? that ties in the move semantics right?
-    // where we would "move" the value from the call's OriginId to x's OriginId
     fn fire_node(&mut self, fir: &Fir<FlattenData<'_>>, node: &Node<FlattenData<'_>>) {
-        dbg!(&node.data.ast);
-
         match &node.kind {
-            Kind::Constant(c) => self.fire_constant(fir, node, c),
+            Kind::Constant(c) => self.fire_constant(node, c),
             Kind::Statements(stmts) => self.fire_block(fir, node, stmts),
             Kind::Call {
                 to,
@@ -248,6 +215,7 @@ impl Fire {
             } => self.fire_call(fir, node, to, args),
             Kind::Binding { to } => self.fire_binding(fir, node, to),
             Kind::TypedValue { value, ty } => self.fire_typed_value(fir, node, value, ty),
+            Kind::Return(expr) => self.fire_return(fir, node, expr),
             // Kind::TypeReference(r) => self.traverse_type_reference(fir, node, r),
             // Kind::Generic { default } => self.traverse_generic(fir, node, default),
             // Kind::Type { generics, fields } => self.traverse_type(fir, node, generics, fields),
@@ -272,7 +240,6 @@ impl Fire {
             //     false_block,
             // } => self.traverse_condition(fir, node, condition, true_block, false_block),
             // Kind::Loop { condition, block } => self.traverse_loop(fir, node, condition, block),
-            // Kind::Return(expr) => self.traverse_return(fir, node, expr),
             _ => {},
         }
     }
@@ -323,6 +290,16 @@ mod tests {
     }
 
     #[test]
+    fn last_value() {
+        let ast = ast! {
+            "jinko"
+        };
+
+        let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from("jinko")))
+    }
+
+    #[test]
     fn call() {
         let ast = ast! {
             func id(x: int) -> int { x }
@@ -331,5 +308,18 @@ mod tests {
         };
 
         let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from(15)))
+    }
+
+    #[test]
+    fn nested_call() {
+        let ast = ast! {
+            func id(x: string) -> string { x }
+
+            id(id(id(id("jinko"))))
+        };
+
+        let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from("jinko")))
     }
 }
