@@ -95,9 +95,9 @@
 // Does that make sense? Does that indicate that for all types we must first keep a Option<Ty> which is set to None?
 // Is this going to cause problems?
 
-use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::{collections::BTreeMap, ops::Index};
 
 mod checks;
 pub mod iter;
@@ -221,6 +221,14 @@ pub enum Kind {
     },
     Statements(Vec<RefIdx>), // to any kind
     Return(Option<RefIdx>),  // to any kind
+}
+
+impl<T> Index<&RefIdx> for Fir<T> {
+    type Output = Node<T>;
+
+    fn index(&self, index: &RefIdx) -> &Node<T> {
+        &self.nodes[&index.unwrap()]
+    }
 }
 
 #[derive(Debug, Clone)]
