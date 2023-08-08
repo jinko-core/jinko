@@ -1,16 +1,18 @@
 use std::collections::HashMap;
 
 use error::{ErrKind, Error};
-use fir::{Fallible, Fir, Incomplete, Mapper, OriginIdx, Pass, Traversal};
+use fir::{Fallible, Fir, Incomplete, Mapper, OriginIdx, Pass, RefIdx, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
 
 mod declarator;
 mod resolver;
+mod scoper;
 
 use declarator::Declarator;
 use resolver::{ResolveKind, Resolver};
+use scoper::Scoper;
 
 /// Error reported when an item (variable, function, type) was already declared
 /// in the current scope.
@@ -140,6 +142,7 @@ impl ScopeMap {
 #[derive(Default)]
 struct NameResolveCtx {
     mappings: ScopeMap,
+    enclosing_scope: HashMap<OriginIdx, RefIdx>,
 }
 
 /// Extension type of [`Error`] to be able to implement [`IterError`].
@@ -264,6 +267,19 @@ impl NameResolutionError {
 }
 
 impl NameResolveCtx {
+    fn scope(fir: &Fir<FlattenData>) -> HashMap<OriginIdx, RefIdx> {
+        let root = fir.nodes.last_key_value().unwrap();
+
+        let mut scoper = Scoper {
+            current_scope: RefIdx::Resolved(*root.0),
+            enclosing_scope: HashMap::new(),
+        };
+
+        scoper.traverse_node(fir, root.1).unwrap();
+
+        scoper.enclosing_scope
+    }
+
     fn insert_definitions(&mut self, fir: &Fir<FlattenData>) -> Fallible<Vec<NameResolutionError>> {
         Declarator(self).traverse(fir)
     }
@@ -282,6 +298,8 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for NameResolveCtx 
     fn post_condition(_fir: &Fir<FlattenData>) {}
 
     fn transform(&mut self, fir: Fir<FlattenData<'ast>>) -> Result<Fir<FlattenData<'ast>>, Error> {
+        self.enclosing_scope = NameResolveCtx::scope(&fir);
+
         let definition = self.insert_definitions(&fir);
         let definition = definition
             .map_err(|errs| NameResolutionError::Multiple(errs).finalize(&fir, &self.mappings));
