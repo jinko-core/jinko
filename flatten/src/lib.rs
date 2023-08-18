@@ -690,7 +690,7 @@ impl<'ast> Ctx<'ast> {
     fn visit_var_declaration(
         self,
         ast: AstInfo<'ast>,
-        _mutable: &bool,
+        _mutable: bool,
         _to_declare: &Symbol,
         value: &'ast Ast,
     ) -> (Ctx<'ast>, RefIdx) {
@@ -802,7 +802,7 @@ impl<'ast> Ctx<'ast> {
                 mutable,
                 to_declare,
                 value,
-            } => self.visit_var_declaration(node, mutable, to_declare, value),
+            } => self.visit_var_declaration(node, *mutable, to_declare, value),
             AstNode::VarAssign { to_assign, value } => {
                 self.visit_var_assign(node, to_assign, value)
             }
@@ -899,7 +899,7 @@ mod tests {
             Kind::Statements(stmts) => stmts,
             _ => unreachable!(),
         };
-        let ret_idx = stmts[0].unwrap();
+        let ret_idx = stmts[0].expect_resolved();
 
         assert!(matches!(
             fir.nodes.get(&ret_idx).unwrap().kind,

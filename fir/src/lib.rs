@@ -122,7 +122,7 @@ pub enum RefIdx {
 
 impl RefIdx {
     #[track_caller]
-    pub fn unwrap(&self) -> OriginIdx {
+    pub fn expect_resolved(&self) -> OriginIdx {
         match self {
             RefIdx::Resolved(idx) => *idx,
             RefIdx::Unresolved => unreachable!("unexpected `RefIdx::Unresolved` in `Fir`"),
@@ -227,7 +227,15 @@ impl<T> Index<&RefIdx> for Fir<T> {
     type Output = Node<T>;
 
     fn index(&self, index: &RefIdx) -> &Node<T> {
-        &self.nodes[&index.unwrap()]
+        &self.nodes[&index.expect_resolved()]
+    }
+}
+
+impl<T> Index<&OriginIdx> for Fir<T> {
+    type Output = Node<T>;
+
+    fn index(&self, index: &OriginIdx) -> &Node<T> {
+        &self.nodes[index]
     }
 }
 

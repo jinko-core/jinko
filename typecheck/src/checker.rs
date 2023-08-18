@@ -20,7 +20,7 @@ impl<'ctx> Checker<'ctx> {
     fn get_type(&self, of: &RefIdx) -> Option<Type> {
         // if at this point, the reference is unresolved, or if we haven't seen that node yet, it's
         // an interpreter error
-        *self.0.types.get(&of.unwrap()).unwrap()
+        *self.0.types.get(&of.expect_resolved()).unwrap()
     }
 }
 
@@ -32,7 +32,7 @@ fn type_mismatch(
 ) -> Error {
     let get_symbol = |ty| {
         let Type::One(idx) = ty;
-        fir.nodes[&idx.unwrap()].data.ast.symbol().unwrap()
+        fir.nodes[&idx.expect_resolved()].data.ast.symbol().unwrap()
     };
     let name_fmt = |ty: Option<&Symbol>| match ty {
         Some(ty) => format!("`{}`", ty.access().purple()),

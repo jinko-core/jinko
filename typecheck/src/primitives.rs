@@ -39,7 +39,7 @@ fn validate_type(
     let collect_locs = |many_refs: &[RefIdx]| {
         many_refs
             .iter()
-            .map(|generic| &fir.nodes[&generic.unwrap()])
+            .map(|generic| &fir.nodes[&generic.expect_resolved()])
             .map(|node| node.data.ast.location().clone())
             .collect::<Vec<SpanTuple>>()
     };
