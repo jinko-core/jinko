@@ -1,6 +1,4 @@
-// pub trait Scoper {
-
-// }
+// FIXME: Documentation
 
 use std::collections::HashMap;
 
@@ -8,8 +6,8 @@ use fir::{Fallible, Fir, Kind, Node, OriginIdx, RefIdx, Traversal};
 use flatten::FlattenData;
 
 pub(crate) struct Scoper {
-    pub(crate) current_scope: RefIdx,
-    pub(crate) enclosing_scope: HashMap<OriginIdx, RefIdx>,
+    pub(crate) current_scope: OriginIdx, // TODO: Wrap in a new type with a .replace() method
+    pub(crate) enclosing_scope: HashMap<OriginIdx, OriginIdx>,
 }
 
 impl Scoper {
@@ -18,29 +16,56 @@ impl Scoper {
         self.enclosing_scope
             .insert(to_scope.origin, self.current_scope);
     }
+
+    fn maybe_visit_child(&mut self, fir: &Fir<FlattenData<'_>>, ref_idx: &RefIdx) -> Fallible<()> {
+        match ref_idx {
+            RefIdx::Resolved(origin) => self.traverse_node(fir, &fir[origin]),
+            // we skip unresolved nodes here
+            RefIdx::Unresolved => Ok(()),
+        }
+    }
+
+    fn visit_field_instantiation(
+        &mut self,
+        fir: &Fir<FlattenData<'_>>,
+        ref_idx: &RefIdx,
+    ) -> Fallible<()> {
+        self.maybe_visit_child(fir, ref_idx)
+
+        // let field_instantiation = dbg!(&fir[ref_idx]);
+
+        // if let Kind::TypedValue { value: _, ty } = field_instantiation.kind {
+        //     // do not visit the `value` - it's always unresolved at this point
+        //     self.maybe_visit_child(fir, &ty)
+        // } else {
+        //     unreachable!()
+        // }
+    }
 }
 
 impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
     fn traverse_function(
         &mut self,
         fir: &Fir<FlattenData<'ast>>,
-        _node: &Node<FlattenData<'ast>>,
+        node: &Node<FlattenData<'ast>>,
         generics: &[RefIdx],
         args: &[RefIdx],
         return_ty: &Option<RefIdx>,
         block: &Option<RefIdx>,
     ) -> Fallible<()> {
+        // TODO: Factor in a function
         let old_scope = self.current_scope;
+        self.current_scope = node.origin;
 
         generics
             .iter()
-            .for_each(|generic| self.traverse_node(fir, &fir[generic]).unwrap());
+            .for_each(|generic| self.maybe_visit_child(fir, generic).unwrap());
 
         args.iter()
-            .for_each(|arg| self.traverse_node(fir, &fir[arg]).unwrap());
+            .for_each(|arg| self.maybe_visit_child(fir, arg).unwrap());
 
-        block.map(|definition| self.traverse_node(fir, &fir[&definition]));
-        return_ty.map(|ty| self.traverse_node(fir, &fir[&ty]));
+        block.map(|definition| self.maybe_visit_child(fir, &definition));
+        return_ty.map(|ty| self.maybe_visit_child(fir, &ty));
 
         self.current_scope = old_scope;
 
@@ -54,12 +79,11 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
         stmts: &[RefIdx],
     ) -> Fallible<()> {
         let old_scope = self.current_scope;
-        self.current_scope = RefIdx::Resolved(node.origin);
+        self.current_scope = node.origin;
 
         stmts
             .iter()
-            // this is safe since the Scoper will never throw an error // FIXME: Is that true?
-            .for_each(|stmt| self.traverse_node(fir, &fir[stmt]).unwrap());
+            .for_each(|stmt| self.maybe_visit_child(fir, stmt).unwrap());
 
         self.current_scope = old_scope;
 
@@ -74,34 +98,55 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
         self.scope(node);
 
         match &node.kind {
-            Kind::Constant(sub_node)
-            | Kind::TypeReference(sub_node)
-            | Kind::TypedValue {
-                value: sub_node, ..
-            }
-            | Kind::Instantiation { to: sub_node, .. }
+            Kind::TypeReference(sub_node)
             | Kind::TypeOffset {
                 instance: sub_node, ..
             }
-            | Kind::Binding { to: sub_node } => self.traverse_node(fir, &fir[sub_node]),
+            | Kind::Binding { to: sub_node } => self.maybe_visit_child(fir, sub_node),
+            Kind::TypedValue { value, ty } => {
+                self.maybe_visit_child(fir, value)?;
+                self.maybe_visit_child(fir, ty)
+            }
             Kind::Type { fields, .. } => {
-                fields
-                    .iter()
-                    .for_each(|field| self.traverse_node(fir, &fir[field]).unwrap());
+                fields.iter().for_each(|field| {
+                    // Factor in a function?
+                    let old_scope = self.current_scope;
+                    self.current_scope = node.origin;
+
+                    self.maybe_visit_child(fir, field).unwrap();
+
+                    self.current_scope = old_scope;
+                });
 
                 Ok(())
             }
             Kind::Generic { default } => default
-                .map(|def| self.traverse_node(fir, &fir[&def]))
+                .map(|def| self.maybe_visit_child(fir, &def))
                 .ok_or(())?,
             Kind::Assignment { to, from } => self.traverse_assignment(fir, node, to, from),
-            Kind::Call { to, generics, args } => {
-                self.traverse_node(fir, &fir[to])?;
+            Kind::Instantiation {
+                to,
+                generics,
+                fields,
+            } => {
+                self.maybe_visit_child(fir, to)?;
                 generics
                     .iter()
-                    .for_each(|generic| self.traverse_node(fir, &fir[generic]).unwrap());
+                    .for_each(|generic| self.maybe_visit_child(fir, generic).unwrap());
+
+                fields
+                    .iter()
+                    .for_each(|field| self.visit_field_instantiation(fir, field).unwrap());
+
+                Ok(())
+            }
+            Kind::Call { to, generics, args } => {
+                self.maybe_visit_child(fir, to)?;
+                generics
+                    .iter()
+                    .for_each(|generic| self.maybe_visit_child(fir, generic).unwrap());
                 args.iter()
-                    .for_each(|arg| self.traverse_node(fir, &fir[arg]).unwrap());
+                    .for_each(|arg| self.maybe_visit_child(fir, arg).unwrap());
 
                 Ok(())
             }
@@ -117,21 +162,23 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
                 true_block,
                 false_block,
             } => {
-                self.traverse_node(fir, &fir[condition])?;
-                self.traverse_node(fir, &fir[true_block])?;
+                self.maybe_visit_child(fir, condition)?;
+                self.maybe_visit_child(fir, true_block)?;
                 false_block
-                    .map(|else_block| self.traverse_node(fir, &fir[&else_block]))
+                    .map(|else_block| self.maybe_visit_child(fir, &else_block))
                     .ok_or(())?
             }
             Kind::Return(sub_node) => sub_node
-                .map(|node| self.traverse_node(fir, &fir[&node]))
+                .map(|node| self.maybe_visit_child(fir, &node))
                 .ok_or(())?,
             Kind::Loop { condition, block } => {
-                self.traverse_node(fir, &fir[condition])?;
-                self.traverse_node(fir, &fir[block])?;
+                self.maybe_visit_child(fir, condition)?;
+                self.maybe_visit_child(fir, block)?;
 
                 Ok(())
             }
+            // nothing to do for constants, other than scoping them
+            Kind::Constant(_) => Ok(()),
         }
     }
 

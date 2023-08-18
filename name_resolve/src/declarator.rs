@@ -1,11 +1,13 @@
 use fir::{Fallible, Fir, Node, RefIdx, Traversal};
 use flatten::FlattenData;
 
-use crate::{NameResolutionError, NameResolveCtx};
+use crate::{NameResolutionError, NameResolveCtx, UniqueError};
 
-pub(crate) struct Declarator<'ctx>(pub(crate) &'ctx mut NameResolveCtx);
+pub(crate) struct Declarator<'ctx, 'enclosing>(pub(crate) &'ctx mut NameResolveCtx<'enclosing>);
 
-impl<'ast, 'ctx> Traversal<FlattenData<'ast>, NameResolutionError> for Declarator<'ctx> {
+impl<'ast, 'ctx, 'enclosing> Traversal<FlattenData<'ast>, NameResolutionError>
+    for Declarator<'ctx, 'enclosing>
+{
     fn traverse_function(
         &mut self,
         _fir: &Fir<FlattenData>,
@@ -17,12 +19,18 @@ impl<'ast, 'ctx> Traversal<FlattenData<'ast>, NameResolutionError> for Declarato
     ) -> Fallible<NameResolutionError> {
         self.0
             .mappings
-            .add_function(
+            .functions
+            .insert(
                 node.data.ast.symbol().unwrap().clone(),
-                node.data.scope,
                 node.origin,
+                self.0.enclosing_scope[node.origin],
             )
-            .map_err(|ue| NameResolutionError::non_unique(node.data.ast.location(), ue))
+            .map_err(|existing| {
+                NameResolutionError::non_unique(
+                    node.data.ast.location(),
+                    UniqueError(existing, "function"),
+                )
+            })
     }
 
     fn traverse_type(
@@ -34,12 +42,18 @@ impl<'ast, 'ctx> Traversal<FlattenData<'ast>, NameResolutionError> for Declarato
     ) -> Fallible<NameResolutionError> {
         self.0
             .mappings
-            .add_type(
+            .types
+            .insert(
                 node.data.ast.symbol().unwrap().clone(),
-                node.data.scope,
                 node.origin,
+                self.0.enclosing_scope[node.origin],
             )
-            .map_err(|ue| NameResolutionError::non_unique(node.data.ast.location(), ue))
+            .map_err(|existing| {
+                NameResolutionError::non_unique(
+                    node.data.ast.location(),
+                    UniqueError(existing, "type"),
+                )
+            })
     }
 
     fn traverse_binding(
@@ -50,11 +64,17 @@ impl<'ast, 'ctx> Traversal<FlattenData<'ast>, NameResolutionError> for Declarato
     ) -> Fallible<NameResolutionError> {
         self.0
             .mappings
-            .add_variable(
+            .variables
+            .insert(
                 node.data.ast.symbol().unwrap().clone(),
-                node.data.scope,
                 node.origin,
+                self.0.enclosing_scope[node.origin],
             )
-            .map_err(|ue| NameResolutionError::non_unique(node.data.ast.location(), ue))
+            .map_err(|existing| {
+                NameResolutionError::non_unique(
+                    node.data.ast.location(),
+                    UniqueError(existing, "binding"),
+                )
+            })
     }
 }
