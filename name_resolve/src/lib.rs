@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Index};
 
 use error::{ErrKind, Error};
-use fir::{Fallible, Fir, Incomplete, Mapper, OriginIdx, Pass, RefIdx, Traversal};
+use fir::{Fallible, Fir, Incomplete, Kind, Mapper, OriginIdx, Pass, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
@@ -18,131 +18,134 @@ use scoper::Scoper;
 /// in the current scope.
 struct UniqueError(OriginIdx, &'static str);
 
-/// A scope contains a set of available variables, functions and types.
-#[derive(Clone, Default, Debug)]
-struct Scope {
-    variables: HashMap<Symbol, OriginIdx>,
-    functions: HashMap<Symbol, OriginIdx>,
-    types: HashMap<Symbol, OriginIdx>,
+/// Documentation: very useful data structure, useful for two things:
+/// 1. knowing where nodes live
+/// 2. knowing which scope is the parent scope of a given scope
+/// Keeps a reference on a hashmap - cheap to copy and pass around
+#[derive(Clone, Copy, Debug)]
+struct EnclosingScope<'enclosing>(&'enclosing HashMap<OriginIdx, OriginIdx>);
+
+impl Index<OriginIdx> for EnclosingScope<'_> {
+    type Output = OriginIdx;
+
+    fn index(&self, index: OriginIdx) -> &Self::Output {
+        &self.0[&index]
+    }
+}
+
+type Bindings = HashMap<Symbol, OriginIdx>;
+
+// FIXME: Documentation
+// Each scope contains a set of bindings
+#[derive(Clone, Debug)]
+struct FlatScope<'enclosing> {
+    scopes: HashMap<OriginIdx, Bindings>,
+    enclosing_scope: EnclosingScope<'enclosing>,
+}
+
+/// Allow iterating on a [`FlatScope`] by going through the chain of enclosing scopes
+struct FlatIterator<'scope, 'enclosing>(Option<OriginIdx>, &'scope FlatScope<'enclosing>);
+
+trait LookupIterator<'scope, 'enclosing> {
+    fn lookup_iterator(&'scope self, starting_scope: OriginIdx)
+        -> FlatIterator<'scope, 'enclosing>;
+}
+
+impl<'scope, 'enclosing> LookupIterator<'scope, 'enclosing> for FlatScope<'enclosing> {
+    fn lookup_iterator(
+        &'scope self,
+        starting_scope: OriginIdx,
+    ) -> FlatIterator<'scope, 'enclosing> {
+        FlatIterator(Some(starting_scope), self)
+    }
+}
+
+impl<'scope, 'enclosing> Iterator for FlatIterator<'scope, 'enclosing> {
+    type Item = &'scope Bindings;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let cursor = self.0;
+        let bindings = cursor.and_then(|scope_idx| self.1.scopes.get(&scope_idx));
+
+        self.0 = cursor
+            .and_then(|current| self.1.enclosing_scope.0.get(&current))
+            .copied();
+
+        bindings
+    }
+}
+
+impl<'enclosing> FlatScope<'enclosing> {
+    fn lookup(&self, name: &Symbol, starting_scope: OriginIdx) -> Option<&OriginIdx> {
+        self.lookup_iterator(starting_scope)
+            .find_map(|bindings| bindings.get(name))
+    }
+
+    fn insert(
+        &mut self,
+        name: Symbol,
+        idx: OriginIdx,
+        scope: OriginIdx, /* FIXME: Needs newtype idiom */
+    ) -> Result<(), OriginIdx> {
+        // we need to use the innermost scope here, not `lookup`
+        if let Some(existing) = self
+            .scopes
+            .get(&scope)
+            .expect("interpreter error: there should always be at least one outer scope")
+            .get(&name)
+        {
+            return Err(*existing);
+        }
+
+        self.scopes
+            .entry(scope)
+            .or_insert_with(HashMap::new)
+            .insert(name, idx);
+
+        Ok(())
+    }
 }
 
 /// A scope map keeps track of the currently available scopes and the current depth
 /// level.
-#[derive(Clone, Default, Debug)]
-struct ScopeMap {
-    scopes: Vec<Scope>,
+#[derive(Clone, Debug)]
+struct ScopeMap<'enclosing> {
+    pub variables: FlatScope<'enclosing>,
+    pub functions: FlatScope<'enclosing>,
+    pub types: FlatScope<'enclosing>,
 }
 
-impl ScopeMap {
-    fn get(
-        &self,
-        key: &Symbol,
-        scope: usize,
-        map_extractor: impl Fn(&Scope) -> &HashMap<Symbol, OriginIdx>,
-    ) -> Option<&OriginIdx> {
-        self.scopes
-            .get(scope)
-            // FIXME: This is buggy if there aren't any scopes, so if we get without having inserted first. e.g with the following code
-            // ```jinko
-            // name = "jinko"; // no declaration, just a binding, so we "get" without having created the scope first
-            // ```
-            .map_or(
-                // This is a workaround for now but Wow! it's super fucking ugly
-                match scope {
-                    1 => None,
-                    _ => Some(self.scopes.len() - 1),
+struct NameResolveCtx<'enclosing> {
+    enclosing_scope: EnclosingScope<'enclosing>,
+    mappings: ScopeMap<'enclosing>,
+}
+
+impl<'enclosing> NameResolveCtx<'enclosing> {
+    fn new(enclosing_scope: EnclosingScope<'enclosing>) -> NameResolveCtx {
+        let empty_scope_map: HashMap<OriginIdx, Bindings> = enclosing_scope
+            .0
+            .values()
+            .map(|scope_idx| (*scope_idx, Bindings::new()))
+            .collect();
+
+        NameResolveCtx {
+            enclosing_scope,
+            mappings: ScopeMap {
+                variables: FlatScope {
+                    scopes: empty_scope_map.clone(),
+                    enclosing_scope,
                 },
-                |_| Some(scope),
-            )
-            .map(|last| &self.scopes[0..=last])
-            .and_then(|scopes| {
-                scopes
-                    .iter()
-                    .map(|scope| map_extractor(scope).get(key))
-                    .find(|value| value.is_some())?
-            })
-    }
-
-    fn insert_unique(
-        &mut self,
-        key: Symbol,
-        value: OriginIdx,
-        scope: usize,
-        map_extractor: impl Fn(&mut Scope) -> &mut HashMap<Symbol, OriginIdx>,
-    ) -> Result<(), OriginIdx> {
-        let scope = match self.scopes.get_mut(scope) {
-            Some(scope) => scope,
-            None => {
-                (self.scopes.len()..=scope).for_each(|_| self.scopes.push(Scope::default()));
-
-                &mut self.scopes[scope]
-            }
-        };
-
-        let map = map_extractor(scope);
-
-        match map.get(&key) {
-            Some(existing) => Err(*existing),
-            None => {
-                map.insert(key, value);
-                Ok(())
-            }
+                functions: FlatScope {
+                    scopes: empty_scope_map.clone(),
+                    enclosing_scope,
+                },
+                types: FlatScope {
+                    scopes: empty_scope_map,
+                    enclosing_scope,
+                },
+            },
         }
     }
-
-    /// Maybe get a variable in any available scopes
-    fn get_variable(&self, name: &Symbol, scope: usize) -> Option<&OriginIdx> {
-        self.get(name, scope, |scope| &scope.variables)
-    }
-
-    /// Maybe get a function in any available scopes
-    fn get_function(&self, name: &Symbol, scope: usize) -> Option<&OriginIdx> {
-        self.get(name, scope, |scope| &scope.functions)
-    }
-
-    /// Maybe get a type in any available scopes
-    fn get_type(&self, name: &Symbol, scope: usize) -> Option<&OriginIdx> {
-        self.get(name, scope, |scope| &scope.types)
-    }
-
-    /// Add a variable to the current scope if it hasn't been added before
-    fn add_variable(
-        &mut self,
-        name: Symbol,
-        scope: usize,
-        var: OriginIdx,
-    ) -> Result<(), UniqueError> {
-        self.insert_unique(name, var, scope, |scope| &mut scope.variables)
-            .map_err(|existing| UniqueError(existing, "binding"))
-    }
-
-    /// Add a function to the current scope if it hasn't been added before
-    fn add_function(
-        &mut self,
-        name: Symbol,
-        scope: usize,
-        func: OriginIdx,
-    ) -> Result<(), UniqueError> {
-        self.insert_unique(name, func, scope, |scope| &mut scope.functions)
-            .map_err(|existing| UniqueError(existing, "function"))
-    }
-
-    /// Add a type to the current scope if it hasn't been added before
-    fn add_type(
-        &mut self,
-        name: Symbol,
-        scope: usize,
-        custom_type: OriginIdx,
-    ) -> Result<(), UniqueError> {
-        self.insert_unique(name, custom_type, scope, |scope| &mut scope.types)
-            .map_err(|existing| UniqueError(existing, "type"))
-    }
-}
-
-#[derive(Default)]
-struct NameResolveCtx {
-    mappings: ScopeMap,
-    enclosing_scope: HashMap<OriginIdx, RefIdx>,
 }
 
 /// Extension type of [`Error`] to be able to implement [`IterError`].
@@ -266,16 +269,20 @@ impl NameResolutionError {
     }
 }
 
-impl NameResolveCtx {
-    fn scope(fir: &Fir<FlattenData>) -> HashMap<OriginIdx, RefIdx> {
+impl<'enclosing> NameResolveCtx<'enclosing> {
+    fn scope(fir: &Fir<FlattenData>) -> HashMap<OriginIdx, OriginIdx> {
         let root = fir.nodes.last_key_value().unwrap();
 
         let mut scoper = Scoper {
-            current_scope: RefIdx::Resolved(*root.0),
+            current_scope: *root.0,
             enclosing_scope: HashMap::new(),
         };
 
-        scoper.traverse_node(fir, root.1).unwrap();
+        let Kind::Statements(stmts) = &root.1.kind else { unreachable!() };
+
+        stmts
+            .iter()
+            .for_each(|stmt| scoper.traverse_node(fir, &fir[stmt]).unwrap());
 
         scoper.enclosing_scope
     }
@@ -292,14 +299,14 @@ impl NameResolveCtx {
     }
 }
 
-impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for NameResolveCtx {
+impl<'ast, 'enclosing> Pass<FlattenData<'ast>, FlattenData<'ast>, Error>
+    for NameResolveCtx<'enclosing>
+{
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
     fn post_condition(_fir: &Fir<FlattenData>) {}
 
     fn transform(&mut self, fir: Fir<FlattenData<'ast>>) -> Result<Fir<FlattenData<'ast>>, Error> {
-        self.enclosing_scope = NameResolveCtx::scope(&fir);
-
         let definition = self.insert_definitions(&fir);
         let definition = definition
             .map_err(|errs| NameResolutionError::Multiple(errs).finalize(&fir, &self.mappings));
@@ -329,7 +336,9 @@ pub trait NameResolve<'ast> {
 
 impl<'ast> NameResolve<'ast> for Fir<FlattenData<'ast>> {
     fn name_resolve(self) -> Result<Fir<FlattenData<'ast>>, Error> {
-        let mut ctx = NameResolveCtx::default();
+        // TODO: Ugly asf
+        let enclosing_scope = NameResolveCtx::scope(&self);
+        let mut ctx = NameResolveCtx::new(EnclosingScope(&enclosing_scope));
 
         ctx.pass(self)
     }
@@ -355,10 +364,7 @@ mod tests {
         let a_reference = &fir.nodes[&OriginIdx(3)];
 
         assert!(matches!(a_reference.kind, Kind::TypedValue { .. }));
-        let a_reference = match a_reference.kind {
-            Kind::TypedValue { value, .. } => value,
-            _ => unreachable!(),
-        };
+        let Kind::TypedValue { value: a_reference, .. } = a_reference.kind else { unreachable!() };
 
         assert_eq!(a_reference, RefIdx::Resolved(a.origin));
     }
@@ -427,7 +433,7 @@ mod tests {
 
         let fir = ast.flatten().name_resolve();
 
-        assert!(fir.is_err())
+        assert!(fir.is_err());
     }
 
     #[test]
@@ -496,9 +502,9 @@ mod tests {
 
         let fir = ast.flatten().name_resolve().unwrap();
 
-        let x_value = &fir.nodes[&OriginIdx(3)];
-        let marker_1 = &fir.nodes[&OriginIdx(2)];
-        let marker_2 = &fir.nodes[&OriginIdx(1)];
+        let marker_1 = dbg!(&fir.nodes[&OriginIdx(1)]);
+        let marker_2 = dbg!(&fir.nodes[&OriginIdx(2)]);
+        let x_value = dbg!(&fir.nodes[&OriginIdx(3)]);
 
         assert!(matches!(x_value.kind, Kind::TypedValue { .. }));
         assert!(matches!(marker_1.kind, Kind::Type { .. }));
@@ -512,5 +518,20 @@ mod tests {
             }
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn fail_resolution_to_fn_arg() {
+        let ast = ast! {
+            type A;
+
+            func f(a: A) {}
+
+            where x = a; // invalid
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_err());
     }
 }

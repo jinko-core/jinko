@@ -24,24 +24,25 @@ impl Display for ResolveKind {
     }
 }
 
-pub(crate) struct Resolver<'ctx>(pub(crate) &'ctx mut NameResolveCtx);
+pub(crate) struct Resolver<'ctx, 'enclosing>(pub(crate) &'ctx mut NameResolveCtx<'enclosing>);
 
-impl<'ctx> Resolver<'ctx> {
+impl<'ctx, 'enclosing> Resolver<'ctx, 'enclosing> {
     fn get_definition(
         &self,
         kind: ResolveKind,
         sym: Option<&Symbol>,
         location: &SpanTuple,
-        scope: usize,
+        node: OriginIdx,
     ) -> Result<OriginIdx, NameResolutionError> {
         let symbol =
             sym.expect("attempting to get definition for non existent symbol - interpreter bug");
 
         let mappings = &self.0.mappings;
+        let scope = self.0.enclosing_scope[dbg!(node)];
         let origin = match kind {
-            ResolveKind::Call => mappings.get_function(symbol, scope),
-            ResolveKind::Type => mappings.get_type(symbol, scope),
-            ResolveKind::Var => mappings.get_variable(symbol, scope),
+            ResolveKind::Call => mappings.functions.lookup(symbol, scope),
+            ResolveKind::Type => mappings.types.lookup(symbol, scope),
+            ResolveKind::Var => mappings.variables.lookup(symbol, scope),
         };
 
         origin.map_or_else(
@@ -51,8 +52,8 @@ impl<'ctx> Resolver<'ctx> {
     }
 }
 
-impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameResolutionError>
-    for Resolver<'ctx>
+impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameResolutionError>
+    for Resolver<'ctx, 'enclosing>
 {
     fn map_call(
         &mut self,
@@ -75,7 +76,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameResolutionErro
                     ResolveKind::Call,
                     data.ast.symbol(),
                     data.ast.location(),
-                    data.scope,
+                    origin,
                 )?;
 
                 Ok(Node {
@@ -102,13 +103,13 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameResolutionErro
             ResolveKind::Var,
             data.ast.symbol(),
             data.ast.location(),
-            data.scope,
+            origin,
         );
         let ty_def = self.get_definition(
             ResolveKind::Type,
             data.ast.symbol(),
             data.ast.location(),
-            data.scope,
+            origin,
         );
 
         // If we're dealing with a type definition, we can "early typecheck"
@@ -151,7 +152,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameResolutionErro
             ResolveKind::Type,
             data.ast.symbol(),
             data.ast.location(),
-            data.scope,
+            origin,
         )?;
 
         Ok(Node {
