@@ -8,7 +8,7 @@ There are two types of instructions in jinko: Those returning the equivalent of 
 or `{}`, such as a variable assignation:
 
 ```rust
-x = 12; // Returns "void"
+where x = 12; // Returns "void"
 
 func void_func() { // Returns nothing
 }
@@ -20,12 +20,12 @@ And those returning any other type, which must not be ignored. For example, cons
 expressions or non-void function calls:
 
 ```rust
-func return_x(int: x) -> int {
+func return_x(x: int) -> int {
     x // Returns an integer. Notice the lack of semicolon
 }
 
-func return_func(int: x) -> func(int) -> int {
-    l = func lambda(int: x) -> int {
+func return_func(x: int) -> func(int) -> int {
+    where l = func lambda(x: int) -> int {
         x + 1
     };
 
@@ -82,9 +82,7 @@ mock something() {
 jinko uses three keywords to define "functions":
 * `test` which are unit tests
 * `mock` which are function mocks
-* `func` which is for functions and procedures
-
-(Procedures return `Nothing`, while Functions return `Something`)
+* `func` which is for functions
 
 `func` was chosen over `fn` because this way, it looks pretty when next to a `test` or
 a `mock` :)
@@ -96,7 +94,7 @@ instructions and functions, which themselves are instructions.
 Instructions can be either Statements or Expressions
 
 ```rust
-x = 12; // Stmt
+where x = 12; // Stmt
 x // Expr
 ```
 -> This jinko code simply assigns a variable x and returns it. If you execute it, the
@@ -117,6 +115,10 @@ example. However, the syntax is similar
 incl other_script;
 /* Functions, Variables in other_script are imported. They're now named
 other_script::<function_name>, other_script::<var_name> and so on */
+
+/* This might change in the future - having first class modules which would desugar
+to an instance of a custom type with specific fields, so that we would write other_script.var
+or other_script.function() */
 ```
 
 There is no way to remove the usage of `<source_name>::`. This is the cause of some
@@ -151,6 +153,7 @@ For now, you can also include directories:
     |_ option.jk
     |_ result.jk
 */
+````
 
 ```rust
 incl std // Actually includes std/lib.jk
@@ -197,7 +200,7 @@ While these two approaches both have advantages and inconvenient, the Rust appro
 in my opinion for Jinko, significantly better for a simple reason: Even if Options are
 part of the standard library and "included" by default, they do not rely on some obscure
 compiler magic: They are just a type. Therefore, they are being understood by the compiler
-as just a type. And I think that keeping `jinko` simple also means keeping the interpreter
+as a simple type. And I think that keeping `jinko` simple also means keeping the interpreter
 simple. Therefore, I think that simply using `Option`s (or some other nomenclature) would
 be best.
 
@@ -245,7 +248,7 @@ Thus, the following syntax should be adopted at first:
 type CustomType(int_value: int, some_character: char, f: float);
 
 // Let's create one
-value = CustomType(int_value: 4, some_character: 'J', f: 27.07);
+where value = CustomType(int_value: 4, some_character: 'J', f: 27.07);
 ```
 
 If your types get too big, then just like function definitions, multilines are supported.
@@ -341,9 +344,9 @@ func push(node: LinkedList, next: LinkedList) {
     /* Some code to add next to the end of the list or whatever */
 }
 
-last = LinkedList(3, None);
-mid = LinkedList(2, Some(last));
-head = LinkedList(1, Some(mid));
+where last = LinkedList(3, None);
+where mid = LinkedList(2, Some(last));
+where head = LinkedList(1, Some(mid));
 
 head.push(LinkedList(67, None));
 
@@ -419,7 +422,7 @@ std::vector<std::unordered_map<std::string, int>> map = ...;
 would become in jinko
 
 ```rust
-map: Vec[Map[string, int]] = ...; 
+where map: Vec[Map[string, int]] = ...; 
 ```
 
 Likewise, the following Rust code
@@ -442,16 +445,16 @@ could be specified by name.
 ```rust
 type BaseError(inner: string);
 
-type Ok[T](T);
-type Err[T](T);
-type Result[T = void, E = BaseError](Ok[T], Err[E]);
+type Ok[T](with: T);
+type Err[E](from: E);
+type Result[T = void, E = BaseError] = Ok[T] | Err[E];
 
 // We can avoid typing `Result` by using type promotion but w/e, this is for
 // the example's sake
-ok_0 = Result[int](Ok(15)); // E defaults to BaseError
-ok_1 = Result[int, string](Ok(15));
-ok_2 = Result[int, string](Err("oops"));
-ok_4 = Result[T = int, string](Err("oops"));
-ok_5 = Result[T = int, E = string](Err("oops"));
-ok_6 = Result[E = bool](Err(false)); // T defaults to void
+where ok_0: Result[int] = Ok(with: 15); // E defaults to BaseError
+where ok_1: Result[int, string] = Ok(with: 15);
+where ok_2: Result[int, string] = Err(from: "oops");
+where ok_4: Result[T = int, string] = Err(from: "oops");
+where ok_5: Result[T = int, E = string] = Err(from: "oops");
+where ok_6: Result[E = bool] = Err(from: false); // T defaults to void
 ```
