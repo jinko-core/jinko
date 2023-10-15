@@ -10,6 +10,12 @@ use crate::{Type, TypeCtx};
 pub(crate) struct Typer<'ctx>(pub(crate) &'ctx mut TypeCtx);
 
 impl<'ctx> Typer<'ctx> {
+    fn assign_type(&mut self, node: OriginIdx, ty: Option<Type>) {
+        // Having non-unique ids in the Fir is an interpreter error
+        // Or should we return an error here?
+        assert!(self.0.types.insert(node, ty).is_none());
+    }
+
     /// Assign a type to a node. This type can either be void ([`None`]) in the case of a declaration or void
     /// statement, or may be a "type linked list": a reference to a type defined elsewhere in the [`Fir`].
     /// Let's consider a block of multiple statements, the last of which being a function call. The type of a
@@ -25,9 +31,7 @@ impl<'ctx> Typer<'ctx> {
     ) -> Result<Node<FlattenData<'ast>>, Error> {
         let ty = ty.map(Type::One);
 
-        // Having non-unique ids in the Fir is an interpreter error
-        // Or should we return an error here?
-        assert!(self.0.types.insert(node.origin, ty).is_none());
+        self.assign_type(node.origin, ty);
 
         Ok(node)
     }
@@ -80,10 +84,28 @@ impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
             | fir::Kind::Function { .. }
             | fir::Kind::Binding { .. }
             | fir::Kind::Assignment { .. } => self.ty(node, None),
+            // // FIXME: This might be the wrong way to go about this
+            // // special case where we want to change the `ty` of a `TypedValue`
+            // fir::Kind::TypedValue {
+            //     ty: RefIdx::Unresolved,
+            //     value,
+            // } => {
+            //     self.assign_type(node.origin, Some(Type::One(value)));
+
+            //     Ok(Node {
+            //         // this seems dodgy at best
+            //         kind: fir::Kind::TypedValue { value, ty: value },
+            //         ..node
+            //     })
+            // }
             // These nodes all refer to other nodes, type references or typed values. They will need
             // to be flattened later on.
             fir::Kind::TypeReference(ty)
-            | fir::Kind::TypedValue { value: ty, .. }
+            | fir::Kind::TypedValue {
+                ty: RefIdx::Unresolved,
+                value: ty,
+            }
+            | fir::Kind::TypedValue { ty, .. }
             | fir::Kind::Instantiation { to: ty, .. }
             | fir::Kind::Call { to: ty, .. }
             | fir::Kind::Conditional { true_block: ty, .. } => self.ty(node, Some(ty)),

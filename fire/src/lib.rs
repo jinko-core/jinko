@@ -36,11 +36,12 @@ impl Fire {
     // these two functions should probalby be part of a gc struct, which should be contained within the Fire
     fn allocate(&mut self, key: OriginIdx, value: Instance) {
         // if we allocate the same value twice, this is an interpreter error
-        assert!(self.values.insert(key, value).is_none());
+        // FIXME: this is not specifically true - e.g. calling a function twice will allocate twice to the function's bindings, which is fine?
+        self.values.insert(key, value);
     }
 
     fn copy(&mut self, to_copy: &RefIdx, key: OriginIdx) {
-        if let Some(instance) = self.values.get(&to_copy.unwrap()) {
+        if let Some(instance) = self.values.get(&to_copy.expect_resolved()) {
             self.allocate(key, instance.clone())
         }
     }
@@ -59,7 +60,7 @@ impl Fire {
         _fir: &Fir<FlattenData<'_>>,
         node: &Node<FlattenData<'_>>, // allocate a value for this node's origin
         args: &[RefIdx],
-    ) {
+    ) -> Option<Instance> {
         let ast = node.data.ast.node();
         let name = match &ast.node {
             ast::Node::Function {
@@ -74,7 +75,7 @@ impl Fire {
 
         if name.access() == "println" {
             args.iter().for_each(|arg| {
-                let value = self.values.get(&arg.unwrap()).unwrap();
+                let value = self.values.get(&arg.expect_resolved()).unwrap();
                 // FIXME: Ugly as SIN
                 println!("{}", unsafe {
                     String::from_utf8_unchecked(value.data().into())
@@ -82,9 +83,7 @@ impl Fire {
             })
         }
 
-        // this should allocate data
-
-        // None
+        None
     }
 
     fn fire_block(
@@ -95,12 +94,12 @@ impl Fire {
     ) {
         // How do we deal with returns in this system?
         stmts.iter().for_each(|node| {
-            let node = &fir.nodes[&node.unwrap()];
+            let node = &fir.nodes[&node.expect_resolved()];
             self.fire_node(fir, node);
         });
 
         if let Some(last_stmt) = stmts.last() {
-            if let Kind::Return(_) = &fir.nodes[&last_stmt.unwrap()].kind {
+            if let Kind::Return(_) = &fir.nodes[&last_stmt.expect_resolved()].kind {
                 self.transfer(last_stmt, node.origin)
             }
         }
@@ -122,25 +121,33 @@ impl Fire {
     fn fire_call(
         &mut self,
         fir: &Fir<FlattenData<'_>>,
-        _node: &Node<FlattenData<'_>>,
+        node: &Node<FlattenData<'_>>,
         to: &RefIdx,
         args: &[RefIdx],
     ) {
-        let def = &fir.nodes[&to.unwrap()];
+        let def = &fir.nodes[&to.expect_resolved()];
         let (block, def_args) = match &def.kind {
             Kind::Function { block, args, .. } => (block, args),
             _ => unreachable!(),
         };
 
         args.iter().enumerate().for_each(|(i, arg)| {
-            self.fire_node(fir, &fir.nodes[&arg.unwrap()]);
-            self.transfer(arg, def_args[i].unwrap());
+            self.fire_node(fir, &fir.nodes[&arg.expect_resolved()]);
+            self.transfer(arg, def_args[i].expect_resolved());
         });
 
         // FIXME: We need to add bindings here between the function's variables and the arguments given to the call
         match block {
-            None => self.perform_extern_call(fir, def, args),
-            Some(block) => self.fire_node_ref(fir, block), // what to do here?
+            None => {
+                let result = self.perform_extern_call(fir, def, args);
+                if let Some(instance) = result {
+                    self.allocate(node.origin, instance)
+                }
+            }
+            Some(block) => {
+                self.fire_node_ref(fir, block); // what to do here?
+                self.transfer(block, node.origin);
+            }
         }
     }
 
@@ -159,30 +166,38 @@ impl Fire {
         &mut self,
         fir: &Fir<FlattenData<'_>>,
         node: &Node<FlattenData<'_>>,
-        _value: &RefIdx,
+        value: &RefIdx,
         ty: &RefIdx,
     ) {
-        let tyref = &fir.nodes[&ty.unwrap()];
-        let fields = match &tyref.kind {
-            Kind::Type { fields, .. } => fields,
-            // FIXME: here we need to decide part of our copy/move semantics
-            Kind::TypeReference(_) => return,
-            other => {
-                dbg!(other);
-                unreachable!()
+        // what do we do here when we have a `value` but no `ty`?
+        match ty {
+            // this is a transfer
+            RefIdx::Unresolved => self.transfer(value, node.origin),
+            // this is an allocate?
+            RefIdx::Resolved(ty) => {
+                let tyref = &fir.nodes[ty];
+                let fields = match &tyref.kind {
+                    Kind::Type { fields, .. } => fields,
+                    // FIXME: here we need to decide part of our copy/move semantics
+                    Kind::TypeReference(_) => return,
+                    other => {
+                        dbg!(other);
+                        unreachable!()
+                    }
+                };
+
+                // TODO: can we just check if value == ty?
+                let instance = if fields.is_empty() {
+                    Instance::empty()
+                } else {
+                    unreachable!()
+                };
+
+                // FIXME: Handle result here
+                // FIXME: Should this be a transfer?
+                self.allocate(node.origin, instance);
             }
-        };
-
-        // TODO: can we just check if value == ty?
-        let instance = if fields.is_empty() {
-            Instance::empty()
-        } else {
-            unreachable!()
-        };
-
-        // FIXME: Handle result here
-        // FIXME: Should this be a transfer?
-        self.allocate(node.origin, instance);
+        }
     }
 
     fn fire_return(
@@ -199,7 +214,7 @@ impl Fire {
     }
 
     fn fire_node_ref(&mut self, fir: &Fir<FlattenData<'_>>, node_ref: &RefIdx) {
-        let node = &fir.nodes[&node_ref.unwrap()];
+        let node = &fir.nodes[&node_ref.expect_resolved()];
 
         self.fire_node(fir, node)
     }
