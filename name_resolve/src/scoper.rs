@@ -1,12 +1,22 @@
-// FIXME: Documentation
-
-use std::collections::HashMap;
+use std::{collections::HashMap, mem};
 
 use fir::{Fallible, Fir, Kind, Node, OriginIdx, RefIdx, Traversal};
 use flatten::FlattenData;
 
+pub(crate) struct Scope(pub(crate) OriginIdx);
+
+impl Scope {
+    pub fn replace(&mut self, new: OriginIdx) -> OriginIdx {
+        mem::replace(&mut self.0, new)
+    }
+
+    pub fn origin(&self) -> OriginIdx {
+        self.0
+    }
+}
+
 pub(crate) struct Scoper {
-    pub(crate) current_scope: OriginIdx, // TODO: Wrap in a new type with a .replace() method
+    pub(crate) current_scope: Scope,
     pub(crate) enclosing_scope: HashMap<OriginIdx, OriginIdx>,
 }
 
@@ -14,7 +24,13 @@ impl Scoper {
     /// Set the enclosing scope of `to_scope` to the current scope
     fn scope(&mut self, to_scope: &Node<FlattenData>) {
         self.enclosing_scope
-            .insert(to_scope.origin, self.current_scope);
+            .insert(to_scope.origin, self.current_scope.origin());
+    }
+
+    /// Enter a new scope, replacing the context's current scope. This returns the old scope,
+    /// which you will need to reuse when you exit the scoped node you are visiting
+    fn enter_scope(&mut self, new_scope: OriginIdx) -> OriginIdx {
+        self.current_scope.replace(new_scope)
     }
 
     fn maybe_visit_child(&mut self, fir: &Fir<FlattenData<'_>>, ref_idx: &RefIdx) -> Fallible<()> {
@@ -24,26 +40,11 @@ impl Scoper {
             RefIdx::Unresolved => Ok(()),
         }
     }
-
-    fn visit_field_instantiation(
-        &mut self,
-        fir: &Fir<FlattenData<'_>>,
-        ref_idx: &RefIdx,
-    ) -> Fallible<()> {
-        self.maybe_visit_child(fir, ref_idx)
-
-        // let field_instantiation = dbg!(&fir[ref_idx]);
-
-        // if let Kind::TypedValue { value: _, ty } = field_instantiation.kind {
-        //     // do not visit the `value` - it's always unresolved at this point
-        //     self.maybe_visit_child(fir, &ty)
-        // } else {
-        //     unreachable!()
-        // }
-    }
 }
 
-impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
+impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok to have void as an error type? */>
+    for Scoper
+{
     fn traverse_assignment(
         &mut self,
         fir: &Fir<FlattenData<'ast>>,
@@ -64,9 +65,7 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
         return_ty: &Option<RefIdx>,
         block: &Option<RefIdx>,
     ) -> Fallible<()> {
-        // TODO: Factor in a function
-        let old_scope = self.current_scope;
-        self.current_scope = node.origin;
+        let old = self.enter_scope(node.origin);
 
         generics
             .iter()
@@ -78,7 +77,7 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
         block.map(|definition| self.maybe_visit_child(fir, &definition));
         return_ty.map(|ty| self.maybe_visit_child(fir, &ty));
 
-        self.current_scope = old_scope;
+        self.enter_scope(old);
 
         Ok(())
     }
@@ -89,14 +88,14 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
         node: &Node<FlattenData<'ast>>,
         stmts: &[RefIdx],
     ) -> Fallible<()> {
-        let old_scope = self.current_scope;
-        self.current_scope = node.origin;
+        // TODO: Ugly but can we do anything better? Can we have types which force you to exit a scope if you enter one?
+        let old = self.enter_scope(node.origin);
 
         stmts
             .iter()
             .for_each(|stmt| self.maybe_visit_child(fir, stmt).unwrap());
 
-        self.current_scope = old_scope;
+        self.enter_scope(old);
 
         Ok(())
     }
@@ -119,15 +118,14 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
                 self.maybe_visit_child(fir, ty)
             }
             Kind::Type { fields, .. } => {
+                let old = self.enter_scope(node.origin);
+
                 fields.iter().for_each(|field| {
-                    // Factor in a function?
-                    let old_scope = self.current_scope;
-                    self.current_scope = node.origin;
-
+                    // FIXME: Is unwrap okay here?
                     self.maybe_visit_child(fir, field).unwrap();
-
-                    self.current_scope = old_scope;
                 });
+
+                self.enter_scope(old);
 
                 Ok(())
             }
@@ -147,7 +145,7 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
 
                 fields
                     .iter()
-                    .for_each(|field| self.visit_field_instantiation(fir, field).unwrap());
+                    .for_each(|field| { self.maybe_visit_child(fir, field) }.unwrap());
 
                 Ok(())
             }
