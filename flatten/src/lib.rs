@@ -666,7 +666,6 @@ impl<'ast> Ctx<'ast> {
 
     fn visit_type(
         self,
-
         ast: AstInfo<'ast>,
         generics: &[GenericArgument],
         fields: &[TypedValue],
@@ -746,6 +745,28 @@ impl<'ast> Ctx<'ast> {
         self.append(data, kind)
     }
 
+    fn handle_field_instantiation(self, instantiation: &'ast Ast) -> (Ctx<'ast>, RefIdx) {
+        let AstNode::VarAssign { value, .. } = &instantiation.node else {
+            // FIXME: Ugly?
+            unreachable!(
+                "invalid AST: non var-assign in field instantiation, in type instantiation"
+            )
+        };
+
+        let (ctx, value) = self.visit(value);
+
+        let data = FlattenData {
+            scope: ctx.scope,
+            ast: AstInfo::Node(instantiation),
+        };
+        let kind = Kind::Assignment {
+            to: RefIdx::Unresolved,
+            from: value,
+        };
+
+        ctx.append(data, kind)
+    }
+
     fn visit_type_instantiation(
         self,
         ast: AstInfo<'ast>,
@@ -756,7 +777,7 @@ impl<'ast> Ctx<'ast> {
         }: &'ast Call,
     ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_ty_node);
-        let (ctx, fields) = ctx.visit_fold(fields.iter(), Ctx::visit);
+        let (ctx, fields) = ctx.visit_fold(fields.iter(), Ctx::handle_field_instantiation);
 
         let data = FlattenData {
             scope: ctx.scope,

@@ -97,10 +97,7 @@ impl<'enclosing> FlatScope<'enclosing> {
             return Err(*existing);
         }
 
-        self.scopes
-            .entry(scope)
-            .or_insert_with(HashMap::new)
-            .insert(name, idx);
+        self.scopes.entry(scope).or_default().insert(name, idx);
 
         Ok(())
     }
@@ -230,12 +227,14 @@ impl NameResolutionError {
                 // TODO: Go through mappings again to find a relevant type or var which could work
 
                 Error::new(ErrKind::NameResolution)
-                    .with_msg(format!("unresolved binding to {sym}"))
+                    .with_msg(format!("unresolved binding to `{sym}`"))
                     .with_loc(location)
                     .with_hint(
-                        Error::hint().with_msg(format!("searched for empty type named {sym}")),
+                        Error::hint().with_msg(format!("searched for empty type named `{sym}`")),
                     )
-                    .with_hint(Error::hint().with_msg(format!("searched for binding named {sym}")))
+                    .with_hint(
+                        Error::hint().with_msg(format!("searched for binding named `{sym}`")),
+                    )
             }
         }
     }
@@ -278,7 +277,9 @@ impl<'enclosing> NameResolveCtx<'enclosing> {
             enclosing_scope: HashMap::new(),
         };
 
-        let Kind::Statements(stmts) = &root.1.kind else { unreachable!() };
+        let Kind::Statements(stmts) = &root.1.kind else {
+            unreachable!()
+        };
 
         stmts
             .iter()
@@ -364,7 +365,12 @@ mod tests {
         let a_reference = &fir.nodes[&OriginIdx(3)];
 
         assert!(matches!(a_reference.kind, Kind::TypedValue { .. }));
-        let Kind::TypedValue { value: a_reference, .. } = a_reference.kind else { unreachable!() };
+        let Kind::TypedValue {
+            value: a_reference, ..
+        } = a_reference.kind
+        else {
+            unreachable!()
+        };
 
         assert_eq!(a_reference, RefIdx::Resolved(a.origin));
     }
