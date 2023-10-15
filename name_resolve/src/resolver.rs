@@ -38,7 +38,9 @@ impl<'ctx, 'enclosing> Resolver<'ctx, 'enclosing> {
             sym.expect("attempting to get definition for non existent symbol - interpreter bug");
 
         let mappings = &self.0.mappings;
+
         let scope = self.0.enclosing_scope[dbg!(node)];
+
         let origin = match kind {
             ResolveKind::Call => mappings.functions.lookup(symbol, scope),
             ResolveKind::Type => mappings.types.lookup(symbol, scope),
@@ -120,7 +122,6 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
         };
 
         let definition = match (var_def, ty_def) {
-            (Ok(def), Err(_)) | (Err(_), Ok(def)) => Ok(def),
             (Ok(var_def), Ok(ty_def)) => Err(NameResolutionError::ambiguous_binding(
                 var_def,
                 ty_def,
@@ -130,6 +131,7 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
                 data.ast.symbol(),
                 data.ast.location(),
             )),
+            (Ok(def), _) | (_, Ok(def)) => Ok(def),
         }?;
 
         Ok(Node {

@@ -44,6 +44,17 @@ impl Scoper {
 }
 
 impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok? */> for Scoper {
+    fn traverse_assignment(
+        &mut self,
+        fir: &Fir<FlattenData<'ast>>,
+        _node: &Node<FlattenData<'ast>>,
+        to: &RefIdx,
+        from: &RefIdx,
+    ) -> Fallible<()> {
+        self.maybe_visit_child(fir, to)?;
+        self.maybe_visit_child(fir, from)
+    }
+
     fn traverse_function(
         &mut self,
         fir: &Fir<FlattenData<'ast>>,
