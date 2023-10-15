@@ -21,6 +21,13 @@ fn innermost_type(fir: &Fir<FlattenData>, linked_node: RefIdx) -> Option<Type> {
         // these are the *only* terminal branches
         Kind::Type { .. } => Some(Type::One(RefIdx::Resolved(linked_node.origin))),
         Kind::Assignment { .. } => None,
+        // if a typed value has no specific type, but points to a value, use this as the source of the type
+        Kind::TypedValue {
+            ty: RefIdx::Unresolved,
+            value,
+            // can we set `ty` here or not? probably not
+            // we need to :(
+        } => innermost_type(fir, *value),
         Kind::Constant(ty)
         | Kind::TypeReference(ty)
         | Kind::TypedValue { ty, .. }
