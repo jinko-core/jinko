@@ -1,3 +1,40 @@
+//! The name-resolve module takes care of resolving each "name" within a `jinko` program to
+//! its definition site. You can think of it as a function, which will take an unresolved
+//! [`Fir`] as input, and output a new [`Fir`] where each node points to the definition it
+//! uses. To do this, multiple passes are applied on the input [`Fir`].
+//!
+//! 1. We start by "scoping" *all* of the definitions and usages in the program.
+//! This is done via the [`Scoper`] type, which will assign an enclosing scope to
+//! each node of our [`Fir`]. This is important, since name resolution in `jinko`
+//! can go "backwards" or "upwards". You can access a definition in an *outer*
+//! scope from an *inner* scope. This means that the outermost scope is able to
+//! use definitions from the outermost scope. But if this "enclosing" or "parent"
+//! relationship does not exist, then the usage is invalid:
+//!
+//! ```ignore
+//! {
+//!     func foo() {}
+//! }
+//! {
+//!     { foo() }
+//!     // this scope does not have `foo`'s scope as a parent, so it will need to error out later on
+//! }
+//! ```
+//!
+//! 2. We collect all of the definitions within the program using the [`Declarator`] struct.
+//! A definition can be a function definition, a new type, as well as a new binding. This
+//! "definition collection" pass will only error out if a definition is present twice, e.g.:
+//!
+//! ```ignore
+//! func foo() {}
+//! func foo(different: int, arguments: int) -> string { "oh no" }
+//! ```
+//!
+//! 2. Finally, we resolve all *usages* to their *definitions* using the [`Resolver`] type.
+//! If a usage cannot be resolved to a definition, then it is an error. Similarly, if a usage
+//! can be resolved to more than one definitions, we error out. The resolver does not take care
+//! of resolving complex usages, such as methods, generic function calls or specialization.
+
 use std::{collections::HashMap, ops::Index};
 
 use error::{ErrKind, Error};
@@ -273,7 +310,7 @@ impl<'enclosing> NameResolveCtx<'enclosing> {
         let root = fir.nodes.last_key_value().unwrap();
 
         let mut scoper = Scoper {
-            current_scope: *root.0,
+            current_scope: scoper::Scope(*root.0),
             enclosing_scope: HashMap::new(),
         };
 
