@@ -1,30 +1,24 @@
-use std::{collections::HashMap, mem};
+use std::collections::HashMap;
+
+use crate::Scope;
 
 use fir::{Fallible, Fir, Kind, Node, OriginIdx, RefIdx, Traversal};
 use flatten::FlattenData;
 
-pub(crate) struct Scope(pub(crate) OriginIdx);
-
-impl Scope {
-    pub fn replace(&mut self, new: OriginIdx) -> OriginIdx {
-        mem::replace(&mut self.0, new)
-    }
-
-    pub fn origin(&self) -> OriginIdx {
-        self.0
-    }
-}
-
 pub(crate) struct Scoper {
+    /// The current scope we are visiting, which we will use when we assign a scope to each
+    /// node in [`Scoper::scope`]
     pub(crate) current_scope: Scope,
-    pub(crate) enclosing_scope: HashMap<OriginIdx, OriginIdx>,
+    /// Map of each node to the scope it is contained in. This will be built progressively as
+    /// we visit each node
+    pub(crate) enclosing_scope: HashMap<OriginIdx, Scope>,
 }
 
 impl Scoper {
     /// Set the enclosing scope of `to_scope` to the current scope
     fn scope(&mut self, to_scope: &Node<FlattenData>) {
         self.enclosing_scope
-            .insert(to_scope.origin, self.current_scope.origin());
+            .insert(to_scope.origin, self.current_scope);
     }
 
     /// Enter a new scope, replacing the context's current scope. This returns the old scope,
@@ -33,6 +27,7 @@ impl Scoper {
         self.current_scope.replace(new_scope)
     }
 
+    // TODO: Move this function in `Traversal`?
     fn maybe_visit_child(&mut self, fir: &Fir<FlattenData<'_>>, ref_idx: &RefIdx) -> Fallible<()> {
         match ref_idx {
             RefIdx::Resolved(origin) => self.traverse_node(fir, &fir[origin]),

@@ -44,7 +44,7 @@ impl<'ctx, 'enclosing> Resolver<'ctx, 'enclosing> {
         let origin = match kind {
             ResolveKind::Call => mappings.functions.lookup(symbol, scope),
             ResolveKind::Type => mappings.types.lookup(symbol, scope),
-            ResolveKind::Var => mappings.variables.lookup(symbol, scope),
+            ResolveKind::Var => mappings.bindings.lookup(symbol, scope),
         };
 
         origin.map_or_else(
