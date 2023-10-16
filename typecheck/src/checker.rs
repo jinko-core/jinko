@@ -61,6 +61,11 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
         return_ty: &Option<RefIdx>,
         block: &Option<RefIdx>,
     ) -> Fallible<Error> {
+        // if there is no block, e.g. an extern function, then we trust the return type
+        if block.is_none() {
+            return Ok(());
+        }
+
         let ret_ty = return_ty.as_ref().and_then(|b| self.get_type(b));
         let block_ty = block.as_ref().and_then(|b| self.get_type(b));
 
