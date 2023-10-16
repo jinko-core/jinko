@@ -13,6 +13,7 @@ type Type = &'static str;
 // needs to be hashable
 // we need the type of the value - it needs to be known at all times
 // FIXME: We need to be very careful about what a "Clone" means here
+/// An [`Instance`] represents an allocated value in `jinko`, more specifically an instantiation of a type. For example, you can consider `15` to be an instance of `int`.
 #[derive(PartialEq, Debug, Clone)]
 pub enum Instance {
     /// This variant is used to represent empty types
