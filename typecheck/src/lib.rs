@@ -224,4 +224,18 @@ mod tests {
 
         assert!(fir.is_ok());
     }
+
+    #[test]
+    fn issue618() {
+        let ast = ast! {
+            func foo(x: string) {}
+
+            foo("27");
+            foo("28");
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok())
+    }
 }
