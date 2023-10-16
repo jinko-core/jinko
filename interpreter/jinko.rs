@@ -6,6 +6,7 @@ mod repl;
 
 use colored::Colorize;
 
+use fire::instance::Instance;
 use fire::Interpret;
 use flatten::{FlattenAst, FlattenData};
 use include_code::IncludeCode;
@@ -22,6 +23,7 @@ use jinko::value::{JkBool, JkFloat, JkInt};
 use args::Args;
 #[cfg(feature = "repl")]
 use repl::Repl;
+use std::process;
 use std::{fs, path::Path};
 use symbol::Symbol;
 use typecheck::TypeCheck;
@@ -148,9 +150,14 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     let fir = x_try!(fir.type_check());
     let result = fir.interpret();
 
-    dbg!(result);
+    let exit_code = match result {
+        // convert `true` to `0` and `false` to `1`
+        Some(Instance::Bool(b)) => !b as i32,
+        Some(Instance::Int(inner)) => inner as i32,
+        _ => 0,
+    };
 
-    todo!("unfinished experimental pipeline: use result as exit code and display it")
+    process::exit(exit_code);
 }
 
 fn handle_input(args: &Args, file: &Path) -> InteractResult {
