@@ -11,7 +11,7 @@
 //! use definitions from the outermost scope. But if this "enclosing" or "parent"
 //! relationship does not exist, then the usage is invalid:
 //!
-//! ```ignore
+//! ```text
 //! {
 //!     func foo() {}
 //! }
@@ -25,7 +25,7 @@
 //! A definition can be a function definition, a new type, as well as a new binding. This
 //! "definition collection" pass will only error out if a definition is present twice, e.g.:
 //!
-//! ```ignore
+//! ```text
 //! func foo() {}
 //! func foo(different: int, arguments: int) -> string { "oh no" }
 //! ```
@@ -35,7 +35,7 @@
 //! can be resolved to more than one definitions, we error out. The resolver does not take care
 //! of resolving complex usages, such as methods, generic function calls or specialization.
 
-use std::{collections::HashMap, ops::Index};
+use std::{collections::HashMap, mem, ops::Index};
 
 use error::{ErrKind, Error};
 use fir::{Fallible, Fir, Incomplete, Kind, Mapper, OriginIdx, Pass, Traversal};
@@ -55,15 +55,29 @@ use scoper::Scoper;
 /// in the current scope.
 struct UniqueError(OriginIdx, &'static str);
 
-/// Documentation: very useful data structure, useful for two things:
-/// 1. knowing where nodes live
-/// 2. knowing which scope is the parent scope of a given scope
-/// Keeps a reference on a hashmap - cheap to copy and pass around
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub(crate) struct Scope(pub(crate) OriginIdx);
+
+impl Scope {
+    pub fn replace(&mut self, new: OriginIdx) -> OriginIdx {
+        mem::replace(&mut self.0, new)
+    }
+
+    pub fn origin(&self) -> OriginIdx {
+        self.0
+    }
+}
+
+/// This data structure maps each node from the [`Fir`] to the scope which contains it. This
+/// makes finding the definition associated with a name very easy, as we can simply look at the
+/// name's enclosing scope, and look for definitions. If no suitable definition, we look at the
+/// parent scope of this scope, and repeat the process, until we find a definition or exhaust
+/// valid parents. This struct keeps a reference on a map, making it cheap to copy and pass around.
 #[derive(Clone, Copy, Debug)]
-struct EnclosingScope<'enclosing>(&'enclosing HashMap<OriginIdx, OriginIdx>);
+struct EnclosingScope<'enclosing>(&'enclosing HashMap<OriginIdx, Scope>);
 
 impl Index<OriginIdx> for EnclosingScope<'_> {
-    type Output = OriginIdx;
+    type Output = Scope;
 
     fn index(&self, index: OriginIdx) -> &Self::Output {
         &self.0[&index]
@@ -72,27 +86,24 @@ impl Index<OriginIdx> for EnclosingScope<'_> {
 
 type Bindings = HashMap<Symbol, OriginIdx>;
 
-// FIXME: Documentation
-// Each scope contains a set of bindings
+/// Each scope in the [`scopes`] map contains the bindings associated with a given scope,
+/// meaning that each scope contains a list of definitions. A definition can be thought of as the
+/// mapping of a name ([`Symbol`]) to the node's index in the [`Fir`].
 #[derive(Clone, Debug)]
 struct FlatScope<'enclosing> {
-    scopes: HashMap<OriginIdx, Bindings>,
+    scopes: HashMap<Scope, Bindings>,
     enclosing_scope: EnclosingScope<'enclosing>,
 }
 
 /// Allow iterating on a [`FlatScope`] by going through the chain of enclosing scopes
-struct FlatIterator<'scope, 'enclosing>(Option<OriginIdx>, &'scope FlatScope<'enclosing>);
+struct FlatIterator<'scope, 'enclosing>(Option<Scope>, &'scope FlatScope<'enclosing>);
 
 trait LookupIterator<'scope, 'enclosing> {
-    fn lookup_iterator(&'scope self, starting_scope: OriginIdx)
-        -> FlatIterator<'scope, 'enclosing>;
+    fn lookup_iterator(&'scope self, starting_scope: Scope) -> FlatIterator<'scope, 'enclosing>;
 }
 
 impl<'scope, 'enclosing> LookupIterator<'scope, 'enclosing> for FlatScope<'enclosing> {
-    fn lookup_iterator(
-        &'scope self,
-        starting_scope: OriginIdx,
-    ) -> FlatIterator<'scope, 'enclosing> {
+    fn lookup_iterator(&'scope self, starting_scope: Scope) -> FlatIterator<'scope, 'enclosing> {
         FlatIterator(Some(starting_scope), self)
     }
 }
@@ -102,10 +113,11 @@ impl<'scope, 'enclosing> Iterator for FlatIterator<'scope, 'enclosing> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let cursor = self.0;
-        let bindings = cursor.and_then(|scope_idx| self.1.scopes.get(&scope_idx));
+        let bindings = cursor.and_then(|scope| self.1.scopes.get(&scope));
 
         self.0 = cursor
-            .and_then(|current| self.1.enclosing_scope.0.get(&current))
+            // TODO: Factor this in a method?
+            .and_then(|current| self.1.enclosing_scope.0.get(&current.origin()))
             .copied();
 
         bindings
@@ -113,17 +125,12 @@ impl<'scope, 'enclosing> Iterator for FlatIterator<'scope, 'enclosing> {
 }
 
 impl<'enclosing> FlatScope<'enclosing> {
-    fn lookup(&self, name: &Symbol, starting_scope: OriginIdx) -> Option<&OriginIdx> {
+    fn lookup(&self, name: &Symbol, starting_scope: Scope) -> Option<&OriginIdx> {
         self.lookup_iterator(starting_scope)
             .find_map(|bindings| bindings.get(name))
     }
 
-    fn insert(
-        &mut self,
-        name: Symbol,
-        idx: OriginIdx,
-        scope: OriginIdx, /* FIXME: Needs newtype idiom */
-    ) -> Result<(), OriginIdx> {
+    fn insert(&mut self, name: Symbol, idx: OriginIdx, scope: Scope) -> Result<(), OriginIdx> {
         // we need to use the innermost scope here, not `lookup`
         if let Some(existing) = self
             .scopes
@@ -144,7 +151,7 @@ impl<'enclosing> FlatScope<'enclosing> {
 /// level.
 #[derive(Clone, Debug)]
 struct ScopeMap<'enclosing> {
-    pub variables: FlatScope<'enclosing>,
+    pub bindings: FlatScope<'enclosing>,
     pub functions: FlatScope<'enclosing>,
     pub types: FlatScope<'enclosing>,
 }
@@ -156,7 +163,7 @@ struct NameResolveCtx<'enclosing> {
 
 impl<'enclosing> NameResolveCtx<'enclosing> {
     fn new(enclosing_scope: EnclosingScope<'enclosing>) -> NameResolveCtx {
-        let empty_scope_map: HashMap<OriginIdx, Bindings> = enclosing_scope
+        let empty_scope_map: HashMap<Scope, Bindings> = enclosing_scope
             .0
             .values()
             .map(|scope_idx| (*scope_idx, Bindings::new()))
@@ -165,7 +172,7 @@ impl<'enclosing> NameResolveCtx<'enclosing> {
         NameResolveCtx {
             enclosing_scope,
             mappings: ScopeMap {
-                variables: FlatScope {
+                bindings: FlatScope {
                     scopes: empty_scope_map.clone(),
                     enclosing_scope,
                 },
@@ -306,11 +313,11 @@ impl NameResolutionError {
 }
 
 impl<'enclosing> NameResolveCtx<'enclosing> {
-    fn scope(fir: &Fir<FlattenData>) -> HashMap<OriginIdx, OriginIdx> {
+    fn scope(fir: &Fir<FlattenData>) -> HashMap<OriginIdx, Scope> {
         let root = fir.nodes.last_key_value().unwrap();
 
         let mut scoper = Scoper {
-            current_scope: scoper::Scope(*root.0),
+            current_scope: Scope(*root.0),
             enclosing_scope: HashMap::new(),
         };
 
