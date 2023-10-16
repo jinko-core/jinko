@@ -41,9 +41,15 @@ impl From<i64> for Instance {
     }
 }
 
+impl From<bool> for Instance {
+    fn from(value: bool) -> Instance {
+        Instance::Bool(value)
+    }
+}
+
 impl From<&bool> for Instance {
     fn from(value: &bool) -> Instance {
-        Instance::Bool(*value)
+        Instance::from(*value)
     }
 }
 

@@ -15,6 +15,18 @@ use instance::Instance;
 use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
 use flatten::FlattenData;
 
+// Emit a fatal error from the [`Fire`].
+// macro_rules! fire_fatal {
+//     ($fmt:literal $($args:tt),*) => {
+//         unreachable!(
+//             concat!(
+//                 concat!("{}:{}: ", $fmt),
+//                 ": this is an interpreter error."),
+//             $($args,)* core::file!(), core::line!()
+//         ),
+//     };
+// }
+
 pub trait Interpret {
     fn interpret(&self) -> Option<Instance>;
 }
@@ -56,6 +68,7 @@ impl GarbaJKollector {
         self.copy(to_move, key)
     }
 
+    // This needs to take a T: IntoOrigin where we implement the trait for both OriginIdx and RefIdx
     fn lookup(&self, key: &OriginIdx) -> Option<&Instance> {
         self.0.get(key)
     }
@@ -228,6 +241,35 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         self.fire_node(self.access(node_ref))
     }
 
+    fn fire_condition(
+        &mut self,
+        node: &Node<FlattenData<'_>>,
+        condition: &RefIdx,
+        true_block: &RefIdx,
+        false_block: Option<&RefIdx>,
+    ) {
+        let t = Instance::from(true);
+        let f = Instance::from(false);
+
+        self.fire_node_ref(condition);
+
+        let condition_result = self.gc.lookup(&condition.expect_resolved());
+
+        let to_run = match condition_result {
+            Some(boolean) if boolean == &t => Some(true_block),
+            Some(boolean) if boolean == &f => false_block,
+            _ => {
+                unreachable!("{}:{}: the conditional did not evaluate to `true` or `false`. this is an interpreter error.", file!(), line!())
+            }
+        };
+
+        // TODO: Is that correct?
+        to_run.map(|block| {
+            self.fire_node_ref(block);
+            self.gc.transfer(block, node.origin)
+        });
+    }
+
     fn fire_node(&mut self, node: &Node<FlattenData<'_>>) {
         match &node.kind {
             Kind::Constant(c) => self.fire_constant(node, c),
@@ -258,11 +300,11 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
             // Kind::TypeOffset { instance, field } => {
             //     self.traverse_type_offset( node, instance, field)
             // }
-            // Kind::Conditional {
-            //     condition,
-            //     true_block,
-            //     false_block,
-            // } => self.traverse_condition( node, condition, true_block, false_block),
+            Kind::Conditional {
+                condition,
+                true_block,
+                false_block,
+            } => self.fire_condition(node, condition, true_block, false_block.as_ref()),
             // Kind::Loop { condition, block } => self.traverse_loop( node, condition, block),
             _ => {},
         }
@@ -344,5 +386,49 @@ mod tests {
 
         let result = fir!(ast).interpret();
         assert_eq!(result, Some(Instance::from("jinko")))
+    }
+
+    #[test]
+    fn conditional() {
+        let ast = ast! {
+            func halloween(b: bool) -> string {
+                {
+                    {
+                        {
+                            {
+                                if b {
+                                    return "boo"
+                                } else {
+                                    return "foo"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            halloween(true)
+        };
+
+        let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from("boo")))
+    }
+
+    #[test]
+    fn conditional_else() {
+        let ast = ast! {
+            func halloween(b: bool) -> string {
+                if b {
+                    return "boo"
+                } else {
+                    return "foo"
+                }
+            }
+
+            halloween(false)
+        };
+
+        let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from("foo")))
     }
 }
