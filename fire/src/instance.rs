@@ -12,44 +12,43 @@ type Type = &'static str;
 // an instance needs to be unique
 // needs to be hashable
 // we need the type of the value - it needs to be known at all times
-// FIXME: We can probably improve this type by specializing it more - turning it into a sum type differentiating between
 // FIXME: We need to be very careful about what a "Clone" means here
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub struct Instance {
-    ty: Type,
-    data: Vec<u8>,
+#[derive(PartialEq, Debug, Clone)]
+pub enum Instance {
+    /// This variant is used to represent empty types
+    Empty,
+    Int(i64),
+    Float(f64),
+    Bool(bool),
+    Char(char),
+    String(String),
+    Other {
+        ty: Type,
+        data: Vec<u8>,
+    },
 }
 
 impl Instance {
     pub fn empty() -> Instance {
-        Instance {
-            ty: "empty type",
-            data: Vec::new(),
-        }
-    }
-
-    pub fn data(&self) -> &[u8] {
-        &self.data
+        Instance::Empty
     }
 }
 
 impl From<i64> for Instance {
     fn from(value: i64) -> Instance {
-        Instance {
-            ty: "int",
-            // origin: node.origin,
-            data: value.to_le_bytes().to_vec(),
-        }
+        Instance::Int(value)
+    }
+}
+
+impl From<&bool> for Instance {
+    fn from(value: &bool) -> Instance {
+        Instance::Bool(*value)
     }
 }
 
 impl From<&str> for Instance {
     fn from(value: &str) -> Instance {
-        Instance {
-            ty: "string",
-            // orgin: node.origin,
-            data: value.as_bytes().to_owned(),
-        }
+        Instance::String(value.to_owned())
     }
 }
 
