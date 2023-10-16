@@ -58,7 +58,7 @@ impl Fire {
     fn perform_extern_call(
         &self,
         _fir: &Fir<FlattenData<'_>>,
-        node: &Node<FlattenData<'_>>, // allocate a value for this node's origin
+        node: &Node<FlattenData<'_>>,
         args: &[RefIdx],
     ) -> Option<Instance> {
         let ast = node.data.ast.node();
@@ -76,10 +76,11 @@ impl Fire {
         if name.access() == "println" {
             args.iter().for_each(|arg| {
                 let value = self.values.get(&arg.expect_resolved()).unwrap();
-                // FIXME: Ugly as SIN
-                println!("{}", unsafe {
-                    String::from_utf8_unchecked(value.data().into())
-                });
+                if let Instance::String(s) = value {
+                    println!("{s}");
+                } else {
+                    unreachable!("typecheck didn't catch this error. this is an interpreter bug.");
+                }
             })
         }
 
@@ -107,11 +108,14 @@ impl Fire {
 
     // FIXME: Does this need "_c"?
     fn fire_constant(&mut self, node: &Node<FlattenData<'_>>, _c: &RefIdx) {
+        use ast::{Node, Value};
+
         let ast = node.data.ast.node();
 
         let instance = match &ast.node {
-            ast::Node::Constant(ast::Value::Integer(value)) => Instance::from(*value),
-            ast::Node::Constant(ast::Value::Str(s)) => Instance::from(s),
+            Node::Constant(Value::Integer(value)) => Instance::from(*value),
+            Node::Constant(Value::Str(s)) => Instance::from(s),
+            Node::Constant(Value::Bool(b)) => Instance::from(b),
             _ => unreachable!(),
         };
 
