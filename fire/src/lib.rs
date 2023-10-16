@@ -431,4 +431,23 @@ mod tests {
         let result = fir!(ast).interpret();
         assert_eq!(result, Some(Instance::from("foo")))
     }
+
+    #[test]
+    fn early_return() {
+        let ast = ast! {
+            func halloween(b: bool) -> string {
+                if b {
+                    return "boo"
+                }
+
+
+                "foo"
+            }
+
+            halloween(true)
+        };
+
+        let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from("foo")))
+    }
 }
