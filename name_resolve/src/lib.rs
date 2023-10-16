@@ -584,4 +584,18 @@ mod tests {
 
         assert!(fir.is_err());
     }
+
+    #[test]
+    fn issue615() {
+        let ast = ast! {
+            type Foo;
+
+            type A(field: Foo);
+            type B(field: Foo);
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_ok())
+    }
 }
