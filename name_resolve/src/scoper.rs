@@ -14,6 +14,10 @@ pub(crate) struct Scoper {
     pub(crate) enclosing_scope: HashMap<OriginIdx, Scope>,
 }
 
+// TODO: Rename
+#[derive(Debug)]
+pub struct ScoperError;
+
 impl Scoper {
     /// Set the enclosing scope of `to_scope` to the current scope
     fn scope(&mut self, to_scope: &Node<FlattenData>) {
@@ -28,7 +32,11 @@ impl Scoper {
     }
 
     // TODO: Move this function in `Traversal`?
-    fn maybe_visit_child(&mut self, fir: &Fir<FlattenData<'_>>, ref_idx: &RefIdx) -> Fallible<()> {
+    fn maybe_visit_child(
+        &mut self,
+        fir: &Fir<FlattenData<'_>>,
+        ref_idx: &RefIdx,
+    ) -> Fallible<ScoperError> {
         match ref_idx {
             RefIdx::Resolved(origin) => self.traverse_node(fir, &fir[origin]),
             // we skip unresolved nodes here
@@ -37,16 +45,14 @@ impl Scoper {
     }
 }
 
-impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok to have void as an error type? */>
-    for Scoper
-{
+impl<'ast> Traversal<FlattenData<'ast>, ScoperError> for Scoper {
     fn traverse_assignment(
         &mut self,
         fir: &Fir<FlattenData<'ast>>,
         _node: &Node<FlattenData<'ast>>,
         to: &RefIdx,
         from: &RefIdx,
-    ) -> Fallible<()> {
+    ) -> Fallible<ScoperError> {
         self.maybe_visit_child(fir, to)?;
         self.maybe_visit_child(fir, from)
     }
@@ -59,7 +65,7 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok to have void as an error
         args: &[RefIdx],
         return_ty: &Option<RefIdx>,
         block: &Option<RefIdx>,
-    ) -> Fallible<()> {
+    ) -> Fallible<ScoperError> {
         let old = self.enter_scope(node.origin);
 
         generics
@@ -82,7 +88,7 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok to have void as an error
         fir: &Fir<FlattenData<'ast>>,
         node: &Node<FlattenData<'ast>>,
         stmts: &[RefIdx],
-    ) -> Fallible<()> {
+    ) -> Fallible<ScoperError> {
         // TODO: Ugly but can we do anything better? Can we have types which force you to exit a scope if you enter one?
         let old = self.enter_scope(node.origin);
 
@@ -99,7 +105,7 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok to have void as an error
         &mut self,
         fir: &Fir<FlattenData<'ast>>,
         node: &Node<FlattenData<'ast>>,
-    ) -> Fallible<()> {
+    ) -> Fallible<ScoperError> {
         self.scope(node);
 
         match &node.kind {
@@ -124,9 +130,9 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok to have void as an error
 
                 Ok(())
             }
-            Kind::Generic { default } => default
-                .map(|def| self.maybe_visit_child(fir, &def))
-                .ok_or(())?,
+            Kind::Generic { default } => {
+                default.map_or(Ok(()), |def| self.maybe_visit_child(fir, &def))
+            }
             Kind::Assignment { to, from } => self.traverse_assignment(fir, node, to, from),
             Kind::Instantiation {
                 to,
@@ -168,13 +174,13 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok to have void as an error
             } => {
                 self.maybe_visit_child(fir, condition)?;
                 self.maybe_visit_child(fir, true_block)?;
-                false_block
-                    .map(|else_block| self.maybe_visit_child(fir, &else_block))
-                    .ok_or(())?
+                false_block.map_or(Ok(()), |else_block| {
+                    self.maybe_visit_child(fir, &else_block)
+                })
             }
-            Kind::Return(sub_node) => sub_node
-                .map(|node| self.maybe_visit_child(fir, &node))
-                .ok_or(())?,
+            Kind::Return(sub_node) => {
+                sub_node.map_or(Ok(()), |node| self.maybe_visit_child(fir, &node))
+            }
             Kind::Loop { condition, block } => {
                 self.maybe_visit_child(fir, condition)?;
                 self.maybe_visit_child(fir, block)?;
@@ -188,7 +194,7 @@ impl<'ast> Traversal<FlattenData<'ast>, () /* FIXME: Ok to have void as an error
 
     /// Nothing to do here, right? This function should never be called
     /// FIXME: Add documentation
-    fn traverse(&mut self, _fir: &Fir<FlattenData<'ast>>) -> Fallible<Vec<()>> {
+    fn traverse(&mut self, _fir: &Fir<FlattenData<'ast>>) -> Fallible<Vec<ScoperError>> {
         unreachable!()
     }
 }
