@@ -9,6 +9,7 @@
 pub mod instance;
 
 use std::collections::HashMap;
+use std::ops::ControlFlow;
 
 use instance::Instance;
 
@@ -26,6 +27,18 @@ use flatten::FlattenData;
 //         ),
 //     };
 // }
+
+// FIXME: UGLY: do we want to keep this?
+/// This useful constant helps you avoid typing `ControlFlow::Continue(())` in all our functions
+#[allow(non_upper_case_globals)]
+const KeepGoing: ControlFlow<EarlyExit> = ControlFlow::Continue(());
+
+/// Allows for an early return from a function, or to control the execution flow in a loop using `break` and `continue`
+enum EarlyExit {
+    Return(OriginIdx),
+    // Break(OriginIdx),
+    // Continue(OriginIdx),
+}
 
 pub trait Interpret {
     fn interpret(&self) -> Option<Instance>;
@@ -136,20 +149,32 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         None
     }
 
-    fn fire_block(&mut self, node: &Node<FlattenData<'_>>, stmts: &[RefIdx]) {
-        stmts.iter().for_each(|node| {
-            self.fire_node(self.access(node));
-        });
+    #[must_use]
+    fn fire_block(
+        &mut self,
+        node: &Node<FlattenData<'_>>,
+        stmts: &[RefIdx],
+    ) -> ControlFlow<EarlyExit> {
+        stmts
+            .iter()
+            .try_for_each(|node| self.fire_node(self.access(node)))?;
 
         if let Some(last_stmt) = stmts.last() {
             if let Kind::Return(_) = self.access(last_stmt).kind {
                 self.gc.transfer(last_stmt, node.origin)
             }
         }
+
+        KeepGoing
     }
 
     // FIXME: Does this need "_c"?
-    fn fire_constant(&mut self, node: &Node<FlattenData<'_>>, _c: &RefIdx) {
+    #[must_use]
+    fn fire_constant(
+        &mut self,
+        node: &Node<FlattenData<'_>>,
+        _c: &RefIdx,
+    ) -> ControlFlow<EarlyExit> {
         use ast::{Node, Value};
 
         let ast = node.data.ast.node();
@@ -162,18 +187,28 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         };
 
         self.gc.allocate(node.origin, instance);
+
+        KeepGoing
     }
 
-    fn fire_call(&mut self, node: &Node<FlattenData<'_>>, to: &RefIdx, args: &[RefIdx]) {
+    #[must_use]
+    fn fire_call(
+        &mut self,
+        node: &Node<FlattenData<'_>>,
+        to: &RefIdx,
+        args: &[RefIdx],
+    ) -> ControlFlow<EarlyExit> {
         let def = self.access(to);
         let (block, def_args) = match &def.kind {
             Kind::Function { block, args, .. } => (block, args),
             _ => unreachable!(),
         };
 
-        args.iter().enumerate().for_each(|(i, arg)| {
-            self.fire_node(self.access(arg));
+        args.iter().enumerate().try_for_each(|(i, arg)| {
+            self.fire_node(self.access(arg))?;
             self.gc.transfer(arg, def_args[i].expect_resolved());
+
+            KeepGoing
         });
 
         // FIXME: We need to add bindings here between the function's variables and the arguments given to the call
@@ -181,34 +216,62 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
             None => {
                 let result = self.perform_extern_call(def, args);
                 if let Some(instance) = result {
-                    self.gc.allocate(node.origin, instance)
+                    self.gc.allocate(node.origin, instance);
                 }
+
+                KeepGoing
             }
             Some(block) => {
-                self.fire_node_ref(block); // what to do here?
-                self.gc.transfer(block, node.origin);
+                // here, we handle the firing of the block particularly as we want to catch early returns
+                let result = match self.fire_node_ref(block) {
+                    ControlFlow::Break(EarlyExit::Return(returned_value)) => {
+                        RefIdx::Resolved(returned_value)
+                    }
+                    // FIXME: Can we use the wildcard here?
+                    _ => *block,
+                };
+
+                self.gc.transfer(&result, node.origin);
+
+                KeepGoing
             }
         }
     }
 
-    fn fire_binding(&mut self, node: &Node<FlattenData<'_>>, to: &RefIdx) {
-        self.fire_node_ref(to);
+    #[must_use]
+    fn fire_binding(
+        &mut self,
+        node: &Node<FlattenData<'_>>,
+        to: &RefIdx,
+    ) -> ControlFlow<EarlyExit> {
+        self.fire_node_ref(to)?;
 
         self.gc.transfer(to, node.origin);
+
+        KeepGoing
     }
 
-    fn fire_typed_value(&mut self, node: &Node<FlattenData<'_>>, value: &RefIdx, ty: &RefIdx) {
+    #[must_use]
+    fn fire_typed_value(
+        &mut self,
+        node: &Node<FlattenData<'_>>,
+        value: &RefIdx,
+        ty: &RefIdx,
+    ) -> ControlFlow<EarlyExit> {
         // what do we do here when we have a `value` but no `ty`?
         match ty {
             // this is a transfer
-            RefIdx::Unresolved => self.gc.transfer(value, node.origin),
+            RefIdx::Unresolved => {
+                self.gc.transfer(value, node.origin);
+                KeepGoing
+            }
             // this is an allocate?
             RefIdx::Resolved(ty) => {
                 let tyref = self.access_resolved(ty);
                 let fields = match &tyref.kind {
                     Kind::Type { fields, .. } => fields,
                     // FIXME: here we need to decide part of our copy/move semantics
-                    Kind::TypeReference(_) => return,
+                    Kind::TypeReference(_) => return KeepGoing,
                     other => {
                         dbg!(other);
                         unreachable!()
@@ -225,33 +288,44 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
                 // FIXME: Handle result here
                 // FIXME: Should this be a transfer?
                 self.gc.allocate(node.origin, instance);
+
+                KeepGoing
             }
         }
     }
 
-    fn fire_return(&mut self, node: &Node<FlattenData<'_>>, expr: &Option<RefIdx>) {
+    #[must_use]
+    fn fire_return(
+        &mut self,
+        node: &Node<FlattenData<'_>>,
+        expr: &Option<RefIdx>,
+    ) -> ControlFlow<EarlyExit> {
         if let Some(returned) = expr {
-            self.fire_node_ref(returned);
+            self.fire_node_ref(returned)?;
 
             self.gc.transfer(returned, node.origin);
         } // FIXME: Allocate None otherwise?
+
+        ControlFlow::Break(EarlyExit::Return(node.origin))
     }
 
-    fn fire_node_ref(&mut self, node_ref: &RefIdx) {
+    #[must_use]
+    fn fire_node_ref(&mut self, node_ref: &RefIdx) -> ControlFlow<EarlyExit> {
         self.fire_node(self.access(node_ref))
     }
 
+    #[must_use]
     fn fire_condition(
         &mut self,
         node: &Node<FlattenData<'_>>,
         condition: &RefIdx,
         true_block: &RefIdx,
         false_block: Option<&RefIdx>,
-    ) {
+    ) -> ControlFlow<EarlyExit> {
         let t = Instance::from(true);
         let f = Instance::from(false);
 
-        self.fire_node_ref(condition);
+        self.fire_node_ref(condition)?;
 
         let condition_result = self.gc.lookup(&condition.expect_resolved());
 
@@ -264,13 +338,17 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         };
 
         // TODO: Is that correct?
-        to_run.map(|block| {
-            self.fire_node_ref(block);
-            self.gc.transfer(block, node.origin)
-        });
+        if let Some(block) = to_run {
+            self.fire_node_ref(block)?;
+
+            self.gc.transfer(block, node.origin);
+        }
+
+        KeepGoing
     }
 
-    fn fire_node(&mut self, node: &Node<FlattenData<'_>>) {
+    #[must_use]
+    fn fire_node(&mut self, node: &Node<FlattenData<'_>>) -> ControlFlow<EarlyExit> {
         match &node.kind {
             Kind::Constant(c) => self.fire_constant(node, c),
             Kind::Statements(stmts) => self.fire_block( node, stmts),
@@ -306,7 +384,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
                 false_block,
             } => self.fire_condition(node, condition, true_block, false_block.as_ref()),
             // Kind::Loop { condition, block } => self.traverse_loop( node, condition, block),
-            _ => {},
+            _ => KeepGoing,
         }
     }
 
@@ -322,9 +400,12 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
             ),
         };
 
-        self.fire_block(entry_point, stmts);
+        let result = match self.fire_block(entry_point, stmts) {
+            ControlFlow::Break(EarlyExit::Return(result)) => result,
+            _ => entry_point.origin,
+        };
 
-        self.gc.lookup(&entry_point.origin).cloned()
+        self.gc.lookup(&result).cloned()
     }
 }
 
@@ -438,7 +519,7 @@ mod tests {
             func halloween(b: bool) -> string {
                 if b {
                     return "boo"
-                }
+                };
 
 
                 "foo"
@@ -448,6 +529,35 @@ mod tests {
         };
 
         let result = fir!(ast).interpret();
-        assert_eq!(result, Some(Instance::from("foo")))
+        assert_eq!(result, Some(Instance::from("boo")))
+    }
+
+    #[test]
+    fn return_from_fn_not_block() {
+        let ast = ast! {
+            func halloween() -> string {
+                where x = {
+                    {
+                        {
+                            {
+                                {
+                                    {
+                                        return "one";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+
+                return "two";
+            }
+
+            halloween()
+        };
+
+        let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from("one")));
     }
 }
