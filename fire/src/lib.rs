@@ -125,7 +125,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
 
     fn fire_block(&mut self, node: &Node<FlattenData<'_>>, stmts: &[RefIdx]) {
         stmts.iter().for_each(|node| {
-            self.fire_node(&self.access(node));
+            self.fire_node(self.access(node));
         });
 
         if let Some(last_stmt) = stmts.last() {
@@ -159,14 +159,14 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         };
 
         args.iter().enumerate().for_each(|(i, arg)| {
-            self.fire_node(&self.access(arg));
+            self.fire_node(self.access(arg));
             self.gc.transfer(arg, def_args[i].expect_resolved());
         });
 
         // FIXME: We need to add bindings here between the function's variables and the arguments given to the call
         match block {
             None => {
-                let result = self.perform_extern_call(&def, args);
+                let result = self.perform_extern_call(def, args);
                 if let Some(instance) = result {
                     self.gc.allocate(node.origin, instance)
                 }
@@ -225,7 +225,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
     }
 
     fn fire_node_ref(&mut self, node_ref: &RefIdx) {
-        self.fire_node(&self.access(node_ref))
+        self.fire_node(self.access(node_ref))
     }
 
     fn fire_node(&mut self, node: &Node<FlattenData<'_>>) {
