@@ -65,6 +65,8 @@ impl GarbaJKollector {
         GarbaJKollector(HashMap::new())
     }
 
+    // TODO: The functions in this `impl` needs to take a T: IntoOrigin where we implement the trait for both OriginIdx and RefIdx
+
     fn allocate(&mut self, key: OriginIdx, value: Instance) {
         // if we allocate the same value twice, this is an interpreter error
         // FIXME: this is not specifically true - e.g. calling a function twice will allocate twice to the function's bindings, which is fine?
@@ -81,7 +83,6 @@ impl GarbaJKollector {
         self.copy(to_move, key)
     }
 
-    // This needs to take a T: IntoOrigin where we implement the trait for both OriginIdx and RefIdx
     fn lookup(&self, key: &OriginIdx) -> Option<&Instance> {
         self.0.get(key)
     }
@@ -530,6 +531,42 @@ mod tests {
 
         let result = fir!(ast).interpret();
         assert_eq!(result, Some(Instance::from("boo")))
+    }
+
+    #[test]
+    fn nested_return() {
+        let ast = ast! {
+            func halloween() -> string {
+                { { { {
+                    return "boo";
+                } } } }
+            }
+
+            halloween()
+        };
+
+        let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from("boo")))
+    }
+
+    #[test]
+    fn nested_return_inner_fn() {
+        let ast = ast! {
+            func halloween() -> string {
+                func inner() -> string {
+                    { { { {
+                        return "boo";
+                    } } } }
+                };
+
+                "different string"
+            }
+
+            halloween()
+        };
+
+        let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from("different string")))
     }
 
     #[test]
