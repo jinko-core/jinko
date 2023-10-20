@@ -29,7 +29,6 @@ use ast::Value;
 use ast::{Ast, TypeContent};
 use location::Location;
 use location::SpanTuple;
-use nom::sequence::tuple;
 use nom::Err::Error as NomError;
 use nom::Slice;
 use nom_locate::position;
@@ -37,7 +36,8 @@ use symbol::Symbol;
 
 use nom::{
     branch::alt, bytes::complete::take, character::complete::multispace0, combinator::opt,
-    multi::many0, sequence::delimited, sequence::pair, sequence::preceded, sequence::terminated,
+    multi::many0, multi::many1, sequence::delimited, sequence::pair, sequence::preceded,
+    sequence::terminated, sequence::tuple,
 };
 
 // FIXME: Refactor, rework, remove, depreciate
@@ -777,22 +777,88 @@ fn return_type(input: ParseInput) -> ParseResult<ParseInput, Option<Type>> {
     }
 }
 
-/// block = '{' next inner_block
+/// block = '{' ([expr ';' | loop | if | function])* expr? '}'
 pub fn block(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     let (input, start_loc) = position(input)?;
     let (input, _) = tokens::left_curly_bracket(input)?;
     let input = next(input);
-    let (input, block) = inner_block(input)?;
+
+    // Check if the block is immediately closed and early return
+    if let Ok((input, _)) = tokens::right_curly_bracket(input) {
+        let (input, end_loc) = position(input)?;
+
+        return Ok((
+            input,
+            Ast {
+                location: pos_to_loc(input, start_loc, end_loc),
+                node: Node::Block {
+                    stmts: vec![],
+                    last_is_expr: false,
+                },
+            },
+        ));
+    }
+
+    let stmt = |input| {
+        let (input, start_loc) = position(input)?;
+
+        if let Ok((input, _)) = tokens::if_tok(input) {
+            unit_if(input, start_loc.into())
+        } else if let Ok((input, kind)) =
+            alt((tokens::func_tok, tokens::test_tok, tokens::mock_tok))(input)
+        {
+            unit_func(input, kind, start_loc.into())
+        } else if tokens::left_curly_bracket(input).is_ok() {
+            // we don't update `input` here so that we can just call `block`
+            block(input)
+        } else {
+            let (input, expr) = expr(input)?;
+            let input = next(input);
+            let (input, _) = tokens::semicolon(input)?;
+
+            Ok((input, expr))
+        }
+    };
+
+    let (input, stmts) = opt(many1(stmt))(input)?;
+    let (input, last_expr) = opt(expr)(input)?;
+    let last_is_expr = last_expr.is_some();
+
     let (input, end_loc) = position(input)?;
+    let mut stmts = stmts.unwrap_or_default();
+
+    if let Some(expr) = last_expr {
+        stmts.push(expr)
+    };
 
     Ok((
         input,
         Ast {
             location: pos_to_loc(input, start_loc, end_loc),
-            node: block,
+            node: Node::Block {
+                stmts,
+                last_is_expr,
+            },
         },
     ))
 }
+
+// /// block = '{' next inner_block
+// pub fn block(input: ParseInput) -> ParseResult<ParseInput, Ast> {
+//     let (input, start_loc) = position(input)?;
+//     let (input, _) = tokens::left_curly_bracket(input)?;
+//     let input = next(input);
+//     let (input, block) = inner_block(input)?;
+//     let (input, end_loc) = position(input)?;
+
+//     Ok((
+//         input,
+//         Ast {
+//             location: pos_to_loc(input, start_loc, end_loc),
+//             node: block,
+//         },
+//     ))
+// }
 
 /// inner_block = '}'
 ///             | expr '}'                  (* The only case where block is an expr *)
@@ -818,6 +884,23 @@ fn inner_block(input: ParseInput) -> ParseResult<ParseInput, Node> {
             },
         ));
     }
+
+    // the lines from here on out until the end of the function are problematic. when we parse
+    // the following:
+    //
+    // ```text
+    // func foo() -> ReturnValue {
+    //     if condition {}
+    //
+    //     return_value
+    // }
+    // ```
+    //
+    // then the parser will fail, as we indicate that all expresssions or statements of a block must be preceded
+    // by a semicolon. this isn't great. the code which will work with the current parser thus adds an extra
+    // semicolon at the end of the `if` block. plus, this function keeps calling itself recursively and adding
+    // at the beginning of the `stmts` vector, instead of accumulating statements.
+    // Issue #395
 
     let (input, block) = preceded(tokens::semicolon, preceded(nom_next, inner_block))(input)?;
     let (mut stmts, last_is_expr) = match block {
