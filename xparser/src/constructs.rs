@@ -58,7 +58,7 @@ pub fn many_exprs(mut input: ParseInput) -> ParseResult<ParseInput, Vec<Ast>> {
         if input.is_empty() {
             return Ok((input, exprs));
         }
-        let (new_input, expr) = expr_semicolon(input)?;
+        let (new_input, expr) = expr_maybe_semi(input)?;
         input = new_input;
         exprs.push(expr);
     }
@@ -67,9 +67,21 @@ pub fn many_exprs(mut input: ParseInput) -> ParseResult<ParseInput, Vec<Ast>> {
 /// Parse an instruction and maybe the semicolon that follows.
 ///
 /// expr_semicolon = expr [ ';' ]
+pub fn expr_maybe_semi(input: ParseInput) -> ParseResult<ParseInput, Ast> {
+    let (input, expr) = expr(input)?;
+    let input = next(input);
+    let (input, _) = opt(tokens::semicolon)(input)?;
+
+    Ok((input, expr))
+}
+
+/// Parse an instruction and the semicolon that follows.
+///
+/// expr_semicolon = expr [ ';' ]
 pub fn expr_semicolon(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     let (input, expr) = expr(input)?;
-    let (input, _) = opt(tokens::semicolon)(input)?;
+    let input = next(input);
+    let (input, _) = tokens::semicolon(input)?;
 
     Ok((input, expr))
 }
@@ -800,6 +812,7 @@ pub fn block(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     }
 
     let stmt = |input| {
+        let input = next(input);
         let (input, start_loc) = position(input)?;
 
         if let Ok((input, _)) = tokens::if_tok(input) {
@@ -812,16 +825,15 @@ pub fn block(input: ParseInput) -> ParseResult<ParseInput, Ast> {
             // we don't update `input` here so that we can just call `block`
             block(input)
         } else {
-            let (input, expr) = expr(input)?;
-            let input = next(input);
-            let (input, _) = tokens::semicolon(input)?;
-
-            Ok((input, expr))
+            expr_semicolon(input)
         }
     };
 
     let (input, stmts) = opt(many1(stmt))(input)?;
     let (input, last_expr) = opt(expr)(input)?;
+    let input = next(input);
+    let (input, _) = tokens::right_curly_bracket(input)?;
+
     let last_is_expr = last_expr.is_some();
 
     let (input, end_loc) = position(input)?;
@@ -2377,5 +2389,19 @@ mod tests {
             type_id(input).unwrap().1.kind,
             TypeKind::FunctionLike(..)
         ));
+    }
+
+    #[test]
+    fn block_in_block_does_not_require_extra_semicolon_395() {
+        let input = span!("func foo() { if true { 15 } else { 14 } }");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn block_in_block_does_not_require_extra_semicolon_395_2() {
+        let input = span!("func foo()  { { { where x = 14; } } }");
+
+        assert!(expr(input).is_ok());
     }
 }
