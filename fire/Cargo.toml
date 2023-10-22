@@ -15,3 +15,4 @@ name_resolve = { path = "../name_resolve" }
 typecheck = { path = "../typecheck" }
 xparser = { path = "../xparser" }
 location = { path = "../location" }
+builtins = { path = "../builtins" }
