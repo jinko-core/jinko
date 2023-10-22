@@ -815,18 +815,26 @@ pub fn block(input: ParseInput) -> ParseResult<ParseInput, Ast> {
         let input = next(input);
         let (input, start_loc) = position(input)?;
 
-        if let Ok((input, _)) = tokens::if_tok(input) {
-            unit_if(input, start_loc.into())
+        let (input, stmt) = if let Ok((input, _)) = tokens::if_tok(input) {
+            unit_if(input, start_loc.into())?
         } else if let Ok((input, kind)) =
             alt((tokens::func_tok, tokens::test_tok, tokens::mock_tok))(input)
         {
-            unit_func(input, kind, start_loc.into())
+            unit_func(input, kind, start_loc.into())?
         } else if tokens::left_curly_bracket(input).is_ok() {
+            // TODO: This does not work to have a block as the last expression of another block
+            // `stmt` will parse it and return it as a statement
+            // we need to do something smarted like lifting the last statement to an expression if there was no semicolon
+
             // we don't update `input` here so that we can just call `block`
-            block(input)
+            block(input)?
         } else {
-            expr_semicolon(input)
-        }
+            expr_semicolon(input)?
+        };
+
+        let (input, _) = opt(tokens::semicolon)(input)?;
+
+        Ok((input, stmt))
     };
 
     let (input, stmts) = opt(many1(stmt))(input)?;
@@ -2403,5 +2411,38 @@ mod tests {
         let input = span!("func foo()  { { { where x = 14; } } }");
 
         assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn early_return395() {
+        let input = span!("func halloween(b: bool) -> int { if b { return 14 }; 15 }");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn inner_block_with_semi395() {
+        let input = span!(
+            "func halloween() -> int { func inner() -> int { { { { { return 14; } } } } }; 15 }"
+        );
+
+        assert!(expr(input).is_ok())
+    }
+
+    #[test]
+    fn inner_nested_function395() {
+        let input = span! {r#"
+            func halloween() -> string {
+                func inner() -> string {
+                    { { { {
+                        return "boo";
+                    } } } }
+                };
+
+                "different string"
+            }
+        "#};
+
+        assert!(expr(input).is_ok())
     }
 }
