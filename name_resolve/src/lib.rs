@@ -385,7 +385,7 @@ impl<'ast> NameResolve<'ast> for Fir<FlattenData<'ast>> {
         let enclosing_scope = NameResolveCtx::scope(&self);
         let mut ctx = NameResolveCtx::new(EnclosingScope(&enclosing_scope));
 
-        ctx.pass(self)
+        ctx.transform(self)
     }
 }
 
