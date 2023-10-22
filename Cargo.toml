@@ -20,6 +20,7 @@ members = [
   "name_resolve",
   "include_code",
   "loop_desugar",
+  "builtins",
   "xparser",
   "ast-sanitizer",
   "debug-fir",
@@ -40,6 +41,7 @@ error = { path = "error" }
 location = { path = "location" }
 include_code = { path = "include_code" }
 loop_desugar = { path = "loop_desugar" }
+builtins = { path = "builtins" }
 xparser = { path = "xparser" }
 typecheck = { path = "typecheck" }
 recursive_typecheck = { path = "recursive_typecheck" }

@@ -111,6 +111,12 @@ impl SpanTuple {
         SpanTuple { source, start, end }
     }
 
+    /// Create the span of a builtin component. This is an invalid location used when generating
+    /// AST nodes or internal components out of thin air.
+    pub fn builtin() -> SpanTuple {
+        SpanTuple::with_source(SourceOwned::Empty, Location::new(1, 1), Location::new(1, 1))
+    }
+
     pub fn start(&self) -> &Location {
         &self.start
     }
