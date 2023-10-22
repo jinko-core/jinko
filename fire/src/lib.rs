@@ -16,6 +16,8 @@ use instance::Instance;
 use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
 use flatten::FlattenData;
 
+mod outside;
+
 // Emit a fatal error from the [`Fire`].
 // macro_rules! fire_fatal {
 //     ($fmt:literal $($args:tt),*) => {
@@ -57,7 +59,7 @@ impl Interpret for Fir<FlattenData<'_>> {
 }
 
 /// It's called [`GarbajKollector`] because this way you have "jk" in the middle of the word :)
-struct GarbaJKollector(HashMap<OriginIdx, Instance>);
+pub struct GarbaJKollector(HashMap<OriginIdx, Instance>);
 
 // FIXME: Add documentation for all methods
 impl GarbaJKollector {
@@ -116,38 +118,6 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
     // TODO: Rename: `access_origin`?
     fn access_resolved(&self, resolved: &OriginIdx) -> &'fir Node<FlattenData<'ast>> {
         &self.fir.nodes[&resolved]
-    }
-
-    // TODO: Move outside of the impl block?
-    fn perform_extern_call(
-        &self,
-        node: &Node<FlattenData<'_>>,
-        args: &[RefIdx],
-    ) -> Option<Instance> {
-        let ast = node.data.ast.node();
-        let name = match &ast.node {
-            ast::Node::Function {
-                decl: ast::Declaration { name, .. },
-                ..
-            } => name,
-            other => {
-                dbg!(other);
-                unreachable!()
-            }
-        };
-
-        if name.access() == "println" {
-            args.iter().for_each(|arg| {
-                let value = self.gc.lookup(&arg.expect_resolved()).unwrap();
-                if let Instance::String(s) = value {
-                    println!("{s}");
-                } else {
-                    unreachable!("typecheck didn't catch this error. this is an interpreter bug.");
-                }
-            })
-        }
-
-        None
     }
 
     #[must_use]
@@ -215,7 +185,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         // FIXME: We need to add bindings here between the function's variables and the arguments given to the call
         match block {
             None => {
-                let result = self.perform_extern_call(def, args);
+                let result = outside::perform_call(&self.gc, def, args);
                 if let Some(instance) = result {
                     self.gc.allocate(node.origin, instance);
                 }
@@ -413,20 +383,25 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use builtins::AppendAstBuiltins;
     use flatten::FlattenAst;
     use name_resolve::NameResolve;
     use typecheck::TypeCheck;
 
     macro_rules! ast {
         ($($toks:tt)*) => {
-            xparser::ast!(
-                type char;
-                type bool;
-                type int;
-                type float;
-                type string;
-                $($toks)*
-            )
+            {
+                let ast = xparser::ast!(
+                    type char;
+                    type bool;
+                    type int;
+                    type float;
+                    type string;
+                    $($toks)*
+                );
+
+                ast.append_builtins().unwrap()
+            }
         }
     }
 
@@ -596,5 +571,13 @@ mod tests {
 
         let result = fir!(ast).interpret();
         assert_eq!(result, Some(Instance::from("one")));
+    }
+
+    #[test]
+    fn arithmetic() {
+        let ast = ast! { 14 * 2 };
+
+        let result = fir!(ast).interpret();
+        assert_eq!(result, Some(Instance::from(28)));
     }
 }
