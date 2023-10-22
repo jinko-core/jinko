@@ -6,6 +6,7 @@ mod repl;
 
 use colored::Colorize;
 
+use builtins::AppendAstBuiltins;
 use fire::instance::Instance;
 use fire::Interpret;
 use flatten::{FlattenAst, FlattenData};
@@ -123,6 +124,12 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
 
     let ast = x_try!(ast.resolve_includes());
     let ast = x_try!(ast_sanitizer::no_incl(ast));
+
+    // should builtin operators be added at the AST level?
+    // name resolution? typechecking?
+    // it's a bit annoying to add them on the `Fir` - it's not suited to node addition like this
+    // and we need them before typechecking for name resolution too
+    let ast = x_try!(ast.append_builtins());
 
     let data_fmt = |data: &FlattenData| {
         format!(
