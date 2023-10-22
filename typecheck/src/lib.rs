@@ -238,4 +238,79 @@ mod tests {
 
         assert!(fir.is_ok())
     }
+
+    #[test]
+    fn typeck_function_call_argument_count_mismatch() {
+        let ast = ast! {
+            func foo(one: int, two: int) -> int { one }
+
+            foo(15)
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_err());
+    }
+
+    #[test]
+    fn typeck_function_call_argument_count_match() {
+        let ast = ast! {
+            func foo(one: int, two: int) -> int { one }
+
+            foo(15, 14)
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn typeck_method_call() {
+        let ast = ast! {
+            func foo(one: string, two: int) -> int { two }
+
+            "hoo".foo(15)
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn typeck_method_call2() {
+        let ast = ast! {
+            func foo(one: string, two: int, three: char) -> int { two }
+
+            "hoo".foo(15, 14)
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_err());
+    }
+
+    #[test]
+    fn typeck_call_complex_arg() {
+        let ast = ast! {
+            type Marker;
+
+            func take_marker(m: Marker) {}
+            func get_marker() -> Marker { Marker }
+
+            take_marker(Marker);
+
+            where m = Marker;
+            take_marker(m);
+
+            take_marker(get_marker());
+
+            get_marker().take_marker();
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok())
+    }
 }

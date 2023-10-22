@@ -6,9 +6,6 @@ use error::{ErrKind, Error};
 use fir::{Fallible, Fir, Node, RefIdx, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
-use symbol::Symbol;
-
-use colored::Colorize;
 
 use crate::{Type, TypeCtx};
 
@@ -24,31 +21,64 @@ impl<'ctx> Checker<'ctx> {
     }
 }
 
-fn type_mismatch(
-    loc: &SpanTuple,
-    fir: &Fir<FlattenData>,
-    expected: Option<Type>,
-    got: Option<Type>,
-) -> Error {
+mod format {
+    use colored::Colorize;
+    use symbol::Symbol;
+
+    pub fn number(value: usize) -> String {
+        match value {
+            0 => format!("{}", "no".purple()),
+            rest => format!("{}", rest.to_string().purple()),
+        }
+    }
+
+    pub fn plural(to_pluralize: &str, value: usize) -> String {
+        match value {
+            1 => to_pluralize.to_string(),
+            _ => format!("{to_pluralize}s"),
+        }
+    }
+
+    pub fn ty(ty: Option<&Symbol>) -> String {
+        match ty {
+            Some(ty) => format!("`{}`", ty.access().purple()),
+            None => format!("{}", "no type".green()),
+        }
+    }
+}
+
+struct Expected(Option<Type>);
+struct Got(Option<Type>);
+
+fn type_mismatch(loc: &SpanTuple, fir: &Fir<FlattenData>, expected: Expected, got: Got) -> Error {
     let get_symbol = |ty| {
         let Type::One(idx) = ty;
         fir.nodes[&idx.expect_resolved()].data.ast.symbol().unwrap()
     };
-    let name_fmt = |ty: Option<&Symbol>| match ty {
-        Some(ty) => format!("`{}`", ty.access().purple()),
-        None => format!("{}", "no type".green()),
-    };
 
-    let expected_ty = expected.map(get_symbol);
-    let got_ty = got.map(get_symbol);
+    let expected_ty = expected.0.map(get_symbol);
+    let got_ty = got.0.map(get_symbol);
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
             "type mismatch found: expected {}, got {}",
-            name_fmt(expected_ty),
-            name_fmt(got_ty)
+            format::ty(expected_ty),
+            format::ty(got_ty)
         ))
         .with_loc(loc.clone()) // FIXME: Missing hint
+}
+
+fn argument_count_mismatch(loc: &SpanTuple, expected: &[RefIdx], got: &[RefIdx]) -> Error {
+    Error::new(ErrKind::TypeChecker)
+        .with_msg(format!(
+            "argument count mismatch: expected {} {}, got {} {}",
+            format::number(expected.len()),
+            format::plural("argument", expected.len()),
+            format::number(got.len()),
+            format::plural("argument", got.len()),
+        ))
+        .with_loc(loc.clone())
+    // FIXME: missing hint
 }
 
 impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
@@ -70,7 +100,12 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
         let block_ty = block.as_ref().and_then(|b| self.get_type(b));
 
         if ret_ty != block_ty {
-            let err = type_mismatch(node.data.ast.location(), fir, ret_ty, block_ty);
+            let err = type_mismatch(
+                node.data.ast.location(),
+                fir,
+                Expected(ret_ty),
+                Got(block_ty),
+            );
             let err = match (ret_ty, block_ty) {
                 (None, Some(_)) => err
                     .with_hint(Error::hint().with_msg(String::from(
@@ -95,6 +130,55 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
         }
     }
 
+    fn traverse_call(
+        &mut self,
+        fir: &Fir<FlattenData<'_>>,
+        node: &Node<FlattenData<'_>>,
+        to: &RefIdx,
+        _generics: &[RefIdx],
+        args: &[RefIdx],
+    ) -> Fallible<Error> {
+        let function = &fir.nodes[&to.expect_resolved()];
+        let def_args = match &function.kind {
+            fir::Kind::Function { args, .. } => args,
+            _ => unreachable!("resolved call to a non-function. this is an interpreter error."),
+        };
+
+        if def_args.len() != args.len() {
+            return Err(argument_count_mismatch(
+                node.data.ast.location(),
+                def_args,
+                args,
+            ));
+        }
+
+        // now we can safely zip both argument slices
+        let errs = def_args
+            .iter()
+            .zip(args)
+            .fold(Vec::new(), |mut errs, (def_arg, arg)| {
+                let expected = self.get_type(def_arg);
+                let got = self.get_type(arg);
+
+                if expected != got {
+                    errs.push(type_mismatch(
+                        node.data.ast.location(),
+                        fir,
+                        Expected(expected),
+                        Got(got),
+                    ))
+                }
+
+                errs
+            });
+
+        if errs.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::new(ErrKind::Multiple(errs)))
+        }
+    }
+
     fn traverse_assignment(
         &mut self,
         fir: &Fir<FlattenData>,
@@ -106,7 +190,12 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
         let from = self.get_type(from);
 
         if to != from {
-            Err(type_mismatch(node.data.ast.location(), fir, to, from))
+            Err(type_mismatch(
+                node.data.ast.location(),
+                fir,
+                Expected(to),
+                Got(from),
+            ))
         } else {
             Ok(())
         }
