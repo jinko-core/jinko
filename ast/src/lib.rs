@@ -6,7 +6,8 @@ use symbol::Symbol;
 
 #[derive(Debug, Clone)]
 pub enum TypeKind {
-    Ty(Symbol),
+    Simple(Symbol),
+    Multi(Vec<TypeArgument>),
     FunctionLike(Vec<TypeArgument>, Option<Box<TypeArgument>>),
 }
 
@@ -16,6 +17,7 @@ pub enum TypeKind {
 /// a: int = id<int>(15);
 ///
 /// a: int = 15;
+/// a: int | string = if true { "jinko" } else { 14 };
 ///
 /// func f(arg: Vector<int>) {}
 /// func g(arg: Tuple<int, float>) {}
@@ -24,9 +26,10 @@ pub enum TypeKind {
 /// ```
 #[derive(Debug, Clone)]
 pub struct TypeArgument {
+    pub kind: TypeKind,
+    // the generics and location are common fields between the multiple kinds, so they are lifted out of the `TypeKind` enum
     pub location: SpanTuple,
     pub generics: Vec<TypeArgument>,
-    pub kind: TypeKind,
 }
 
 /// A value with its associated type. This is used for function arguments or type fields

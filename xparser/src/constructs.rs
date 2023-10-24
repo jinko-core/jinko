@@ -492,11 +492,27 @@ fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
     }
 }
 
-/// type_id '(' type_inst_arg (',' type_inst_arg)* ')'
+/// ```text
+/// generic_arg ::= identifier [ "=" type ]?
+/// id_and_generics ::= identifier [ "[" generic_arg+ "]" ]?
+///
+/// # int
+/// # int | ComplexType
+/// type ::= id_and_generics | type "|" id_and_generics
+///
+/// type_declaration ::=
+///     // record type
+///     | "type" id_and_generics "(" [id_and_generics ":" type ]","* ")" ";"
+///     // tuple type
+///     | "type" id_and_generics "(" [type]","* ")"
+///     // type alias
+///     | "type" id_and_generics = type ";"
+/// ```
 fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, Ast> {
     // FIXME: This needs to use TypeIds
     let (input, (name, _)) = spaced_identifier(input)?;
     let (input, generics) = maybe_generic_arguments(input)?;
+
     let (input, type_dec) = if let Ok((input, _)) = tokens::left_parenthesis(input) {
         let (input, first_field) = typed_arg(input)?;
         let (input, mut fields) = many0(preceded(tokens::comma, typed_arg))(input)?;
@@ -511,6 +527,25 @@ fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseIn
                 generics,
                 fields,
                 with: None, // TODO: Parse `with` block properly
+            },
+        )
+    } else if let Ok((input, _)) = tokens::equal(input) {
+        let input = next(input);
+        let (input, start_loc) = position(input)?;
+        let (input, type_aliased) = multi_type(input)?;
+        let (input, end_loc) = position(input)?;
+        (
+            input,
+            Node::Type {
+                name: Symbol::from(name),
+                generics,
+                // FIXME: this is invalid
+                fields: vec![TypedValue {
+                    location: pos_to_loc(input, start_loc, end_loc),
+                    symbol: Symbol::from("@type-alias-field"),
+                    ty: type_aliased,
+                }],
+                with: None,
             },
         )
     } else {
@@ -2216,6 +2251,20 @@ mod tests {
     #[test]
     fn mutable_declaration_complex() {
         let input = span!("where mut x = if value { 14 } else { 15 }");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn type_alias() {
+        let input = span!("type Foo = Bar");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn type_alias_multi_type() {
+        let input = span!("type Foo = Bar | Baz | Qux");
 
         assert!(expr(input).is_ok());
     }
