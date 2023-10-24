@@ -29,6 +29,7 @@ use ast::TypedValue;
 use ast::Value;
 use location::Location;
 use location::SpanTuple;
+use nom::sequence::tuple;
 use nom::Err::Error as NomError;
 use nom::Slice;
 use nom_locate::position;
@@ -449,54 +450,93 @@ fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
         type_id(input)
     }
 
-    let input = next(input);
-    let (input, start_loc) = position(input)?;
-    if let Ok((input, _)) = tokens::func_tok(input) {
-        let (input, generics) = maybe_generic_application(input)?;
-        let (input, _) = tokens::left_parenthesis(input)?;
-        let (input, args) = arg_types(input)?;
-        let (input, ret_ty) = opt(return_type)(input)?;
-        let (input, end_loc) = position(input)?;
+    fn type_id_no_multi(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
+        let input = next(input);
+        let (input, start_loc) = position(input)?;
+        if let Ok((input, _)) = tokens::func_tok(input) {
+            let (input, generics) = maybe_generic_application(input)?;
+            let (input, _) = tokens::left_parenthesis(input)?;
+            let (input, args) = arg_types(input)?;
+            let (input, ret_ty) = opt(return_type)(input)?;
+            let (input, end_loc) = position(input)?;
 
-        let kind = TypeKind::FunctionLike(args, ret_ty.map(Box::new));
+            let kind = TypeKind::FunctionLike(args, ret_ty.map(Box::new));
+
+            Ok((
+                input,
+                TypeArgument {
+                    kind,
+                    generics,
+                    location: pos_to_loc(input, start_loc, end_loc),
+                },
+            ))
+        } else {
+            let (input, (id, (start_loc, end_loc))) = spaced_identifier(input)?;
+            let kind = TypeKind::Simple(Symbol::from(id));
+            let (input, generics) = maybe_generic_application(input)?;
+
+            // FIXME: Refactor
+            let end_loc = if !generics.is_empty() {
+                position(input)?.1.into()
+            } else {
+                end_loc
+            };
+
+            Ok((
+                input,
+                TypeArgument {
+                    kind,
+                    generics,
+                    location: pos_to_loc(input, start_loc, end_loc),
+                },
+            ))
+        }
+    }
+
+    let (input, start_loc) = position(input)?;
+    let (input, ty_arg) = type_id_no_multi(input)?;
+
+    if delimited(nom_next, tokens::pipe, nom_next)(input).is_ok() {
+        let (input, types) = many0(tuple((nom_next, tokens::pipe, type_id_no_multi)))(input)?;
+        let mut multi = vec![ty_arg];
+        // FIXME: butt ugly
+        multi.extend(types.into_iter().map(|tuple| tuple.2));
+        let (input, end_loc) = position(input)?;
 
         Ok((
             input,
             TypeArgument {
-                kind,
-                generics,
+                kind: TypeKind::Multi(multi),
+                generics: vec![],
                 location: pos_to_loc(input, start_loc, end_loc),
             },
         ))
     } else {
-        let (input, (id, (start_loc, end_loc))) = spaced_identifier(input)?;
-        let kind = TypeKind::Ty(Symbol::from(id));
-
-        let (input, generics) = maybe_generic_application(input)?;
-
-        // FIXME: Refactor
-        let end_loc = if !generics.is_empty() {
-            position(input)?.1.into()
-        } else {
-            end_loc
-        };
-
-        Ok((
-            input,
-            TypeArgument {
-                kind,
-                generics,
-                location: pos_to_loc(input, start_loc, end_loc),
-            },
-        ))
+        Ok((input, ty_arg))
     }
 }
 
-/// type_id '(' type_inst_arg (',' type_inst_arg)* ')'
+/// ```text
+/// generic_arg ::= identifier [ "=" type ]?
+/// id_and_generics ::= identifier [ "[" generic_arg+ "]" ]?
+///
+/// # int
+/// # int | ComplexType
+/// type ::= id_and_generics | type "|" id_and_generics
+///
+/// type_declaration ::=
+///     // record type
+///     | "type" id_and_generics "(" [id_and_generics ":" type ]","* ")" ";"
+///     // tuple type
+///     | "type" id_and_generics "(" [type]","* ")"
+///     // type alias
+///     | "type" id_and_generics = type ";"
+/// ```
 fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, Ast> {
     // FIXME: This needs to use TypeIds
     let (input, (name, _)) = spaced_identifier(input)?;
     let (input, generics) = maybe_generic_arguments(input)?;
+
     let (input, type_dec) = if let Ok((input, _)) = tokens::left_parenthesis(input) {
         let (input, first_field) = typed_arg(input)?;
         let (input, mut fields) = many0(preceded(tokens::comma, typed_arg))(input)?;
@@ -511,6 +551,25 @@ fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseIn
                 generics,
                 fields,
                 with: None, // TODO: Parse `with` block properly
+            },
+        )
+    } else if let Ok((input, _)) = tokens::equal(input) {
+        let input = next(input);
+        let (input, start_loc) = position(input)?;
+        let (input, type_aliased) = type_id(input)?;
+        let (input, end_loc) = position(input)?;
+        (
+            input,
+            Node::Type {
+                name: Symbol::from(name),
+                generics,
+                // FIXME: this is invalid
+                fields: vec![TypedValue {
+                    location: pos_to_loc(input, start_loc, end_loc),
+                    symbol: Symbol::from("@type-alias-field"),
+                    ty: type_aliased,
+                }],
+                with: None,
             },
         )
     } else {
@@ -932,30 +991,12 @@ fn typed_args(input: ParseInput) -> ParseResult<ParseInput, Vec<TypedValue>> {
     Ok((input, args))
 }
 
-// FIXME: This should not return a String
-fn multi_type(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
-    // FIXME: Remove with #342
-    fn whitespace_plus_type_id(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
-        delimited(nom_next, type_id, nom_next)(input)
-    }
-
-    // FIXME: We want to allow generic types here later on
-    let (input, first_type) = whitespace_plus_type_id(input)?;
-
-    let (input, mut types) = many0(preceded(tokens::pipe, whitespace_plus_type_id))(input)?;
-
-    // FIXME: Remove clone once we have a proper MultiType struct to return
-    types.insert(0, first_type.clone());
-
-    Ok((input, first_type))
-}
-
-/// typed_arg = spaced_identifier ':' spaced_identifier
+/// typed_arg = spaced_identifier ':' type_id
 fn typed_arg(input: ParseInput) -> ParseResult<ParseInput, TypedValue> {
     let (input, (id, (start_loc, _))) = spaced_identifier(input)?;
     let (input, _) = tokens::colon(input)?;
     let input = next(input);
-    let (input, ty) = multi_type(input)?;
+    let (input, ty) = type_id(input)?;
     let input = next(input);
     let (input, end_loc) = position(input)?;
 
@@ -2218,5 +2259,46 @@ mod tests {
         let input = span!("where mut x = if value { 14 } else { 15 }");
 
         assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn type_alias() {
+        let input = span!("type Foo = Bar");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn type_alias_multi_type() {
+        let input = span!("type Foo = Bar | Baz | Qux");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn parse_type_id() {
+        let input = span!("Bar");
+
+        assert!(matches!(
+            type_id(input).unwrap().1.kind,
+            TypeKind::Simple(_)
+        ));
+    }
+
+    #[test]
+    fn parse_type_id_multi() {
+        let input = span!("Bar | Baz | Qux");
+
+        assert!(matches!(type_id(input).unwrap().1.kind, TypeKind::Multi(v) if v.len() == 3));
+    }
+
+    #[test]
+    fn parse_type_id_func() {
+        let input = span!("func(Bar) -> Baz");
+
+        assert!(matches!(
+            type_id(input).unwrap().1.kind,
+            TypeKind::FunctionLike(..)
+        ));
     }
 }

@@ -306,7 +306,9 @@ impl<'ast> Ctx<'ast> {
         let data = FlattenData {
             ast: AstInfo::Helper(
                 match &ty.kind {
-                    TypeKind::Ty(s) => s.clone(),
+                    // TODO: how do we handle multi types properly here?
+                    TypeKind::Simple(s) => s.clone(),
+                    TypeKind::Multi(_) => Symbol::from("multi"),
                     TypeKind::FunctionLike(_, _) => Symbol::from("func"), // FIXME: Invalid but w/ever for now
                 },
                 ty.location.clone(),
