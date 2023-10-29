@@ -5,30 +5,15 @@
 use fir::{Node, RefIdx};
 use flatten::FlattenData;
 
+use builtins::Operator;
+
+use builtins::Arithmetic::*;
+use builtins::Comparison::*;
+use builtins::Mode::*;
+use builtins::Unary::*;
+
 use crate::instance::Instance;
 use crate::GarbaJKollector;
-
-// TODO: Factor this with `ast_builtins`?
-static ARITHMETIC_BUILTINS: &[&'static str] = &["+", "-", "*", "/"];
-
-enum Arithmetic {
-    Add,
-    Sub,
-    Mul,
-    Div,
-}
-
-impl From<&str> for Arithmetic {
-    fn from(s: &str) -> Self {
-        match s {
-            "+" => Arithmetic::Add,
-            "-" => Arithmetic::Sub,
-            "*" => Arithmetic::Mul,
-            "/" => Arithmetic::Div,
-            _ => unreachable!("this is an interpreter error."),
-        }
-    }
-}
 
 pub fn perform_call(
     // FIXME: This should probably take a context, correct? &self?
@@ -48,12 +33,8 @@ pub fn perform_call(
         }
     };
 
-    if ARITHMETIC_BUILTINS.contains(&name.access()) {
-        return Some(arithmetic_builtin_call(
-            gc,
-            args,
-            Arithmetic::from(name.access()),
-        ));
+    if let Some(op) = builtins::Operator::try_from_str(name.access()) {
+        return Some(arithmetic_builtin_call(gc, args, op));
     }
 
     if name.access() == "println" {
@@ -70,35 +51,98 @@ pub fn perform_call(
     None
 }
 
-fn int_op(lhs: &i64, rhs: &i64, op: Arithmetic) -> Instance {
-    let res = match op {
-        Arithmetic::Add => lhs + rhs,
-        Arithmetic::Sub => lhs - rhs,
-        Arithmetic::Mul => lhs * rhs,
-        Arithmetic::Div => lhs / rhs,
-    };
-
-    Instance::Int(res)
+fn bool_ops(lhs: &bool, rhs: &bool, op: builtins::Operator) -> Instance {
+    match op {
+        Operator::Unary(Not) => Instance::from(!lhs),
+        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
+        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        _ => unreachable!(
+            "invalid operation on booleans: `{}`. this is an intepreter error",
+            op.as_str()
+        ),
+    }
 }
 
-fn float_op(lhs: &f64, rhs: &f64, op: Arithmetic) -> Instance {
-    let res = match op {
-        Arithmetic::Add => lhs + rhs,
-        Arithmetic::Sub => lhs - rhs,
-        Arithmetic::Mul => lhs * rhs,
-        Arithmetic::Div => lhs / rhs,
-    };
-
-    Instance::Float(res)
+fn int_ops(lhs: &i64, rhs: &i64, op: builtins::Operator) -> Instance {
+    match op {
+        // operations returning integers
+        Operator::Arithmetic(Add) => Instance::from(lhs + rhs),
+        Operator::Arithmetic(Sub) => Instance::from(lhs - rhs),
+        Operator::Arithmetic(Mul) => Instance::from(lhs * rhs),
+        Operator::Arithmetic(Div) => Instance::from(lhs / rhs),
+        Operator::Unary(Minus) => Instance::from(-lhs),
+        // operations returning booleans
+        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
+        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        Operator::Comparison(LessThan(Strict)) => Instance::from(lhs < rhs),
+        Operator::Comparison(LessThan(OrEqual)) => Instance::from(lhs <= rhs),
+        Operator::Comparison(GreaterThan(Strict)) => Instance::from(lhs > rhs),
+        Operator::Comparison(GreaterThan(OrEqual)) => Instance::from(lhs >= rhs),
+        _ => unreachable!(
+            "invalid operation on integers: `{}`. this is an intepreter error",
+            op.as_str()
+        ),
+    }
 }
 
-fn arithmetic_builtin_call(gc: &GarbaJKollector, args: &[RefIdx], op: Arithmetic) -> Instance {
+fn char_ops(lhs: &char, rhs: &char, op: builtins::Operator) -> Instance {
+    match op {
+        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
+        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        Operator::Comparison(LessThan(Strict)) => Instance::from(lhs < rhs),
+        Operator::Comparison(LessThan(OrEqual)) => Instance::from(lhs <= rhs),
+        Operator::Comparison(GreaterThan(Strict)) => Instance::from(lhs > rhs),
+        Operator::Comparison(GreaterThan(OrEqual)) => Instance::from(lhs >= rhs),
+        _ => unreachable!(
+            "invalid operation on chars: `{}`. this is an intepreter error",
+            op.as_str()
+        ),
+    }
+}
+
+fn float_ops(lhs: &f64, rhs: &f64, op: builtins::Operator) -> Instance {
+    match op {
+        // operations returning integers
+        Operator::Arithmetic(Add) => Instance::from(lhs + rhs),
+        Operator::Arithmetic(Sub) => Instance::from(lhs - rhs),
+        Operator::Arithmetic(Mul) => Instance::from(lhs * rhs),
+        Operator::Arithmetic(Div) => Instance::from(lhs / rhs),
+        Operator::Unary(Minus) => Instance::from(-lhs),
+        // operationrs returning booleans
+        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
+        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        Operator::Comparison(LessThan(Strict)) => Instance::from(lhs < rhs),
+        Operator::Comparison(LessThan(OrEqual)) => Instance::from(lhs <= rhs),
+        Operator::Comparison(GreaterThan(Strict)) => Instance::from(lhs > rhs),
+        Operator::Comparison(GreaterThan(OrEqual)) => Instance::from(lhs >= rhs),
+        _ => unreachable!(
+            "invalid operation on floats: `{}`. this is an intepreter error",
+            op.as_str()
+        ),
+    }
+}
+
+fn string_ops(lhs: &str, rhs: &str, op: builtins::Operator) -> Instance {
+    match op {
+        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
+        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        _ => unreachable!(
+            "invalid operation on floats: `{}`. this is an intepreter error",
+            op.as_str()
+        ),
+    }
+}
+
+fn arithmetic_builtin_call(gc: &GarbaJKollector, args: &[RefIdx], op: Operator) -> Instance {
     let lhs = gc.lookup(&args[0].expect_resolved()).unwrap();
     let rhs = gc.lookup(&args[1].expect_resolved()).unwrap();
 
     match (lhs, rhs) {
-        (Instance::Int(l), Instance::Int(r)) => int_op(l, r, op),
-        (Instance::Float(l), Instance::Float(r)) => float_op(l, r, op),
-        _ => unreachable!("fuck me"),
+        (Instance::Bool(l), Instance::Bool(r)) => bool_ops(l, r, op),
+        (Instance::Int(l), Instance::Int(r)) => int_ops(l, r, op),
+        (Instance::Char(l), Instance::Char(r)) => char_ops(l, r, op),
+        (Instance::Float(l), Instance::Float(r)) => float_ops(l, r, op),
+        (Instance::String(l), Instance::String(r)) => string_ops(l, r, op),
+        _ => unreachable!("invalid type for arithmetic operation. this is an interpreter error."),
     }
 }

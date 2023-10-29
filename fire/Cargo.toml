@@ -9,6 +9,7 @@ edition = "2021"
 ast = { path = "../ast" }
 fir = { path = "../fir" }
 flatten = { path = "../flatten" }
+builtins = { path = "../builtins" }
 
 [dev-dependencies]
 name_resolve = { path = "../name_resolve" }
