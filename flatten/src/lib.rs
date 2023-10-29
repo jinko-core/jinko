@@ -683,7 +683,9 @@ impl<'ast> Ctx<'ast> {
         ctx.append(data, kind)
     }
 
-    fn handle_type_fields(self, fields: &'ast TypeFields) -> (Ctx<'ast>, Vec<RefIdx>) {}
+    fn handle_type_fields(self, fields: &'ast TypeFields) -> (Ctx<'ast>, Vec<RefIdx>) {
+        todo!()
+    }
 
     fn visit_type(
         self,
@@ -693,13 +695,18 @@ impl<'ast> Ctx<'ast> {
         _with: &Option<Box<Ast>>,
     ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
-        let kind = match fields {
-            TypeFields::None => Kind::Type { generics },
-            TypeFields::Record(_) => todo!(),
-            TypeFields::Tuple(_) => todo!(),
-            // how do we handle generic type aliases? `type Foo[T] = Bar[T]`
-            TypeFields::Alias(_) => Kind::TypeReference(RefIdx::Unresolved),
-        };
+        // let kind = match fields {
+        //     TypeFields::None => Kind::Type {
+        //         generics,
+        //         fields: vec![],
+        //     },
+        //     TypeFields::Record(fields) => {
+        //         let (ctx, fields)
+        //     },
+        //     TypeFields::Tuple(_) => todo!(),
+        //     // how do we handle generic type aliases? `type Foo[T] = Bar[T]`
+        //     TypeFields::Alias(_) => Kind::TypeReference(RefIdx::Unresolved),
+        // };
 
         let (ctx, fields) = ctx.handle_type_fields(fields);
 
