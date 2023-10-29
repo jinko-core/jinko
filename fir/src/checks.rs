@@ -65,7 +65,7 @@ impl<T: Debug> Fir<T> {
                 Kind::Constant(r) => check!(r => Kind::RecordType { .. }, node),
                 Kind::TypedValue { value, ty } => {
                     // FIXME: Is pointing to `Type` here valid?
-                    check!(ty => Kind::RecordType { .. } | Kind::TypeReference(_), node);
+                    check!(ty => Kind::UnionType { .. } | Kind::RecordType { .. } | Kind::TypeReference(_), node);
                     // `value` can link to basically anything
                     check!(value => Kind::Call { .. }
                         | Kind::Constant(_)
@@ -76,7 +76,7 @@ impl<T: Debug> Fir<T> {
                         , node);
                 }
                 // FIXME: Is that okay?
-                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::Generic { .. }, node),
+                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } |  Kind::Generic { .. }, node),
                 Kind::Generic {
                     default: Some(default),
                 } => check!(default => Kind::TypeReference { .. }, node),
