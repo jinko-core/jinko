@@ -28,6 +28,7 @@ pub enum TypeKind {
 /// func apply_fn(arg: int, fn: func(int) -> int) -> int { fn(arg) }
 /// ```
 #[derive(Debug, Clone)]
+// TODO: Rename? `Type`?
 pub struct TypeArgument {
     pub kind: TypeKind,
     // the generics and location are common fields between the multiple kinds, so they are lifted out of the `TypeKind` enum
