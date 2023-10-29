@@ -153,7 +153,9 @@ pub trait Traversal<T, E> {
             Kind::TypeReference(r) => self.traverse_type_reference(fir, node, r),
             Kind::TypedValue { value, ty } => self.traverse_typed_value(fir, node, value, ty),
             Kind::Generic { default } => self.traverse_generic(fir, node, default),
-            Kind::Type { generics, fields } => self.traverse_type(fir, node, generics, fields),
+            Kind::RecordType { generics, fields } => {
+                self.traverse_type(fir, node, generics, fields)
+            }
             Kind::Function {
                 generics,
                 args,

@@ -193,7 +193,7 @@ impl Mapper<FlattenData<'_>, TypeData, Error> for TypeCtx {
             // a type declaration has no type
             data: TypeData::from(data).declares(Some(RefIdx::Resolved(origin))),
             origin,
-            kind: Kind::Type { generics, fields },
+            kind: Kind::RecordType { generics, fields },
         })
     }
 

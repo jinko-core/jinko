@@ -681,7 +681,7 @@ impl<'ast> Ctx<'ast> {
             ast,
         };
 
-        let kind = Kind::Type { generics, fields };
+        let kind = Kind::RecordType { generics, fields };
 
         ctx.append(data, kind)
     }

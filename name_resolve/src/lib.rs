@@ -460,7 +460,7 @@ mod tests {
         let def = fir
             .nodes
             .values()
-            .find(|node| matches!(node.kind, Kind::Type { .. }));
+            .find(|node| matches!(node.kind, Kind::RecordType { .. }));
         let (value, ty) = fir
             .nodes
             .values()
@@ -557,8 +557,8 @@ mod tests {
         let x_value = dbg!(&fir.nodes[&OriginIdx(3)]);
 
         assert!(matches!(x_value.kind, Kind::TypedValue { .. }));
-        assert!(matches!(marker_1.kind, Kind::Type { .. }));
-        assert!(matches!(marker_2.kind, Kind::Type { .. }));
+        assert!(matches!(marker_1.kind, Kind::RecordType { .. }));
+        assert!(matches!(marker_2.kind, Kind::RecordType { .. }));
 
         match x_value.kind {
             Kind::TypedValue { value, ty } => {

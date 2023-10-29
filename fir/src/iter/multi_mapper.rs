@@ -69,7 +69,7 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
         Ok(vec![Node {
             data: U::from(_data),
             origin,
-            kind: Kind::Type { generics, fields },
+            kind: Kind::RecordType { generics, fields },
         }])
     }
 
@@ -231,7 +231,7 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
                 self.map_typed_value(node.data, node.origin, value, ty)
             }
             Kind::Generic { default } => self.map_generic(node.data, node.origin, default),
-            Kind::Type { generics, fields } => {
+            Kind::RecordType { generics, fields } => {
                 self.map_type(node.data, node.origin, generics, fields)
             }
             Kind::Function {
