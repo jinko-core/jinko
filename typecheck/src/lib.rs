@@ -18,6 +18,7 @@ use primitives::PrimitiveTypes;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Type {
     One(RefIdx),
+    // Many(Vec<RefIdx>),
 }
 
 impl Type {

@@ -59,7 +59,7 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
         }])
     }
 
-    fn map_type(
+    fn map_record_type(
         &mut self,
         _data: T,
         origin: OriginIdx,
@@ -70,6 +70,20 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
             data: U::from(_data),
             origin,
             kind: Kind::RecordType { generics, fields },
+        }])
+    }
+
+    fn map_union_type(
+        &mut self,
+        _data: T,
+        origin: OriginIdx,
+        generics: Vec<RefIdx>,
+        variants: Vec<RefIdx>,
+    ) -> Result<Vec<Node<U>>, E> {
+        Ok(vec![Node {
+            data: U::from(_data),
+            origin,
+            kind: Kind::UnionType { generics, variants },
         }])
     }
 
@@ -232,7 +246,10 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
             }
             Kind::Generic { default } => self.map_generic(node.data, node.origin, default),
             Kind::RecordType { generics, fields } => {
-                self.map_type(node.data, node.origin, generics, fields)
+                self.map_record_type(node.data, node.origin, generics, fields)
+            }
+            Kind::UnionType { generics, variants } => {
+                self.map_union_type(node.data, node.origin, generics, variants)
             }
             Kind::Function {
                 generics,

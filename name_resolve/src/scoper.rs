@@ -118,12 +118,12 @@ impl<'ast> Traversal<FlattenData<'ast>, ScoperError> for Scoper {
                 self.maybe_visit_child(fir, value)?;
                 self.maybe_visit_child(fir, ty)
             }
-            Kind::RecordType { fields, .. } => {
+            Kind::RecordType { fields: subs, .. } | Kind::UnionType { variants: subs, .. } => {
                 let old = self.enter_scope(node.origin);
 
-                fields.iter().for_each(|field| {
+                subs.iter().for_each(|sub| {
                     // FIXME: Is unwrap okay here?
-                    self.maybe_visit_child(fir, field).unwrap();
+                    self.maybe_visit_child(fir, sub).unwrap();
                 });
 
                 self.enter_scope(old);

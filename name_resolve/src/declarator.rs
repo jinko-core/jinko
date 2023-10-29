@@ -57,7 +57,7 @@ impl<'ast, 'ctx, 'enclosing> Traversal<FlattenData<'ast>, NameResolutionError>
         self.define(DefinitionKind::Function, node)
     }
 
-    fn traverse_type(
+    fn traverse_record_type(
         &mut self,
         _: &Fir<FlattenData>,
         node: &Node<FlattenData>,

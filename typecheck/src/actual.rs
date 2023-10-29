@@ -29,7 +29,9 @@ fn innermost_type(ctx: &TypeCtx, fir: &Fir<FlattenData>, linked_node: RefIdx) ->
 
     match &linked_node.kind {
         // these are the *only* terminal branches
-        Kind::RecordType { .. } => Some(Type::One(RefIdx::Resolved(linked_node.origin))),
+        Kind::RecordType { .. } | Kind::UnionType { .. } => {
+            Some(Type::One(RefIdx::Resolved(linked_node.origin)))
+        }
         Kind::Assignment { .. } => None,
         // if a typed value has no specific type, but points to a value, use this as the source of the type
         Kind::TypedValue {

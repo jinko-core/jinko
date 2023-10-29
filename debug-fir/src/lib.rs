@@ -90,7 +90,8 @@ impl<T, F: Fn(&T) -> String> FirDebug<T, F> {
             Kind::TypeReference(_) => "TypeReference".blue(),
             Kind::TypedValue { .. } => "TypedValue".blue(),
             Kind::Generic { .. } => "Generic".blue(),
-            Kind::RecordType { .. } => "Type".blue(),
+            Kind::RecordType { .. } => "RecordType".blue(),
+            Kind::UnionType { .. } => "UnionType".blue(),
             Kind::Function { .. } => "Function".blue(),
             Kind::Binding { .. } => "Binding".blue(),
             Kind::Assignment { .. } => "Assignment".blue(),
@@ -114,6 +115,11 @@ impl<T, F: Fn(&T) -> String> FirDebug<T, F> {
                 "generics: {}\n\t\tfields: {}",
                 fmt_slice(generics),
                 fmt_slice(fields)
+            ),
+            Kind::UnionType { generics, variants } => format!(
+                "generics: {}\n\t\tvariants: {}",
+                fmt_slice(generics),
+                fmt_slice(variants)
             ),
             Kind::Function {
                 generics,
