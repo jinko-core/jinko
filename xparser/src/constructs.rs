@@ -16,7 +16,6 @@
 use super::tokens;
 use super::{Error, ParseInput, ParseResult};
 
-use ast::Ast;
 use ast::Call;
 use ast::Declaration;
 use ast::FunctionKind;
@@ -27,6 +26,7 @@ use ast::TypeArgument;
 use ast::TypeKind;
 use ast::TypedValue;
 use ast::Value;
+use ast::{Ast, TypeFields};
 use location::Location;
 use location::SpanTuple;
 use nom::sequence::tuple;
@@ -549,26 +549,20 @@ fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseIn
             Node::Type {
                 name: Symbol::from(name),
                 generics,
-                fields,
+                fields: TypeFields::Record(fields),
                 with: None, // TODO: Parse `with` block properly
             },
         )
     } else if let Ok((input, _)) = tokens::equal(input) {
         let input = next(input);
-        let (input, start_loc) = position(input)?;
         let (input, type_aliased) = type_id(input)?;
-        let (input, end_loc) = position(input)?;
         (
             input,
             Node::Type {
                 name: Symbol::from(name),
                 generics,
                 // FIXME: this is invalid
-                fields: vec![TypedValue {
-                    location: pos_to_loc(input, start_loc, end_loc),
-                    symbol: Symbol::from("@type-alias-field"),
-                    ty: type_aliased,
-                }],
+                fields: TypeFields::Alias(type_aliased),
                 with: None,
             },
         )
@@ -578,7 +572,7 @@ fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseIn
             Node::Type {
                 name: Symbol::from(name),
                 generics,
-                fields: vec![],
+                fields: TypeFields::None,
                 with: None,
             },
         )
