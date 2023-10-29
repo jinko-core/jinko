@@ -41,6 +41,12 @@ impl From<i64> for Instance {
     }
 }
 
+impl From<f64> for Instance {
+    fn from(value: f64) -> Instance {
+        Instance::Float(value)
+    }
+}
+
 impl From<bool> for Instance {
     fn from(value: bool) -> Instance {
         Instance::Bool(value)
