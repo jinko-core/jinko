@@ -189,13 +189,16 @@ impl OriginExt for OriginIdx {
 #[derive(Clone, Debug)]
 pub enum AstInfo<'ast> {
     Node(&'ast Ast),
+    Type(&'ast TypeArgument),
     Helper(Symbol, SpanTuple),
 }
 
 impl<'ast> AstInfo<'ast> {
     pub fn location(&self) -> &SpanTuple {
         match self {
-            AstInfo::Node(Ast { location, .. }) | AstInfo::Helper(_, location) => location,
+            AstInfo::Node(Ast { location, .. })
+            | AstInfo::Type(TypeArgument { location, .. })
+            | AstInfo::Helper(_, location) => location,
         }
     }
 
@@ -227,6 +230,12 @@ impl<'ast> AstInfo<'ast> {
                     to_declare: sym, ..
                 } => Some(sym),
             },
+            AstInfo::Type(TypeArgument {
+                kind: TypeKind::Simple(sym),
+                ..
+            }) => Some(sym),
+            // FIXME: is that valid?
+            AstInfo::Type(_) => None,
             AstInfo::Helper(symbol, _) => Some(symbol),
         }
     }
@@ -235,7 +244,15 @@ impl<'ast> AstInfo<'ast> {
     pub fn node(&self) -> &Ast {
         match self {
             AstInfo::Node(node) => node,
-            AstInfo::Helper(_, _) => unreachable!("asked for AST node from an `AstInfo::Helper`"),
+            _ => unreachable!("asked for AST node from a non `AstInfo::Node`"),
+        }
+    }
+
+    /// Fetch the [`AstInfo::Node`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is actually an [`AstInfo::Helper`]
+    pub fn type_node(&self) -> &TypeArgument {
+        match self {
+            AstInfo::Type(ty) => ty,
+            _ => unreachable!("asked for type node from a non `AstInfo::Type`"),
         }
     }
 
@@ -243,7 +260,7 @@ impl<'ast> AstInfo<'ast> {
     pub fn helper(&self) -> (&Symbol, &SpanTuple) {
         match self {
             AstInfo::Helper(sym, loc) => (sym, loc),
-            AstInfo::Node(_) => unreachable!("asked for Helper from an `AstInfo::Node`"),
+            _ => unreachable!("asked for helper from a non `AstInfo::Helper`"),
         }
     }
 }
@@ -300,19 +317,19 @@ impl<'ast> Ctx<'ast> {
         self.append(data, kind)
     }
 
-    fn handle_ty_node(self, ty: &TypeArgument) -> (Ctx<'ast>, RefIdx) {
+    fn handle_ty_node(self, ty: &'ast TypeArgument) -> (Ctx<'ast>, RefIdx) {
         let (ctx, _generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_ty_node);
 
         let data = FlattenData {
-            ast: AstInfo::Helper(
-                match &ty.kind {
-                    // TODO: how do we handle multi types properly here?
-                    TypeKind::Simple(s) => s.clone(),
-                    TypeKind::Multi(_) => Symbol::from("multi"),
-                    TypeKind::FunctionLike(_, _) => Symbol::from("func"), // FIXME: Invalid but w/ever for now
-                },
-                ty.location.clone(),
-            ),
+            ast: AstInfo::Type(ty),
+            //     match &ty.kind {
+            //         // TODO: how do we handle multi types properly here?
+            //         TypeKind::Simple(s) => s.clone(),
+            //         TypeKind::Multi(_) => Symbol::from("multi"),
+            //         TypeKind::FunctionLike(_, _) => Symbol::from("func"), // FIXME: Invalid but w/ever for now
+            //     },
+            //     ty.location.clone(),
+            // ),
             scope: ctx.scope,
         };
 
@@ -333,7 +350,7 @@ impl<'ast> Ctx<'ast> {
         ctx.append(data, kind)
     }
 
-    fn handle_declaration_argument(self, arg: &TypedValue) -> (Ctx<'ast>, RefIdx) {
+    fn handle_declaration_argument(self, arg: &'ast TypedValue) -> (Ctx<'ast>, RefIdx) {
         let (ctx, ty) = self.handle_ty_node(&arg.ty);
 
         let data = FlattenData {
@@ -523,7 +540,7 @@ impl<'ast> Ctx<'ast> {
             generics,
             args,
             return_type,
-        }: &Declaration,
+        }: &'ast Declaration,
         block: &'ast Option<Box<Ast>>,
     ) -> (Ctx<'ast>, RefIdx) {
         self.scoped(ast, |ctx, ast| {
@@ -670,7 +687,7 @@ impl<'ast> Ctx<'ast> {
         self,
         ast: AstInfo<'ast>,
         generics: &[GenericArgument],
-        fields: &[TypedValue],
+        fields: &'ast [TypedValue],
         _with: &Option<Box<Ast>>,
     ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
