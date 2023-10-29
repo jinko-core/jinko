@@ -9,11 +9,21 @@ use crate::{Type, TypeCtx};
 /// This pass will resolve these links and make each node point to its *actual* type.
 pub(crate) struct Actual<'ctx>(pub(crate) &'ctx mut TypeCtx);
 
-fn innermost_type(fir: &Fir<FlattenData>, linked_node: RefIdx) -> Option<Type> {
-    let linked_node = &fir.nodes[&linked_node.expect_resolved()];
+fn innermost_type(ctx: &TypeCtx, fir: &Fir<FlattenData>, linked_node: RefIdx) -> Option<Type> {
+    let linked_node = linked_node.expect_resolved();
+
+    // if the context contains an entry for `linked_node`, then we use this - otherwise, we simply
+    // get the node from the FIR
+    let to_lookup = &ctx
+        .types
+        .get(&linked_node)
+        .and_then(|ty| ty.map(|t| t.ref_idx().expect_resolved()))
+        .unwrap_or(linked_node);
+
+    let linked_node = &fir.nodes[to_lookup];
 
     let inner_opt = |fir, opt| match opt {
-        Some(opt) => innermost_type(fir, opt),
+        Some(opt) => innermost_type(ctx, fir, opt),
         None => None,
     };
 
@@ -27,14 +37,14 @@ fn innermost_type(fir: &Fir<FlattenData>, linked_node: RefIdx) -> Option<Type> {
             value,
             // can we set `ty` here or not? probably not
             // we need to :(
-        } => innermost_type(fir, *value),
+        } => innermost_type(ctx, fir, *value),
         Kind::Constant(ty)
         | Kind::TypeReference(ty)
         | Kind::TypedValue { ty, .. }
         | Kind::Binding { to: ty }
         | Kind::Instantiation { to: ty, .. }
         | Kind::Call { to: ty, .. }
-        | Kind::Conditional { true_block: ty, .. } => innermost_type(fir, *ty),
+        | Kind::Conditional { true_block: ty, .. } => innermost_type(ctx, fir, *ty),
         Kind::Function {
             return_type: ty, ..
         }
@@ -56,7 +66,7 @@ impl<'ctx> Actual<'ctx> {
 
         // void nodes are already fully typed, so we don't take care of them
         if let Some(Type::One(ty_ref)) = link {
-            let innermost_ty = innermost_type(fir, *ty_ref);
+            let innermost_ty = innermost_type(self.0, fir, *ty_ref);
             self.0.types.insert(to_resolve, innermost_ty).unwrap();
         }
 

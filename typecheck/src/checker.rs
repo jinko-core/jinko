@@ -19,6 +19,26 @@ impl<'ctx> Checker<'ctx> {
         // an interpreter error
         *self.0.types.get(&of.expect_resolved()).unwrap()
     }
+
+    fn expected_arithmetic_types(
+        &self,
+        op: builtins::Operator,
+        args: &[RefIdx],
+    ) -> Vec<Option<Type>> {
+        use builtins::*;
+
+        let arity = match op {
+            Operator::Arithmetic(_) | Operator::Comparison(_) => 2,
+            Operator::Unary(_) => 1,
+        };
+
+        let expected_ty = match op.ty() {
+            BuiltinType::Number | BuiltinType::Comparable => self.get_type(&args[0]).unwrap(),
+            BuiltinType::Bool => Type::One(RefIdx::Resolved(self.0.primitives.bool_type)),
+        };
+
+        vec![Some(expected_ty); arity]
+    }
 }
 
 mod format {
@@ -47,10 +67,15 @@ mod format {
     }
 }
 
-struct Expected(Option<Type>);
-struct Got(Option<Type>);
+struct Expected<T>(T);
+struct Got<T>(T);
 
-fn type_mismatch(loc: &SpanTuple, fir: &Fir<FlattenData>, expected: Expected, got: Got) -> Error {
+fn type_mismatch(
+    loc: &SpanTuple,
+    fir: &Fir<FlattenData>,
+    expected: Expected<Option<Type>>,
+    got: Got<Option<Type>>,
+) -> Error {
     let get_symbol = |ty| {
         let Type::One(idx) = ty;
         fir.nodes[&idx.expect_resolved()].data.ast.symbol().unwrap()
@@ -68,14 +93,14 @@ fn type_mismatch(loc: &SpanTuple, fir: &Fir<FlattenData>, expected: Expected, go
         .with_loc(loc.clone()) // FIXME: Missing hint
 }
 
-fn argument_count_mismatch(loc: &SpanTuple, expected: &[RefIdx], got: &[RefIdx]) -> Error {
+fn argument_count_mismatch(loc: &SpanTuple, expected: Expected<usize>, got: Got<usize>) -> Error {
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
             "argument count mismatch: expected {} {}, got {} {}",
-            format::number(expected.len()),
-            format::plural("argument", expected.len()),
-            format::number(got.len()),
-            format::plural("argument", got.len()),
+            format::number(expected.0),
+            format::plural("argument", expected.0),
+            format::number(got.0),
+            format::plural("argument", got.0),
         ))
         .with_loc(loc.clone())
     // FIXME: missing hint
@@ -144,20 +169,31 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             _ => unreachable!("resolved call to a non-function. this is an interpreter error."),
         };
 
+        // we need to special case arithmetic operators here, based on the data available in
+        // the `builtins` package. their type is special, and their operator type is special as well - they also
+        // need to be "coerced" to a specific type on return, we can't use the builtin number type
+        let def_args = builtins::Operator::try_from_str(node.data.ast.symbol().unwrap().access())
+            .map(|op| self.expected_arithmetic_types(op, args))
+            .unwrap_or_else(|| {
+                def_args
+                    .iter()
+                    .map(|def_arg| self.get_type(def_arg))
+                    .collect()
+            });
+
         if def_args.len() != args.len() {
             return Err(argument_count_mismatch(
                 node.data.ast.location(),
-                def_args,
-                args,
+                Expected(def_args.len()),
+                Got(args.len()),
             ));
         }
 
         // now we can safely zip both argument slices
         let errs = def_args
-            .iter()
+            .into_iter()
             .zip(args)
-            .fold(Vec::new(), |mut errs, (def_arg, arg)| {
-                let expected = self.get_type(def_arg);
+            .fold(Vec::new(), |mut errs, (expected, arg)| {
                 let got = self.get_type(arg);
 
                 if expected != got {
