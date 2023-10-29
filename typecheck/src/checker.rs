@@ -2,10 +2,16 @@
 //! valid. This includes checking that a function and its block return the same type, that
 //! both branches of a condition return the same type, etc
 
+use colored::Colorize;
 use error::{ErrKind, Error};
 use fir::{Fallible, Fir, Node, RefIdx, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
+
+use std::iter::Iterator;
+
+use builtins::Comparison::*;
+use builtins::Unary::*;
 
 use crate::{Type, TypeCtx};
 
@@ -22,14 +28,36 @@ impl<'ctx> Checker<'ctx> {
 
     fn expected_arithmetic_types(
         &self,
+        loc: &SpanTuple,
+        fir: &Fir<FlattenData>,
         op: builtins::Operator,
         args: &[RefIdx],
-    ) -> Vec<Option<Type>> {
+    ) -> Result<Vec<Option<Type>>, Error> {
         use builtins::*;
+
+        let numbers = [
+            Type::One(RefIdx::Resolved(self.0.primitives.int_type)),
+            Type::One(RefIdx::Resolved(self.0.primitives.float_type)),
+        ];
+        let comparable = [
+            Type::One(RefIdx::Resolved(self.0.primitives.bool_type)),
+            Type::One(RefIdx::Resolved(self.0.primitives.string_type)),
+            Type::One(RefIdx::Resolved(self.0.primitives.int_type)),
+            Type::One(RefIdx::Resolved(self.0.primitives.char_type)),
+            Type::One(RefIdx::Resolved(self.0.primitives.float_type)),
+        ];
 
         let arity = match op {
             Operator::Arithmetic(_) | Operator::Comparison(_) => 2,
             Operator::Unary(_) => 1,
+        };
+
+        let valid_types = match op {
+            Operator::Arithmetic(_) => numbers.as_slice(),
+            Operator::Comparison(Equals) | Operator::Comparison(Differs) => comparable.as_slice(),
+            Operator::Comparison(_) => &comparable[2..],
+            Operator::Unary(Not) => &comparable[..1],
+            Operator::Unary(Minus) => &numbers[..1],
         };
 
         let expected_ty = match op.ty() {
@@ -37,7 +65,17 @@ impl<'ctx> Checker<'ctx> {
             BuiltinType::Bool => Type::One(RefIdx::Resolved(self.0.primitives.bool_type)),
         };
 
-        vec![Some(expected_ty); arity]
+        if valid_types.contains(&expected_ty) {
+            Ok(vec![Some(expected_ty); arity])
+        } else {
+            Err(unexpected_arithmetic_type(
+                loc,
+                fir,
+                &expected_ty,
+                valid_types,
+                op,
+            ))
+        }
     }
 }
 
@@ -64,6 +102,14 @@ mod format {
             Some(ty) => format!("`{}`", ty.access().purple()),
             None => format!("{}", "no type".green()),
         }
+    }
+
+    pub fn ty_vec(tys: Vec<Option<&Symbol>>) -> String {
+        tys.into_iter()
+            // this calls `format::ty` but we are in the format module
+            .map(ty)
+            // FIXME: Improve formatting
+            .fold(String::new(), |acc, ty| format!("{} | {}", acc, ty))
     }
 }
 
@@ -104,6 +150,28 @@ fn argument_count_mismatch(loc: &SpanTuple, expected: Expected<usize>, got: Got<
         ))
         .with_loc(loc.clone())
     // FIXME: missing hint
+}
+
+fn unexpected_arithmetic_type(
+    loc: &SpanTuple,
+    fir: &Fir<FlattenData>,
+    ty: &Type,
+    valid: &[Type],
+    op: builtins::Operator,
+) -> Error {
+    let get_symbol = |ty| {
+        let &Type::One(idx) = ty;
+        fir.nodes[&idx.expect_resolved()].data.ast.symbol()
+    };
+
+    Error::new(ErrKind::TypeChecker)
+        .with_msg(format!(
+            "unexpected type for arithmetic operation `{}`: {} (expected {})",
+            op.as_str().yellow(),
+            format::ty(get_symbol(ty)),
+            format::ty_vec(valid.iter().map(get_symbol).collect()),
+        ))
+        .with_loc(loc.clone())
 }
 
 impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
@@ -173,13 +241,13 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
         // the `builtins` package. their type is special, and their operator type is special as well - they also
         // need to be "coerced" to a specific type on return, we can't use the builtin number type
         let def_args = builtins::Operator::try_from_str(node.data.ast.symbol().unwrap().access())
-            .map(|op| self.expected_arithmetic_types(op, args))
+            .map(|op| self.expected_arithmetic_types(node.data.ast.location(), fir, op, args))
             .unwrap_or_else(|| {
-                def_args
+                Ok(def_args
                     .iter()
                     .map(|def_arg| self.get_type(def_arg))
-                    .collect()
-            });
+                    .collect())
+            })?;
 
         if def_args.len() != args.len() {
             return Err(argument_count_mismatch(

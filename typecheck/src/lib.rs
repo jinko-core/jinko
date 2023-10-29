@@ -384,4 +384,26 @@ mod tests {
 
         assert!(fir.is_err());
     }
+
+    #[test]
+    fn typeck_cmp_binop_invalid_on_string() {
+        let ast = ast! {
+            "foo" >= "fah"
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_err());
+    }
+
+    #[test]
+    fn typeck_cmp_binop_valid_on_string() {
+        let ast = ast! {
+            "foo" != "fah"
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
 }
