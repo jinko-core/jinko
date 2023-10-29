@@ -13,6 +13,7 @@ error = { path = "../error" }
 symbol = { path = "../symbol" }
 location = { path = "../location" }
 ast = { path = "../ast" }
+builtins = { path = "../builtins" }
 
 [dev-dependencies]
 xparser = { path = "../xparser" }

@@ -35,6 +35,17 @@ impl<'ctx> Typer<'ctx> {
 
         Ok(node)
     }
+
+    fn type_arithmetic_call(&self, op: builtins::Operator, args: &[RefIdx]) -> RefIdx {
+        use builtins::*;
+
+        match op {
+            Operator::Arithmetic(_) | Operator::Unary(Unary::Minus) => args[0],
+            Operator::Comparison(_) | Operator::Unary(Unary::Not) => {
+                RefIdx::Resolved(self.0.primitives.bool_type)
+            }
+        }
+    }
 }
 
 impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
@@ -73,6 +84,29 @@ impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
         self.ty(new_node, Some(RefIdx::Resolved(ty)))
     }
 
+    fn map_call(
+        &mut self,
+        data: FlattenData<'ast>,
+        origin: OriginIdx,
+        to: RefIdx,
+        generics: Vec<RefIdx>,
+        args: Vec<RefIdx>,
+    ) -> Result<Node<FlattenData<'ast>>, Error> {
+        let arithmetic = builtins::Operator::try_from_str(data.ast.symbol().unwrap().access());
+
+        let ty = arithmetic
+            .map(|op| dbg!(self.type_arithmetic_call(op, args.as_slice())))
+            .unwrap_or(to);
+
+        let new_node = Node {
+            data,
+            origin,
+            kind: Kind::Call { to, generics, args },
+        };
+
+        self.ty(new_node, Some(ty))
+    }
+
     fn map_node(
         &mut self,
         node: Node<FlattenData<'ast>>,
@@ -83,20 +117,6 @@ impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
             fir::Kind::Type { .. } | fir::Kind::Function { .. } | fir::Kind::Assignment { .. } => {
                 self.ty(node, None)
             }
-            // // FIXME: This might be the wrong way to go about this
-            // // special case where we want to change the `ty` of a `TypedValue`
-            // fir::Kind::TypedValue {
-            //     ty: RefIdx::Unresolved,
-            //     value,
-            // } => {
-            //     self.assign_type(node.origin, Some(Type::One(value)));
-
-            //     Ok(Node {
-            //         // this seems dodgy at best
-            //         kind: fir::Kind::TypedValue { value, ty: value },
-            //         ..node
-            //     })
-            // }
             // These nodes all refer to other nodes, type references or typed values. They will need
             // to be flattened later on.
             fir::Kind::TypeReference(ty)
@@ -107,8 +127,12 @@ impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
             | fir::Kind::Binding { to: ty }
             | fir::Kind::TypedValue { ty, .. }
             | fir::Kind::Instantiation { to: ty, .. }
-            | fir::Kind::Call { to: ty, .. }
             | fir::Kind::Conditional { true_block: ty, .. } => self.ty(node, Some(ty)),
+            // we need to special case `Call`s for arithmetic operators - otherwise, they
+            // are also simply a call to `self.ty(node, Some(call.to))`
+            fir::Kind::Call { to, generics, args } => {
+                self.map_call(node.data, node.origin, to, generics, args)
+            }
             // Returns are a bit special as they can already be void
             fir::Kind::Return(ty) => self.ty(node, ty),
             // Blocks are the same type as their last stmt, or void if it does not exist

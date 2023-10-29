@@ -834,6 +834,7 @@ name = "typecheck"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "builtins",
  "colored",
  "error",
  "fir",

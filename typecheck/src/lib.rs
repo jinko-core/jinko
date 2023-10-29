@@ -20,6 +20,14 @@ pub(crate) enum Type {
     One(RefIdx),
 }
 
+impl Type {
+    pub fn ref_idx(&self) -> &RefIdx {
+        match self {
+            Type::One(r) => r,
+        }
+    }
+}
+
 pub(crate) struct TypeCtx {
     // primitive type declaration
     pub(crate) primitives: PrimitiveTypes,
@@ -75,6 +83,7 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use builtins::AppendAstBuiltins;
     use flatten::FlattenAst;
     use name_resolve::NameResolve;
 
@@ -88,7 +97,7 @@ mod tests {
                 type float;
                 type string;
                 $($toks)*
-            )
+            ).append_builtins().unwrap()
         }
     }
 
@@ -312,5 +321,67 @@ mod tests {
         let fir = fir!(ast).type_check();
 
         assert!(fir.is_ok())
+    }
+
+    #[test]
+    fn typeck_binop() {
+        let ast = ast! {
+            func take_int(a: int) -> int { a }
+            func square(x: int) -> int { x * x }
+            func add(l: int, r: int) -> int { l + r }
+
+            take_int(4);
+            take_int(15 + 4);
+            square(2);
+            add(square(2), 6);
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn typeck_binop_valid() {
+        let ast = ast! {
+            5 + 15
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn typeck_cmp_binop_valid() {
+        let ast = ast! {
+            "foo" == "boo"
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn typeck_binop_invalid() {
+        let ast = ast! {
+            5.4 + 15
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_err());
+    }
+
+    #[test]
+    fn typeck_cmp_binop_invalid() {
+        let ast = ast! {
+            "foo" == 15
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_err());
     }
 }
