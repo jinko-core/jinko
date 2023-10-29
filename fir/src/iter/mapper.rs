@@ -49,7 +49,7 @@ pub trait Mapper<T, U: From<T>, E> {
         })
     }
 
-    fn map_type(
+    fn map_record_type(
         &mut self,
         data: T,
         origin: OriginIdx,
@@ -60,6 +60,20 @@ pub trait Mapper<T, U: From<T>, E> {
             data: U::from(data),
             origin,
             kind: Kind::RecordType { generics, fields },
+        })
+    }
+
+    fn map_union_type(
+        &mut self,
+        data: T,
+        origin: OriginIdx,
+        generics: Vec<RefIdx>,
+        variants: Vec<RefIdx>,
+    ) -> Result<Node<U>, E> {
+        Ok(Node {
+            data: U::from(data),
+            origin,
+            kind: Kind::UnionType { generics, variants },
         })
     }
 
@@ -222,7 +236,10 @@ pub trait Mapper<T, U: From<T>, E> {
             }
             Kind::Generic { default } => self.map_generic(node.data, node.origin, default),
             Kind::RecordType { generics, fields } => {
-                self.map_type(node.data, node.origin, generics, fields)
+                self.map_record_type(node.data, node.origin, generics, fields)
+            }
+            Kind::UnionType { generics, variants } => {
+                self.map_union_type(node.data, node.origin, generics, variants)
             }
             Kind::Function {
                 generics,

@@ -48,7 +48,7 @@ impl<'ctx> Typer<'ctx> {
     }
 }
 
-impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
+impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'ctx> {
     fn map_constant(
         &mut self,
         data: FlattenData<'ast>,
@@ -115,8 +115,8 @@ impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
             fir::Kind::Constant(c) => self.map_constant(node.data, node.origin, c),
             // Declarations and assignments are void
             fir::Kind::RecordType { .. }
+            | fir::Kind::UnionType { .. }
             | fir::Kind::Function { .. }
-            | fir::Kind::Binding { .. }
             | fir::Kind::Assignment { .. } => self.ty(node, None),
             // // FIXME: This might be the wrong way to go about this
             // // special case where we want to change the `ty` of a `TypedValue`

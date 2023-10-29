@@ -182,7 +182,7 @@ impl Mapper<FlattenData<'_>, TypeData, Error> for TypeCtx {
         })
     }
 
-    fn map_type(
+    fn map_record_type(
         &mut self,
         data: FlattenData,
         origin: OriginIdx,

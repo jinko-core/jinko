@@ -181,6 +181,10 @@ pub enum Kind {
         generics: Vec<RefIdx>, // to Kind::Generic
         fields: Vec<RefIdx>,   // to Kind::TypedValue
     },
+    UnionType {
+        generics: Vec<RefIdx>, // to Kind::Generic
+        variants: Vec<RefIdx>, // to Kind::TypeReference
+    },
     Function {
         generics: Vec<RefIdx>,       // to Kind::Generic
         args: Vec<RefIdx>,           // to Kind::TypedValue

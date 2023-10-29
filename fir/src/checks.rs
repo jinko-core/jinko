@@ -107,6 +107,13 @@ impl<T: Debug> Fir<T> {
                     check!(@generics => Kind::Generic { .. }, node);
                     check!(@fields => Kind::Binding { .. }, node);
                 }
+                Kind::UnionType {
+                    generics,
+                    variants,
+                } => {
+                    check!(@generics => Kind::Generic { .. }, node);
+                    check!(@variants => Kind::TypeReference { .. }, node);
+                }
                 Kind::Binding { to: _ } => {
                     // FIXME: Check `to` as well
                 }

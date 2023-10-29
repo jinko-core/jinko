@@ -93,7 +93,7 @@ fn duplicate(fir: &Fir<FlattenData<'_>>, old: &OriginIdx, new: &OriginIdx) -> Er
 }
 
 impl Traversal<FlattenData<'_>, Error> for PrimitiveTypeCtx {
-    fn traverse_type(
+    fn traverse_record_type(
         &mut self,
         fir: &Fir<FlattenData<'_>>,
         node: &Node<FlattenData<'_>>,

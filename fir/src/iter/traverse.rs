@@ -40,12 +40,22 @@ pub trait Traversal<T, E> {
         Ok(())
     }
 
-    fn traverse_type(
+    fn traverse_record_type(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
         _generics: &[RefIdx],
         _fields: &[RefIdx],
+    ) -> Fallible<E> {
+        Ok(())
+    }
+
+    fn traverse_union_type(
+        &mut self,
+        _fir: &Fir<T>,
+        _node: &Node<T>,
+        _generics: &[RefIdx],
+        _variants: &[RefIdx],
     ) -> Fallible<E> {
         Ok(())
     }
@@ -154,7 +164,10 @@ pub trait Traversal<T, E> {
             Kind::TypedValue { value, ty } => self.traverse_typed_value(fir, node, value, ty),
             Kind::Generic { default } => self.traverse_generic(fir, node, default),
             Kind::RecordType { generics, fields } => {
-                self.traverse_type(fir, node, generics, fields)
+                self.traverse_record_type(fir, node, generics, fields)
+            }
+            Kind::UnionType { generics, variants } => {
+                self.traverse_union_type(fir, node, generics, variants)
             }
             Kind::Function {
                 generics,
