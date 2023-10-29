@@ -317,8 +317,8 @@ impl<'ast> Ctx<'ast> {
         self.append(data, kind)
     }
 
-    fn handle_ty_node(self, ty: &'ast TypeArgument) -> (Ctx<'ast>, RefIdx) {
-        let (ctx, _generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_ty_node);
+    fn handle_type_node(self, ty: &'ast TypeArgument) -> (Ctx<'ast>, RefIdx) {
+        let (ctx, _generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_type_node);
 
         let data = FlattenData {
             ast: AstInfo::Type(ty),
@@ -351,7 +351,7 @@ impl<'ast> Ctx<'ast> {
     }
 
     fn handle_declaration_argument(self, arg: &'ast TypedValue) -> (Ctx<'ast>, RefIdx) {
-        let (ctx, ty) = self.handle_ty_node(&arg.ty);
+        let (ctx, ty) = self.handle_type_node(&arg.ty);
 
         let data = FlattenData {
             ast: AstInfo::Helper(arg.symbol.clone(), arg.location.clone()),
@@ -504,7 +504,7 @@ impl<'ast> Ctx<'ast> {
             args,
         }: &'ast Call,
     ) -> (Ctx<'ast>, RefIdx) {
-        let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_ty_node);
+        let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_type_node);
         let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::visit);
 
         let data = FlattenData {
@@ -546,7 +546,7 @@ impl<'ast> Ctx<'ast> {
         self.scoped(ast, |ctx, ast| {
             let (ctx, generics) = ctx.visit_fold(generics.iter(), Ctx::handle_generic_node);
             let (ctx, args) = ctx.visit_fold(args.iter(), Ctx::handle_declaration_argument);
-            let (ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_ty_node);
+            let (ctx, return_type) = ctx.visit_opt(return_type.as_ref(), Ctx::handle_type_node);
             let (ctx, block) = ctx.visit_opt(block.as_deref(), Ctx::visit);
 
             let data = FlattenData {
@@ -635,7 +635,7 @@ impl<'ast> Ctx<'ast> {
         }: &'ast Call,
     ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, idx) = self.visit(instance);
-        let (ctx, generics) = ctx.visit_fold(generics.iter(), Ctx::handle_ty_node);
+        let (ctx, generics) = ctx.visit_fold(generics.iter(), Ctx::handle_type_node);
         let (ctx, mut args) = ctx.visit_fold(args.iter(), Ctx::visit);
 
         args.insert(0, idx);
@@ -683,8 +683,57 @@ impl<'ast> Ctx<'ast> {
         ctx.append(data, kind)
     }
 
-    fn handle_type_fields(self, fields: &'ast TypeFields) -> (Ctx<'ast>, Vec<RefIdx>) {
-        todo!()
+    fn handle_multi_type(
+        self,
+        ty: &'ast TypeArgument,
+        generics: Vec<RefIdx>,
+        variants: &'ast [TypeArgument],
+    ) -> (Ctx<'ast>, RefIdx) {
+        let (ctx, variants) = self.visit_fold(variants.iter(), Ctx::handle_type_node);
+
+        let data = FlattenData {
+            ast: AstInfo::Type(ty),
+            scope: ctx.scope,
+        };
+
+        let kind = Kind::UnionType { generics, variants };
+
+        ctx.append(data, kind)
+    }
+
+    fn handle_type_fields(
+        self,
+        ast: AstInfo<'ast>,
+        generics: Vec<RefIdx>,
+        fields: &'ast TypeFields,
+    ) -> (Ctx<'ast>, RefIdx) {
+        let data = FlattenData {
+            scope: self.scope,
+            ast,
+        };
+
+        match fields {
+            TypeFields::None => {
+                self.append(data,  Kind::RecordType { generics, fields: vec![] })
+            },
+            TypeFields::Record(fields) => {
+                let (ctx, fields) =
+                    self.visit_fold(fields.iter(), Ctx::handle_declaration_argument);
+
+                ctx.append(data, Kind::RecordType { generics, fields })
+            },
+            // FIXME: Surely there is something we need to do with generics here and in the following variants, right?
+            TypeFields::Alias(ty @ TypeArgument { kind: TypeKind::Multi(variants), .. }) => {
+                let (ctx, aliased) = self.handle_multi_type(ty, generics, variants);
+
+                ctx.append(data, Kind::TypeReference(aliased))
+            },
+            TypeFields::Alias(TypeArgument { kind: TypeKind::Simple(_), .. }) => {
+                self.append(data, Kind::TypeReference(RefIdx::Unresolved))
+            },
+            TypeFields::Tuple(_) => todo!("tuple fields are not handled yet: map to a RecordType with fields named `.0`, `.1`..."),
+            _ => todo!("function-like types are not handled yet")
+        }
     }
 
     fn visit_type(
@@ -695,31 +744,7 @@ impl<'ast> Ctx<'ast> {
         _with: &Option<Box<Ast>>,
     ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
-        // let kind = match fields {
-        //     TypeFields::None => Kind::Type {
-        //         generics,
-        //         fields: vec![],
-        //     },
-        //     TypeFields::Record(fields) => {
-        //         let (ctx, fields)
-        //     },
-        //     TypeFields::Tuple(_) => todo!(),
-        //     // how do we handle generic type aliases? `type Foo[T] = Bar[T]`
-        //     TypeFields::Alias(_) => Kind::TypeReference(RefIdx::Unresolved),
-        // };
-
-        let (ctx, fields) = ctx.handle_type_fields(fields);
-
-        // FIXME: Handle `with` properly
-
-        let data = FlattenData {
-            scope: ctx.scope,
-            ast,
-        };
-
-        let kind = Kind::RecordType { generics, fields };
-
-        ctx.append(data, kind)
+        ctx.handle_type_fields(ast, generics, fields)
     }
 
     fn visit_var_declaration(
@@ -812,7 +837,7 @@ impl<'ast> Ctx<'ast> {
             args: fields,
         }: &'ast Call,
     ) -> (Ctx<'ast>, RefIdx) {
-        let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_ty_node);
+        let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_type_node);
         let (ctx, fields) = ctx.visit_fold(fields.iter(), Ctx::handle_field_instantiation);
 
         let data = FlattenData {
