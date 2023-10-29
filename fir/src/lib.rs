@@ -177,7 +177,7 @@ pub enum Kind {
     Generic {
         default: Option<RefIdx>, // to Kind::Type
     },
-    Type {
+    RecordType {
         generics: Vec<RefIdx>, // to Kind::Generic
         fields: Vec<RefIdx>,   // to Kind::TypedValue
     },

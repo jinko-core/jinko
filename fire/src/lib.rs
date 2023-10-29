@@ -240,7 +240,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
             RefIdx::Resolved(ty) => {
                 let tyref = self.access_resolved(ty);
                 let fields = match &tyref.kind {
-                    Kind::Type { fields, .. } => fields,
+                    Kind::RecordType { fields, .. } => fields,
                     // FIXME: here we need to decide part of our copy/move semantics
                     Kind::TypeReference(_) => return KeepGoing,
                     other => {

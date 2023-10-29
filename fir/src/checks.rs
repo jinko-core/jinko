@@ -62,21 +62,21 @@ impl<T: Debug> Fir<T> {
                 // FIXME: This is missing a bunch of valid "checks". For example, checking that a call's argument can
                 // point to an if-else expression. Basically, to anything that's an expression actually.
                 // Should we split the fir::Kind into fir::Kind::Stmt and fir::Kind::Expr? Or does that not make sense?
-                Kind::Constant(r) => check!(r => Kind::Type { .. }, node),
+                Kind::Constant(r) => check!(r => Kind::RecordType { .. }, node),
                 Kind::TypedValue { value, ty } => {
                     // FIXME: Is pointing to `Type` here valid?
-                    check!(ty => Kind::Type { .. } | Kind::TypeReference(_), node);
+                    check!(ty => Kind::RecordType { .. } | Kind::TypeReference(_), node);
                     // `value` can link to basically anything
                     check!(value => Kind::Call { .. }
                         | Kind::Constant(_)
                         | Kind::Instantiation { .. }
                         | Kind::TypedValue { .. }
                         | Kind::Binding { .. }
-                        | Kind::Type { .. } // for empty types // FIXME: Is that allowed?
+                        | Kind::RecordType { .. } // for empty types // FIXME: Is that allowed?
                         , node);
                 }
                 // FIXME: Is that okay?
-                Kind::TypeReference(to) => check!(to => Kind::Type { .. } | Kind::Generic { .. }, node),
+                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::Generic { .. }, node),
                 Kind::Generic {
                     default: Some(default),
                 } => check!(default => Kind::TypeReference { .. }, node),
@@ -100,7 +100,7 @@ impl<T: Debug> Fir<T> {
                     check!(@generics => Kind::TypeReference { .. }, node);
                     check!(@args => Kind::TypedValue { .. } | Kind::Constant(_) | Kind::Call { .. }, node);
                 }
-                Kind::Type {
+                Kind::RecordType {
                     generics,
                     fields,
                 } => {
@@ -119,7 +119,7 @@ impl<T: Debug> Fir<T> {
                     generics,
                     fields,
                 } => {
-                    check!(to => Kind::Type { .. }, node);
+                    check!(to => Kind::RecordType { .. }, node);
                     check!(@generics => Kind::TypeReference { .. }, node);
                     check!(@fields => Kind::Assignment { .. }, node);
                 }
