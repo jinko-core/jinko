@@ -151,6 +151,8 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
         _reference: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
         dbg!(origin);
+        // how do we handle references to multi types here?
+
         let definition = self.get_definition(
             ResolveKind::Type,
             data.ast.symbol(),
