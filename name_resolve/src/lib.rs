@@ -600,4 +600,79 @@ mod tests {
 
         assert!(fir.is_ok())
     }
+
+    #[test]
+    fn multi_type_nameres_invalid() {
+        let ast = ast! {
+            type Foo = Bar | Baz;
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_err())
+    }
+
+    #[test]
+    #[ignore]
+    fn multi_type_nameres_valid() {
+        let ast = ast! {
+            type Bar;
+            type Baz;
+            type Foo = Bar | Baz;
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_ok())
+    }
+
+    #[test]
+    fn multi_type_nameres_fn_arg_valid() {
+        let ast = ast! {
+            type Bar;
+            type Baz;
+            func foo(a: Bar | Baz) {}
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_ok())
+    }
+
+    #[test]
+    fn multi_type_nameres_fn_arg_invalid() {
+        let ast = ast! {
+            type Bar;
+            func foo(a: Bar | Baz) {}
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_err())
+    }
+
+    #[test]
+    fn multi_type_in_record_nameres_valid() {
+        let ast = ast! {
+            type Bar;
+            type Baz;
+            type Foo(inner: Bar | Baz);
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_ok())
+    }
+
+    #[test]
+    fn multi_type_in_record_nameres_invalid() {
+        let ast = ast! {
+            type Bar;
+            type Foo(inner: Bar | Baz);
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_err())
+    }
 }
