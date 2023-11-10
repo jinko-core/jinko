@@ -14,7 +14,7 @@ macro_rules! name {
     };
 }
 
-mod name {
+pub mod name {
     name![ADD -> "+"];
     name![SUB -> "-"];
     name![MUL -> "*"];
