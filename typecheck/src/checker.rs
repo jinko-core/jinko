@@ -57,7 +57,7 @@ impl<'ctx> Checker<'ctx> {
             Operator::Comparison(Equals) | Operator::Comparison(Differs) => comparable.as_slice(),
             Operator::Comparison(_) => &comparable[2..],
             Operator::Unary(Not) => &comparable[..1],
-            Operator::Unary(Minus) => &numbers[..1],
+            Operator::Unary(Minus) => numbers.as_slice(),
         };
 
         let expected_ty = match op.ty() {
