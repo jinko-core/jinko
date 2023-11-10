@@ -127,7 +127,7 @@ fn string_ops(lhs: &str, rhs: &str, op: builtins::Operator) -> Instance {
         Operator::Comparison(Equals) => Instance::from(lhs == rhs),
         Operator::Comparison(Differs) => Instance::from(lhs != rhs),
         _ => unreachable!(
-            "invalid operation on floats: `{}`. this is an intepreter error",
+            "invalid operation on strings: `{}`. this is an intepreter error",
             op.as_str()
         ),
     }
