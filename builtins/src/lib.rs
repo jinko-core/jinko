@@ -221,7 +221,6 @@ impl AppendAstBuiltins for Ast {
             builder::function(
                 op.as_str(),
                 vec![
-                    // FIXME: Use something else than `ty("int")` here. but what?
                     builder::argument("lhs", builder::ty_arg(BuiltinType::Number)),
                     builder::argument("rhs", builder::ty_arg(BuiltinType::Number)),
                 ],
@@ -233,7 +232,6 @@ impl AppendAstBuiltins for Ast {
             builder::function(
                 op.as_str(),
                 vec![
-                    // FIXME: Use something else than `ty("int")` here. but what?
                     builder::argument("lhs", builder::ty_arg(BuiltinType::Comparable)),
                     builder::argument("rhs", builder::ty_arg(BuiltinType::Comparable)),
                 ],
@@ -241,7 +239,7 @@ impl AppendAstBuiltins for Ast {
             )
         });
 
-        // unary operators, like !bool or !int
+        // unary operators, like !bool or -int
         let unary_builtins = Unary::iter().map(|op| {
             builder::function(
                 op.as_str(),
