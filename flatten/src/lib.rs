@@ -318,7 +318,9 @@ impl<'ast> Ctx<'ast> {
     }
 
     fn handle_type_node(self, ty: &'ast Type) -> (Ctx<'ast>, RefIdx) {
-        let (ctx, _generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_type_node);
+        // TODO: we can call handle_multi_type from here as well maybe?
+
+        let (ctx, generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_type_node);
 
         let data = FlattenData {
             ast: AstInfo::Type(ty),
@@ -339,7 +341,28 @@ impl<'ast> Ctx<'ast> {
 
         // FIXME: This should be a type reference probably, not a `Type`. Or `visit_function` uses `handle_ty_node` when
         // it shouldn't for its return type
-        let kind = Kind::TypeReference(RefIdx::Unresolved);
+        let (ctx, kind) = match &ty.kind {
+            TypeKind::Simple(_) => (
+                ctx,
+                // TODO: Should this have a generics field then? probably, right?
+                // or... if we have generics, are we creating a new type instead?
+                Kind::TypeReference(RefIdx::Unresolved),
+            ),
+            TypeKind::Multi(sum) => {
+                let (ctx, summed_types) = ctx.visit_fold(sum.iter(), Ctx::handle_type_node);
+
+                (
+                    ctx,
+                    Kind::UnionType {
+                        generics,
+                        variants: summed_types,
+                    },
+                )
+            }
+            TypeKind::FunctionLike(_, _) => {
+                todo!("function like types cannot be flattened yet. this is an interpreter error.")
+            }
+        };
 
         // FIXME: where do we put the generics?
         // In the flatten data? Basically we're flattening all of the generics of the
@@ -727,6 +750,7 @@ impl<'ast> Ctx<'ast> {
                 ctx.append(data, Kind::RecordType { generics, fields })
             },
             // FIXME: Surely there is something we need to do with generics here and in the following variants, right?
+            // TODO: Add Kind::TypeAlias?
             TypeFields::Alias(ty @ Type { kind: TypeKind::Multi(variants), .. }) => {
                 let (ctx, aliased) = self.handle_multi_type(ty, generics, variants);
 
