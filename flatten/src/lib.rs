@@ -153,7 +153,7 @@
 //! ```
 
 use ast::{
-    Ast, Call, Declaration, GenericArgument, LoopKind, Node as AstNode, TypeArgument, TypeFields,
+    Ast, Call, Declaration, GenericParameter, LoopKind, Node as AstNode, Type, TypeFields,
     TypeKind, TypedValue,
 };
 use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
@@ -189,7 +189,7 @@ impl OriginExt for OriginIdx {
 #[derive(Clone, Debug)]
 pub enum AstInfo<'ast> {
     Node(&'ast Ast),
-    Type(&'ast TypeArgument),
+    Type(&'ast Type),
     Helper(Symbol, SpanTuple),
 }
 
@@ -197,7 +197,7 @@ impl<'ast> AstInfo<'ast> {
     pub fn location(&self) -> &SpanTuple {
         match self {
             AstInfo::Node(Ast { location, .. })
-            | AstInfo::Type(TypeArgument { location, .. })
+            | AstInfo::Type(Type { location, .. })
             | AstInfo::Helper(_, location) => location,
         }
     }
@@ -230,7 +230,7 @@ impl<'ast> AstInfo<'ast> {
                     to_declare: sym, ..
                 } => Some(sym),
             },
-            AstInfo::Type(TypeArgument {
+            AstInfo::Type(Type {
                 kind: TypeKind::Simple(sym),
                 ..
             }) => Some(sym),
@@ -249,7 +249,7 @@ impl<'ast> AstInfo<'ast> {
     }
 
     /// Fetch the [`AstInfo::Node`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is actually an [`AstInfo::Helper`]
-    pub fn type_node(&self) -> &TypeArgument {
+    pub fn type_node(&self) -> &Type {
         match self {
             AstInfo::Type(ty) => ty,
             _ => unreachable!("asked for type node from a non `AstInfo::Type`"),
@@ -295,7 +295,7 @@ impl<'ast> Ctx<'ast> {
         )
     }
 
-    fn handle_generic_node(self, generic: &GenericArgument) -> (Ctx<'ast>, RefIdx) {
+    fn handle_generic_node(self, generic: &GenericParameter) -> (Ctx<'ast>, RefIdx) {
         // FIXME: Needs AST to be fixed
         // let (ctx, default_ty) = self.handle_ty_node(generic.ty);
 
@@ -317,7 +317,7 @@ impl<'ast> Ctx<'ast> {
         self.append(data, kind)
     }
 
-    fn handle_type_node(self, ty: &'ast TypeArgument) -> (Ctx<'ast>, RefIdx) {
+    fn handle_type_node(self, ty: &'ast Type) -> (Ctx<'ast>, RefIdx) {
         let (ctx, _generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_type_node);
 
         let data = FlattenData {
@@ -332,6 +332,10 @@ impl<'ast> Ctx<'ast> {
             // ),
             scope: ctx.scope,
         };
+
+        // so in some cases this should be a type reference, and in other cases this should be a type definition which contains multiple type references - e.g
+        // a: int // type reference
+        // a: int | string // type declaration, which gets flattened as a union type with two type references: int and string
 
         // FIXME: This should be a type reference probably, not a `Type`. Or `visit_function` uses `handle_ty_node` when
         // it shouldn't for its return type
@@ -685,9 +689,9 @@ impl<'ast> Ctx<'ast> {
 
     fn handle_multi_type(
         self,
-        ty: &'ast TypeArgument,
+        ty: &'ast Type,
         generics: Vec<RefIdx>,
-        variants: &'ast [TypeArgument],
+        variants: &'ast [Type],
     ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, variants) = self.visit_fold(variants.iter(), Ctx::handle_type_node);
 
@@ -723,12 +727,12 @@ impl<'ast> Ctx<'ast> {
                 ctx.append(data, Kind::RecordType { generics, fields })
             },
             // FIXME: Surely there is something we need to do with generics here and in the following variants, right?
-            TypeFields::Alias(ty @ TypeArgument { kind: TypeKind::Multi(variants), .. }) => {
+            TypeFields::Alias(ty @ Type { kind: TypeKind::Multi(variants), .. }) => {
                 let (ctx, aliased) = self.handle_multi_type(ty, generics, variants);
 
                 ctx.append(data, Kind::TypeReference(aliased))
             },
-            TypeFields::Alias(TypeArgument { kind: TypeKind::Simple(_), .. }) => {
+            TypeFields::Alias(Type { kind: TypeKind::Simple(_), .. }) => {
                 self.append(data, Kind::TypeReference(RefIdx::Unresolved))
             },
             TypeFields::Tuple(_) => todo!("tuple fields are not handled yet: map to a RecordType with fields named `.0`, `.1`..."),
@@ -739,7 +743,7 @@ impl<'ast> Ctx<'ast> {
     fn visit_type(
         self,
         ast: AstInfo<'ast>,
-        generics: &[GenericArgument],
+        generics: &[GenericParameter],
         fields: &'ast TypeFields,
         _with: &Option<Box<Ast>>,
     ) -> (Ctx<'ast>, RefIdx) {

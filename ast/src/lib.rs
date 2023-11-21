@@ -8,10 +8,10 @@ use symbol::Symbol;
 pub enum TypeKind {
     // TODO: Should we consider a simple type as a variant of multi type with only one type argument?
     // probably simpler, right?
-    // but then how do we handle a simple type like "int" without generics or anything
-    Simple(Symbol),
-    Multi(Vec<TypeArgument>),
-    FunctionLike(Vec<TypeArgument>, Option<Box<TypeArgument>>),
+    // but then how do we handle a simple type like "int" without generics or anything -> symbol(int) and empty vec for generics so we're good
+    Simple(Symbol), // FIXME: Can this be a symbol? Should it be something else? I think Symbol is fine, because the struct enclosing TypeKind has generics and location
+    Multi(Vec<Type>),
+    FunctionLike(Vec<Type>, Option<Box<Type>>),
 }
 
 /// A type argument, i.e. when performing a specific generic call or specifying a variable's type
@@ -29,26 +29,29 @@ pub enum TypeKind {
 /// ```
 #[derive(Debug, Clone)]
 // TODO: Rename? `Type`?
-pub struct TypeArgument {
+pub struct Type {
     pub kind: TypeKind,
-    // the generics and location are common fields between the multiple kinds, so they are lifted out of the `TypeKind` enum
+    /// the generics and location are common fields between the multiple kinds, so they are lifted out of the [`TypeKind`] enum
     pub location: SpanTuple,
-    pub generics: Vec<TypeArgument>,
+    /// this is an application, not the generic parameters. so it concerns fully formed types, e.g. Foo[int, string], not generic declarations.
+    pub generics: Vec<Type>,
 }
 
 /// The fields of a type declaration. This data structure helps differentiating record types, from
 /// tuple types, from type aliases, from empty types
+// TODO: How does this handle sum types?
 #[derive(Debug, Clone)]
 pub enum TypeFields {
+    // TODO: Merge with `Record`?
     /// An empty type: `type Foo;`
     None,
     /// A record type: `type Foo(field1: Bar, field2: Baz);`
     Record(Vec<TypedValue>),
     /// A named tuple, or tuple type: `type Foo(Bar, Baz);`
-    Tuple(Vec<TypeArgument>),
+    Tuple(Vec<Type>),
     /// A type alias: `type Foo = Bar;`
     /// This can be an alias to a multi type - a single [`TypeArgument`] of kind [`TypeKind::Multi`]
-    Alias(TypeArgument),
+    Alias(Type),
 }
 
 /// A value with its associated type. This is used for function arguments or type fields
@@ -57,7 +60,7 @@ pub enum TypeFields {
 pub struct TypedValue {
     pub location: SpanTuple,
     pub symbol: Symbol,
-    pub ty: TypeArgument,
+    pub ty: Type,
     // FIXME: Missing location member
 }
 
@@ -72,10 +75,9 @@ pub struct TypedValue {
 /// //      ^^^^^^^
 /// ```
 #[derive(Debug, Clone)]
-pub struct GenericArgument {
+pub struct GenericParameter {
     pub name: Symbol,
-    pub default: Option<Symbol>,
-    // FIXME: This should be an Option<TypeArgument>
+    pub default: Option<Type>,
     // FIXME: Missing location member
 }
 
@@ -97,9 +99,9 @@ pub enum Operator {
 #[derive(Debug, Clone)]
 pub struct Declaration {
     pub name: Symbol,
-    pub generics: Vec<GenericArgument>,
+    pub generics: Vec<GenericParameter>,
     pub args: Vec<TypedValue>,
-    pub return_type: Option<TypeArgument>,
+    pub return_type: Option<Type>,
 }
 
 #[derive(Debug, Clone)]
@@ -115,7 +117,7 @@ pub enum FunctionKind {
 #[derive(Debug, Default, Clone)]
 pub struct Call {
     pub to: Symbol,
-    pub generics: Vec<TypeArgument>,
+    pub generics: Vec<Type>,
     pub args: Vec<Ast>,
 }
 
@@ -155,7 +157,7 @@ pub enum Node {
     },
     Type {
         name: Symbol,
-        generics: Vec<GenericArgument>,
+        generics: Vec<GenericParameter>,
         fields: TypeFields,
         with: Option<Box<Ast>>,
     },
@@ -277,7 +279,7 @@ pub trait Visitor {
         &mut self,
         location: SpanTuple,
         name: Symbol,
-        generics: Vec<GenericArgument>,
+        generics: Vec<GenericParameter>,
         fields: TypeFields,
         with: Option<Box<Ast>>,
     ) -> Result<Ast, Error> {
