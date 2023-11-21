@@ -253,6 +253,9 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
                 let instance = if fields.is_empty() {
                     Instance::empty()
                 } else {
+                    // TODO: At the moment, this fails because `type Foo = Bar` is desugared
+                    // as one record type `type Foo(@type-alias-field: Bar)` which is not correct
+                    // to handle this we can have a better `fields` structure maybe?
                     unreachable!()
                 };
 
