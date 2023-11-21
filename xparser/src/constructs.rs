@@ -19,10 +19,10 @@ use super::{Error, ParseInput, ParseResult};
 use ast::Call;
 use ast::Declaration;
 use ast::FunctionKind;
-use ast::GenericArgument;
+use ast::GenericParameter;
 use ast::LoopKind;
 use ast::Node;
-use ast::TypeArgument;
+use ast::Type;
 use ast::TypeKind;
 use ast::TypedValue;
 use ast::Value;
@@ -428,8 +428,8 @@ fn unit_incl(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, 
     }
 }
 
-fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
-    fn arg_types(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeArgument>> {
+fn type_id(input: ParseInput) -> ParseResult<ParseInput, Type> {
+    fn arg_types(input: ParseInput) -> ParseResult<ParseInput, Vec<Type>> {
         if let Ok((input, _)) = tokens::right_parenthesis(input) {
             return Ok((input, vec![]));
         }
@@ -443,14 +443,14 @@ fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
         Ok((input, args))
     }
 
-    fn return_type(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
+    fn return_type(input: ParseInput) -> ParseResult<ParseInput, Type> {
         let input = next(input);
         let (input, _) = tokens::arrow(input)?;
         let input = next(input);
         type_id(input)
     }
 
-    fn type_id_no_multi(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
+    fn type_id_no_multi(input: ParseInput) -> ParseResult<ParseInput, Type> {
         let input = next(input);
         let (input, start_loc) = position(input)?;
         if let Ok((input, _)) = tokens::func_tok(input) {
@@ -464,7 +464,7 @@ fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
 
             Ok((
                 input,
-                TypeArgument {
+                Type {
                     kind,
                     generics,
                     location: pos_to_loc(input, start_loc, end_loc),
@@ -484,7 +484,7 @@ fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
 
             Ok((
                 input,
-                TypeArgument {
+                Type {
                     kind,
                     generics,
                     location: pos_to_loc(input, start_loc, end_loc),
@@ -505,7 +505,7 @@ fn type_id(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
 
         Ok((
             input,
-            TypeArgument {
+            Type {
                 kind: TypeKind::Multi(multi),
                 generics: vec![],
                 location: pos_to_loc(input, start_loc, end_loc),
@@ -684,8 +684,8 @@ fn unit_block(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput,
 }
 
 // FIXME: generic_list, generic_arguments and the maybe* versions need to be improved and refactored
-fn generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeArgument>> {
-    fn whitespace_plus_type(input: ParseInput) -> ParseResult<ParseInput, TypeArgument> {
+fn generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<Type>> {
+    fn whitespace_plus_type(input: ParseInput) -> ParseResult<ParseInput, Type> {
         let input = next(input);
         let (input, ty) = type_id(input)?;
         let input = next(input);
@@ -702,15 +702,15 @@ fn generic_list(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeArgument>>
 }
 
 // FIXME: This does not parse default generic types yet (`func f[T = int]()`)
-fn generic_arguments(input: ParseInput) -> ParseResult<ParseInput, Vec<GenericArgument>> {
-    fn whitespace_plus_generic(input: ParseInput) -> ParseResult<ParseInput, GenericArgument> {
+fn generic_arguments(input: ParseInput) -> ParseResult<ParseInput, Vec<GenericParameter>> {
+    fn whitespace_plus_generic(input: ParseInput) -> ParseResult<ParseInput, GenericParameter> {
         let input = next(input);
         let (input, (id, _)) = spaced_identifier(input)?;
         let input = next(input);
 
         Ok((
             input,
-            GenericArgument {
+            GenericParameter {
                 name: Symbol::from(id),
                 default: None,
             },
@@ -725,7 +725,7 @@ fn generic_arguments(input: ParseInput) -> ParseResult<ParseInput, Vec<GenericAr
     Ok((input, generics))
 }
 
-fn maybe_generic_arguments(input: ParseInput) -> ParseResult<ParseInput, Vec<GenericArgument>> {
+fn maybe_generic_arguments(input: ParseInput) -> ParseResult<ParseInput, Vec<GenericParameter>> {
     if let Ok((input, _)) = tokens::left_bracket(input) {
         Ok(generic_arguments(input)?)
     } else {
@@ -733,7 +733,7 @@ fn maybe_generic_arguments(input: ParseInput) -> ParseResult<ParseInput, Vec<Gen
     }
 }
 
-fn maybe_generic_application(input: ParseInput) -> ParseResult<ParseInput, Vec<TypeArgument>> {
+fn maybe_generic_application(input: ParseInput) -> ParseResult<ParseInput, Vec<Type>> {
     if let Ok((input, _)) = tokens::left_bracket(input) {
         Ok(generic_list(input)?)
     } else {
@@ -767,7 +767,7 @@ fn func_declaration(input: ParseInput) -> ParseResult<ParseInput, Declaration> {
 
 /// return_type = '->' type_id
 ///             | ε
-fn return_type(input: ParseInput) -> ParseResult<ParseInput, Option<TypeArgument>> {
+fn return_type(input: ParseInput) -> ParseResult<ParseInput, Option<Type>> {
     match tokens::arrow(input) {
         Ok((input, _)) => {
             let (input, ty_id) = type_id(input)?;
@@ -883,7 +883,7 @@ fn func_type_or_var(
 fn func_or_type_inst_args(
     input: ParseInput,
     id: String,
-    generics: Vec<TypeArgument>,
+    generics: Vec<Type>,
     start_loc: Location,
 ) -> ParseResult<ParseInput, Ast> {
     let (input, first_attr_start_loc) = position(input)?;
