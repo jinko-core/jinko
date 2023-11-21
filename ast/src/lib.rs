@@ -36,6 +36,21 @@ pub struct TypeArgument {
     pub generics: Vec<TypeArgument>,
 }
 
+/// The fields of a type declaration. This data structure helps differentiating record types, from
+/// tuple types, from type aliases, from empty types
+#[derive(Debug, Clone)]
+pub enum TypeFields {
+    /// An empty type: `type Foo;`
+    None,
+    /// A record type: `type Foo(field1: Bar, field2: Baz);`
+    Record(Vec<TypedValue>),
+    /// A named tuple, or tuple type: `type Foo(Bar, Baz);`
+    Tuple(Vec<TypeArgument>),
+    /// A type alias: `type Foo = Bar;`
+    /// This can be an alias to a multi type - a single [`TypeArgument`] of kind [`TypeKind::Multi`]
+    Alias(TypeArgument),
+}
+
 /// A value with its associated type. This is used for function arguments or type fields
 // FIXME: This needs a location right?
 #[derive(Debug, Clone)]
@@ -141,7 +156,7 @@ pub enum Node {
     Type {
         name: Symbol,
         generics: Vec<GenericArgument>,
-        fields: Vec<TypedValue>,
+        fields: TypeFields,
         with: Option<Box<Ast>>,
     },
     TypeInstantiation(Call),
@@ -263,7 +278,7 @@ pub trait Visitor {
         location: SpanTuple,
         name: Symbol,
         generics: Vec<GenericArgument>,
-        fields: Vec<TypedValue>,
+        fields: TypeFields,
         with: Option<Box<Ast>>,
     ) -> Result<Ast, Error> {
         let with = self.optional(with, Self::boxed)?;
