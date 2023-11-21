@@ -244,6 +244,8 @@ impl NameResolutionError {
                 //     }
                 // });
 
+                // FIXME: factor this with the typechecker for the colorization of the type in purple
+                // this should probably be part of the `error` module, with a function like `error::format::ty`
                 Error::new(ErrKind::NameResolution)
                     .with_msg(format!("unresolved {kind}: `{sym}`"))
                     .with_loc(location)

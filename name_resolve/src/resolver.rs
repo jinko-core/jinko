@@ -150,6 +150,7 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
         origin: OriginIdx,
         _reference: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
+        dbg!(origin);
         let definition = self.get_definition(
             ResolveKind::Type,
             data.ast.symbol(),
