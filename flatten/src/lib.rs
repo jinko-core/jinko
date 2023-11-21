@@ -153,8 +153,8 @@
 //! ```
 
 use ast::{
-    Ast, Call, Declaration, GenericArgument, LoopKind, Node as AstNode, TypeArgument, TypeKind,
-    TypedValue,
+    Ast, Call, Declaration, GenericArgument, LoopKind, Node as AstNode, TypeArgument, TypeFields,
+    TypeKind, TypedValue,
 };
 use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
 use location::SpanTuple;
@@ -683,15 +683,25 @@ impl<'ast> Ctx<'ast> {
         ctx.append(data, kind)
     }
 
+    fn handle_type_fields(self, fields: &'ast TypeFields) -> (Ctx<'ast>, Vec<RefIdx>) {}
+
     fn visit_type(
         self,
         ast: AstInfo<'ast>,
         generics: &[GenericArgument],
-        fields: &'ast [TypedValue],
+        fields: &'ast TypeFields,
         _with: &Option<Box<Ast>>,
     ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
-        let (ctx, fields) = ctx.visit_fold(fields.iter(), Ctx::handle_declaration_argument);
+        let kind = match fields {
+            TypeFields::None => Kind::Type { generics },
+            TypeFields::Record(_) => todo!(),
+            TypeFields::Tuple(_) => todo!(),
+            // how do we handle generic type aliases? `type Foo[T] = Bar[T]`
+            TypeFields::Alias(_) => Kind::TypeReference(RefIdx::Unresolved),
+        };
+
+        let (ctx, fields) = ctx.handle_type_fields(fields);
 
         // FIXME: Handle `with` properly
 
