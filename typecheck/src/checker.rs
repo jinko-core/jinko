@@ -13,14 +13,15 @@ use std::iter::Iterator;
 use builtins::Comparison::*;
 use builtins::Unary::*;
 
-use crate::{Type, TypeCtx};
+use crate::{Type, TypeCtx, TypeVariable};
 
 // TODO: We need a way to fetch common type nodes used during typechecking, such as `bool` for example,
 // as it's used for conditions for multiple nodes
 pub(crate) struct Checker<'ctx>(pub(crate) &'ctx mut TypeCtx);
 
+// TODO: Actually, can the checker only work with `Type`s instead of `TypeVariable`s? Since we're after `Actual`... right?
 impl<'ctx> Checker<'ctx> {
-    fn get_type(&self, of: &RefIdx) -> Option<Type> {
+    fn get_type(&self, of: &RefIdx) -> Option<TypeVariable> {
         // if at this point, the reference is unresolved, or if we haven't seen that node yet, it's
         // an interpreter error
         *self.0.types.get(&of.expect_resolved()).unwrap()
@@ -32,19 +33,22 @@ impl<'ctx> Checker<'ctx> {
         fir: &Fir<FlattenData>,
         op: builtins::Operator,
         args: &[RefIdx],
-    ) -> Result<Vec<Option<Type>>, Error> {
+    ) -> Result<Vec<Option<TypeVariable>>, Error> {
         use builtins::*;
 
         let numbers = [
-            Type::One(RefIdx::Resolved(self.0.primitives.int_type)),
-            Type::One(RefIdx::Resolved(self.0.primitives.float_type)),
+            // FIXME: This is ugly
+            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.int_type))),
+            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.float_type))),
         ];
         let comparable = [
-            Type::One(RefIdx::Resolved(self.0.primitives.bool_type)),
-            Type::One(RefIdx::Resolved(self.0.primitives.string_type)),
-            Type::One(RefIdx::Resolved(self.0.primitives.int_type)),
-            Type::One(RefIdx::Resolved(self.0.primitives.char_type)),
-            Type::One(RefIdx::Resolved(self.0.primitives.float_type)),
+            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.bool_type))),
+            TypeVariable::Actual(Type::single(RefIdx::Resolved(
+                self.0.primitives.string_type,
+            ))),
+            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.int_type))),
+            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.char_type))),
+            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.float_type))),
         ];
 
         let arity = match op {
@@ -62,7 +66,9 @@ impl<'ctx> Checker<'ctx> {
 
         let expected_ty = match op.ty() {
             BuiltinType::Number | BuiltinType::Comparable => self.get_type(&args[0]).unwrap(),
-            BuiltinType::Bool => Type::One(RefIdx::Resolved(self.0.primitives.bool_type)),
+            BuiltinType::Bool => {
+                TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.bool_type)))
+            }
         };
 
         if valid_types.contains(&expected_ty) {
@@ -123,7 +129,7 @@ fn type_mismatch(
     got: Got<Option<Type>>,
 ) -> Error {
     let get_symbol = |ty| {
-        let Type::One(idx) = ty;
+        let Type::single(idx) = ty;
         fir.nodes[&idx.expect_resolved()].data.ast.symbol().unwrap()
     };
 
@@ -160,7 +166,7 @@ fn unexpected_arithmetic_type(
     op: builtins::Operator,
 ) -> Error {
     let get_symbol = |ty| {
-        let &Type::One(idx) = ty;
+        let &Type::single(idx) = ty;
         fir.nodes[&idx.expect_resolved()].data.ast.symbol()
     };
 

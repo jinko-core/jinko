@@ -3,7 +3,10 @@ mod checker;
 mod primitives;
 mod typer;
 
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    iter,
+};
 
 use error::{ErrKind, Error};
 use fir::{Fir, Incomplete, Mapper, OriginIdx, Pass, RefIdx, Traversal};
@@ -15,25 +18,47 @@ use typer::Typer;
 
 use primitives::PrimitiveTypes;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum Type {
-    One(RefIdx),
-    // Many(Vec<RefIdx>),
-}
+/// This is the base structure that our typechecker - a type "interpreter" - will play with.
+/// In `jinko`, the type of a variable is a set of elements of kind `type`. So this structure can
+/// be thought of as a simple set of actual, monomorphized types.
+// TODO: for now, let's not think about optimizations - let's box and clone and blurt bytes everywhere
+#[derive(Clone, Debug, Eq, PartialEq)]
+// TODO: We might have to turn this into an enum - `ActualType(Set<RefIdx>) | TypeReference(RefIdx)`
+pub(crate) struct Type(HashSet<RefIdx>);
 
 impl Type {
-    pub fn ref_idx(&self) -> &RefIdx {
-        match self {
-            Type::One(r) => r,
-        }
+    pub fn new(set: HashSet<RefIdx>) -> Type {
+        Type(set)
+    }
+
+    // TODO: Rename? one? simple? unique? what's the opposite of `sum` or `multi`?
+    pub fn single(fir_type: RefIdx) -> Type {
+        let mut set = HashSet::new();
+        set.insert(fir_type);
+
+        Type(set)
     }
 }
+
+impl FromIterator<RefIdx> for Type {
+    fn from_iter<T: IntoIterator<Item = RefIdx>>(iter: T) -> Type {
+        Type(iter.into_iter().collect())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum TypeVariable {
+    Actual(Type),
+    Reference(RefIdx), // specifically we're interested in `type_ctx.type_of(< that refidx >)`
+}
+
+impl TypeVariable {}
 
 pub(crate) struct TypeCtx {
     // primitive type declaration
     pub(crate) primitives: PrimitiveTypes,
     // mapping from declaration to type
-    pub(crate) types: HashMap<OriginIdx, Option<Type>>,
+    pub(crate) types: HashMap<OriginIdx, Option<TypeVariable>>,
 }
 
 pub trait TypeCheck<T>: Sized {
