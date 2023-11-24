@@ -3,7 +3,10 @@ mod checker;
 mod primitives;
 mod typer;
 
-use std::collections::HashMap;
+// FIXME: Rename?
+mod typemap;
+
+use std::collections::{HashMap, HashSet};
 
 use error::{ErrKind, Error};
 use fir::{Fir, Incomplete, Mapper, OriginIdx, Pass, RefIdx, Traversal};
@@ -15,25 +18,98 @@ use typer::Typer;
 
 use primitives::PrimitiveTypes;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum Type {
-    One(RefIdx),
-    // Many(Vec<RefIdx>),
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TypeSet(HashSet<RefIdx>);
+
+impl TypeSet {
+    // TODO: Rename or improve `Type`'s API
+    pub fn contains(&self, other: &TypeSet) -> bool {
+        // FIXME: This is quite ugly
+        other.0.iter().find(|elt| !self.0.contains(elt)).is_none()
+    }
 }
 
+/// This is the base structure that our typechecker - a type "interpreter" - will play with.
+/// In `jinko`, the type of a variable is a set of elements of kind `type`. So this structure can
+/// be thought of as a simple set of actual, monomorphized types.
+// TODO: for now, let's not think about optimizations - let's box and clone and blurt bytes everywhere
+#[derive(Clone, Debug, Eq, PartialEq)]
+// TODO: We might have to turn this into an enum - `ActualType(Set<RefIdx>) | TypeReference(RefIdx)`
+pub struct Type(OriginIdx, TypeSet);
+
 impl Type {
-    pub fn ref_idx(&self) -> &RefIdx {
+    #[deprecated(note = "needs a new API")]
+    pub fn new(origin: OriginIdx, set: HashSet<RefIdx>) -> Type {
+        Type(origin, TypeSet(set))
+    }
+
+    // TODO: Rename? one? simple? unique? what's the opposite of `sum` or `multi`?
+    pub fn single(origin: OriginIdx, fir_type: RefIdx) -> Type {
+        let mut set = HashSet::new();
+        set.insert(fir_type);
+
+        Type(origin, TypeSet(set))
+    }
+
+    pub fn set(&self) -> &TypeSet {
+        &self.1
+    }
+
+    // #[deprecated(note = "is this actually valid?")]
+    // pub fn is_single(&self) -> bool {
+    //     self.0.len() == 1
+    // }
+
+    // #[deprecated(note = "is this actually valid?")]
+    // pub fn get_single(&self) -> Option<RefIdx> {
+    //     self.is_single()
+    //         // NOTE: We can unwrap safely here since this closure only executes if there
+    //         // is exactly one element
+    //         .then(|| self.0.iter().next().unwrap())
+    //         .copied()
+    // }
+
+    pub fn is_superset_of(&self, other: &Type) -> bool {
+        return self.set().contains(other.set());
+    }
+
+    pub fn can_widen_to(&self, superset: &Type) -> bool {
+        return superset.set().contains(self.set());
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum TypeVariable {
+    Actual(Type),
+    Reference(RefIdx), // specifically we're interested in `type_ctx.type_of(< that refidx >)`
+}
+
+impl TypeVariable {
+    pub fn actual(&self) -> &Type {
         match self {
-            Type::One(r) => r,
+            TypeVariable::Actual(a) => a,
+            TypeVariable::Reference(r) => unreachable!("unexpected type reference: {r:?}"),
+        }
+    }
+
+    pub fn ref_idx(&self) -> RefIdx {
+        match self {
+            TypeVariable::Actual(a) => {
+                unreachable!("expected reference type, got actual type: {a:?}")
+            }
+            TypeVariable::Reference(r) => *r,
         }
     }
 }
 
-pub(crate) struct TypeCtx {
+type TypeLinkMap = HashMap<OriginIdx, Option<TypeVariable>>;
+
+// TODO: Make generic over the `types` field? and explain why this is used?
+pub(crate) struct TypeCtx<T> {
     // primitive type declaration
     pub(crate) primitives: PrimitiveTypes,
     // mapping from declaration to type
-    pub(crate) types: HashMap<OriginIdx, Option<Type>>,
+    pub(crate) types: T,
 }
 
 pub trait TypeCheck<T>: Sized {
@@ -52,7 +128,7 @@ impl<'ast> TypeCheck<Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
     }
 }
 
-impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx {
+impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLinkMap> {
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
     fn post_condition(_fir: &Fir<FlattenData>) {}
@@ -71,8 +147,10 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx {
             }
         };
 
-        Actual(self).traverse(&fir)?;
-        Checker(self).traverse(&fir)?;
+        // let mut actualized_ctx = Actual::new(self, &fir).resolve_type_links();
+        let mut actual_ctx = Actual::resolve_type_links(self, &fir)?;
+
+        Checker(&mut actual_ctx).traverse(&fir)?;
 
         match type_errs {
             Some(e) => Err(e),
@@ -406,5 +484,46 @@ mod tests {
         let fir = fir!(ast).type_check();
 
         assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn typeset_makes_sense() {
+        let superset = Type(
+            OriginIdx(4),
+            TypeSet(
+                [
+                    RefIdx::Resolved(OriginIdx(0)),
+                    RefIdx::Resolved(OriginIdx(1)),
+                    RefIdx::Resolved(OriginIdx(2)),
+                    RefIdx::Resolved(OriginIdx(3)),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+        );
+        let set = Type(
+            OriginIdx(5),
+            TypeSet(
+                [
+                    RefIdx::Resolved(OriginIdx(0)),
+                    RefIdx::Resolved(OriginIdx(1)),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+        );
+        let single = Type::single(OriginIdx(6), RefIdx::Resolved(OriginIdx(0)));
+        let empty = Type(OriginIdx(7), TypeSet(HashSet::new()));
+
+        // FIXME: Decide on empty's behavior
+
+        assert!(set.can_widen_to(&superset));
+        assert!(superset.is_superset_of(&set));
+
+        assert!(single.can_widen_to(&set));
+        assert!(set.is_superset_of(&single));
+
+        assert!(single.can_widen_to(&superset));
+        assert!(superset.is_superset_of(&single));
     }
 }

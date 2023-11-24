@@ -21,6 +21,9 @@ struct PrimitiveTypeCtx {
 /// This is the finalized version of [`PrimitiveTypeCtx`] - a version which only has
 /// valid [`OriginIdx`], or otherwise it will not be returned, and an [`Error`] will
 /// be present instead
+// FIXME: Does this need a `void` type? How do we encode it? How is it different from an empty record type,
+// which at the moment is how we flatten empty types like `type Empty;`
+#[derive(Clone)]
 pub struct PrimitiveTypes {
     pub(crate) bool_type: OriginIdx,
     pub(crate) char_type: OriginIdx,
