@@ -1,21 +1,27 @@
+// TODO: Write module documentation
+// TODO: Does `Typer` take care of monomorphization as well?
+
 use ast::{Node as AstNode, Value};
 use error::Error;
 use fir::{Kind, Mapper, Node, OriginIdx, RefIdx};
 use flatten::FlattenData;
 
-use crate::{Type, TypeCtx};
+use crate::{Type, TypeCtx, TypeLinkMap, TypeVariable};
 
 /// This pass takes care of "typing" each node in the [`Fir`], but to a non-terminal type. More explanation can be found
 /// in the documentation for [`Typer::ty`].
-pub(crate) struct Typer<'ctx>(pub(crate) &'ctx mut TypeCtx);
+pub(crate) struct Typer<'ctx>(pub(crate) &'ctx mut TypeCtx<TypeLinkMap>);
 
 impl<'ctx> Typer<'ctx> {
-    fn assign_type(&mut self, node: OriginIdx, ty: Option<Type>) {
+    fn assign_type(&mut self, node: OriginIdx, ty: Option<TypeVariable>) {
         // Having non-unique ids in the Fir is an interpreter error
         // Or should we return an error here?
         assert!(self.0.types.insert(node, ty).is_none());
     }
 
+    // FIXME: Is this used for declarations? or only for type references? it should be used only for type references
+    // FIXME: Add note about NOT using this for declarations
+    // FIXME: Can we add newtypes for this?
     /// Assign a type to a node. This type can either be void ([`None`]) in the case of a declaration or void
     /// statement, or may be a "type linked list": a reference to a type defined elsewhere in the [`Fir`].
     /// Let's consider a block of multiple statements, the last of which being a function call. The type of a
@@ -29,7 +35,8 @@ impl<'ctx> Typer<'ctx> {
         node: Node<FlattenData<'ast>>,
         ty: Option<RefIdx>,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
-        let ty = ty.map(Type::One);
+        // so is this correct? or can we create actual types here too. I assume NO
+        let ty = ty.map(TypeVariable::Reference);
 
         self.assign_type(node.origin, ty);
 
@@ -58,6 +65,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         let ast = data.ast.node();
 
         let ty = match &ast.node {
+            // This does not take into account that primitives are multi types and will need to be fixed
             AstNode::Constant(Value::Bool(_)) => self.0.primitives.bool_type,
             AstNode::Constant(Value::Char(_)) => self.0.primitives.char_type,
             AstNode::Constant(Value::Integer(_)) => self.0.primitives.int_type,
@@ -95,7 +103,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         let arithmetic = builtins::Operator::try_from_str(data.ast.symbol().unwrap().access());
 
         let ty = arithmetic
-            .map(|op| dbg!(self.type_arithmetic_call(op, args.as_slice())))
+            .map(|op| self.type_arithmetic_call(op, args.as_slice()))
             .unwrap_or(to);
 
         let new_node = Node {
@@ -107,19 +115,68 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         self.ty(new_node, Some(ty))
     }
 
+    // map_record_type and map_union_type are the two only functions which *create* actual types - all of the other
+    // mappers create type references. they are declaration points.
+
+    fn map_record_type(
+        &mut self,
+        data: FlattenData<'ast>,
+        origin: OriginIdx,
+        generics: Vec<RefIdx>,
+        fields: Vec<RefIdx>,
+    ) -> Result<Node<FlattenData<'ast>>, Error> {
+        self.assign_type(
+            origin,
+            // this is too complicated
+            Some(TypeVariable::Actual(Type::single(RefIdx::Resolved(origin)))),
+        );
+
+        // and we return the same node since this is mapper
+        Ok(Node {
+            origin,
+            data,
+            kind: Kind::RecordType { generics, fields },
+        })
+    }
+
+    fn map_union_type(
+        &mut self,
+        data: FlattenData<'ast>,
+        origin: OriginIdx,
+        generics: Vec<RefIdx>,
+        variants: Vec<RefIdx>,
+    ) -> Result<Node<FlattenData<'ast>>, Error> {
+        self.assign_type(
+            origin,
+            Some(TypeVariable::Actual(Type::new(
+                variants.iter().copied().collect(),
+            ))),
+        );
+
+        Ok(Node {
+            data,
+            origin,
+            kind: Kind::UnionType { generics, variants },
+        })
+    }
+
     fn map_node(
         &mut self,
         node: Node<FlattenData<'ast>>,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
         match node.kind {
             fir::Kind::Constant(c) => self.map_constant(node.data, node.origin, c),
-            // FIXME: This isn't true - we should eventually get to a position where a type in itself is
-            // a value which can be manipulated by the typechecker
-            // Declarations and assignments are void
-            fir::Kind::RecordType { .. }
-            | fir::Kind::UnionType { .. }
-            | fir::Kind::Function { .. }
-            | fir::Kind::Assignment { .. } => self.ty(node, None),
+            // Assignments are void
+            fir::Kind::Assignment { .. } => self.ty(node, None),
+            // Functions are weird
+            // FIXME: Handle them properly
+            fir::Kind::Function { .. } => self.ty(node, None),
+            fir::Kind::UnionType { generics, variants } => {
+                self.map_union_type(node.data, node.origin, generics, variants)
+            }
+            fir::Kind::RecordType { generics, fields } => {
+                self.map_record_type(node.data, node.origin, generics, fields)
+            }
             // These nodes all refer to other nodes, type references or typed values. They will need
             // to be flattened later on.
             fir::Kind::TypeReference(ty)
