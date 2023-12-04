@@ -39,8 +39,8 @@ impl Type {
         Type(set)
     }
 
-    pub fn set(&self) -> HashSet<RefIdx> {
-        self.0
+    pub fn set(&self) -> &HashSet<RefIdx> {
+        &self.0
     }
 
     #[deprecated(note = "is this actually valid?")]
@@ -71,7 +71,7 @@ pub(crate) enum TypeVariable {
 }
 
 impl TypeVariable {
-    pub fn actual(self) -> Type {
+    pub fn actual(&self) -> &Type {
         match self {
             TypeVariable::Actual(a) => a,
             TypeVariable::Reference(r) => unreachable!("unexpected type reference: {r:?}"),

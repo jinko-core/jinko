@@ -145,8 +145,11 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
     ) -> Result<Node<FlattenData<'ast>>, Error> {
         match node.kind {
             fir::Kind::Constant(c) => self.map_constant(node.data, node.origin, c),
-            // Declarations and assignments are void
-            fir::Kind::Function { .. } | fir::Kind::Assignment { .. } => self.ty(node, None),
+            // Assignments are void
+            fir::Kind::Assignment { .. } => self.ty(node, None),
+            // Functions are weird
+            // FIXME: Handle them properly
+            fir::Kind::Function { .. } => self.ty(node, None),
             fir::Kind::UnionType { generics, variants } => {
                 self.map_union_type(node.data, node.origin, generics, variants)
             }

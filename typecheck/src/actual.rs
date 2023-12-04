@@ -1,5 +1,5 @@
 use error::Error;
-use fir::{Fallible, Fir, Kind, Node, OriginIdx, RefIdx, Traversal};
+use fir::{Fallible, Fir, Node, OriginIdx, RefIdx, Traversal};
 use flatten::FlattenData;
 
 use crate::{Type, TypeCtx, TypeVariable};
@@ -9,7 +9,7 @@ use crate::{Type, TypeCtx, TypeVariable};
 /// This pass will resolve these links and make each node point to its *actual* type.
 pub(crate) struct Actual<'ctx>(pub(crate) &'ctx mut TypeCtx);
 
-fn innermost_type(ctx: &TypeCtx, fir: &Fir<FlattenData>, linked_node: RefIdx) -> Option<Type> {
+fn innermost_type(ctx: &TypeCtx, linked_node: RefIdx) -> Option<Type> {
     let linked_node = linked_node.expect_resolved();
 
     // so can we replace all of this by a permanent lookup until we find a Type::Actual?
@@ -22,7 +22,7 @@ fn innermost_type(ctx: &TypeCtx, fir: &Fir<FlattenData>, linked_node: RefIdx) ->
         match ty {
             Some(ty) => match ty {
                 Some(ty) => match ty {
-                    TypeVariable::Actual(ty) => return Some(*ty),
+                    TypeVariable::Actual(ty) => return Some(ty.clone()), // FIXME: Remove clone
                     TypeVariable::Reference(r) => {
                         to_lookup = r.expect_resolved();
                     }
@@ -84,14 +84,21 @@ fn innermost_type(ctx: &TypeCtx, fir: &Fir<FlattenData>, linked_node: RefIdx) ->
 impl<'ctx> Actual<'ctx> {
     /// Recursively try and resolve a type link within the type context. This will update the given node's type
     /// within the type context.
-    fn resolve_link(&mut self, fir: &Fir<FlattenData>, to_resolve: OriginIdx) -> Fallible<Error> {
+    fn resolve_link(&mut self, to_resolve: OriginIdx) -> Fallible<Error> {
         // if any node has not been through "Typer" before, this is an interpreter error
         let link = self.0.types.get(&to_resolve).unwrap();
 
         // void nodes are already fully typed, so we don't take care of them
-        if let Some(Type::One(ty_ref)) = link {
-            let innermost_ty = innermost_type(self.0, fir, *ty_ref);
-            self.0.types.insert(to_resolve, innermost_ty).unwrap();
+        if let Some(TypeVariable::Reference(ty_ref)) = link {
+            // FIXME: Rework. that's very ugly
+            let innermost_ty = innermost_type(self.0, *ty_ref);
+            self.0
+                .types
+                .insert(
+                    to_resolve,
+                    Some(TypeVariable::Actual(innermost_ty.unwrap())),
+                )
+                .unwrap();
         }
 
         Ok(())
@@ -99,11 +106,7 @@ impl<'ctx> Actual<'ctx> {
 }
 
 impl<'ctx> Traversal<FlattenData<'_>, Error> for Actual<'ctx> {
-    fn traverse_node(
-        &mut self,
-        fir: &Fir<FlattenData>,
-        node: &Node<FlattenData>,
-    ) -> Fallible<Error> {
-        self.resolve_link(fir, node.origin)
+    fn traverse_node(&mut self, _: &Fir<FlattenData>, node: &Node<FlattenData>) -> Fallible<Error> {
+        self.resolve_link(node.origin)
     }
 }

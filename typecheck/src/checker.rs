@@ -8,7 +8,6 @@ use fir::{Fallible, Fir, Node, RefIdx, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
 
-use std::collections::HashSet;
 use std::iter::Iterator;
 
 use builtins::Comparison::*;
@@ -24,10 +23,10 @@ pub(crate) struct Checker<'ctx>(pub(crate) &'ctx mut TypeCtx);
 impl<'ctx> Checker<'ctx> {
     // At this point we've gone through Actual - so maybe our TypeCtx should be a TypeCtx<ActualTypeVar> then?
     // like TypeCtx<Type> and TypeCtx<TypeVariable> before? Or does that not make sense?
-    fn get_type(&self, of: &RefIdx) -> Option<TypeVariable> {
+    fn get_type(&self, of: &RefIdx) -> Option<&TypeVariable> {
         // if at this point, the reference is unresolved, or if we haven't seen that node yet, it's
         // an interpreter error
-        *self.0.types.get(&of.expect_resolved()).unwrap()
+        self.0.types.get(&of.expect_resolved()).unwrap().as_ref()
     }
 
     fn expected_arithmetic_types(
@@ -70,7 +69,9 @@ impl<'ctx> Checker<'ctx> {
         };
 
         let expected_ty = match op.ty() {
-            BuiltinType::Number | BuiltinType::Comparable => self.get_type(&args[0]).unwrap(),
+            BuiltinType::Number | BuiltinType::Comparable => {
+                self.get_type(&args[0]).unwrap().clone() // FIXME: Remove clone
+            }
             BuiltinType::Bool => {
                 TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.bool_type)))
             }
@@ -143,8 +144,8 @@ struct Got<T>(T);
 fn type_mismatch(
     loc: &SpanTuple,
     fir: &Fir<FlattenData>,
-    expected: Expected<Option<Type>>,
-    got: Got<Option<Type>>,
+    expected: Expected<Option<&Type>>,
+    got: Got<Option<&Type>>,
 ) -> Error {
     // FIXME: Factor
     let get_symbol = |ty: Type| {
@@ -162,8 +163,8 @@ fn type_mismatch(
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
             "type mismatch found: expected {}, got {}",
-            fmt.ty(&expected.0),
-            fmt.ty(&got.0)
+            fmt.ty(expected.0),
+            fmt.ty(got.0)
         ))
         .with_loc(loc.clone()) // FIXME: Missing hint
 }
@@ -281,7 +282,8 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             .unwrap_or_else(|| {
                 Ok(def_args
                     .iter()
-                    .map(|def_arg| self.get_type(def_arg))
+                    // FIXME: Remove clone
+                    .map(|def_arg| self.get_type(def_arg).cloned())
                     .collect())
             })?;
 
@@ -295,11 +297,13 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
 
         // now we can safely zip both argument slices
         let errs = def_args
-            .into_iter()
+            .iter()
             .zip(args)
             .fold(Vec::new(), |mut errs, (expected, arg)| {
                 let got = self.get_type(arg);
+                let expected = expected.as_ref();
 
+                // FIXME: Remove clone
                 if expected != got {
                     errs.push(type_mismatch(
                         node.data.ast.location(),
