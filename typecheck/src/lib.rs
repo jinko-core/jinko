@@ -38,6 +38,24 @@ impl Type {
 
         Type(set)
     }
+
+    pub fn set(&self) -> HashSet<RefIdx> {
+        self.0
+    }
+
+    #[deprecated(note = "is this actually valid?")]
+    pub fn is_single(&self) -> bool {
+        self.0.len() == 1
+    }
+
+    #[deprecated(note = "is this actually valid?")]
+    pub fn get_single(&self) -> Option<RefIdx> {
+        self.is_single()
+            // NOTE: We can unwrap safely here since this closure only executes if there
+            // is exactly one element
+            .then(|| self.0.iter().next().unwrap())
+            .copied()
+    }
 }
 
 impl FromIterator<RefIdx> for Type {
@@ -52,7 +70,23 @@ pub(crate) enum TypeVariable {
     Reference(RefIdx), // specifically we're interested in `type_ctx.type_of(< that refidx >)`
 }
 
-impl TypeVariable {}
+impl TypeVariable {
+    pub fn actual(self) -> Type {
+        match self {
+            TypeVariable::Actual(a) => a,
+            TypeVariable::Reference(r) => unreachable!("unexpected type reference: {r:?}"),
+        }
+    }
+
+    pub fn ref_idx(&self) -> RefIdx {
+        match self {
+            TypeVariable::Actual(a) => {
+                unreachable!("expected reference type, got actual type: {a:?}")
+            }
+            TypeVariable::Reference(r) => *r,
+        }
+    }
+}
 
 pub(crate) struct TypeCtx {
     // primitive type declaration

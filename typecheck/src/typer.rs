@@ -118,7 +118,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
     // map_record_type and map_union_type are the two only functions which *create* actual types - all of the other
     // mappers create type references. they are declaration points.
 
-    fn map_type(
+    fn map_record_type(
         &mut self,
         data: FlattenData<'ast>,
         origin: OriginIdx,
@@ -135,7 +135,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         Ok(Node {
             origin,
             data,
-            kind: Kind::Type { generics, fields },
+            kind: Kind::RecordType { generics, fields },
         })
     }
 
@@ -147,8 +147,11 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
             fir::Kind::Constant(c) => self.map_constant(node.data, node.origin, c),
             // Declarations and assignments are void
             fir::Kind::Function { .. } | fir::Kind::Assignment { .. } => self.ty(node, None),
-            fir::Kind::Type { generics, fields } => {
-                self.map_type(node.data, node.origin, generics, fields)
+            fir::Kind::UnionType { generics, variants } => {
+                self.map_union_type(node.data, node.origin, generics, variants)
+            }
+            fir::Kind::RecordType { generics, fields } => {
+                self.map_record_type(node.data, node.origin, generics, fields)
             }
             // These nodes all refer to other nodes, type references or typed values. They will need
             // to be flattened later on.

@@ -8,6 +8,7 @@ use fir::{Fallible, Fir, Node, RefIdx, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
 
+use std::collections::HashSet;
 use std::iter::Iterator;
 
 use builtins::Comparison::*;
@@ -21,6 +22,8 @@ pub(crate) struct Checker<'ctx>(pub(crate) &'ctx mut TypeCtx);
 
 // TODO: Actually, can the checker only work with `Type`s instead of `TypeVariable`s? Since we're after `Actual`... right?
 impl<'ctx> Checker<'ctx> {
+    // At this point we've gone through Actual - so maybe our TypeCtx should be a TypeCtx<ActualTypeVar> then?
+    // like TypeCtx<Type> and TypeCtx<TypeVariable> before? Or does that not make sense?
     fn get_type(&self, of: &RefIdx) -> Option<TypeVariable> {
         // if at this point, the reference is unresolved, or if we haven't seen that node yet, it's
         // an interpreter error
@@ -36,19 +39,18 @@ impl<'ctx> Checker<'ctx> {
     ) -> Result<Vec<Option<TypeVariable>>, Error> {
         use builtins::*;
 
+        // FIXME: Remove all calls to `::single` here?
         let numbers = [
             // FIXME: This is ugly
-            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.int_type))),
-            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.float_type))),
+            RefIdx::Resolved(self.0.primitives.int_type),
+            RefIdx::Resolved(self.0.primitives.float_type),
         ];
         let comparable = [
-            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.bool_type))),
-            TypeVariable::Actual(Type::single(RefIdx::Resolved(
-                self.0.primitives.string_type,
-            ))),
-            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.int_type))),
-            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.char_type))),
-            TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.float_type))),
+            RefIdx::Resolved(self.0.primitives.bool_type),
+            RefIdx::Resolved(self.0.primitives.string_type),
+            RefIdx::Resolved(self.0.primitives.int_type),
+            RefIdx::Resolved(self.0.primitives.char_type),
+            RefIdx::Resolved(self.0.primitives.float_type),
         ];
 
         let arity = match op {
@@ -56,12 +58,15 @@ impl<'ctx> Checker<'ctx> {
             Operator::Unary(_) => 1,
         };
 
-        let valid_types = match op {
-            Operator::Arithmetic(_) => numbers.as_slice(),
-            Operator::Comparison(Equals) | Operator::Comparison(Differs) => comparable.as_slice(),
-            Operator::Comparison(_) => &comparable[2..],
-            Operator::Unary(Not) => &comparable[..1],
-            Operator::Unary(Minus) => numbers.as_slice(),
+        let valid_union_type = match op {
+            Operator::Arithmetic(_) => Type(numbers.into_iter().collect()),
+            Operator::Comparison(Equals) | Operator::Comparison(Differs) => {
+                Type(comparable.into_iter().collect())
+            }
+            Operator::Unary(Minus) => Type(numbers.into_iter().collect()),
+            // FIXME: These two are ugly as sin - remove the .map call
+            Operator::Comparison(_) => Type(comparable[2..].into_iter().map(|r| *r).collect()),
+            Operator::Unary(Not) => Type(comparable[..1].into_iter().map(|r| *r).collect()),
         };
 
         let expected_ty = match op.ty() {
@@ -71,24 +76,26 @@ impl<'ctx> Checker<'ctx> {
             }
         };
 
-        if valid_types.contains(&expected_ty) {
+        if valid_union_type
+            .set()
+            .contains(&expected_ty.actual().get_single().unwrap())
+        {
             Ok(vec![Some(expected_ty); arity])
         } else {
             Err(unexpected_arithmetic_type(
                 loc,
                 fir,
-                &expected_ty,
-                valid_types,
+                &expected_ty.actual(), // FIXME: This is wrong
+                &valid_union_type,
                 op,
             ))
         }
     }
 }
 
-mod format {
-    use colored::Colorize;
-    use symbol::Symbol;
+struct Fmt<'fir, 'ast>(&'fir Fir<FlattenData<'ast>>);
 
+impl<'fir, 'ast> Fmt<'fir, 'ast> {
     pub fn number(value: usize) -> String {
         match value {
             0 => format!("{}", "no".purple()),
@@ -103,20 +110,31 @@ mod format {
         }
     }
 
-    pub fn ty(ty: Option<&Symbol>) -> String {
+    // is having a self parameter okay here
+    pub fn ty(&self, ty: Option<&Type>) -> String {
         match ty {
-            Some(ty) => format!("`{}`", ty.access().purple()),
             None => format!("{}", "no type".green()),
+            // FIXME: Are empty sets allowed?
+            Some(ty) => ty
+                .set()
+                .iter()
+                .map(|idx| self.0.nodes[&idx.expect_resolved()].data.ast.symbol())
+                .fold(None, |acc, sym| match acc {
+                    None => Some(String::from(sym.unwrap().access())),
+                    Some(acc) => Some(format!("{} | {}", acc, sym.unwrap().access().purple())),
+                })
+                .unwrap(),
         }
     }
 
-    pub fn ty_vec(tys: Vec<Option<&Symbol>>) -> String {
-        tys.into_iter()
-            // this calls `format::ty` but we are in the format module
-            .map(ty)
-            // FIXME: Improve formatting
-            .fold(String::new(), |acc, ty| format!("{} | {}", acc, ty))
-    }
+    // #[deprecated(note = "unneeded?")]
+    // pub fn ty_vec(tys: Vec<Option<String>>) -> String {
+    //     tys.into_iter()
+    //         // this calls `format::ty` but we are in the format module
+    //         .map(ty)
+    //         // FIXME: Improve formatting
+    //         .fold(String::new(), |acc, ty| format!("{} | {}", acc, ty))
+    // }
 }
 
 struct Expected<T>(T);
@@ -128,19 +146,24 @@ fn type_mismatch(
     expected: Expected<Option<Type>>,
     got: Got<Option<Type>>,
 ) -> Error {
-    let get_symbol = |ty| {
-        let Type::single(idx) = ty;
-        fir.nodes[&idx.expect_resolved()].data.ast.symbol().unwrap()
+    // FIXME: Factor
+    let get_symbol = |ty: Type| {
+        ty.set()
+            .iter()
+            .map(|idx| fir.nodes[&idx.expect_resolved()].data.ast.symbol())
+            .fold(None, |acc, sym| match acc {
+                None => Some(String::from(sym.unwrap().access())),
+                Some(acc) => Some(format!("{} | {}", acc, sym.unwrap().access().purple())),
+            })
     };
 
-    let expected_ty = expected.0.map(get_symbol);
-    let got_ty = got.0.map(get_symbol);
+    let fmt = Fmt(fir);
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
             "type mismatch found: expected {}, got {}",
-            format::ty(expected_ty),
-            format::ty(got_ty)
+            fmt.ty(&expected.0),
+            fmt.ty(&got.0)
         ))
         .with_loc(loc.clone()) // FIXME: Missing hint
 }
@@ -149,10 +172,10 @@ fn argument_count_mismatch(loc: &SpanTuple, expected: Expected<usize>, got: Got<
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
             "argument count mismatch: expected {} {}, got {} {}",
-            format::number(expected.0),
-            format::plural("argument", expected.0),
-            format::number(got.0),
-            format::plural("argument", got.0),
+            Fmt::number(expected.0),
+            Fmt::plural("argument", expected.0),
+            Fmt::number(got.0),
+            Fmt::plural("argument", got.0),
         ))
         .with_loc(loc.clone())
     // FIXME: missing hint
@@ -162,20 +185,27 @@ fn unexpected_arithmetic_type(
     loc: &SpanTuple,
     fir: &Fir<FlattenData>,
     ty: &Type,
-    valid: &[Type],
+    valid_type_set: &Type, // FIXME: Should that be a Type?
     op: builtins::Operator,
 ) -> Error {
-    let get_symbol = |ty| {
-        let &Type::single(idx) = ty;
-        fir.nodes[&idx.expect_resolved()].data.ast.symbol()
+    let get_symbol = |ty: &Type| {
+        ty.set()
+            .iter()
+            .map(|idx| fir.nodes[&idx.expect_resolved()].data.ast.symbol())
+            .fold(None, |acc, sym| match acc {
+                None => Some(String::from(sym.unwrap().access())),
+                Some(acc) => Some(format!("{} | {}", acc, sym.unwrap().access().purple())),
+            })
     };
+
+    let fmt = Fmt(fir);
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
             "unexpected type for arithmetic operation `{}`: {} (expected {})",
             op.as_str().yellow(),
-            format::ty(get_symbol(ty)),
-            format::ty_vec(valid.iter().map(get_symbol).collect()),
+            fmt.ty(Some(ty)),
+            fmt.ty(Some(valid_type_set)),
         ))
         .with_loc(loc.clone())
 }
@@ -202,8 +232,8 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             let err = type_mismatch(
                 node.data.ast.location(),
                 fir,
-                Expected(ret_ty),
-                Got(block_ty),
+                Expected(ret_ty.map(TypeVariable::actual)),
+                Got(block_ty.map(TypeVariable::actual)),
             );
             let err = match (ret_ty, block_ty) {
                 (None, Some(_)) => err
@@ -274,8 +304,8 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
                     errs.push(type_mismatch(
                         node.data.ast.location(),
                         fir,
-                        Expected(expected),
-                        Got(got),
+                        Expected(expected.map(TypeVariable::actual)),
+                        Got(got.map(TypeVariable::actual)),
                     ))
                 }
 
@@ -303,8 +333,8 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             Err(type_mismatch(
                 node.data.ast.location(),
                 fir,
-                Expected(to),
-                Got(from),
+                Expected(to.map(TypeVariable::actual)),
+                Got(from.map(TypeVariable::actual)),
             ))
         } else {
             Ok(())
