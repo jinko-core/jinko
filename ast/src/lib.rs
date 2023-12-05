@@ -28,7 +28,6 @@ pub enum TypeKind {
 /// func apply_fn(arg: int, fn: func(int) -> int) -> int { fn(arg) }
 /// ```
 #[derive(Debug, Clone)]
-// TODO: Rename? `Type`?
 pub struct Type {
     pub kind: TypeKind,
     /// the generics and location are common fields between the multiple kinds, so they are lifted out of the [`TypeKind`] enum
@@ -41,7 +40,7 @@ pub struct Type {
 /// tuple types, from type aliases, from empty types
 // TODO: How does this handle sum types?
 #[derive(Debug, Clone)]
-pub enum TypeFields {
+pub enum TypeContent {
     // TODO: Merge with `Record`?
     /// An empty type: `type Foo;`
     None,
@@ -158,7 +157,7 @@ pub enum Node {
     Type {
         name: Symbol,
         generics: Vec<GenericParameter>,
-        fields: TypeFields,
+        fields: TypeContent,
         with: Option<Box<Ast>>,
     },
     TypeInstantiation(Call),
@@ -280,7 +279,7 @@ pub trait Visitor {
         location: SpanTuple,
         name: Symbol,
         generics: Vec<GenericParameter>,
-        fields: TypeFields,
+        fields: TypeContent,
         with: Option<Box<Ast>>,
     ) -> Result<Ast, Error> {
         let with = self.optional(with, Self::boxed)?;

@@ -2,7 +2,7 @@
 
 use crate::BuiltinType;
 
-use ast::{Ast, Declaration, FunctionKind, Node, Type, TypeFields, TypeKind, TypedValue};
+use ast::{Ast, Declaration, FunctionKind, Node, Type, TypeContent, TypeKind, TypedValue};
 use location::SpanTuple;
 use symbol::Symbol;
 
@@ -28,7 +28,7 @@ pub fn ty(ty: BuiltinType) -> Ast {
         node: Node::Type {
             name: Symbol::from(ty.name()),
             generics: vec![],
-            fields: TypeFields::None,
+            fields: TypeContent::None,
             with: None,
         },
     }

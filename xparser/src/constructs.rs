@@ -26,7 +26,7 @@ use ast::Type;
 use ast::TypeKind;
 use ast::TypedValue;
 use ast::Value;
-use ast::{Ast, TypeFields};
+use ast::{Ast, TypeContent};
 use location::Location;
 use location::SpanTuple;
 use nom::sequence::tuple;
@@ -549,7 +549,7 @@ fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseIn
             Node::Type {
                 name: Symbol::from(name),
                 generics,
-                fields: TypeFields::Record(fields),
+                fields: TypeContent::Record(fields),
                 with: None, // TODO: Parse `with` block properly
             },
         )
@@ -562,7 +562,7 @@ fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseIn
                 name: Symbol::from(name),
                 generics,
                 // FIXME: this is invalid
-                fields: TypeFields::Alias(type_aliased),
+                fields: TypeContent::Alias(type_aliased),
                 with: None,
             },
         )
@@ -572,7 +572,7 @@ fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseIn
             Node::Type {
                 name: Symbol::from(name),
                 generics,
-                fields: TypeFields::None,
+                fields: TypeContent::None,
                 with: None,
             },
         )
