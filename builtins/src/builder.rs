@@ -2,11 +2,11 @@
 
 use crate::BuiltinType;
 
-use ast::{Ast, Declaration, FunctionKind, Node, TypeArgument, TypeKind, TypedValue};
+use ast::{Ast, Declaration, FunctionKind, Node, Type, TypeFields, TypeKind, TypedValue};
 use location::SpanTuple;
 use symbol::Symbol;
 
-pub fn argument(name: &str, ty: TypeArgument) -> TypedValue {
+pub fn argument(name: &str, ty: Type) -> TypedValue {
     TypedValue {
         location: SpanTuple::builtin(),
         symbol: Symbol::from(name),
@@ -14,11 +14,11 @@ pub fn argument(name: &str, ty: TypeArgument) -> TypedValue {
     }
 }
 
-pub fn ty_arg(ty: BuiltinType) -> TypeArgument {
-    TypeArgument {
+pub fn ty_arg(ty: BuiltinType) -> Type {
+    Type {
         location: SpanTuple::builtin(),
         generics: vec![],
-        kind: TypeKind::Ty(Symbol::from(ty.name())),
+        kind: TypeKind::Simple(Symbol::from(ty.name())),
     }
 }
 
@@ -28,13 +28,13 @@ pub fn ty(ty: BuiltinType) -> Ast {
         node: Node::Type {
             name: Symbol::from(ty.name()),
             generics: vec![],
-            fields: vec![],
+            fields: TypeFields::None,
             with: None,
         },
     }
 }
 
-pub fn function(name: &str, args: Vec<TypedValue>, return_type: Option<TypeArgument>) -> Ast {
+pub fn function(name: &str, args: Vec<TypedValue>, return_type: Option<Type>) -> Ast {
     Ast {
         location: SpanTuple::builtin(),
         node: Node::Function {
