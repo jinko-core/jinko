@@ -207,6 +207,7 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
         let ret_ty = return_ty.as_ref().and_then(|b| self.get_type(b));
         let block_ty = block.as_ref().and_then(|b| self.get_type(b));
 
+        // FIXME: Use `is_superset_of` or equivalent here
         if ret_ty != block_ty {
             let err = type_mismatch(
                 node.data.ast.location(),
@@ -281,14 +282,22 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
                 let got = self.get_type(arg);
                 let expected = expected.as_ref();
 
-                // FIXME: Remove clone
-                if expected != got {
-                    errs.push(type_mismatch(
-                        node.data.ast.location(),
-                        fir,
-                        Expected(expected.map(TypeVariable::actual)),
-                        Got(got.map(TypeVariable::actual)),
-                    ))
+                // so we can't use != here anymore. multiple options
+                // 1. instead of storing Option<Type>, keep Type - and add a new `None` variant to the Type
+                // 2. this can be represented using an empty set, but we must then make sure that {} is "not" a subset of { int, string }
+                // which makes very little sense in terms of set theory
+                if let (Some(got), Some(expected)) = (got, expected) {
+                    dbg!(got.actual());
+                    dbg!(expected.actual());
+
+                    if !got.actual().can_widen_to(expected.actual()) {
+                        errs.push(type_mismatch(
+                            node.data.ast.location(),
+                            fir,
+                            Expected(Some(expected.actual())),
+                            Got(Some(got.actual())),
+                        ))
+                    }
                 }
 
                 errs
@@ -311,6 +320,7 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
         let to = self.get_type(to);
         let from = self.get_type(from);
 
+        // FIXME: Use `is_superset_of` here
         if to != from {
             Err(type_mismatch(
                 node.data.ast.location(),

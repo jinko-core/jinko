@@ -65,6 +65,14 @@ impl Type {
     //         .then(|| self.0.iter().next().unwrap())
     //         .copied()
     // }
+
+    pub fn is_superset_of(&self, other: &Type) -> bool {
+        return self.set().contains(other.set());
+    }
+
+    pub fn can_widen_to(&self, superset: &Type) -> bool {
+        return superset.set().contains(self.set());
+    }
 }
 
 impl FromIterator<RefIdx> for Type {
@@ -474,5 +482,40 @@ mod tests {
         let fir = fir!(ast).type_check();
 
         assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn typeset_makes_sense() {
+        let superset = Type(TypeSet(
+            [
+                RefIdx::Resolved(OriginIdx(0)),
+                RefIdx::Resolved(OriginIdx(1)),
+                RefIdx::Resolved(OriginIdx(2)),
+                RefIdx::Resolved(OriginIdx(3)),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+        let set = Type(TypeSet(
+            [
+                RefIdx::Resolved(OriginIdx(0)),
+                RefIdx::Resolved(OriginIdx(1)),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+        let single = Type::single(RefIdx::Resolved(OriginIdx(0)));
+        let empty = Type(TypeSet(HashSet::new()));
+
+        // FIXME: Decide on empty's behavior
+
+        assert!(set.can_widen_to(&superset));
+        assert!(superset.is_superset_of(&set));
+
+        assert!(single.can_widen_to(&set));
+        assert!(set.is_superset_of(&single));
+
+        assert!(single.can_widen_to(&superset));
+        assert!(superset.is_superset_of(&single));
     }
 }

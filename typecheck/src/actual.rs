@@ -22,6 +22,8 @@ fn innermost_type(ctx: &TypeCtx, linked_node: RefIdx) -> Option<Type> {
         match ty {
             Some(ty) => match ty {
                 Some(ty) => match ty {
+                    // This is an issue - we can run into situations where we have an `Actual` which
+                    // points to an `fir::Kind::TypeReference` - so we must extract that
                     TypeVariable::Actual(ty) => return Some(ty.clone()), // FIXME: Remove clone
                     TypeVariable::Reference(r) => {
                         to_lookup = r.expect_resolved();
@@ -88,8 +90,8 @@ impl<'ctx> Actual<'ctx> {
         // if any node has not been through "Typer" before, this is an interpreter error
         let link = self.0.types.get(&to_resolve).unwrap();
 
-        dbg!(&to_resolve);
-        dbg!(&link);
+        // dbg!(&to_resolve);
+        // dbg!(&link);
 
         // void nodes are already fully typed, so we don't take care of them
         if let Some(TypeVariable::Reference(ty_ref)) = link {
