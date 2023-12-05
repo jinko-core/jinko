@@ -153,7 +153,7 @@
 //! ```
 
 use ast::{
-    Ast, Call, Declaration, GenericParameter, LoopKind, Node as AstNode, Type, TypeFields,
+    Ast, Call, Declaration, GenericParameter, LoopKind, Node as AstNode, Type, TypeContent,
     TypeKind, TypedValue,
 };
 use fir::{Fir, Kind, Node, OriginIdx, RefIdx};
@@ -732,7 +732,7 @@ impl<'ast> Ctx<'ast> {
         self,
         ast: AstInfo<'ast>,
         generics: Vec<RefIdx>,
-        fields: &'ast TypeFields,
+        fields: &'ast TypeContent,
     ) -> (Ctx<'ast>, RefIdx) {
         let data = FlattenData {
             scope: self.scope,
@@ -740,10 +740,10 @@ impl<'ast> Ctx<'ast> {
         };
 
         match fields {
-            TypeFields::None => {
+            TypeContent::None => {
                 self.append(data,  Kind::RecordType { generics, fields: vec![] })
             },
-            TypeFields::Record(fields) => {
+            TypeContent::Record(fields) => {
                 let (ctx, fields) =
                     self.visit_fold(fields.iter(), Ctx::handle_declaration_argument);
 
@@ -751,15 +751,15 @@ impl<'ast> Ctx<'ast> {
             },
             // FIXME: Surely there is something we need to do with generics here and in the following variants, right?
             // TODO: Add Kind::TypeAlias?
-            TypeFields::Alias(ty @ Type { kind: TypeKind::Multi(variants), .. }) => {
+            TypeContent::Alias(ty @ Type { kind: TypeKind::Multi(variants), .. }) => {
                 let (ctx, aliased) = self.handle_multi_type(ty, generics, variants);
 
                 ctx.append(data, Kind::TypeReference(aliased))
             },
-            TypeFields::Alias(Type { kind: TypeKind::Simple(_), .. }) => {
+            TypeContent::Alias(Type { kind: TypeKind::Simple(_), .. }) => {
                 self.append(data, Kind::TypeReference(RefIdx::Unresolved))
             },
-            TypeFields::Tuple(_) => todo!("tuple fields are not handled yet: map to a RecordType with fields named `.0`, `.1`..."),
+            TypeContent::Tuple(_) => todo!("tuple fields are not handled yet: map to a RecordType with fields named `.0`, `.1`..."),
             _ => todo!("function-like types are not handled yet")
         }
     }
@@ -768,7 +768,7 @@ impl<'ast> Ctx<'ast> {
         self,
         ast: AstInfo<'ast>,
         generics: &[GenericParameter],
-        fields: &'ast TypeFields,
+        fields: &'ast TypeContent,
         _with: &Option<Box<Ast>>,
     ) -> (Ctx<'ast>, RefIdx) {
         let (ctx, generics) = self.visit_fold(generics.iter(), Ctx::handle_generic_node);
