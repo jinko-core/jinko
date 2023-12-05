@@ -3,10 +3,7 @@ mod checker;
 mod primitives;
 mod typer;
 
-use std::{
-    collections::{HashMap, HashSet},
-    iter,
-};
+use std::collections::{HashMap, HashSet};
 
 use error::{ErrKind, Error};
 use fir::{Fir, Incomplete, Mapper, OriginIdx, Pass, RefIdx, Traversal};
@@ -18,17 +15,29 @@ use typer::Typer;
 
 use primitives::PrimitiveTypes;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TypeSet(HashSet<RefIdx>);
+
+impl TypeSet {
+    // TODO: Rename or improve `Type`'s API
+    pub fn contains(&self, other: &TypeSet) -> bool {
+        // FIXME: This is quite ugly
+        other.0.iter().find(|elt| !self.0.contains(elt)).is_none()
+    }
+}
+
 /// This is the base structure that our typechecker - a type "interpreter" - will play with.
 /// In `jinko`, the type of a variable is a set of elements of kind `type`. So this structure can
 /// be thought of as a simple set of actual, monomorphized types.
 // TODO: for now, let's not think about optimizations - let's box and clone and blurt bytes everywhere
 #[derive(Clone, Debug, Eq, PartialEq)]
 // TODO: We might have to turn this into an enum - `ActualType(Set<RefIdx>) | TypeReference(RefIdx)`
-pub(crate) struct Type(HashSet<RefIdx>);
+pub(crate) struct Type(TypeSet);
 
 impl Type {
+    #[deprecated(note = "needs a new API")]
     pub fn new(set: HashSet<RefIdx>) -> Type {
-        Type(set)
+        Type(TypeSet(set))
     }
 
     // TODO: Rename? one? simple? unique? what's the opposite of `sum` or `multi`?
@@ -36,31 +45,31 @@ impl Type {
         let mut set = HashSet::new();
         set.insert(fir_type);
 
-        Type(set)
+        Type(TypeSet(set))
     }
 
-    pub fn set(&self) -> &HashSet<RefIdx> {
+    pub fn set(&self) -> &TypeSet {
         &self.0
     }
 
-    #[deprecated(note = "is this actually valid?")]
-    pub fn is_single(&self) -> bool {
-        self.0.len() == 1
-    }
+    // #[deprecated(note = "is this actually valid?")]
+    // pub fn is_single(&self) -> bool {
+    //     self.0.len() == 1
+    // }
 
-    #[deprecated(note = "is this actually valid?")]
-    pub fn get_single(&self) -> Option<RefIdx> {
-        self.is_single()
-            // NOTE: We can unwrap safely here since this closure only executes if there
-            // is exactly one element
-            .then(|| self.0.iter().next().unwrap())
-            .copied()
-    }
+    // #[deprecated(note = "is this actually valid?")]
+    // pub fn get_single(&self) -> Option<RefIdx> {
+    //     self.is_single()
+    //         // NOTE: We can unwrap safely here since this closure only executes if there
+    //         // is exactly one element
+    //         .then(|| self.0.iter().next().unwrap())
+    //         .copied()
+    // }
 }
 
 impl FromIterator<RefIdx> for Type {
     fn from_iter<T: IntoIterator<Item = RefIdx>>(iter: T) -> Type {
-        Type(iter.into_iter().collect())
+        Type(TypeSet(iter.into_iter().collect()))
     }
 }
 

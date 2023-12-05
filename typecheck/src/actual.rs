@@ -88,16 +88,16 @@ impl<'ctx> Actual<'ctx> {
         // if any node has not been through "Typer" before, this is an interpreter error
         let link = self.0.types.get(&to_resolve).unwrap();
 
+        dbg!(&to_resolve);
+        dbg!(&link);
+
         // void nodes are already fully typed, so we don't take care of them
         if let Some(TypeVariable::Reference(ty_ref)) = link {
             // FIXME: Rework. that's very ugly
             let innermost_ty = innermost_type(self.0, *ty_ref);
             self.0
                 .types
-                .insert(
-                    to_resolve,
-                    Some(TypeVariable::Actual(innermost_ty.unwrap())),
-                )
+                .insert(to_resolve, innermost_ty.map(TypeVariable::Actual))
                 .unwrap();
         }
 

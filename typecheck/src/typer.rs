@@ -103,7 +103,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         let arithmetic = builtins::Operator::try_from_str(data.ast.symbol().unwrap().access());
 
         let ty = arithmetic
-            .map(|op| dbg!(self.type_arithmetic_call(op, args.as_slice())))
+            .map(|op| self.type_arithmetic_call(op, args.as_slice()))
             .unwrap_or(to);
 
         let new_node = Node {

@@ -58,14 +58,14 @@ impl<'ctx> Checker<'ctx> {
         };
 
         let valid_union_type = match op {
-            Operator::Arithmetic(_) => Type(numbers.into_iter().collect()),
+            Operator::Arithmetic(_) => Type::new(numbers.into_iter().collect()),
             Operator::Comparison(Equals) | Operator::Comparison(Differs) => {
-                Type(comparable.into_iter().collect())
+                Type::new(comparable.into_iter().collect())
             }
-            Operator::Unary(Minus) => Type(numbers.into_iter().collect()),
+            Operator::Unary(Minus) => Type::new(numbers.into_iter().collect()),
             // FIXME: These two are ugly as sin - remove the .map call
-            Operator::Comparison(_) => Type(comparable[2..].into_iter().map(|r| *r).collect()),
-            Operator::Unary(Not) => Type(comparable[..1].into_iter().map(|r| *r).collect()),
+            Operator::Comparison(_) => Type::new(comparable[2..].into_iter().map(|r| *r).collect()),
+            Operator::Unary(Not) => Type::new(comparable[..1].into_iter().map(|r| *r).collect()),
         };
 
         let expected_ty = match op.ty() {
@@ -77,10 +77,8 @@ impl<'ctx> Checker<'ctx> {
             }
         };
 
-        if valid_union_type
-            .set()
-            .contains(&expected_ty.actual().get_single().unwrap())
-        {
+        // FIXME: This API isn't great
+        if valid_union_type.set().contains(&expected_ty.actual().set()) {
             Ok(vec![Some(expected_ty); arity])
         } else {
             Err(unexpected_arithmetic_type(
@@ -118,10 +116,11 @@ impl<'fir, 'ast> Fmt<'fir, 'ast> {
             // FIXME: Are empty sets allowed?
             Some(ty) => ty
                 .set()
+                .0 // FIXME: ugly
                 .iter()
                 .map(|idx| self.0.nodes[&idx.expect_resolved()].data.ast.symbol())
                 .fold(None, |acc, sym| match acc {
-                    None => Some(String::from(sym.unwrap().access())),
+                    None => Some(String::from(sym.unwrap().access()).purple().to_string()),
                     Some(acc) => Some(format!("{} | {}", acc, sym.unwrap().access().purple())),
                 })
                 .unwrap(),
@@ -147,22 +146,11 @@ fn type_mismatch(
     expected: Expected<Option<&Type>>,
     got: Got<Option<&Type>>,
 ) -> Error {
-    // FIXME: Factor
-    let get_symbol = |ty: Type| {
-        ty.set()
-            .iter()
-            .map(|idx| fir.nodes[&idx.expect_resolved()].data.ast.symbol())
-            .fold(None, |acc, sym| match acc {
-                None => Some(String::from(sym.unwrap().access())),
-                Some(acc) => Some(format!("{} | {}", acc, sym.unwrap().access().purple())),
-            })
-    };
-
     let fmt = Fmt(fir);
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
-            "type mismatch found: expected {}, got {}",
+            "type mismatch found: expected `{}`, got `{}`",
             fmt.ty(expected.0),
             fmt.ty(got.0)
         ))
@@ -189,21 +177,11 @@ fn unexpected_arithmetic_type(
     valid_type_set: &Type, // FIXME: Should that be a Type?
     op: builtins::Operator,
 ) -> Error {
-    let get_symbol = |ty: &Type| {
-        ty.set()
-            .iter()
-            .map(|idx| fir.nodes[&idx.expect_resolved()].data.ast.symbol())
-            .fold(None, |acc, sym| match acc {
-                None => Some(String::from(sym.unwrap().access())),
-                Some(acc) => Some(format!("{} | {}", acc, sym.unwrap().access().purple())),
-            })
-    };
-
     let fmt = Fmt(fir);
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
-            "unexpected type for arithmetic operation `{}`: {} (expected {})",
+            "unexpected type for arithmetic operation `{}`: `{}` (expected `{}`)",
             op.as_str().yellow(),
             fmt.ty(Some(ty)),
             fmt.ty(Some(valid_type_set)),
