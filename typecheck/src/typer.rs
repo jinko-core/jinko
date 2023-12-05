@@ -139,6 +139,27 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         })
     }
 
+    fn map_union_type(
+        &mut self,
+        data: FlattenData<'ast>,
+        origin: OriginIdx,
+        generics: Vec<RefIdx>,
+        variants: Vec<RefIdx>,
+    ) -> Result<Node<FlattenData<'ast>>, Error> {
+        self.assign_type(
+            origin,
+            Some(TypeVariable::Actual(Type::new(
+                variants.iter().copied().collect(),
+            ))),
+        );
+
+        Ok(Node {
+            data,
+            origin,
+            kind: Kind::UnionType { generics, variants },
+        })
+    }
+
     fn map_node(
         &mut self,
         node: Node<FlattenData<'ast>>,
