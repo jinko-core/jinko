@@ -113,25 +113,13 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
     ) -> Result<Node<FlattenData<'ast>>, Error> {
         match node.kind {
             fir::Kind::Constant(c) => self.map_constant(node.data, node.origin, c),
+            // FIXME: This isn't true - we should eventually get to a position where a type in itself is
+            // a value which can be manipulated by the typechecker
             // Declarations and assignments are void
             fir::Kind::RecordType { .. }
             | fir::Kind::UnionType { .. }
             | fir::Kind::Function { .. }
             | fir::Kind::Assignment { .. } => self.ty(node, None),
-            // // FIXME: This might be the wrong way to go about this
-            // // special case where we want to change the `ty` of a `TypedValue`
-            // fir::Kind::TypedValue {
-            //     ty: RefIdx::Unresolved,
-            //     value,
-            // } => {
-            //     self.assign_type(node.origin, Some(Type::One(value)));
-
-            //     Ok(Node {
-            //         // this seems dodgy at best
-            //         kind: fir::Kind::TypedValue { value, ty: value },
-            //         ..node
-            //     })
-            // }
             // These nodes all refer to other nodes, type references or typed values. They will need
             // to be flattened later on.
             fir::Kind::TypeReference(ty)
