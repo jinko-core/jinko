@@ -240,7 +240,7 @@ impl<'ast> AstInfo<'ast> {
         }
     }
 
-    /// Fetch the [`AstInfo::Node`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is actually an [`AstInfo::Helper`]
+    /// Fetch the [`AstInfo::Node`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is *not* an [`AstInfo::Ast`]
     pub fn node(&self) -> &Ast {
         match self {
             AstInfo::Node(node) => node,
@@ -248,7 +248,7 @@ impl<'ast> AstInfo<'ast> {
         }
     }
 
-    /// Fetch the [`AstInfo::Node`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is actually an [`AstInfo::Helper`]
+    /// Fetch the [`AstInfo::Node`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is *not* an [`AstInfo::Type`]
     pub fn type_node(&self) -> &Type {
         match self {
             AstInfo::Type(ty) => ty,
@@ -256,7 +256,7 @@ impl<'ast> AstInfo<'ast> {
         }
     }
 
-    /// Fetch the [`AstInfo::Helper`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is actually an [`AstInfo::Node`]
+    /// Fetch the [`AstInfo::Helper`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is *not* an [`AstInfo::Helper`]
     pub fn helper(&self) -> (&Symbol, &SpanTuple) {
         match self {
             AstInfo::Helper(sym, loc) => (sym, loc),
