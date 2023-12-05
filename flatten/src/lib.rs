@@ -318,22 +318,7 @@ impl<'ast> Ctx<'ast> {
     }
 
     fn handle_type_node(self, ty: &'ast Type) -> (Ctx<'ast>, RefIdx) {
-        // TODO: we can call handle_multi_type from here as well maybe?
-
         let (ctx, generics) = self.visit_fold(ty.generics.iter(), Ctx::handle_type_node);
-
-        let data = FlattenData {
-            ast: AstInfo::Type(ty),
-            //     match &ty.kind {
-            //         // TODO: how do we handle multi types properly here?
-            //         TypeKind::Simple(s) => s.clone(),
-            //         TypeKind::Multi(_) => Symbol::from("multi"),
-            //         TypeKind::FunctionLike(_, _) => Symbol::from("func"), // FIXME: Invalid but w/ever for now
-            //     },
-            //     ty.location.clone(),
-            // ),
-            scope: ctx.scope,
-        };
 
         // so in some cases this should be a type reference, and in other cases this should be a type definition which contains multiple type references - e.g
         // a: int // type reference
@@ -341,40 +326,42 @@ impl<'ast> Ctx<'ast> {
 
         // FIXME: This should be a type reference probably, not a `Type`. Or `visit_function` uses `handle_ty_node` when
         // it shouldn't for its return type
-        let (ctx, kind) = match &ty.kind {
-            TypeKind::Simple(_) => (
-                ctx,
+        match &ty.kind {
+            // FIXME: Do we need to create a type reference here as well? `handle_multi_ty` returns the actual union type
+            TypeKind::Multi(variants) => ctx.handle_multi_type(ty, generics, variants),
+
+            TypeKind::Simple(_) => {
+                let data = FlattenData {
+                    ast: AstInfo::Type(ty),
+                    //     match &ty.kind {
+                    //         // TODO: how do we handle multi types properly here?
+                    //         TypeKind::Simple(s) => s.clone(),
+                    //         TypeKind::Multi(_) => Symbol::from("multi"),
+                    //         TypeKind::FunctionLike(_, _) => Symbol::from("func"), // FIXME: Invalid but w/ever for now
+                    //     },
+                    //     ty.location.clone(),
+                    // ),
+                    scope: ctx.scope,
+                };
+
+                // FIXME: where do we put the generics?
+                // In the flatten data? Basically we're flattening all of the generics of the
+                // type and putting them... nowhere? Should `TypeReference` keep a `generics: Vec<RefIdx>` or no?
+                // or is the goal to instantiate a proper monomorphized type down the line and have
+                // typereference point to it?
+                //  {
+                //     generics,
+                //     fields: vec![],
+                // };
+
                 // TODO: Should this have a generics field then? probably, right?
                 // or... if we have generics, are we creating a new type instead?
-                Kind::TypeReference(RefIdx::Unresolved),
-            ),
-            TypeKind::Multi(sum) => {
-                let (ctx, summed_types) = ctx.visit_fold(sum.iter(), Ctx::handle_type_node);
-
-                (
-                    ctx,
-                    Kind::UnionType {
-                        generics,
-                        variants: summed_types,
-                    },
-                )
+                ctx.append(data, Kind::TypeReference(RefIdx::Unresolved))
             }
             TypeKind::FunctionLike(_, _) => {
                 todo!("function like types cannot be flattened yet. this is an interpreter error.")
             }
-        };
-
-        // FIXME: where do we put the generics?
-        // In the flatten data? Basically we're flattening all of the generics of the
-        // type and putting them... nowhere? Should `TypeReference` keep a `generics: Vec<RefIdx>` or no?
-        // or is the goal to instantiate a proper monomorphized type down the line and have
-        // typereference point to it?
-        //  {
-        //     generics,
-        //     fields: vec![],
-        // };
-
-        ctx.append(data, kind)
+        }
     }
 
     fn handle_declaration_argument(self, arg: &'ast TypedValue) -> (Ctx<'ast>, RefIdx) {
