@@ -109,6 +109,7 @@ impl<'fir, 'ast> Fmt<'fir, 'ast> {
         }
     }
 
+    // FIXME: Add debug format which adds new info like the RefIdx
     // is having a self parameter okay here
     pub fn ty(&self, ty: Option<&Type>) -> String {
         match ty {
@@ -120,8 +121,8 @@ impl<'fir, 'ast> Fmt<'fir, 'ast> {
                 .iter()
                 .map(|idx| self.0.nodes[&idx.expect_resolved()].data.ast.symbol())
                 .fold(None, |acc, sym| match acc {
-                    None => Some(String::from(sym.unwrap().access()).purple().to_string()),
-                    Some(acc) => Some(format!("{} | {}", acc, sym.unwrap().access().purple())),
+                    None => Some(format!("`{}`", sym.unwrap().access().purple())),
+                    Some(acc) => Some(format!("{} | `{}`", acc, sym.unwrap().access().purple(),)),
                 })
                 .unwrap(),
         }
@@ -150,7 +151,7 @@ fn type_mismatch(
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
-            "type mismatch found: expected `{}`, got `{}`",
+            "type mismatch found: expected {}, got {}",
             fmt.ty(expected.0),
             fmt.ty(got.0)
         ))
@@ -287,9 +288,6 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
                 // 2. this can be represented using an empty set, but we must then make sure that {} is "not" a subset of { int, string }
                 // which makes very little sense in terms of set theory
                 if let (Some(got), Some(expected)) = (got, expected) {
-                    dbg!(got.actual());
-                    dbg!(expected.actual());
-
                     if !got.actual().can_widen_to(expected.actual()) {
                         errs.push(type_mismatch(
                             node.data.ast.location(),
