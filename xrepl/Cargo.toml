@@ -1,0 +1,26 @@
+[package]
+name = "xrepl"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+colored = "2.1.0"
+rustyline = "13.0.0"
+
+ast = { path = "../ast" }
+ast-sanitizer = { path = "../ast-sanitizer" }
+fir = { path = "../fir" }
+debug-fir = { path = "../debug-fir" }
+flatten = { path = "../flatten" }
+name_resolve = { path = "../name_resolve" }
+symbol = { path = "../symbol" }
+error = { path = "../error" }
+location = { path = "../location" }
+include_code = { path = "../include_code" }
+loop_desugar = { path = "../loop_desugar" }
+builtins = { path = "../builtins" }
+xparser = { path = "../xparser" }
+typecheck = { path = "../typecheck" }
+fire = { path = "../fire" }
