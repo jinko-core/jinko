@@ -4,6 +4,8 @@ mod args;
 #[cfg(feature = "repl")]
 mod repl;
 
+use xrepl;
+
 use colored::Colorize;
 
 use builtins::AppendAstBuiltins;
@@ -104,6 +106,8 @@ fn run_tests(ctx: &mut Context) -> Result<Option<ObjectInstance>, Error> {
 
 fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     use debug_fir::FirDebug;
+
+    // FIXME: do we want to accumulate errors instead here
 
     macro_rules! x_try {
         ($res:expr) => {
@@ -225,7 +229,16 @@ fn main() -> anyhow::Result<()> {
     }
     #[cfg(feature = "repl")]
     let result = args.input().map_or_else(
-        || Repl::new()?.launch(),
+        || {
+            if args.experimental {
+                match xrepl::repl() {
+                    Ok(_) => Ok((None, Context::new(Box::new(jinko::io_trait::JkStdReader)))),
+                    Err(_) => todo!(),
+                }
+            } else {
+                Repl::new()?.launch()
+            }
+        },
         |filename| handle_input(&args, filename),
     )?;
 

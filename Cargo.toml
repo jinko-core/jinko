@@ -27,6 +27,7 @@ members = [
   "typecheck",
   "recursive_typecheck",
   "fire",
+  "xrepl",
 ]
 
 [dependencies]
@@ -46,6 +47,7 @@ xparser = { path = "xparser" }
 typecheck = { path = "typecheck" }
 recursive_typecheck = { path = "recursive_typecheck" }
 fire = { path = "fire" }
+xrepl = { path = "xrepl" }
 structopt = "0.3"
 colored = "2.0"
 nom = "7.1"
