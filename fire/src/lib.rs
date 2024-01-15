@@ -151,9 +151,11 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         let ast = node.data.ast.node();
 
         let instance = match &ast.node {
-            Node::Constant(Value::Integer(value)) => Instance::from(*value),
+            Node::Constant(Value::Integer(i)) => Instance::from(*i),
+            Node::Constant(Value::Float(f)) => Instance::from(*f),
+            Node::Constant(Value::Bool(b)) => Instance::from(*b),
+            Node::Constant(Value::Char(c)) => Instance::from(*c),
             Node::Constant(Value::Str(s)) => Instance::from(s),
-            Node::Constant(Value::Bool(b)) => Instance::from(b),
             _ => unreachable!(),
         };
 
