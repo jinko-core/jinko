@@ -47,15 +47,15 @@ impl From<f64> for Instance {
     }
 }
 
-impl From<bool> for Instance {
-    fn from(value: bool) -> Instance {
-        Instance::Bool(value)
+impl From<char> for Instance {
+    fn from(value: char) -> Instance {
+        Instance::Char(value)
     }
 }
 
-impl From<&bool> for Instance {
-    fn from(value: &bool) -> Instance {
-        Instance::from(*value)
+impl From<bool> for Instance {
+    fn from(value: bool) -> Instance {
+        Instance::Bool(value)
     }
 }
 
