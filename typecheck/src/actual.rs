@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use error::Error;
 use fir::{Fallible, Fir, Kind, Node, OriginIdx, RefIdx, Traversal};
 use flatten::FlattenData;
@@ -30,7 +32,7 @@ fn resolve_type_chain_RENAME_ME(
 
     // FIXME: This API does not work with what we've done so far
     loop {
-        let intermediate_nodes = vec![];
+        let mut intermediate_nodes = vec![];
 
         match ty {
             None => todo!(),
@@ -74,13 +76,16 @@ fn innermost_type(
                         // `innermost_type` it again
                         let referenced_ty = ty.set().0.iter().next().unwrap();
                         let referenced_node = &fir.nodes[&referenced_ty.expect_resolved()];
+                        let origin = referenced_node.origin;
 
                         match &referenced_node.kind {
                             Kind::TypeReference(r) => innermost_type(ctx, fir, *r),
-                            Kind::RecordType { .. } => {
-                                Some(Type::single(RefIdx::Resolved(referenced_node.origin)))
-                            }
+                            Kind::RecordType { .. } => Some(Type::single(
+                                origin,
+                                RefIdx::Resolved(referenced_node.origin),
+                            )),
                             Kind::UnionType { variants, .. } => Some(Type::new(
+                                origin,
                                 variants
                                     .into_iter()
                                     .map(|variant| innermost_type(ctx, fir, *variant))
@@ -92,16 +97,17 @@ fn innermost_type(
                             _ => unreachable!(),
                         }
                     } else {
-                        Some(Type::new(
-                            ty.set()
-                                .0
-                                .iter()
-                                .map(|variant| innermost_type(ctx, fir, *variant))
-                                .map(|variant| {
-                                    variant.unwrap().set().0.iter().copied().next().unwrap()
-                                })
-                                .collect(),
-                        ))
+                        todo!()
+                        // Some(Type::new(
+                        //     ty.set()
+                        //         .0
+                        //         .iter()
+                        //         .map(|variant| innermost_type(ctx, fir, *variant))
+                        //         .map(|variant| {
+                        //             variant.unwrap().set().0.iter().copied().next().unwrap()
+                        //         })
+                        //         .collect(),
+                        // ))
                     }
                     // if let Kind::TypeReference(r) = referenced_node.kind {
                     //     innermost_type(ctx, fir, r)
@@ -189,7 +195,168 @@ impl Actual {
     }
 }
 
+// think of the APIs we want
+/*
+we want to:
+
+1. find the origin type from a node, so the end of the chain
+2. as we do that, we want to build a list of intermediate nodes which will need their types updated
+3. so something like find_end() -> <Vec<OriginIdx>, Type>
+
+4. we call find_end(), create a TypeRef, update all the intermediate nodes
+
+let (intermediate, ty) = find_end();
+
+let ref = self.new.insert_type(ty);
+intermediate.into_iter().for_each(|node| self.new.insert(node, ref));
+
+// done!
+
+now this should also return the OriginIdx of the type we've just found - this way we can flatten union types properly right?
+
+should Type keep a hashset of RefIdx? why not OriginIdx? probably better to have OriginIdx at this point.
+
+so this function that does the `find_end` and update should probably return an OriginIdx of the type we've just resolved
+
+so
+
+// is it fallible? or not?
+
+fn resolve_link(&mut self, to_resolve: OriginIdx, fir: &'fir Fir<FlattenData>) -> OriginIdx {
+    let (intermediate, ty) = find_end();
+
+    let node = ty.0;
+    let tyref = self.new.insert_type(ty);
+
+    intermediate.into_iter().for_each(|node| self.new.insert(node, tyref));
+
+    node
+}
+
+// FIXME: Rename
+struct ChainEnd {
+    intermediate_nodes: Vec<OriginIdx>,
+    final_type: Type,
+}
+
+struct ResolutionCtx<'fir> {
+    fir: &'fir Fir<FlattenData>,
+    to_resolve: OriginIdx,
+}
+
+fn find_end_inner(to_resolve: ResolutionCtx, intermediate_nodes: Vec<OriginIdx>) -> ControlFlow<Continue: Vec<OriginIdx>, Break: ChainEnd> {
+    match
+}
+
+fn find_end(to_resolve: ResolutionCtx) -> ChainEnd {
+    let intermediate_nodes = vec![];
+
+    let rec = find_end_inner(to_resolve, intermediate_nodes)
+}
+
+*/
+
+struct ChainEnd {
+    intermediate_nodes: Vec<OriginIdx>,
+    final_type: Type,
+}
+
+struct ResolutionCtx<'ast, 'fir> {
+    fir: &'fir Fir<FlattenData<'ast>>,
+    to_resolve: OriginIdx,
+}
+
 impl<'ctx> TypeLinkResolver<'ctx> {
+    fn resolve_link_v2<'fir>(
+        &mut self,
+        to_resolve: OriginIdx,
+        fir: &'fir Fir<FlattenData>,
+    ) -> OriginIdx {
+        let resolution_ctx = ResolutionCtx { fir, to_resolve };
+
+        let ChainEnd {
+            intermediate_nodes,
+            final_type,
+        } = self.find_end(resolution_ctx);
+
+        let node = final_type.0;
+        let tyref = self.new.types.new_type(final_type);
+
+        intermediate_nodes
+            .into_iter()
+            .for_each(|node| self.new.types.insert(node, tyref));
+
+        node
+    }
+
+    // FIXME: Rename
+    // FIXME: Remove ResolutionCtx - too complicated for just one extra parameter
+    fn find_end_inner(
+        &self,
+        ctx: ResolutionCtx,
+        mut intermediate_nodes: Vec<OriginIdx>,
+    ) -> ControlFlow<ChainEnd, Vec<OriginIdx>> {
+        let ResolutionCtx { fir, to_resolve } = ctx;
+
+        let ty_of_node = self.old.types.get(&to_resolve).unwrap();
+
+        match ty_of_node {
+            Some(TypeVariable::Reference(ty_ref)) => {
+                intermediate_nodes.push(to_resolve);
+
+                self.find_end_inner(
+                    ResolutionCtx {
+                        fir,
+                        to_resolve: ty_ref.expect_resolved(),
+                    },
+                    intermediate_nodes,
+                )
+            }
+            Some(TypeVariable::Record(r)) => {
+                // we don't insert here so that we can get the typeref directly later on - does that make sense?
+                // self.new.types.new_type(final_type.clone());
+
+                // FIXME: No clone - Actual() should probably keep an OriginIdx rather than a Type
+                ControlFlow::Break(ChainEnd {
+                    intermediate_nodes,
+                    final_type: Type::single(*r),
+                })
+            }
+            Some(TypeVariable::Union(u)) => {
+                let original_node = fir.nodes[u];
+                let variants = match original_node.kind {
+                    Kind::UnionType { variants, .. } => variants,
+                    _ => unreachable!(),
+                };
+
+                // FIXME: This can cause an infinite loop - how to prevent that?
+                let variants = variants
+                    .into_iter()
+                    .map(|variant| self.resolve_link_v2(variant.expect_resolved(), fir))
+                    .map(|origin| RefIdx::Resolved(origin));
+
+                // we don't insert here so that we can get the typeref directly later on - does that make sense?
+                // self.new.types.new_type(final_type.clone());
+
+                // FIXME: No clone - Actual() should probably keep an OriginIdx rather than a Type
+                ControlFlow::Break(ChainEnd {
+                    intermediate_nodes,
+                    final_type: Type::new(*u, variants.collect()),
+                })
+            }
+            None => todo!(),
+        }
+    }
+
+    fn find_end(&self, ctx: ResolutionCtx) -> ChainEnd {
+        let intermediate_nodes = vec![];
+
+        match self.find_end_inner(ctx, intermediate_nodes) {
+            ControlFlow::Break(b) => b,
+            ControlFlow::Continue(_) => unreachable!(),
+        }
+    }
+
     /// Recursively try and resolve a type link within the type context. This will update the given node's type
     /// within the type context.
     fn resolve_link(
@@ -239,7 +406,7 @@ impl<'ctx> TypeLinkResolver<'ctx> {
                             // we found an actual type definition - insert it, break the loop and type
                             // all the intermediate nodes
                             Kind::RecordType { fields, .. } => {
-                                let ty = Type::single(RefIdx::Resolved(node));
+                                let ty = Type::single(node, RefIdx::Resolved(node));
 
                                 self.new.types.new_type(node, ty);
                             }
