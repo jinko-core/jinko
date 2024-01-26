@@ -19,6 +19,9 @@ use typer::Typer;
 use primitives::PrimitiveTypes;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+// FIXME: Should that be a hashset RefIdx or OriginIdx?
+// probably OriginIdx
+// FIXME: Switch to HashSet<OriginIdx>
 pub struct TypeSet(HashSet<RefIdx>);
 
 impl TypeSet {
@@ -43,10 +46,15 @@ impl Type {
         Type(origin, TypeSet(set))
     }
 
+    pub fn builtin(set: HashSet<RefIdx>) -> Type {
+        Type(OriginIdx(u64::MAX), TypeSet(set))
+    }
+
     // TODO: Rename? one? simple? unique? what's the opposite of `sum` or `multi`?
-    pub fn single(origin: OriginIdx, fir_type: RefIdx) -> Type {
+    pub fn single(origin: OriginIdx) -> Type {
         let mut set = HashSet::new();
-        set.insert(fir_type);
+        // FIXME: Switch to keeping HashSet<OriginIdx> instead
+        set.insert(RefIdx::Resolved(origin));
 
         Type(origin, TypeSet(set))
     }
@@ -80,21 +88,22 @@ impl Type {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum TypeVariable {
-    Actual(Type),
+    Union(OriginIdx),
+    Record(OriginIdx),
     Reference(RefIdx), // specifically we're interested in `type_ctx.type_of(< that refidx >)`
 }
 
 impl TypeVariable {
-    pub fn actual(&self) -> &Type {
+    pub fn actual(&self) -> OriginIdx {
         match self {
-            TypeVariable::Actual(a) => a,
+            TypeVariable::Union(a) | TypeVariable::Record(a) => *a,
             TypeVariable::Reference(r) => unreachable!("unexpected type reference: {r:?}"),
         }
     }
 
     pub fn ref_idx(&self) -> RefIdx {
         match self {
-            TypeVariable::Actual(a) => {
+            TypeVariable::Union(a) | TypeVariable::Record(a) => {
                 unreachable!("expected reference type, got actual type: {a:?}")
             }
             TypeVariable::Reference(r) => *r,
