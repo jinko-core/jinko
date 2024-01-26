@@ -88,7 +88,7 @@ impl<T: Debug> Fir<T> {
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
                     check!(@args => Kind::Binding { .. }, node);
-                    check!(return_type => Some(Kind::TypeReference { .. }), node);
+                    check!(return_type => Some(Kind::TypeReference { .. } | Kind::UnionType { .. }), node);
                     check!(block => Some(Kind::Statements(_)), node);
                 }
                 Kind::Call {
