@@ -14,7 +14,7 @@ use builtins::Comparison::*;
 use builtins::Unary::*;
 
 use crate::typemap::TypeMap;
-use crate::{Type, TypeCtx, TypeVariable};
+use crate::{Type, TypeCtx};
 
 // TODO: We need a way to fetch common type nodes used during typechecking, such as `bool` for example,
 // as it's used for conditions for multiple nodes
@@ -24,10 +24,10 @@ pub(crate) struct Checker<'ctx>(pub(crate) &'ctx mut TypeCtx<TypeMap>);
 impl<'ctx> Checker<'ctx> {
     // At this point we've gone through Actual - so maybe our TypeCtx should be a TypeCtx<ActualTypeVar> then?
     // like TypeCtx<Type> and TypeCtx<TypeVariable> before? Or does that not make sense?
-    fn get_type(&self, of: &RefIdx) -> Option<&TypeVariable> {
+    fn get_type(&self, of: &RefIdx) -> Option<&Type> {
         // if at this point, the reference is unresolved, or if we haven't seen that node yet, it's
         // an interpreter error
-        self.0.types.get(&of.expect_resolved()).unwrap().as_ref()
+        self.0.types.type_of(of.expect_resolved())
     }
 
     fn expected_arithmetic_types(
@@ -36,7 +36,7 @@ impl<'ctx> Checker<'ctx> {
         fir: &Fir<FlattenData>,
         op: builtins::Operator,
         args: &[RefIdx],
-    ) -> Result<Vec<Option<TypeVariable>>, Error> {
+    ) -> Result<Vec<Option<Type>>, Error> {
         use builtins::*;
 
         // FIXME: Remove all calls to `::single` here?
@@ -59,33 +59,35 @@ impl<'ctx> Checker<'ctx> {
         };
 
         let valid_union_type = match op {
-            Operator::Arithmetic(_) => Type::new(numbers.into_iter().collect()),
+            Operator::Arithmetic(_) => Type::builtin(numbers.into_iter().collect()),
             Operator::Comparison(Equals) | Operator::Comparison(Differs) => {
-                Type::new(comparable.into_iter().collect())
+                Type::builtin(comparable.into_iter().collect())
             }
-            Operator::Unary(Minus) => Type::new(numbers.into_iter().collect()),
+            Operator::Unary(Minus) => Type::builtin(numbers.into_iter().collect()),
             // FIXME: These two are ugly as sin - remove the .map call
-            Operator::Comparison(_) => Type::new(comparable[2..].into_iter().map(|r| *r).collect()),
-            Operator::Unary(Not) => Type::new(comparable[..1].into_iter().map(|r| *r).collect()),
+            Operator::Comparison(_) => {
+                Type::builtin(comparable[2..].into_iter().map(|r| *r).collect())
+            }
+            Operator::Unary(Not) => {
+                Type::builtin(comparable[..1].into_iter().map(|r| *r).collect())
+            }
         };
 
         let expected_ty = match op.ty() {
             BuiltinType::Number | BuiltinType::Comparable => {
                 self.get_type(&args[0]).unwrap().clone() // FIXME: Remove clone
             }
-            BuiltinType::Bool => {
-                TypeVariable::Actual(Type::single(RefIdx::Resolved(self.0.primitives.bool_type)))
-            }
+            BuiltinType::Bool => Type::single(self.0.primitives.bool_type),
         };
 
         // FIXME: This API isn't great
-        if valid_union_type.set().contains(&expected_ty.actual().set()) {
+        if valid_union_type.set().contains(&expected_ty.set()) {
             Ok(vec![Some(expected_ty); arity])
         } else {
             Err(unexpected_arithmetic_type(
                 loc,
                 fir,
-                &expected_ty.actual(), // FIXME: This is wrong
+                &expected_ty, // FIXME: This is wrong
                 &valid_union_type,
                 op,
             ))
@@ -214,8 +216,8 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             let err = type_mismatch(
                 node.data.ast.location(),
                 fir,
-                Expected(ret_ty.map(TypeVariable::actual)),
-                Got(block_ty.map(TypeVariable::actual)),
+                Expected(ret_ty),
+                Got(block_ty),
             );
             let err = match (ret_ty, block_ty) {
                 (None, Some(_)) => err
@@ -289,12 +291,12 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
                 // 2. this can be represented using an empty set, but we must then make sure that {} is "not" a subset of { int, string }
                 // which makes very little sense in terms of set theory
                 if let (Some(got), Some(expected)) = (got, expected) {
-                    if !got.actual().can_widen_to(expected.actual()) {
+                    if !got.can_widen_to(expected) {
                         errs.push(type_mismatch(
                             node.data.ast.location(),
                             fir,
-                            Expected(Some(expected.actual())),
-                            Got(Some(got.actual())),
+                            Expected(Some(expected)),
+                            Got(Some(got)),
                         ))
                     }
                 }
@@ -324,8 +326,8 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             Err(type_mismatch(
                 node.data.ast.location(),
                 fir,
-                Expected(to.map(TypeVariable::actual)),
-                Got(from.map(TypeVariable::actual)),
+                Expected(to),
+                Got(from),
             ))
         } else {
             Ok(())

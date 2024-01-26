@@ -39,7 +39,10 @@ impl TypeRef {
 
 pub struct TypeMap {
     nodes: HashMap<OriginIdx, TypeRef>,
-    types: HashMap<TypeRef, Type>,
+    types: HashMap<
+        TypeRef,
+        Type, /* FIXME: We should store the OriginIdx here as well probably */
+    >,
 }
 
 impl TypeMap {
@@ -57,16 +60,16 @@ impl TypeMap {
     }
 
     /// Insert a new type into the typemap
-    pub fn new_type(&mut self, origin: OriginIdx, ty: Type) -> TypeRef {
-        let ty_ref = TypeRef(origin);
-        // FIXME:
-        self.types.insert(ty_ref, ty).unwrap();
+    pub fn new_type(&mut self, ty: Type) -> TypeRef {
+        let ty_ref = TypeRef(ty.0);
+        // FIXME: Is it actually okay to ignore if the type existed or not?
+        self.types.insert(ty_ref, ty);
 
         ty_ref
     }
 
     pub fn insert(&mut self, node: OriginIdx, tyref: TypeRef) {
         // FIXME:
-        self.nodes.insert(node, tyref).unwrap();
+        self.nodes.insert(node, tyref);
     }
 }

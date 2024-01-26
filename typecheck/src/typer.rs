@@ -6,7 +6,7 @@ use error::Error;
 use fir::{Kind, Mapper, Node, OriginIdx, RefIdx};
 use flatten::FlattenData;
 
-use crate::{Type, TypeCtx, TypeLinkMap, TypeVariable};
+use crate::{TypeCtx, TypeLinkMap, TypeVariable};
 
 /// This pass takes care of "typing" each node in the [`Fir`], but to a non-terminal type. More explanation can be found
 /// in the documentation for [`Typer::ty`].
@@ -125,11 +125,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         generics: Vec<RefIdx>,
         fields: Vec<RefIdx>,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
-        self.assign_type(
-            origin,
-            // this is too complicated
-            Some(TypeVariable::Actual(Type::single(RefIdx::Resolved(origin)))),
-        );
+        self.assign_type(origin, Some(TypeVariable::Record(origin)));
 
         // and we return the same node since this is mapper
         Ok(Node {
@@ -146,12 +142,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         generics: Vec<RefIdx>,
         variants: Vec<RefIdx>,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
-        self.assign_type(
-            origin,
-            Some(TypeVariable::Actual(Type::new(
-                variants.iter().copied().collect(),
-            ))),
-        );
+        self.assign_type(origin, Some(TypeVariable::Union(origin)));
 
         Ok(Node {
             data,
