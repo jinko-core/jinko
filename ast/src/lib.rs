@@ -17,15 +17,15 @@ pub enum TypeKind {
 /// A type argument, i.e. when performing a specific generic call or specifying a variable's type
 ///
 /// ```ignore
-/// a: int = id<int>(15);
+/// a: int = id[int](15);
 ///
 /// a: int = 15;
 /// a: int | string = if true { "jinko" } else { 14 };
 ///
-/// func f(arg: Vector<int>) {}
-/// func g(arg: Tuple<int, float>) {}
-/// func h(arg: Tuple<int, Tuple<Vector<float>, string>>) {}
-/// func apply_fn(arg: int, fn: func(int) -> int) -> int { fn(arg) }
+/// func f(arg: Vector[int]) {}
+/// func g(arg: Tuple[int, float]) {}
+/// func h(arg: Tuple[int, Tuple[Vector[float], string]) {}
+/// func apply_fn(arg: int, fn: int -> int) -> int { fn(arg) }
 /// ```
 #[derive(Debug, Clone)]
 pub struct Type {
