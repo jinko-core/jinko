@@ -37,6 +37,7 @@
 
 use std::{collections::HashMap, mem, ops::Index};
 
+use colored::Colorize;
 use error::{ErrKind, Error};
 use fir::{Fallible, Fir, Incomplete, Kind, Mapper, OriginIdx, Pass, Traversal};
 use flatten::FlattenData;
@@ -247,7 +248,7 @@ impl NameResolutionError {
                 // FIXME: factor this with the typechecker for the colorization of the type in purple
                 // this should probably be part of the `error` module, with a function like `error::format::ty`
                 Error::new(ErrKind::NameResolution)
-                    .with_msg(format!("unresolved {kind}: `{sym}`"))
+                    .with_msg(format!("unresolved {kind}: `{}`", sym.access().purple()))
                     .with_loc(location)
             }
             NameResolutionError::AmbiguousBinding(lhs, rhs, location) => {
