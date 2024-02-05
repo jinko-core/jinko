@@ -39,7 +39,7 @@ impl<'ctx, 'enclosing> Resolver<'ctx, 'enclosing> {
 
         let mappings = &self.0.mappings;
 
-        let scope = self.0.enclosing_scope[dbg!(node)];
+        let scope = self.0.enclosing_scope[node];
 
         let origin = match kind {
             ResolveKind::Call => mappings.functions.lookup(symbol, scope),
@@ -150,7 +150,6 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
         origin: OriginIdx,
         _reference: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
-        dbg!(origin);
         // how do we handle references to multi types here?
 
         let definition = self.get_definition(
