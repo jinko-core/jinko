@@ -738,14 +738,11 @@ impl<'ast> Ctx<'ast> {
             },
             // FIXME: Surely there is something we need to do with generics here and in the following variants, right?
             // TODO: Add Kind::TypeAlias?
-            TypeContent::Alias(ty @ Type { kind: TypeKind::Multi(variants), .. }) => {
-                let (ctx, aliased) = self.handle_multi_type(ty, generics, variants);
+            TypeContent::Alias(ty) => {
+                let (ctx, aliased) = self.handle_type_node(ty);
 
                 ctx.append(data, Kind::TypeReference(aliased))
-            },
-            TypeContent::Alias(Type { kind: TypeKind::Simple(_), .. }) => {
-                self.append(data, Kind::TypeReference(RefIdx::Unresolved))
-            },
+            }
             TypeContent::Tuple(_) => todo!("tuple fields are not handled yet: map to a RecordType with fields named `.0`, `.1`..."),
             _ => todo!("function-like types are not handled yet")
         }
