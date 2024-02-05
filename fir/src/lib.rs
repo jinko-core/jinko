@@ -95,7 +95,7 @@
 // Does that make sense? Does that indicate that for all types we must first keep a Option<Ty> which is set to None?
 // Is this going to cause problems?
 
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 use std::hash::Hash;
 use std::{collections::BTreeMap, ops::Index};
 
@@ -135,7 +135,7 @@ impl RefIdx {
 /// call points or to emit errors.
 /// An origin point - this is where a variable, type or function is defined. Later uses of that
 /// object (variable, type or function) are resolved to [`RefIdx::Resolved`]s.
-#[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OriginIdx(pub u64);
 
 impl OriginIdx {
@@ -143,6 +143,15 @@ impl OriginIdx {
     /// and repeatedly call [`next`] on it.
     pub fn next(&self) -> OriginIdx {
         OriginIdx(self.0 + 1)
+    }
+}
+
+impl Debug for OriginIdx {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0 {
+            u64::MAX => write!(f, "OriginIdx::BUILTIN"),
+            any => write!(f, "OriginIdx({any})"),
+        }
     }
 }
 
