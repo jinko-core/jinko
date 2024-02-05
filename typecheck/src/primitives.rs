@@ -11,6 +11,7 @@ use symbol::Symbol;
 /// All primitive types that must be found before we actually perform typechecking
 #[derive(Default)]
 struct PrimitiveTypeCtx {
+    unit_type: Option<OriginIdx>,
     bool_type: Option<OriginIdx>,
     char_type: Option<OriginIdx>,
     int_type: Option<OriginIdx>,
@@ -25,6 +26,7 @@ struct PrimitiveTypeCtx {
 // which at the moment is how we flatten empty types like `type Empty;`
 #[derive(Clone)]
 pub struct PrimitiveTypes {
+    pub(crate) unit_type: OriginIdx,
     pub(crate) bool_type: OriginIdx,
     pub(crate) char_type: OriginIdx,
     pub(crate) int_type: OriginIdx,
@@ -109,6 +111,7 @@ impl Traversal<FlattenData<'_>, Error> for PrimitiveTypeCtx {
         let name = ast.symbol().unwrap();
 
         let field_to_set = match name.access() {
+            "unit" => Some(&mut self.unit_type),
             "bool" => Some(&mut self.bool_type),
             "char" => Some(&mut self.char_type),
             "int" => Some(&mut self.int_type),
@@ -143,6 +146,7 @@ fn extract_types(ctx: &PrimitiveTypeCtx) -> Result<PrimitiveTypes, Error> {
     };
 
     // FIXME: we need to do a fold here and accumulate errors
+    let unit_type = ctx.unit_type.ok_or_else(missing_ty("unit"))?;
     let bool_type = ctx.bool_type.ok_or_else(missing_ty("bool"))?;
     let char_type = ctx.char_type.ok_or_else(missing_ty("char"))?;
     let int_type = ctx.int_type.ok_or_else(missing_ty("int"))?;
@@ -150,6 +154,7 @@ fn extract_types(ctx: &PrimitiveTypeCtx) -> Result<PrimitiveTypes, Error> {
     let string_type = ctx.string_type.ok_or_else(missing_ty("string"))?;
 
     Ok(PrimitiveTypes {
+        unit_type,
         bool_type,
         char_type,
         int_type,
@@ -175,6 +180,8 @@ mod tests {
     #[test]
     fn full_decls() {
         let ast = ast! {
+            type unit;
+
             type true;
             type false;
             type bool;

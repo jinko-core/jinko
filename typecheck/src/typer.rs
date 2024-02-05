@@ -13,16 +13,20 @@ use crate::{TypeCtx, TypeLinkMap, TypeVariable};
 pub(crate) struct Typer<'ctx>(pub(crate) &'ctx mut TypeCtx<TypeLinkMap>);
 
 impl<'ctx> Typer<'ctx> {
-    fn assign_type(&mut self, node: OriginIdx, ty: Option<TypeVariable>) {
+    fn assign_type(&mut self, node: OriginIdx, ty: TypeVariable) {
         // Having non-unique ids in the Fir is an interpreter error
         // Or should we return an error here?
         assert!(self.0.types.insert(node, ty).is_none());
     }
 
+    fn unit(&self) -> RefIdx {
+        RefIdx::Resolved(self.0.primitives.unit_type)
+    }
+
     // FIXME: Is this used for declarations? or only for type references? it should be used only for type references
     // FIXME: Add note about NOT using this for declarations
     // FIXME: Can we add newtypes for this?
-    /// Assign a type to a node. This type can either be void ([`None`]) in the case of a declaration or void
+    /// Assign a type to a node. This type can either be void (the unit type) in the case of a declaration or void
     /// statement, or may be a "type linked list": a reference to a type defined elsewhere in the [`Fir`].
     /// Let's consider a block of multiple statements, the last of which being a function call. The type of a
     /// block is the type of its last statement, which is often a return statement. In that case the return statement
@@ -33,10 +37,10 @@ impl<'ctx> Typer<'ctx> {
     fn ty<'ast>(
         &mut self,
         node: Node<FlattenData<'ast>>,
-        ty: Option<RefIdx>,
+        ty: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
         // so is this correct? or can we create actual types here too. I assume NO
-        let ty = ty.map(TypeVariable::Reference);
+        let ty = TypeVariable::Reference(ty);
 
         self.assign_type(node.origin, ty);
 
@@ -89,7 +93,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
             kind: Kind::Constant(RefIdx::Resolved(ty)),
         };
 
-        self.ty(new_node, Some(RefIdx::Resolved(ty)))
+        self.ty(new_node, RefIdx::Resolved(ty))
     }
 
     fn map_call(
@@ -104,7 +108,12 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
 
         let ty = arithmetic
             .map(|op| self.type_arithmetic_call(op, args.as_slice()))
-            .unwrap_or(to);
+            .unwrap_or(to /* how did this ever work? */);
+
+        // FIXME: How do we access the function's return type here? should we do something in Actual?
+        // should we do something here?
+        // probably here right but how to access the fucken thing?
+        // should Function get typed as their return type?
 
         let new_node = Node {
             data,
@@ -112,7 +121,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
             kind: Kind::Call { to, generics, args },
         };
 
-        self.ty(new_node, Some(ty))
+        self.ty(new_node, ty)
     }
 
     // map_record_type and map_union_type are the two only functions which *create* actual types - all of the other
@@ -125,7 +134,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         generics: Vec<RefIdx>,
         fields: Vec<RefIdx>,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
-        self.assign_type(origin, Some(TypeVariable::Record(origin)));
+        self.assign_type(origin, TypeVariable::Record(origin));
 
         // and we return the same node since this is mapper
         Ok(Node {
@@ -142,7 +151,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         generics: Vec<RefIdx>,
         variants: Vec<RefIdx>,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
-        self.assign_type(origin, Some(TypeVariable::Union(origin)));
+        self.assign_type(origin, TypeVariable::Union(origin));
 
         Ok(Node {
             data,
@@ -158,10 +167,12 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         match node.kind {
             fir::Kind::Constant(c) => self.map_constant(node.data, node.origin, c),
             // Assignments are void
-            fir::Kind::Assignment { .. } => self.ty(node, None),
+            fir::Kind::Assignment { .. } => self.ty(node, self.unit()),
             // Functions are weird
             // FIXME: Handle them properly
-            fir::Kind::Function { .. } => self.ty(node, None),
+            fir::Kind::Function { return_type, .. } => {
+                self.ty(node, return_type.unwrap_or(self.unit()))
+            }
             fir::Kind::UnionType { generics, variants } => {
                 self.map_union_type(node.data, node.origin, generics, variants)
             }
@@ -178,18 +189,18 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
             | fir::Kind::Binding { to: ty }
             | fir::Kind::TypedValue { ty, .. }
             | fir::Kind::Instantiation { to: ty, .. }
-            | fir::Kind::Conditional { true_block: ty, .. } => self.ty(node, Some(ty)),
+            | fir::Kind::Conditional { true_block: ty, .. } => self.ty(node, ty),
             // we need to special case `Call`s for arithmetic operators - otherwise, they
             // are also simply a call to `self.ty(node, Some(call.to))`
             fir::Kind::Call { to, generics, args } => {
                 self.map_call(node.data, node.origin, to, generics, args)
             }
             // Returns are a bit special as they can already be void
-            fir::Kind::Return(ty) => self.ty(node, ty),
+            fir::Kind::Return(ty) => self.ty(node, ty.unwrap_or(self.unit())),
             // Blocks are the same type as their last stmt, or void if it does not exist
             fir::Kind::Statements(ref stmts) => {
                 let last = stmts.last().copied();
-                self.ty(node, last)
+                self.ty(node, last.unwrap_or(self.unit()))
             }
             // TODO: Figure out what to do with these
             fir::Kind::Generic { .. } | fir::Kind::TypeOffset { .. } | fir::Kind::Loop { .. } => {

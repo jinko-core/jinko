@@ -111,7 +111,7 @@ impl TypeVariable {
     }
 }
 
-type TypeLinkMap = HashMap<OriginIdx, Option<TypeVariable>>;
+type TypeLinkMap = HashMap<OriginIdx, TypeVariable>;
 
 // TODO: Make generic over the `types` field? and explain why this is used?
 pub(crate) struct TypeCtx<T> {
@@ -179,6 +179,7 @@ mod tests {
     macro_rules! ast {
         ($($toks:tt)*) => {
             xparser::ast!(
+                type unit;
                 type char;
                 type bool;
                 type int;
