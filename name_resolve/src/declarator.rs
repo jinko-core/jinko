@@ -67,6 +67,21 @@ impl<'ast, 'ctx, 'enclosing> Traversal<FlattenData<'ast>, NameResolutionError>
         self.define(DefinitionKind::Type, node)
     }
 
+    fn traverse_type_reference(
+        &mut self,
+        _fir: &Fir<FlattenData<'ast>>,
+        node: &Node<FlattenData<'ast>>,
+        reference: &RefIdx,
+    ) -> Fallible<NameResolutionError> {
+        // if we already see resolved type references, then it means we are dealing
+        // with a type alias
+        if let RefIdx::Resolved(_) = reference {
+            self.define(DefinitionKind::Type, node)
+        } else {
+            Ok(())
+        }
+    }
+
     fn traverse_binding(
         &mut self,
         _: &Fir<FlattenData>,
