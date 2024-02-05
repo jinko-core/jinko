@@ -536,4 +536,18 @@ mod tests {
         assert!(single.can_widen_to(&superset));
         assert!(superset.is_superset_of(&single));
     }
+
+    #[test]
+    fn nullable_union_type() {
+        let ast = ast! {
+            type Nil;
+            type Nullable = int | Nil;
+
+            func nil_unit() -> Nullable { Nil }
+            func nil_just(i: int) -> Nullable { i }
+        };
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
 }
