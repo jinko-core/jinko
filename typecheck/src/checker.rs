@@ -20,14 +20,23 @@ use crate::{Type, TypeCtx};
 // as it's used for conditions for multiple nodes
 pub(crate) struct Checker<'ctx>(pub(crate) &'ctx mut TypeCtx<TypeMap>);
 
-// TODO: Actually, can the checker only work with `Type`s instead of `TypeVariable`s? Since we're after `Actual`... right?
 impl<'ctx> Checker<'ctx> {
-    // At this point we've gone through Actual - so maybe our TypeCtx should be a TypeCtx<ActualTypeVar> then?
-    // like TypeCtx<Type> and TypeCtx<TypeVariable> before? Or does that not make sense?
-    fn get_type(&self, of: &RefIdx) -> Option<&Type> {
+    fn get_type(&self, of: &RefIdx) -> &Type {
         // if at this point, the reference is unresolved, or if we haven't seen that node yet, it's
         // an interpreter error
-        self.0.types.type_of(of.expect_resolved())
+        self.0
+            .types
+            .type_of(of.expect_resolved())
+            .unwrap_or(self.unit())
+    }
+
+    fn unit(&self) -> &Type {
+        // FIXME: Super ugly - rework
+        self.0
+            .types
+            .types
+            .get(&crate::typemap::TypeRef(self.0.primitives.unit_type))
+            .unwrap()
     }
 
     fn expected_arithmetic_types(
@@ -36,7 +45,7 @@ impl<'ctx> Checker<'ctx> {
         fir: &Fir<FlattenData>,
         op: builtins::Operator,
         args: &[RefIdx],
-    ) -> Result<Vec<Option<Type>>, Error> {
+    ) -> Result<Vec<Type>, Error> {
         use builtins::*;
 
         // FIXME: Remove all calls to `::single` here?
@@ -75,14 +84,14 @@ impl<'ctx> Checker<'ctx> {
 
         let expected_ty = match op.ty() {
             BuiltinType::Number | BuiltinType::Comparable => {
-                self.get_type(&args[0]).unwrap().clone() // FIXME: Remove clone
+                self.get_type(&args[0]).clone() // FIXME: Remove clone
             }
             BuiltinType::Bool => Type::single(self.0.primitives.bool_type),
         };
 
         // FIXME: This API isn't great
         if valid_union_type.set().contains(&expected_ty.set()) {
-            Ok(vec![Some(expected_ty); arity])
+            Ok(vec![expected_ty; arity])
         } else {
             Err(unexpected_arithmetic_type(
                 loc,
@@ -114,21 +123,20 @@ impl<'fir, 'ast> Fmt<'fir, 'ast> {
 
     // FIXME: Add debug format which adds new info like the RefIdx
     // is having a self parameter okay here
-    pub fn ty(&self, ty: Option<&Type>) -> String {
-        match ty {
-            None => format!("{}", "no type".green()),
-            // FIXME: Are empty sets allowed?
-            Some(ty) => ty
-                .set()
-                .0 // FIXME: ugly
-                .iter()
-                .map(|idx| self.0.nodes[&idx.expect_resolved()].data.ast.symbol())
-                .fold(None, |acc, sym| match acc {
-                    None => Some(format!("`{}`", sym.unwrap().access().purple())),
-                    Some(acc) => Some(format!("{} | `{}`", acc, sym.unwrap().access().purple(),)),
-                })
-                .unwrap(),
+    pub fn ty(&self, ty: &Type) -> String {
+        if ty.set().0.is_empty() {
+            unreachable!()
         }
+
+        ty.set()
+            .0 // FIXME: ugly
+            .iter()
+            .map(|idx| self.0.nodes[&idx.expect_resolved()].data.ast.symbol())
+            .fold(None, |acc, sym| match acc {
+                None => Some(format!("`{}`", sym.unwrap().access().purple())),
+                Some(acc) => Some(format!("{} | `{}`", acc, sym.unwrap().access().purple(),)),
+            })
+            .unwrap()
     }
 
     // #[deprecated(note = "unneeded?")]
@@ -147,8 +155,8 @@ struct Got<T>(T);
 fn type_mismatch(
     loc: &SpanTuple,
     fir: &Fir<FlattenData>,
-    expected: Expected<Option<&Type>>,
-    got: Got<Option<&Type>>,
+    expected: Expected<&Type>,
+    got: Got<&Type>,
 ) -> Error {
     let fmt = Fmt(fir);
 
@@ -187,8 +195,8 @@ fn unexpected_arithmetic_type(
         .with_msg(format!(
             "unexpected type for arithmetic operation `{}`: `{}` (expected `{}`)",
             op.as_str().yellow(),
-            fmt.ty(Some(ty)),
-            fmt.ty(Some(valid_type_set)),
+            fmt.ty(ty),
+            fmt.ty(valid_type_set),
         ))
         .with_loc(loc.clone())
 }
@@ -208,18 +216,24 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             return Ok(());
         }
 
-        let ret_ty = return_ty.as_ref().and_then(|b| self.get_type(b));
-        let block_ty = block.as_ref().and_then(|b| self.get_type(b));
+        let ret_ty = return_ty
+            .as_ref()
+            .map(|b| self.get_type(b))
+            .unwrap_or(self.unit());
+        let block_ty = block
+            .as_ref()
+            .map(|b| self.get_type(b))
+            .unwrap_or(self.unit());
 
-        // FIXME: Use `is_superset_of` or equivalent here
-        if ret_ty != block_ty {
+        if !block_ty.can_widen_to(ret_ty) {
             let err = type_mismatch(
                 node.data.ast.location(),
                 fir,
                 Expected(ret_ty),
                 Got(block_ty),
             );
-            let err = match (ret_ty, block_ty) {
+
+            let err = match (return_ty, block) {
                 (None, Some(_)) => err
                     .with_hint(Error::hint().with_msg(String::from(
                         "this function is not expected to return any value but does",
@@ -266,7 +280,7 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
                 Ok(def_args
                     .iter()
                     // FIXME: Remove clone
-                    .map(|def_arg| self.get_type(def_arg).cloned())
+                    .map(|def_arg| self.get_type(def_arg).clone())
                     .collect())
             })?;
 
@@ -284,21 +298,18 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             .zip(args)
             .fold(Vec::new(), |mut errs, (expected, arg)| {
                 let got = self.get_type(arg);
-                let expected = expected.as_ref();
 
                 // so we can't use != here anymore. multiple options
                 // 1. instead of storing Option<Type>, keep Type - and add a new `None` variant to the Type
                 // 2. this can be represented using an empty set, but we must then make sure that {} is "not" a subset of { int, string }
                 // which makes very little sense in terms of set theory
-                if let (Some(got), Some(expected)) = (got, expected) {
-                    if !got.can_widen_to(expected) {
-                        errs.push(type_mismatch(
-                            node.data.ast.location(),
-                            fir,
-                            Expected(Some(expected)),
-                            Got(Some(got)),
-                        ))
-                    }
+                if !got.can_widen_to(expected) {
+                    errs.push(type_mismatch(
+                        node.data.ast.location(),
+                        fir,
+                        Expected(expected),
+                        Got(got),
+                    ))
                 }
 
                 errs

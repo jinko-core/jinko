@@ -19,27 +19,14 @@ use crate::Type;
 // and Actual is TypeCtx<LinkedTypeMap> -> TypeCtx<TypeMap>?
 
 /// A strongly typed reference to a type node - `Kind::UnionType` or `Kind::RecordType` only
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub struct TypeRef(OriginIdx);
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct TypeRef(pub(crate) OriginIdx); // FIXME: Remove vis?
 
-// FIXME: These two are not needed?
-// FIXME: Should we use phantom types here?
-pub struct UnionType(OriginIdx);
-pub struct RecordType(OriginIdx);
-
-impl TypeRef {
-    pub fn union(UnionType(node): UnionType) -> TypeRef {
-        TypeRef(node)
-    }
-
-    pub fn record(RecordType(node): RecordType) -> TypeRef {
-        TypeRef(node)
-    }
-}
-
+#[derive(Debug)]
 pub struct TypeMap {
     nodes: HashMap<OriginIdx, TypeRef>,
-    types: HashMap<
+    // FIXME: Remove?
+    pub(crate) types: HashMap<
         TypeRef,
         Type, /* FIXME: We should store the OriginIdx here as well probably */
     >,

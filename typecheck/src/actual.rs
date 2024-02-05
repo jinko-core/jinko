@@ -306,7 +306,7 @@ impl<'ctx> TypeLinkResolver<'ctx> {
         let ty_of_node = self.old.types.get(&to_resolve).unwrap();
 
         match ty_of_node {
-            Some(TypeVariable::Reference(ty_ref)) => {
+            TypeVariable::Reference(ty_ref) => {
                 intermediate_nodes.push(to_resolve);
 
                 self.find_end_inner(
@@ -317,7 +317,7 @@ impl<'ctx> TypeLinkResolver<'ctx> {
                     intermediate_nodes,
                 )
             }
-            Some(TypeVariable::Record(r)) => {
+            TypeVariable::Record(r) => {
                 // we don't insert here so that we can get the typeref directly later on - does that make sense?
                 // self.new.types.new_type(final_type.clone());
 
@@ -327,7 +327,7 @@ impl<'ctx> TypeLinkResolver<'ctx> {
                     final_type: Type::single(*r),
                 })
             }
-            Some(TypeVariable::Union(u)) => {
+            TypeVariable::Union(u) => {
                 let original_node = &fir.nodes[u];
                 let variants = match &original_node.kind {
                     Kind::UnionType { variants, .. } => variants,
@@ -349,13 +349,6 @@ impl<'ctx> TypeLinkResolver<'ctx> {
                     final_type: Type::new(*u, variants.collect()),
                 })
             }
-            // FIXME: Remove None as the type for void types
-            // nothing to do
-            // FIXME: This is invalid
-            None => ControlFlow::Break(ChainEnd {
-                intermediate_nodes,
-                final_type: Type::builtin(HashSet::new()),
-            }),
         }
     }
 
