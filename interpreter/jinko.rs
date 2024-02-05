@@ -232,6 +232,9 @@ fn main() -> anyhow::Result<()> {
         || {
             if args.experimental {
                 match xrepl::repl() {
+                    // FIXME: At the moment, we are still expected to return an "old" [`Context`] in this block - even
+                    // if it does not make sense with the new interpreter and intermediate representation. So build a
+                    // fake and empty context for now, but remove it in the future
                     Ok(_) => Ok((None, Context::new(Box::new(jinko::io_trait::JkStdReader)))),
                     Err(_) => todo!(),
                 }
