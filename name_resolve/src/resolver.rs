@@ -148,21 +148,29 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
         &mut self,
         data: FlattenData<'ast>,
         origin: OriginIdx,
-        _reference: RefIdx,
+        reference: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
-        // how do we handle references to multi types here?
+        // short circuit in case the type-reference was already resolved - this can happen for
+        // things like type aliases where we can create type reference during flattening
+        if let RefIdx::Resolved(_) = reference {
+            Ok(Node {
+                data,
+                origin,
+                kind: Kind::TypeReference(reference),
+            })
+        } else {
+            let definition = self.get_definition(
+                ResolveKind::Type,
+                data.ast.symbol(),
+                data.ast.location(),
+                origin,
+            )?;
 
-        let definition = self.get_definition(
-            ResolveKind::Type,
-            data.ast.symbol(),
-            data.ast.location(),
-            origin,
-        )?;
-
-        Ok(Node {
-            data,
-            origin,
-            kind: Kind::TypeReference(RefIdx::Resolved(definition)),
-        })
+            Ok(Node {
+                data,
+                origin,
+                kind: Kind::TypeReference(RefIdx::Resolved(definition)),
+            })
+        }
     }
 }
