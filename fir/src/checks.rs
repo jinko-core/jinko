@@ -76,7 +76,7 @@ impl<T: Debug> Fir<T> {
                         , node);
                 }
                 // FIXME: Is that okay?
-                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } |  Kind::Generic { .. }, node),
+                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } |  Kind::Generic { .. } | Kind::TypeReference(_), node),
                 Kind::Generic {
                     default: Some(default),
                 } => check!(default => Kind::TypeReference { .. }, node),
