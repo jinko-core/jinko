@@ -521,7 +521,7 @@ mod tests {
                 .collect(),
             ),
         );
-        let single = Type::single(OriginIdx(6), RefIdx::Resolved(OriginIdx(0)));
+        let single = Type::single(OriginIdx(0));
         let empty = Type(OriginIdx(7), TypeSet(HashSet::new()));
 
         // FIXME: Decide on empty's behavior
