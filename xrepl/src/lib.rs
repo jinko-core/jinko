@@ -58,9 +58,7 @@ pub fn repl() -> Result<(), Error> {
     let mut ast = ast.append_builtins().unwrap();
 
     loop {
-        let line = rl.readline(
-            &format!("{} > ", "jinko".purple().underline()), /* TODO: Refactor? */
-        );
+        let line = rl.readline(&format!("{} > ", "jinko".purple()));
 
         // let mut fir = ast.flatten();
 
