@@ -397,6 +397,7 @@ mod tests {
         ($($toks:tt)*) => {
             {
                 let ast = xparser::ast!(
+                    type unit;
                     type char;
                     type bool;
                     type int;
