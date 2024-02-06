@@ -1,7 +1,7 @@
 use crate::{Fir, Incomplete, Kind, Node, OriginIdx, RefIdx};
 
 pub trait MultiMapper<T, U: Default + From<T>, E> {
-    /// Each implementer of [`Pass`] should keep its own [`OriginIdx`] counter in order to supply the [`Fir`]
+    /// Each implementer of [`MultiMapper`] should keep its own [`OriginIdx`] counter in order to supply the [`Fir`]
     /// with new nodes. This can be done by keeping an [`OriginIdx`] as part of the context, and repeatedly
     /// calling [`OriginIdx::next`] on it.
     fn next_origin(&mut self) -> OriginIdx;

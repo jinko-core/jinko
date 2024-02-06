@@ -116,7 +116,7 @@ pub enum RefIdx {
     /// yet.
     Unresolved,
     /// A resolved reference to a definition/origin point. If you are certain that a [`RefIdx`] points to a valid
-    /// [`OriginIdx`], you can use [`RefIdx::unwrap`].
+    /// [`OriginIdx`], you can use [`RefIdx::expect_resolved`].
     Resolved(OriginIdx),
 }
 
@@ -140,7 +140,7 @@ pub struct OriginIdx(pub u64);
 
 impl OriginIdx {
     /// Get the next origin from an existing one. This allows [`Pass`]es to simply keep an [`OriginIdx`] in their context
-    /// and repeatedly call [`next`] on it.
+    /// and repeatedly call [`OriginIdx::next`] on it.
     pub fn next(&self) -> OriginIdx {
         OriginIdx(self.0 + 1)
     }
@@ -296,9 +296,9 @@ pub trait Pass<T: Debug, U: Debug, E> {
     /// The actual pass algorithm which transforms the [`Fir`] and returns a new one.
     fn transform(&mut self, fir: Fir<T>) -> Result<Fir<U>, E>;
 
-    /// The [`pass`] function is implemented by default in the [`Pass`] trait. It calls into the
-    /// [`pre_condition`] function, then executes the [`transform`] one, before finally executing
-    /// the [`post_condition`] one.
+    /// The [`Pass::pass`] function is implemented by default in the [`Pass`] trait. It calls into the
+    /// [`Pass::pre_condition`] function, then executes the [`Pass::transform`] one, before finally executing
+    /// the [`Pass::post_condition`] one.
     ///
     /// ## Return value
     ///
