@@ -168,9 +168,7 @@ impl SpanTuple {
     /// Write the content in the range included by the [`SpanTuple`]. This
     /// methods splits the input in lines and starts printing from the
     /// `start.line()` line at the `start.column()` character until the
-    /// `end.line()` and `end.column()`. The "algorithm" is repeated in this
-    /// struct's [`to_string`] method, which is only for testing
-    /// purposes and contains extra allocations.
+    /// `end.line()` and `end.column()`.
     pub fn emit<T1: Display, T2: Display>(&self, separator: T1, repetitor: T2) {
         // FIXME: As the API and behavior is still young, use self.to_string()
         // for now. This is quite slow, but since emitting an error is already
