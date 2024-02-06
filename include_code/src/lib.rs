@@ -105,7 +105,7 @@ trait ParseErrorExt {
     fn to_error(self) -> Error;
 }
 
-impl ParseErrorExt for xparser::Error {
+impl ParseErrorExt for xparser::Error<'_> {
     fn to_error(self) -> Error {
         Error::new(ErrKind::Parsing)
     }

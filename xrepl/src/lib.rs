@@ -67,7 +67,15 @@ pub fn repl() -> Result<(), Error> {
                 rl.add_history_entry(&line).unwrap();
 
                 // this returns a block, from which we extract the only expression and set ast's `last_is_expr`
-                let expr = xparser::parse(&line, location::Source::Input(&line)).unwrap();
+                let expr = xparser::parse(&line, location::Source::Input(&line));
+                let expr = match expr {
+                    Ok(expr) => expr,
+                    Err(e) => {
+                        dbg!(e);
+                        continue;
+                    }
+                };
+
                 let expr = match expr.node {
                     ast::Node::Block { mut stmts, .. } => stmts.pop().unwrap(),
                     _ => unreachable!(),
