@@ -240,7 +240,7 @@ impl<'ast> AstInfo<'ast> {
         }
     }
 
-    /// Fetch the [`AstInfo::Node`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is *not* an [`AstInfo::Ast`]
+    /// Fetch the [`AstInfo::Node`] from an [`AstInfo`]. This function will panic if the [`AstInfo`] is *not* an [`AstInfo::Node`]
     pub fn node(&self) -> &Ast {
         match self {
             AstInfo::Node(node) => node,
