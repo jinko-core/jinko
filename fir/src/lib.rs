@@ -146,7 +146,7 @@ impl OriginIdx {
     }
 }
 
-impl Debug for OriginIdx {
+impl fmt::Debug for OriginIdx {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.0 {
             u64::MAX => write!(f, "OriginIdx::BUILTIN"),
