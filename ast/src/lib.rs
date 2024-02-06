@@ -16,7 +16,7 @@ pub enum TypeKind {
 
 /// A type argument, i.e. when performing a specific generic call or specifying a variable's type
 ///
-/// ```ignore
+/// ```text
 /// a: int = id[int](15);
 ///
 /// a: int = 15;
@@ -49,7 +49,7 @@ pub enum TypeContent {
     /// A named tuple, or tuple type: `type Foo(Bar, Baz);`
     Tuple(Vec<Type>),
     /// A type alias: `type Foo = Bar;`
-    /// This can be an alias to a multi type - a single [`TypeArgument`] of kind [`TypeKind::Multi`]
+    /// This can be an alias to a multi type - a single [`Type`] of kind [`TypeKind::Multi`]
     Alias(Type),
 }
 
@@ -189,8 +189,8 @@ pub enum Node {
     Empty,
 }
 
-/// The [`Ast`] structure is a wrapper around the [`AstNode`] sum type, which contains
-/// extra information such as the node's [`Location`]
+/// The [`Ast`] structure is a wrapper around the [`Node`] sum type, which contains
+/// extra information such as the node's location
 #[derive(Debug, Clone)]
 pub struct Ast {
     pub location: SpanTuple,
