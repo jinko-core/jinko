@@ -12,7 +12,7 @@ use crate::{typemap::TypeMap, Type, TypeCtx, TypeLinkMap, TypeVariable};
 /// This pass takes care of shortening each link within the type context as much as possible. As explained in
 /// the previous module ([`crate::typer`]), a list will be built within the [`TypeCtx`] containing "type links".
 /// This pass will resolve these links and make each node point to its *actual* type.
-pub(crate) struct Actual; // <'ctx>(pub(crate) &'ctx mut TypeCtx);
+pub(crate) struct Actual;
 
 struct TypeLinkResolver<'ctx> {
     old: &'ctx TypeCtx<TypeLinkMap>,
@@ -43,21 +43,14 @@ struct ChainEnd {
     final_type: Type,
 }
 
-struct ResolutionCtx<'ast, 'fir> {
-    fir: &'fir Fir<FlattenData<'ast>>,
-    to_resolve: OriginIdx,
-}
-
 impl<'ctx> TypeLinkResolver<'ctx> {
     /// Recursively try and resolve a type link within the type context. This will update the given node's type
     /// within the type context.
     fn resolve_link(&mut self, to_resolve: OriginIdx, fir: &Fir<FlattenData>) -> OriginIdx {
-        let resolution_ctx = ResolutionCtx { fir, to_resolve };
-
         let ChainEnd {
             intermediate_nodes,
             final_type,
-        } = self.find_end(resolution_ctx);
+        } = self.find_end(fir, to_resolve);
 
         let node = final_type.0;
         let tyref = self.new.types.new_type(final_type);
@@ -73,33 +66,25 @@ impl<'ctx> TypeLinkResolver<'ctx> {
     // FIXME: Remove ResolutionCtx - too complicated for just one extra parameter
     fn find_end_inner(
         &mut self,
-        ctx: ResolutionCtx,
+        fir: &Fir<FlattenData<'_>>,
+        to_resolve: OriginIdx,
         mut intermediate_nodes: Vec<OriginIdx>,
     ) -> ControlFlow<ChainEnd, Vec<OriginIdx>> {
-        let ResolutionCtx { fir, to_resolve } = ctx;
-
         let ty_of_node = self.old.types.get(&to_resolve).unwrap();
 
         match ty_of_node {
             TypeVariable::Reference(ty_ref) => {
                 intermediate_nodes.push(to_resolve);
 
-                self.find_end_inner(
-                    ResolutionCtx {
-                        fir,
-                        to_resolve: ty_ref.expect_resolved(),
-                    },
-                    intermediate_nodes,
-                )
+                self.find_end_inner(fir, ty_ref.expect_resolved(), intermediate_nodes)
             }
             TypeVariable::Record(r) => {
                 // we don't insert here so that we can get the typeref directly later on - does that make sense?
                 // self.new.types.new_type(final_type.clone());
 
-                // FIXME: No clone - Actual() should probably keep an OriginIdx rather than a Type
                 ControlFlow::Break(ChainEnd {
                     intermediate_nodes,
-                    final_type: Type::single(*r),
+                    final_type: Type::record(*r),
                 })
             }
             TypeVariable::Union(u) => {
@@ -126,10 +111,10 @@ impl<'ctx> TypeLinkResolver<'ctx> {
         }
     }
 
-    fn find_end(&mut self, ctx: ResolutionCtx) -> ChainEnd {
+    fn find_end(&mut self, fir: &Fir<FlattenData<'_>>, to_resolve: OriginIdx) -> ChainEnd {
         let intermediate_nodes = vec![];
 
-        match self.find_end_inner(ctx, intermediate_nodes) {
+        match self.find_end_inner(fir, to_resolve, intermediate_nodes) {
             ControlFlow::Break(b) => b,
             ControlFlow::Continue(_) => unreachable!(),
         }

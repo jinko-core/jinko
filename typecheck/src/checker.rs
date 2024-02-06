@@ -48,9 +48,7 @@ impl<'ctx> Checker<'ctx> {
     ) -> Result<Vec<Type>, Error> {
         use builtins::*;
 
-        // FIXME: Remove all calls to `::single` here?
         let numbers = [
-            // FIXME: This is ugly
             RefIdx::Resolved(self.0.primitives.int_type),
             RefIdx::Resolved(self.0.primitives.float_type),
         ];
@@ -82,17 +80,16 @@ impl<'ctx> Checker<'ctx> {
             BuiltinType::Number | BuiltinType::Comparable => {
                 self.get_type(&args[0]).clone() // FIXME: Remove clone
             }
-            BuiltinType::Bool => Type::single(self.0.primitives.bool_type),
+            BuiltinType::Bool => Type::record(self.0.primitives.bool_type),
         };
 
-        // FIXME: This API isn't great
         if valid_union_type.is_superset_of(&expected_ty) {
             Ok(vec![expected_ty; arity])
         } else {
             Err(unexpected_arithmetic_type(
                 loc,
                 fir,
-                &expected_ty, // FIXME: This is wrong
+                &expected_ty,
                 &valid_union_type,
                 op,
             ))
@@ -118,7 +115,7 @@ impl<'fir, 'ast> Fmt<'fir, 'ast> {
     }
 
     // FIXME: Add debug format which adds new info like the RefIdx
-    // is having a self parameter okay here
+    // FIXME: Is having a self parameter okay here?
     pub fn ty(&self, ty: &Type) -> String {
         if ty.set().0.is_empty() {
             unreachable!()
@@ -134,15 +131,6 @@ impl<'fir, 'ast> Fmt<'fir, 'ast> {
             })
             .unwrap()
     }
-
-    // #[deprecated(note = "unneeded?")]
-    // pub fn ty_vec(tys: Vec<Option<String>>) -> String {
-    //     tys.into_iter()
-    //         // this calls `format::ty` but we are in the format module
-    //         .map(ty)
-    //         // FIXME: Improve formatting
-    //         .fold(String::new(), |acc, ty| format!("{} | {}", acc, ty))
-    // }
 }
 
 struct Expected<T>(T);
@@ -182,7 +170,7 @@ fn unexpected_arithmetic_type(
     loc: &SpanTuple,
     fir: &Fir<FlattenData>,
     ty: &Type,
-    valid_type_set: &Type, // FIXME: Should that be a Type?
+    valid_type_set: &Type,
     op: builtins::Operator,
 ) -> Error {
     let fmt = Fmt(fir);
@@ -295,10 +283,6 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             .fold(Vec::new(), |mut errs, (expected, arg)| {
                 let got = self.get_type(arg);
 
-                // so we can't use != here anymore. multiple options
-                // 1. instead of storing Option<Type>, keep Type - and add a new `None` variant to the Type
-                // 2. this can be represented using an empty set, but we must then make sure that {} is "not" a subset of { int, string }
-                // which makes very little sense in terms of set theory
                 if !got.can_widen_to(expected) {
                     errs.push(type_mismatch(
                         node.data.ast.location(),
@@ -329,6 +313,7 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
         let from = self.get_type(from);
 
         // FIXME: Use `is_superset_of` here
+        // FIXME: How do we prevent usage of == here?
         if to != from {
             Err(type_mismatch(
                 node.data.ast.location(),
