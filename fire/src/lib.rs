@@ -538,7 +538,7 @@ mod tests {
                     { { { {
                         return "boo";
                     } } } }
-                };
+                }
 
                 "different string"
             }
