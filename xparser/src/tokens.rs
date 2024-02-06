@@ -33,7 +33,7 @@ fn specific_char(input: ParseInput, character: char) -> ParseResult<ParseInput, 
 fn token<'input>(
     input: ParseInput<'input>,
     token: &'input str,
-) -> ParseResult<ParseInput<'input>, ParseInput<'input>> {
+) -> ParseResult<'input, ParseInput<'input>, ParseInput<'input>> {
     let tok = tag(token)(input)?;
 
     Ok(tok)
@@ -45,7 +45,7 @@ fn token<'input>(
 fn specific_token<'tok>(
     input: ParseInput<'tok>,
     token: &'tok str,
-) -> ParseResult<ParseInput<'tok>, ParseInput<'tok>> {
+) -> ParseResult<'tok, ParseInput<'tok>, ParseInput<'tok>> {
     let (input, tag) = tag(token)(input)?;
 
     if let Some(next_char) = input.chars().next() {
@@ -54,7 +54,10 @@ fn specific_token<'tok>(
             // return Err(NomError(Error::new(ErrKind::Parsing).with_msg(
             //     String::from("Unexpected alphanum character after symbol"),
             // )));
-            return Err(NomError(Error));
+
+            return Err(NomError(Error::Msg(format!(
+                "unexpected alphanum character after symbol: `{next_char}`"
+            ))));
         }
     }
     Ok((input, tag))
@@ -286,7 +289,7 @@ pub fn inner_identifer(input: ParseInput) -> ParseResult<ParseInput, ParseInput>
         return Err(NomError(
             // FIXME: Reuse this
             // Error::new(ErrKind::Parsing).with_msg(String::from("identifier cannot be keyword")),
-            Error,
+            Error::Msg(format!("identifier cannot be keyword: `{id}`")),
         ));
     }
 
@@ -298,7 +301,7 @@ pub fn inner_identifer(input: ParseInput) -> ParseResult<ParseInput, ParseInput>
     Err(NomError(
         // FIXME: Reuse this
         // Error::new(ErrKind::Parsing).with_msg(String::from("invalid identifier")),
-        Error,
+        Error::Msg(format!("invalid identifier: `{id}`")),
     ))
 }
 
@@ -328,7 +331,7 @@ pub fn identifier(input: ParseInput) -> ParseResult<ParseInput, String> {
             // FIXME: Reuse this
             // Error::new(ErrKind::Parsing).with_msg(
             // String::from("cannot finish identifier on namespace separator `::`"))
-            Error,
+            Error::Msg("cannot finish identifier on namespace separator `::`".to_string()),
         ));
     }
 
@@ -365,7 +368,9 @@ pub fn float_constant(input: ParseInput) -> ParseResult<ParseInput, f64> {
             //     "invalid floating point number: {}.{}",
             //     whole, decimal
             // ))
-            Error,
+            Error::Msg(format!(
+                "invalid floating point number: `{whole}.{decimal}`"
+            )),
         )),
     }
 }
@@ -382,7 +387,7 @@ pub fn int_constant(input: ParseInput) -> ParseResult<ParseInput, i64> {
         Err(_) => Err(NomError(
             // FIXME: Reuse this
             // Error::new(ErrKind::Parsing).with_msg(format!("invalid integer: {}", num)),
-            Error,
+            Error::Msg(format!("invalid integer: `{num}`")),
         )),
     }
 }
