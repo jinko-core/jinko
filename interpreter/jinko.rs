@@ -4,8 +4,6 @@ mod args;
 #[cfg(feature = "repl")]
 mod repl;
 
-use xrepl;
-
 use colored::Colorize;
 
 use builtins::AppendAstBuiltins;

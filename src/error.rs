@@ -340,7 +340,7 @@ impl std::error::Error for Error {}
 
 // FIXME: These need to appear in the `error` package as well!
 
-impl From<xparser::Error> for Error {
+impl From<xparser::Error<'_>> for Error {
     fn from(_err: xparser::Error) -> Error {
         // FIXME: Missing bits and pieces
         Error::new(ErrKind::Parsing)
