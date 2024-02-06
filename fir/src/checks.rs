@@ -151,7 +151,7 @@ impl<T: Debug> Fir<T> {
         })
     }
 
-    /// Check that the [`Fir`] is in a valid state. This means that all [`OriginIdx`] should be unique,
+    /// Check that the [`Fir`] is in a valid state. This means that all [`crate::OriginIdx`] should be unique,
     /// and that all links between nodes should be allowed
     ///
     /// # Panic
