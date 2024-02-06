@@ -744,7 +744,7 @@ impl<'ast> Ctx<'ast> {
                 ctx.append(data, Kind::TypeReference(aliased))
             }
             TypeContent::Tuple(_) => todo!("tuple fields are not handled yet: map to a RecordType with fields named `.0`, `.1`..."),
-            _ => todo!("function-like types are not handled yet")
+            // FIXME: function-like types are not handled yet
         }
     }
 

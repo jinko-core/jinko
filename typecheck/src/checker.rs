@@ -74,12 +74,8 @@ impl<'ctx> Checker<'ctx> {
             }
             Operator::Unary(Minus) => Type::builtin(numbers.into_iter().collect()),
             // FIXME: These two are ugly as sin - remove the .map call
-            Operator::Comparison(_) => {
-                Type::builtin(comparable[2..].into_iter().map(|r| *r).collect())
-            }
-            Operator::Unary(Not) => {
-                Type::builtin(comparable[..1].into_iter().map(|r| *r).collect())
-            }
+            Operator::Comparison(_) => Type::builtin(comparable[2..].iter().copied().collect()),
+            Operator::Unary(Not) => Type::builtin(comparable[..1].iter().copied().collect()),
         };
 
         let expected_ty = match op.ty() {
@@ -90,7 +86,7 @@ impl<'ctx> Checker<'ctx> {
         };
 
         // FIXME: This API isn't great
-        if valid_union_type.set().contains(&expected_ty.set()) {
+        if valid_union_type.is_superset_of(&expected_ty) {
             Ok(vec![expected_ty; arity])
         } else {
             Err(unexpected_arithmetic_type(

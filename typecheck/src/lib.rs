@@ -28,7 +28,7 @@ impl TypeSet {
     // TODO: Rename or improve `Type`'s API
     pub fn contains(&self, other: &TypeSet) -> bool {
         // FIXME: This is quite ugly
-        other.0.iter().find(|elt| !self.0.contains(elt)).is_none()
+        !other.0.iter().any(|elt| !self.0.contains(elt))
     }
 }
 
@@ -41,9 +41,8 @@ impl TypeSet {
 pub struct Type(OriginIdx, TypeSet);
 
 impl Type {
-    #[deprecated(note = "needs a new API")]
-    pub fn new(origin: OriginIdx, set: HashSet<RefIdx>) -> Type {
-        Type(origin, TypeSet(set))
+    pub fn union(origin: OriginIdx, variants: impl Iterator<Item = RefIdx>) -> Type {
+        Type(origin, TypeSet(variants.collect()))
     }
 
     pub fn builtin(set: HashSet<RefIdx>) -> Type {
@@ -91,24 +90,6 @@ pub(crate) enum TypeVariable {
     Union(OriginIdx),
     Record(OriginIdx),
     Reference(RefIdx), // specifically we're interested in `type_ctx.type_of(< that refidx >)`
-}
-
-impl TypeVariable {
-    pub fn actual(&self) -> OriginIdx {
-        match self {
-            TypeVariable::Union(a) | TypeVariable::Record(a) => *a,
-            TypeVariable::Reference(r) => unreachable!("unexpected type reference: {r:?}"),
-        }
-    }
-
-    pub fn ref_idx(&self) -> RefIdx {
-        match self {
-            TypeVariable::Union(a) | TypeVariable::Record(a) => {
-                unreachable!("expected reference type, got actual type: {a:?}")
-            }
-            TypeVariable::Reference(r) => *r,
-        }
-    }
 }
 
 type TypeLinkMap = HashMap<OriginIdx, TypeVariable>;
