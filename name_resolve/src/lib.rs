@@ -87,7 +87,7 @@ impl Index<OriginIdx> for EnclosingScope<'_> {
 
 type Bindings = HashMap<Symbol, OriginIdx>;
 
-/// Each scope in the [`scopes`] map contains the bindings associated with a given scope,
+/// Each scope in the `scopes` map contains the bindings associated with a given scope,
 /// meaning that each scope contains a list of definitions. A definition can be thought of as the
 /// mapping of a name ([`Symbol`]) to the node's index in the [`Fir`].
 #[derive(Clone, Debug)]
@@ -190,7 +190,6 @@ impl<'enclosing> NameResolveCtx<'enclosing> {
     }
 }
 
-/// Extension type of [`Error`] to be able to implement [`IterError`].
 enum NameResolutionError {
     NonUnique(SpanTuple, OriginIdx, &'static str),
     Unresolved(ResolveKind, Symbol, SpanTuple),
