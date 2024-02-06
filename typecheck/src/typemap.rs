@@ -44,6 +44,10 @@ impl TypeMap {
         self.nodes
             .get(&node)
             .and_then(|ty_ref| self.types.get(ty_ref))
+            // in case that we are directly looking at the type's definition and not a reference.
+            // this happens when dealing with inline type variables, such as union-types defined
+            // in a function's return type.
+            .or_else(|| self.types.get(&TypeRef(node)))
     }
 
     /// Insert a new type into the typemap
