@@ -58,7 +58,7 @@ impl Interpret for Fir<FlattenData<'_>> {
     }
 }
 
-/// It's called [`GarbajKollector`] because this way you have "jk" in the middle of the word :)
+/// It's called [`GarbaJKollector`] because this way you have "jk" in the middle of the word :)
 pub struct GarbaJKollector(HashMap<OriginIdx, Instance>);
 
 // FIXME: Add documentation for all methods
