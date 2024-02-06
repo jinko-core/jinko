@@ -12,7 +12,7 @@ use typecheck::TypeCheck;
 use std::{ops::ControlFlow, process};
 
 // The "pipeline" loop. We basically want to get a context, add to it, typecheck the entire thing and keep everything nice and tight
-fn pipeline<'ast>(ast: &'ast ast::Ast) -> ControlFlow<Error, ()> {
+fn pipeline(ast: &ast::Ast) -> ControlFlow<Error, ()> {
     // FIXME: do we want to accumulate errors instead here
 
     macro_rules! x_try {
