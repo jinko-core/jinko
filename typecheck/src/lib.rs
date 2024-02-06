@@ -1,10 +1,8 @@
 mod actual;
 mod checker;
 mod primitives;
-mod typer;
-
-// FIXME: Rename?
 mod typemap;
+mod typer;
 
 use std::collections::{HashMap, HashSet};
 
@@ -37,20 +35,14 @@ impl TypeSet {
 /// be thought of as a simple set of actual, monomorphized types.
 // TODO: for now, let's not think about optimizations - let's box and clone and blurt bytes everywhere
 #[derive(Clone, Debug, Eq, PartialEq)]
-// TODO: We might have to turn this into an enum - `ActualType(Set<RefIdx>) | TypeReference(RefIdx)`
 pub struct Type(OriginIdx, TypeSet);
 
 impl Type {
-    pub fn union(origin: OriginIdx, variants: impl Iterator<Item = RefIdx>) -> Type {
-        Type(origin, TypeSet(variants.collect()))
-    }
-
     pub fn builtin(set: HashSet<RefIdx>) -> Type {
         Type(OriginIdx(u64::MAX), TypeSet(set))
     }
 
-    // TODO: Rename? one? simple? unique? what's the opposite of `sum` or `multi`?
-    pub fn single(origin: OriginIdx) -> Type {
+    pub fn record(origin: OriginIdx) -> Type {
         let mut set = HashSet::new();
         // FIXME: Switch to keeping HashSet<OriginIdx> instead
         set.insert(RefIdx::Resolved(origin));
@@ -58,23 +50,13 @@ impl Type {
         Type(origin, TypeSet(set))
     }
 
+    pub fn union(origin: OriginIdx, variants: impl Iterator<Item = RefIdx>) -> Type {
+        Type(origin, TypeSet(variants.collect()))
+    }
+
     pub fn set(&self) -> &TypeSet {
         &self.1
     }
-
-    // #[deprecated(note = "is this actually valid?")]
-    // pub fn is_single(&self) -> bool {
-    //     self.0.len() == 1
-    // }
-
-    // #[deprecated(note = "is this actually valid?")]
-    // pub fn get_single(&self) -> Option<RefIdx> {
-    //     self.is_single()
-    //         // NOTE: We can unwrap safely here since this closure only executes if there
-    //         // is exactly one element
-    //         .then(|| self.0.iter().next().unwrap())
-    //         .copied()
-    // }
 
     pub fn is_superset_of(&self, other: &Type) -> bool {
         return self.set().contains(other.set());
@@ -94,11 +76,11 @@ pub(crate) enum TypeVariable {
 
 type TypeLinkMap = HashMap<OriginIdx, TypeVariable>;
 
-// TODO: Make generic over the `types` field? and explain why this is used?
 pub(crate) struct TypeCtx<T> {
     // primitive type declaration
     pub(crate) primitives: PrimitiveTypes,
     // mapping from declaration to type
+    // FIXME: Explain why this is needed
     pub(crate) types: T,
 }
 
@@ -137,7 +119,6 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
             }
         };
 
-        // let mut actualized_ctx = Actual::new(self, &fir).resolve_type_links();
         let mut actual_ctx = Actual::resolve_type_links(self, &fir)?;
 
         Checker(&mut actual_ctx).traverse(&fir)?;
@@ -503,7 +484,7 @@ mod tests {
                 .collect(),
             ),
         );
-        let single = Type::single(OriginIdx(0));
+        let single = Type::record(OriginIdx(0));
         let empty = Type(OriginIdx(7), TypeSet(HashSet::new()));
 
         // FIXME: Decide on empty's behavior

@@ -18,7 +18,6 @@ use crate::Type;
 // do we do something like TypeCtx<LinkedTypeMap> ? and then TypeCtx<TypeMap>
 // and Actual is TypeCtx<LinkedTypeMap> -> TypeCtx<TypeMap>?
 
-/// A strongly typed reference to a type node - `Kind::UnionType` or `Kind::RecordType` only
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct TypeRef(pub(crate) OriginIdx); // FIXME: Remove vis?
 
@@ -26,10 +25,7 @@ pub struct TypeRef(pub(crate) OriginIdx); // FIXME: Remove vis?
 pub struct TypeMap {
     nodes: HashMap<OriginIdx, TypeRef>,
     // FIXME: Remove?
-    pub(crate) types: HashMap<
-        TypeRef,
-        Type, /* FIXME: We should store the OriginIdx here as well probably */
-    >,
+    pub(crate) types: HashMap<TypeRef, Type>,
 }
 
 impl TypeMap {
@@ -60,7 +56,7 @@ impl TypeMap {
     }
 
     pub fn insert(&mut self, node: OriginIdx, tyref: TypeRef) {
-        // FIXME:
+        // FIXME: Is that okay?
         self.nodes.insert(node, tyref);
     }
 }
