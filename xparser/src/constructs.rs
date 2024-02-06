@@ -1128,11 +1128,11 @@ fn special(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, As
             "n" => "\n",
             "r" => "\r",
             "t" => "\t",
-            _ => {
+            unknown => {
                 return Err(NomError(
                     // FIXME: Reuse this
                     // Error::new(ErrKind::Parsing).with_msg(String::from("Unknown character escape")),
-                    Error,
+                    Error::Msg(format!("unknown character escape: `{unknown}`")),
                 ));
             }
         };
@@ -1154,7 +1154,7 @@ fn special(input: ParseInput, start_loc: Location) -> ParseResult<ParseInput, As
         Err(NomError(
             // FIXME: Reuse this
             // Error::new(ErrKind::Parsing).with_msg(String::from("undelimited string")),
-            Error,
+            Error::Msg("undelimited string".to_string()),
         ))
     }
 }
