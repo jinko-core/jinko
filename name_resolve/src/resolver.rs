@@ -151,7 +151,7 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
         reference: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
         // short circuit in case the type-reference was already resolved - this can happen for
-        // things like type aliases where we can create type reference during flattening
+        // things like type aliases where we can create type references during flattening
         if let RefIdx::Resolved(_) = reference {
             Ok(Node {
                 data,
