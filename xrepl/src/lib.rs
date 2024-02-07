@@ -31,7 +31,7 @@ fn pipeline(ast: &ast::Ast) -> ControlFlow<Error, ()> {
     let result = fir.interpret();
 
     if let Some(instance) = &result {
-        match instance {
+        match dbg!(instance) {
             Instance::Int(inner) => println!("{inner}"),
             Instance::Float(inner) => println!("{inner}"),
             Instance::Bool(inner) => println!("{inner}"),
@@ -51,7 +51,7 @@ fn pipeline(ast: &ast::Ast) -> ControlFlow<Error, ()> {
 pub fn repl() -> Result<(), Error> {
     let mut rl = rustyline::DefaultEditor::new().unwrap();
     // FIXME: How to handle this?
-    let builtin_types = "type bool; type int; type float; type char; type string;";
+    let builtin_types = "type unit; type bool; type int; type float; type char; type string;";
     let ast = xparser::parse(builtin_types, Source::Input(builtin_types)).unwrap();
 
     // FIXME: No unwrap
