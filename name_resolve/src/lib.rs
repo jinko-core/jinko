@@ -49,7 +49,7 @@ mod resolver;
 mod scoper;
 
 use declarator::Declarator;
-use resolver::{ResolveKind, Resolver};
+use resolver::{LatentResolver, ResolveKind, Resolver};
 use scoper::Scoper;
 
 /// Error reported when an item (variable, function, type) was already declared
@@ -342,7 +342,35 @@ impl<'enclosing> NameResolveCtx<'enclosing> {
         &mut self,
         fir: Fir<FlattenData<'ast>>,
     ) -> Result<Fir<FlattenData<'ast>>, Incomplete<FlattenData<'ast>, NameResolutionError>> {
-        Resolver(self).map(fir)
+        let mut resolver = Resolver {
+            ctx: self,
+            required_parents: Vec::new(),
+        };
+
+        let fir = resolver.map(fir)?;
+
+        let latent_map =
+            resolver
+                .required_parents
+                .into_iter()
+                .fold(HashMap::new(), |mut map, reqd| {
+                    let required_node = &fir[&reqd];
+
+                    let scope = match required_node.kind {
+                        Kind::Instantiation { to, .. } => Scope(to.expect_resolved()),
+                        _ => unreachable!(),
+                    };
+
+                    map.insert(reqd, scope);
+
+                    map
+                });
+
+        LatentResolver {
+            ctx: self,
+            latent_map,
+        }
+        .map(fir)
     }
 }
 
