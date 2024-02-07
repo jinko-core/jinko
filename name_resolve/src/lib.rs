@@ -357,9 +357,11 @@ impl<'enclosing> NameResolveCtx<'enclosing> {
                 .fold(HashMap::new(), |mut map, reqd| {
                     let required_node = &fir[&reqd];
 
-                    let scope = match required_node.kind {
+                    let scope = match &required_node.kind {
                         Kind::Instantiation { to, .. } => Scope(to.expect_resolved()),
-                        _ => unreachable!(),
+                        other => unreachable!(
+                            "interpreter error - expected Instantiation, got {other:#?}"
+                        ),
                     };
 
                     map.insert(reqd, scope);
@@ -703,5 +705,33 @@ mod tests {
         let fir = ast.flatten().name_resolve();
 
         assert!(fir.is_err())
+    }
+
+    #[test]
+    fn field_instantiation_valid() {
+        let ast = ast! {
+            type Foo;
+
+            type Record(of: Foo);
+            where x = Record(of: Foo);
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn field_instantiation_invalid() {
+        let ast = ast! {
+            type Foo;
+
+            type Record(of: Foo);
+            where x = Record(not_of: Foo);
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_err());
     }
 }
