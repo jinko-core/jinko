@@ -254,9 +254,9 @@ impl<T> Index<&OriginIdx> for Fir<T> {
 
 #[derive(Debug, Clone)]
 pub struct Node<T = ()> {
-    pub data: T,
     pub origin: OriginIdx,
     pub kind: Kind,
+    pub data: T,
 }
 
 /// An instance of [`Fir`] is similar to a graph, containing [`Node`]s and relationships binding them together.

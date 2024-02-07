@@ -118,7 +118,7 @@ impl<T: Debug> Fir<T> {
                     // FIXME: Check `to` as well
                 }
                 Kind::Assignment { to, from: _ } => {
-                    check!(to => Kind::TypedValue { .. }, node);
+                    check!(to => Kind::TypedValue { .. } | Kind::Binding { .. }, node);
                     // FIXME: Check `from` as well
                 }
                 Kind::Instantiation {
