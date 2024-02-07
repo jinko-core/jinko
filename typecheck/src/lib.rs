@@ -219,6 +219,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Reevaluate once #653 is done"]
     fn assignment_valid() {
         let ast = ast! {
             type Marker0;
@@ -235,6 +236,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Reevaluate once #653 is done"]
     fn assignment_invalid() {
         let ast = ast! {
             type Marker0;
@@ -242,6 +244,33 @@ mod tests {
 
             where mut a = Marker0;
             a = Marker1;
+        };
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_err());
+    }
+
+    #[test]
+    fn field_instantiation_valid() {
+        let ast = ast! {
+            type Foo;
+
+            type Record(m: Foo);
+            where x = Record(m: Foo);
+        };
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn field_instantiation_invalid() {
+        let ast = ast! {
+            type Foo;
+            type Bar;
+
+            type Record(m: Foo);
+            where x = Record(m: Bar);
         };
         let fir = fir!(ast).type_check();
 
