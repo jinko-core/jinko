@@ -59,6 +59,7 @@ impl Interpret for Fir<FlattenData<'_>> {
 }
 
 /// It's called [`GarbajKollector`] because this way you have "jk" in the middle of the word :)
+#[derive(Debug)]
 pub struct GarbaJKollector(HashMap<OriginIdx, Instance>);
 
 // FIXME: Add documentation for all methods
@@ -324,6 +325,52 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
     }
 
     #[must_use]
+    fn fire_instantiation(
+        &mut self,
+        node: &Node<FlattenData<'_>>,
+        to: &RefIdx,
+        _generics: &[RefIdx],
+        fields: &[RefIdx],
+    ) -> ControlFlow<EarlyExit> {
+        let definition = self.access(to);
+        let fields_def = match &definition.kind {
+            Kind::RecordType { fields, .. } => fields,
+            _ => unreachable!(),
+        };
+
+        // FIXME: This is absolutely disgusting
+        let map = match fields_def.iter().zip(fields).try_fold(
+            HashMap::new(),
+            |mut field_map, (field_def, field)| {
+                let field_def = self
+                    .access(field_def)
+                    .data
+                    .ast
+                    .symbol()
+                    .expect("interpreter error - field definition without a symbol");
+
+                match self.fire_node_ref(field) {
+                    ControlFlow::Continue(_) => Ok(()),
+                    ControlFlow::Break(early) => Err(early),
+                }?;
+
+                let value = self.gc.lookup(&field.expect_resolved()).cloned().unwrap();
+
+                field_map.insert(field_def.access().to_string(), value);
+
+                Ok::<HashMap<String, Instance>, EarlyExit>(field_map)
+            },
+        ) {
+            Ok(map) => ControlFlow::Continue(map),
+            Err(early) => ControlFlow::Break(early),
+        }?;
+
+        self.gc.allocate(node.origin, Instance::SlowRecord(map));
+
+        KeepGoing
+    }
+
+    #[must_use]
     fn fire_node(&mut self, node: &Node<FlattenData<'_>>) -> ControlFlow<EarlyExit> {
         match &node.kind {
             Kind::Constant(c) => self.fire_constant(node, c),
@@ -345,12 +392,18 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
                 // return_type,
             //     block,
             // } => self.traverse_function( node, generics, args, return_type, block),
-            // Kind::Assignment { to, from } => self.traverse_assignment( node, to, from),
-            // Kind::Instantiation {
-            //     to,
-            //     generics,
-            //     fields,
-            // } => self.traverse_instantiation( node, to, generics, fields),
+            // FIXME: Rework this - invalid
+            Kind::Assignment { from, .. } => {
+                self.fire_node_ref(from)?; 
+                self.gc.transfer(from, node.origin);
+
+                KeepGoing
+            },
+            Kind::Instantiation {
+                to,
+                generics,
+                fields,
+            } => self.fire_instantiation(node, to, generics, fields),
             // Kind::TypeOffset { instance, field } => {
             //     self.traverse_type_offset( node, instance, field)
             // }

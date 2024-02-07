@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 // FIXME: This is invalid
 // what's a type? at runtime?
 // just the hash of the type? -> that's good enough
@@ -23,7 +25,10 @@ pub enum Instance {
     Bool(bool),
     Char(char),
     String(String),
-    Other {
+    /// A slow representation of a record type instance - useful for debugging
+    SlowRecord(HashMap<String, Instance>),
+    /// A speedy record type instance
+    Record {
         ty: Type,
         data: Vec<u8>,
     },
