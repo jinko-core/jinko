@@ -31,15 +31,14 @@ fn pipeline(ast: &ast::Ast) -> ControlFlow<Error, ()> {
     let result = fir.interpret();
 
     if let Some(instance) = &result {
-        match dbg!(instance) {
+        match instance {
             Instance::Int(inner) => println!("{inner}"),
             Instance::Float(inner) => println!("{inner}"),
             Instance::Bool(inner) => println!("{inner}"),
             Instance::Char(inner) => println!("{inner}"),
             Instance::String(inner) => println!("{inner}"),
-            Instance::Other { ty, .. } => {
-                println!("// #{ty}")
-            }
+            Instance::Record { ty, .. } => println!("// #{ty}"),
+            Instance::SlowRecord(map) => println!("// {map:?}"),
             Instance::Empty => {}
         }
     }
