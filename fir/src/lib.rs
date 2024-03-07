@@ -102,7 +102,7 @@ use std::{collections::BTreeMap, ops::Index};
 mod checks;
 pub mod iter;
 
-pub use iter::{Fallible, Incomplete, Mapper, MultiMapper, Traversal};
+pub use iter::{Fallible, IncompleteFir, Mapper, MultiMapper, Traversal};
 
 /// A reference to another [`Node`] in the [`Fir`]. These references can be either resolved or unresolved, based
 /// on the state of the [`Fir`].
@@ -294,7 +294,7 @@ pub trait Pass<T: Debug, U: Debug, E> {
     fn post_condition(fir: &Fir<U>);
 
     /// The actual pass algorithm which transforms the [`Fir`] and returns a new one.
-    fn transform(&mut self, fir: Fir<T>) -> Result<Fir<U>, E>;
+    fn transform(&mut self, fir: Fir<T>) -> Result<Fir<U>, IncompleteFir<T, E>>;
 
     /// The [`pass`] function is implemented by default in the [`Pass`] trait. It calls into the
     /// [`pre_condition`] function, then executes the [`transform`] one, before finally executing
@@ -305,7 +305,7 @@ pub trait Pass<T: Debug, U: Debug, E> {
     /// The fallible traits in the Fir's `iter` module return an instance of the [`Incomplete`] type
     /// on error. Should you want to return this incomplete [`Fir`], make sure to return it in the
     /// [`Ok`] case. This trait is to be used as high level interface into your [`Fir`] pass.
-    fn pass(&mut self, fir: Fir<T>) -> Result<Fir<U>, E> {
+    fn pass(&mut self, fir: Fir<T>) -> Result<Fir<U>, IncompleteFir<T, E>> {
         // FIXME: Add a #[cfg(not(release))] here
         Self::pre_condition(&fir);
 

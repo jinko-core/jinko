@@ -24,6 +24,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "080e9890a082662b09c1ad45f567faeeb47f22b5fb23895fbe1e651e718e25ca"
 
 [[package]]
+name = "append_bind"
+version = "0.1.0"
+
+[[package]]
 name = "arrayref"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -385,7 +389,6 @@ dependencies = [
  "name_resolve",
  "nom",
  "nom_locate",
- "recursive_typecheck",
  "structopt",
  "symbol",
  "typecheck",
@@ -686,19 +689,6 @@ name = "rand_core"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
-
-[[package]]
-name = "recursive_typecheck"
-version = "0.1.0"
-dependencies = [
- "error",
- "fir",
- "flatten",
- "location",
- "name_resolve",
- "symbol",
- "xparser",
-]
 
 [[package]]
 name = "redox_syscall"

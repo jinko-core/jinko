@@ -4,7 +4,7 @@
 // are supposed to do things?
 
 use error::{ErrKind, Error};
-use fir::{Fallible, Fir, Kind, Mapper, Node, OriginIdx, Pass, RefIdx, Traversal};
+use fir::{Fallible, Fir, IncompleteFir, Kind, Mapper, Node, OriginIdx, Pass, RefIdx, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
@@ -17,7 +17,7 @@ pub trait TypeCheck<T>: Sized {
 }
 
 impl TypeCheck<Fir<TypeData>> for Fir<FlattenData<'_>> {
-    fn type_check(self) -> Result<Fir<TypeData>, Error> {
+    fn type_check(self) -> Result<Fir<TypeData>, IncompleteFir<TypeData, Error>> {
         TypeCtx.pass(self)
     }
 }
@@ -441,12 +441,20 @@ impl Pass<FlattenData<'_>, TypeData, Error> for TypeCtx {
 
     fn post_condition(_fir: &Fir<TypeData>) {}
 
-    fn transform(&mut self, fir: Fir<FlattenData>) -> Result<Fir<TypeData>, Error> {
+    fn transform(
+        &mut self,
+        fir: Fir<FlattenData>,
+    ) -> Result<Fir<TypeData>, IncompleteFir<TypeData, Error>> {
         // Typing pass
         let typed_fir = self.map(fir).unwrap(); /* FIXME: No unwrap */
 
         // Checking pass
-        self.traverse(&typed_fir)?;
+        if let Err(errs) = self.traverse(&typed_fir) {
+            return Err(IncompleteFir {
+                carcass: typed_fir,
+                errs,
+            });
+        }
 
         Ok(typed_fir)
     }
