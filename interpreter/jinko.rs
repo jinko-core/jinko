@@ -7,8 +7,10 @@ mod repl;
 use colored::Colorize;
 
 use builtins::AppendAstBuiltins;
-use fire::instance::Instance;
-use fire::Interpret;
+use error::Emitter;
+use fir::iter::AccumulateBind;
+use fir::IncompleteFir;
+use fire::{instance::Instance, Interpret};
 use flatten::{FlattenAst, FlattenData};
 use include_code::IncludeCode;
 use loop_desugar::DesugarLoops;
@@ -111,9 +113,10 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
         ($res:expr) => {
             match $res {
                 Ok(inner) => inner,
-                Err(e) => {
-                    e.emit();
-                    return Err(Error::new(ErrKind::Context));
+                Err(Incomplete { carcass, errs }) => {
+                    errs.emit();
+
+                    carcass
                 }
             }
         };
@@ -142,25 +145,39 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     };
 
     let fir = ast.flatten();
-    FirDebug::default()
-        .header("flattened")
-        .show_data(data_fmt)
-        .display(&fir);
 
-    let fir = x_try!(fir.name_resolve());
-    FirDebug::default()
-        .header("name_resolved")
-        .show_data(data_fmt)
-        .display(&fir);
+    let result = ast
+        .flatten()
+        .bind(|fir| {
+            FirDebug::default()
+                .header("flattened")
+                .show_data(data_fmt)
+                .display(&fir);
 
-    let fir = x_try!(fir.type_check());
-    let result = fir.interpret();
+            fir.name_resolve()
+        })
+        .bind(|fir| {
+            FirDebug::default()
+                .header("name_resolved")
+                .show_data(data_fmt)
+                .display(&fir);
+
+            fir.type_check()
+        })
+        .bind(Interpret::interpret)?;
 
     let exit_code = match result {
-        // convert `true` to `0` and `false` to `1`
-        Some(Instance::Bool(b)) => !b as i32,
-        Some(Instance::Int(inner)) => inner as i32,
-        _ => 0,
+        Ok(instance) => match instance {
+            // convert `true` to `0` and `false` to `1`
+            Some(Instance::Bool(b)) => !b as i32,
+            Some(Instance::Int(inner)) => inner as i32,
+            _ => 0,
+        },
+        Err(IncompleteFir { errs, .. }) => {
+            errs.emit();
+
+            1
+        }
     };
 
     process::exit(exit_code);

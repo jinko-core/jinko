@@ -16,6 +16,39 @@ pub struct ErrorHandler {
     file: PathBuf,
 }
 
+pub trait Emitter {
+    fn emit(&self);
+}
+
+impl Emitter for Error {
+    fn emit(&self) {
+        match &self.kind {
+            ErrKind::Multiple(errs) => errs.iter().for_each(|e| e.emit()),
+            ErrKind::Hint => self.emit_hint(),
+            ErrKind::Sanitizer => self.emit_sanity_error(),
+            _ => {
+                if let Some(loc) = &self.loc {
+                    self.emit_full_loc(loc);
+                } else if let Some(msg) = &self.msg {
+                    eprintln!("{msg}")
+                }
+
+                if let Some(first_hint) = self.hints.first() {
+                    first_hint.emit_hint();
+                }
+
+                self.hints.iter().skip(1).for_each(|hint| hint.emit_hint());
+            }
+        }
+    }
+}
+
+impl Emitter for Vec<Error> {
+    fn emit(&self) {
+        self.iter().for_each(|err| err.emit())
+    }
+}
+
 impl ErrorHandler {
     /// Emit all the errors contained in a handler
     pub fn emit(&self) {
@@ -76,6 +109,7 @@ pub enum ErrKind {
     IO,
     Debug,
     UTF8,
+    // FIXME: Remove
     Multiple(Vec<Error>),
 }
 
@@ -178,27 +212,6 @@ impl Error {
 
         if let Some(loc) = &self.loc {
             loc.emit("|".green(), "^".green());
-        }
-    }
-
-    pub fn emit(&self) {
-        match &self.kind {
-            ErrKind::Multiple(errs) => errs.iter().for_each(|e| e.emit()),
-            ErrKind::Hint => self.emit_hint(),
-            ErrKind::Sanitizer => self.emit_sanity_error(),
-            _ => {
-                if let Some(loc) = &self.loc {
-                    self.emit_full_loc(loc);
-                } else if let Some(msg) = &self.msg {
-                    eprintln!("{msg}")
-                }
-
-                if let Some(first_hint) = self.hints.first() {
-                    first_hint.emit_hint();
-                }
-
-                self.hints.iter().skip(1).for_each(|hint| hint.emit_hint());
-            }
         }
     }
 

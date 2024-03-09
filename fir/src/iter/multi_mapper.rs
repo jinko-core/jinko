@@ -1,4 +1,4 @@
-use crate::{Fir, Incomplete, Kind, Node, OriginIdx, RefIdx};
+use crate::{Fir, IncompleteFir, Kind, Node, OriginIdx, RefIdx};
 
 pub trait MultiMapper<T, U: Default + From<T>, E> {
     /// Each implementer of [`MultiMapper`] should keep its own [`OriginIdx`] counter in order to supply the [`Fir`]
@@ -286,7 +286,7 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
     /// In the [`Err`] case, this returns an incomplete [`Fir`] which contains
     /// all valid mapped nodes. This allows an interpreter to keep trying
     /// passes and emit as many errors as possible
-    fn multi_map(&mut self, fir: Fir<T>) -> Result<Fir<U>, Incomplete<U, E>> {
+    fn multi_map(&mut self, fir: Fir<T>) -> Result<Fir<U>, IncompleteFir<U, E>> {
         let (fir, errs) = fir.nodes.into_values().fold(
             (Fir::default(), Vec::new()),
             |(new_fir, mut errs), node| match self.map_node(node) {
@@ -305,7 +305,7 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
         if errs.is_empty() {
             Ok(fir)
         } else {
-            Err(Incomplete { carcass: fir, errs })
+            Err(IncompleteFir { carcass: fir, errs })
         }
     }
 }

@@ -6,8 +6,8 @@ mod typer;
 
 use std::collections::{HashMap, HashSet};
 
-use error::{ErrKind, Error};
-use fir::{Fir, Incomplete, Mapper, OriginIdx, Pass, RefIdx, Traversal};
+use error::Error;
+use fir::{Fir, IncompleteFir, Mapper, OriginIdx, Pass, RefIdx, Traversal};
 use flatten::FlattenData;
 
 use actual::Actual;
@@ -84,13 +84,22 @@ pub(crate) struct TypeCtx<T> {
     pub(crate) types: T,
 }
 
-pub trait TypeCheck<T>: Sized {
-    fn type_check(self) -> Result<T, Error>;
+pub trait TypeCheck<'ast, T>: Sized {
+    fn type_check(self) -> Result<T, IncompleteFir<FlattenData<'ast>, Error>>;
 }
 
-impl<'ast> TypeCheck<Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
-    fn type_check(self) -> Result<Fir<FlattenData<'ast>>, Error> {
-        let primitives = primitives::find(&self)?;
+impl<'ast> TypeCheck<'ast, Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
+    fn type_check(self) -> Result<Fir<FlattenData<'ast>>, IncompleteFir<FlattenData<'ast>, Error>> {
+        // FIXME: Ugly?
+        let primitives = match primitives::find(&self) {
+            Ok(p) => p,
+            Err(e) => {
+                return Err(IncompleteFir {
+                    carcass: self,
+                    errs: vec![e],
+                })
+            }
+        };
 
         TypeCtx {
             primitives,
@@ -105,26 +114,36 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
 
     fn post_condition(_fir: &Fir<FlattenData>) {}
 
-    fn transform(&mut self, fir: Fir<FlattenData<'ast>>) -> Result<Fir<FlattenData<'ast>>, Error> {
+    fn transform(
+        &mut self,
+        fir: Fir<FlattenData<'ast>>,
+    ) -> Result<Fir<FlattenData<'ast>>, IncompleteFir<FlattenData<'ast>, Error>> {
         // Typing pass
         let fir = Typer(self).map(fir);
+
+        let to_incomplete = |errs, carcass| IncompleteFir { carcass, errs };
 
         let mut type_errs = None;
 
         let fir = match fir {
             Ok(fir) => fir,
-            Err(Incomplete { carcass, errs }) => {
-                type_errs = Some(Error::new(ErrKind::Multiple(errs)));
+            Err(IncompleteFir { carcass, errs }) => {
+                type_errs = Some(errs);
                 carcass
             }
         };
 
-        let mut actual_ctx = Actual::resolve_type_links(self, &fir)?;
+        let mut actual_ctx = match Actual::resolve_type_links(self, &fir) {
+            Ok(ctx) => ctx,
+            Err(errs) => return Err(IncompleteFir { carcass: fir, errs }),
+        };
 
-        Checker(&mut actual_ctx).traverse(&fir)?;
+        if let Err(errs) = Checker(&mut actual_ctx).traverse(&fir) {
+            return Err(IncompleteFir { carcass: fir, errs });
+        }
 
         match type_errs {
-            Some(e) => Err(e),
+            Some(e) => Err(to_incomplete(e, fir)),
             None => Ok(fir),
         }
     }

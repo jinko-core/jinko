@@ -4,7 +4,7 @@
 use std::ops::ControlFlow;
 
 use error::Error;
-use fir::{Fallible, Fir, Kind, Node, OriginIdx, RefIdx, Traversal};
+use fir::{Fallible, Fir, IncompleteFir, Kind, Node, OriginIdx, RefIdx, Traversal};
 use flatten::FlattenData;
 
 use crate::{typemap::TypeMap, Type, TypeCtx, TypeLinkMap, TypeVariable};
@@ -20,10 +20,10 @@ struct TypeLinkResolver<'ctx> {
 }
 
 impl Actual {
-    pub fn resolve_type_links(
+    pub fn resolve_type_links<'ast>(
         ctx: &TypeCtx<TypeLinkMap>,
-        fir: &Fir<FlattenData<'_>>,
-    ) -> Result<TypeCtx<TypeMap>, Error> {
+        fir: &Fir<FlattenData<'ast>>,
+    ) -> Result<TypeCtx<TypeMap>, Vec<Error>> {
         let mut resolver = TypeLinkResolver {
             old: ctx,
             new: TypeCtx {

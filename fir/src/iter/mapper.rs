@@ -1,4 +1,4 @@
-use crate::{Fir, Incomplete, Kind, Node, OriginIdx, RefIdx};
+use crate::{Fir, IncompleteFir, Kind, Node, OriginIdx, RefIdx};
 
 pub trait Mapper<T, U: From<T>, E> {
     fn map_constant(&mut self, data: T, origin: OriginIdx, constant: RefIdx) -> Result<Node<U>, E> {
@@ -276,7 +276,7 @@ pub trait Mapper<T, U: From<T>, E> {
     /// In the [`Err`] case, this returns an incomplete [`Fir`] which contains
     /// all valid mapped nodes. This allows an interpreter to keep trying
     /// passes and emit as many errors as possible
-    fn map(&mut self, fir: Fir<T>) -> Result<Fir<U>, Incomplete<U, E>> {
+    fn map(&mut self, fir: Fir<T>) -> Result<Fir<U>, IncompleteFir<U, E>> {
         let (fir, errs) =
             fir.nodes
                 .into_values()
@@ -294,7 +294,7 @@ pub trait Mapper<T, U: From<T>, E> {
         if errs.is_empty() {
             Ok(fir)
         } else {
-            Err(Incomplete { carcass: fir, errs })
+            Err(IncompleteFir { carcass: fir, errs })
         }
     }
 }

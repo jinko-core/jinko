@@ -39,7 +39,7 @@ use std::{collections::HashMap, mem, ops::Index};
 
 use colored::Colorize;
 use error::{ErrKind, Error};
-use fir::{Fallible, Fir, Incomplete, Kind, Mapper, OriginIdx, Pass, Traversal};
+use fir::{Fallible, Fir, IncompleteFir, Kind, Mapper, OriginIdx, Pass, Traversal};
 use flatten::FlattenData;
 use location::SpanTuple;
 use symbol::Symbol;
@@ -199,7 +199,11 @@ enum NameResolutionError {
 }
 
 impl NameResolutionError {
-    fn finalize(self, fir: &Fir<FlattenData>, _mappings: &ScopeMap) -> Error {
+    fn finalize(
+        self,
+        fir: Fir<FlattenData>,
+        _mappings: &ScopeMap,
+    ) -> IncompleteFir<FlattenData<'_>, Error> {
         // we need the FIR... how do we access nodes otherwise??
         match self {
             NameResolutionError::Multiple(errs) => Error::new(ErrKind::Multiple(
@@ -341,7 +345,7 @@ impl<'enclosing> NameResolveCtx<'enclosing> {
     fn resolve_nodes<'ast>(
         &mut self,
         fir: Fir<FlattenData<'ast>>,
-    ) -> Result<Fir<FlattenData<'ast>>, Incomplete<FlattenData<'ast>, NameResolutionError>> {
+    ) -> Result<Fir<FlattenData<'ast>>, IncompleteFir<FlattenData<'ast>, NameResolutionError>> {
         Resolver(self).map(fir)
     }
 }
@@ -353,7 +357,10 @@ impl<'ast, 'enclosing> Pass<FlattenData<'ast>, FlattenData<'ast>, Error>
 
     fn post_condition(_fir: &Fir<FlattenData>) {}
 
-    fn transform(&mut self, fir: Fir<FlattenData<'ast>>) -> Result<Fir<FlattenData<'ast>>, Error> {
+    fn transform(
+        &mut self,
+        fir: Fir<FlattenData<'ast>>,
+    ) -> Result<Fir<FlattenData<'ast>>, IncompleteFir<FlattenData<'ast>, Error>> {
         let definition = self.insert_definitions(&fir);
         let definition = definition
             .map_err(|errs| NameResolutionError::Multiple(errs).finalize(&fir, &self.mappings));
@@ -362,11 +369,11 @@ impl<'ast, 'enclosing> Pass<FlattenData<'ast>, FlattenData<'ast>, Error>
 
         match (definition, resolution) {
             (Ok(_), Ok(fir)) => Ok(fir),
-            (Ok(_), Err(Incomplete { carcass, errs })) => {
+            (Ok(_), Err(IncompleteFir { carcass, errs })) => {
                 Err(NameResolutionError::Multiple(errs).finalize(&carcass, &self.mappings))
             }
             (Err(e), Ok(_fir)) => Err(e),
-            (Err(e1), Err(Incomplete { carcass, errs })) => {
+            (Err(e1), Err(IncompleteFir { carcass, errs })) => {
                 let multi_err = Error::new(ErrKind::Multiple(vec![
                     e1,
                     NameResolutionError::Multiple(errs).finalize(&carcass, &self.mappings),
@@ -378,11 +385,15 @@ impl<'ast, 'enclosing> Pass<FlattenData<'ast>, FlattenData<'ast>, Error>
 }
 
 pub trait NameResolve<'ast> {
-    fn name_resolve(self) -> Result<Fir<FlattenData<'ast>>, Error>;
+    fn name_resolve(
+        self,
+    ) -> Result<Fir<FlattenData<'ast>>, IncompleteFir<FlattenData<'ast>, Error>>;
 }
 
 impl<'ast> NameResolve<'ast> for Fir<FlattenData<'ast>> {
-    fn name_resolve(self) -> Result<Fir<FlattenData<'ast>>, Error> {
+    fn name_resolve(
+        self,
+    ) -> Result<Fir<FlattenData<'ast>>, IncompleteFir<FlattenData<'ast>, Error>> {
         // TODO: Ugly asf
         let enclosing_scope = NameResolveCtx::scope(&self);
         let mut ctx = NameResolveCtx::new(EnclosingScope(&enclosing_scope));
@@ -535,7 +546,7 @@ mod tests {
         let fir = ast.flatten().name_resolve();
 
         if let Err(e) = &fir {
-            e.emit();
+            e.errs.emit();
         }
 
         assert!(fir.is_ok());

@@ -25,9 +25,9 @@ members = [
   "ast-sanitizer",
   "debug-fir",
   "typecheck",
-  "recursive_typecheck",
+  # "recursive_typecheck",
   "fire",
-  "xrepl",
+  "xrepl", "append_bind",
 ]
 
 [dependencies]
@@ -45,7 +45,7 @@ loop_desugar = { path = "loop_desugar" }
 builtins = { path = "builtins" }
 xparser = { path = "xparser" }
 typecheck = { path = "typecheck" }
-recursive_typecheck = { path = "recursive_typecheck" }
+# recursive_typecheck = { path = "recursive_typecheck" }
 fire = { path = "fire" }
 xrepl = { path = "xrepl" }
 structopt = "0.3"
