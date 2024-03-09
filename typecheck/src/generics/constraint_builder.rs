@@ -35,13 +35,13 @@ struct FnCtx<'fir, 'ast> {
     fir: &'fir Fir<FlattenData<'ast>>,
 }
 
-struct Woobler {
-    pub(crate) to_see: RefIdx,
+struct Woobler<'a> {
+    pub(crate) to_see: &'a [RefIdx],
     pub(crate) seen: bool,
 }
 
-impl Woobler {
-    pub fn new(to_see: RefIdx) -> Woobler {
+impl<'a> Woobler<'a> {
+    pub fn new(to_see: &'a [RefIdx]) -> Woobler {
         Woobler {
             to_see,
             seen: false,
@@ -49,13 +49,59 @@ impl Woobler {
     }
 }
 
-impl<'ast, 'fir> TreeLike<'ast, 'fir, FlattenData<'ast>> for Woobler {
+impl<'a, 'ast, 'fir> TreeLike<'ast, 'fir, FlattenData<'ast>> for Woobler<'a> {
     fn visit_reference(&mut self, fir: &Fir<FlattenData<'ast>>, reference: &RefIdx) {
-        if *reference == self.to_see {
+        if self.to_see.contains(&reference) {
             self.seen = true;
         }
 
-        self.visit(fir, &reference.expect_resolved())
+        // Otherwise, a bunch of unresolved types error out
+        // FIXME: Is that correct?
+        if let RefIdx::Resolved(origin) = reference {
+            self.visit(fir, origin)
+        }
+    }
+
+    // FIXME:
+    // Adding a hack around TypedValues because arguments are resolved weirdly feels wrong :/
+    // this is done because in the name resolver, an arg's typed value resolves to its own binding for some reason
+    fn visit_typed_value(
+        &mut self,
+        fir: &Fir<FlattenData<'ast>>,
+        _node: &Node<FlattenData<'ast>>,
+        value: &RefIdx,
+        ty: &RefIdx,
+    ) {
+        // FIXME: Refactor?
+        if self.to_see.contains(&value) {
+            self.seen = true;
+        }
+
+        self.visit_reference(fir, ty);
+    }
+}
+
+pub struct CallConstraintBuilder<'a> {
+    constrained_args: &'a [RefIdx],
+}
+
+impl<'a, 'ast, 'fir> TreeLike<'ast, 'fir, FlattenData<'ast>> for CallConstraintBuilder<'a> {
+    fn visit_call(
+        &mut self,
+        fir: &Fir<FlattenData<'ast>>,
+        node: &Node<FlattenData<'ast>>,
+        to: &RefIdx,
+        generics: &[RefIdx],
+        args: &[RefIdx],
+    ) {
+        for arg in args {
+            match fir[arg].kind {
+                Kind::TypedValue { value, .. } if value == *arg => {
+                    dbg!(node);
+                }
+                _ => unreachable!(),
+            }
+        }
     }
 }
 
@@ -93,6 +139,11 @@ impl<'fir, 'ast> FnCtx<'fir, 'ast> {
     }
 
     // FIXME: Should we consume self here instead?
+    // generics, args -> Vec<Generic>, Vec<Arg>
+    // collect_constrained_args -> Map<Arg, Generic>
+    // collect_constrained_stmts -> Map<Arg, [Stmts]>
+    // collect_constraints_per_stmt -> Map<Stmt, [Constraint]>
+    // collect_constraints_per_stmt -> Map<Arg, Constraints>
     fn collect_constraints(&self) -> Constraints {
         let FnCtx {
             generics,
@@ -103,9 +154,7 @@ impl<'fir, 'ast> FnCtx<'fir, 'ast> {
         } = self;
 
         // we first have to build a list of possibly constrained args - if an arg's type is in the list of generics?
-        // do we just do that based on name resolution? is that information stored in the typectx? do we even handle
-        // it at the moment?
-        let constrained_args: Vec<&RefIdx> = args
+        let constrained_args: Vec<RefIdx> = args
             .iter()
             .filter(|arg| {
                 // first, we get the actual typed value we are dealing with - args are flattened as bindings, but
@@ -127,25 +176,48 @@ impl<'fir, 'ast> FnCtx<'fir, 'ast> {
 
                 generics.contains(&arg_ty)
             })
+            .copied()
             .collect();
 
-        let constraints = stmts
-            .iter()
-            .filter_map(|stmt| {
-                let mut woobler = Woobler::new(*constrained_args[0]);
+        // then, we collect the statements which use one or more of these
+        // constrained args - meaning that these statements are the ones applying
+        // "constraints" to our generic types.
+        // we can then collect the constraints for each statement based on the args they use,
+        // with another micro visitor
+        let constrained_stmts = stmts.iter().filter_map(|stmt| {
+            let mut woobler = Woobler::new(&constrained_args);
+            woobler.visit_reference(fir, stmt);
 
-                woobler.visit_reference(fir, stmt);
+            woobler.seen.then_some(stmt)
+        });
 
-                woobler.seen.then_some(stmt)
-            })
-            .fold(Constraints::new(), |mut constraints, _constraint| {
-                // here we mostly want to insert or update
-                constraints.insert(generics[0], vec![]);
+        // for each of these constrained statements, we build a map of constraints:
+        // Map<Arg, Vec<Constraint>>
+        let constraints = constrained_stmts.for_each(|stmt| {
+            // we want another micro visitor, basically - that starts at stmt and goes through all its children
+            // then, when it sees a function call, it builds a constraint for that call if that call contains the argument
+            // we are looking for
 
-                constraints
-            });
+            let mut visitor = CallConstraintBuilder {
+                constrained_args: &constrained_args,
+            };
 
-        constraints
+            visitor.visit_reference(fir, stmt);
+
+            // TODO: How do we do that?
+            // what to do when we see a call?
+        });
+
+        // .fold(Constraints::new(), |mut constraints, _constraint| {
+        //     // here we mostly want to insert or update
+        //     constraints.insert(generics[0], vec![]);
+
+        //     constraints
+        // });
+
+        // constrained_stmts
+
+        todo!()
     }
 }
 
