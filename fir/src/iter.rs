@@ -22,10 +22,12 @@
 mod mapper;
 mod multi_mapper;
 mod traverse;
+mod tree_like;
 
 pub use mapper::Mapper;
 pub use multi_mapper::MultiMapper;
 pub use traverse::Traversal;
+pub use tree_like::TreeLike;
 
 use crate::Fir;
 
