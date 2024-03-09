@@ -118,6 +118,7 @@ impl<'ast> Traversal<FlattenData<'ast>, ScoperError> for Scoper {
                 self.maybe_visit_child(fir, value)?;
                 self.maybe_visit_child(fir, ty)
             }
+            // FIXME: Is it valid to put a union's variants in its scope?
             Kind::RecordType { fields: subs, .. } | Kind::UnionType { variants: subs, .. } => {
                 let old = self.enter_scope(node.origin);
 
@@ -144,9 +145,13 @@ impl<'ast> Traversal<FlattenData<'ast>, ScoperError> for Scoper {
                     .iter()
                     .for_each(|generic| self.maybe_visit_child(fir, generic).unwrap());
 
+                let old = self.enter_scope(node.origin);
+
                 fields
                     .iter()
                     .for_each(|field| { self.maybe_visit_child(fir, field) }.unwrap());
+
+                self.enter_scope(old);
 
                 Ok(())
             }
