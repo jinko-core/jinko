@@ -1,6 +1,7 @@
 mod actual;
 mod checker;
 mod collectors;
+mod generics;
 mod typemap;
 mod typer;
 mod widen;
@@ -164,7 +165,9 @@ impl<'ast> TypeCheck<Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
 impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLinkMap> {
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
-    fn post_condition(_fir: &Fir<FlattenData>) {}
+    fn post_condition(_fir: &Fir<FlattenData>) {
+        // TODO: Assert that there are no unresolved generics
+    }
 
     fn transform(&mut self, fir: Fir<FlattenData<'ast>>) -> Result<Fir<FlattenData<'ast>>, Error> {
         // Typing pass
@@ -180,10 +183,15 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
             }
         };
 
+        generics::ConstraintBuilder::default()
+            .traverse(&fir)
+            .unwrap();
         let ctx = Actual::resolve_type_links(self, &fir)?;
         // FIXME: Improve the API?
         let mut ctx = widen(ctx);
 
+        // FIXME: If we have errors in the checker and in the typer then we
+        // early return here and ignore errors from the typer - this is not what we want
         Checker(&mut ctx).traverse(&fir)?;
 
         match type_errs {
