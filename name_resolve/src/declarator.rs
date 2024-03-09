@@ -90,4 +90,13 @@ impl<'ast, 'ctx, 'enclosing> Traversal<FlattenData<'ast>, NameResolutionError>
     ) -> Fallible<NameResolutionError> {
         self.define(DefinitionKind::Binding, node)
     }
+
+    fn traverse_generic(
+        &mut self,
+        _: &Fir<FlattenData<'ast>>,
+        node: &Node<FlattenData<'ast>>,
+        _: &Option<RefIdx>,
+    ) -> Fallible<NameResolutionError> {
+        self.define(DefinitionKind::Type, node)
+    }
 }
