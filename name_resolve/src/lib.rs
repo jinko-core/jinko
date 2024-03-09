@@ -49,7 +49,7 @@ mod resolver;
 mod scoper;
 
 use declarator::Declarator;
-use resolver::{LatentResolver, ResolveKind, Resolver};
+use resolver::{FieldInstantiationResolver, ResolveKind, Resolver};
 use scoper::Scoper;
 
 /// Error reported when an item (variable, function, type) was already declared
@@ -368,7 +368,7 @@ impl<'enclosing> NameResolveCtx<'enclosing> {
                     map
                 });
 
-        LatentResolver {
+        FieldInstantiationResolver {
             ctx: self,
             latent_map,
         }

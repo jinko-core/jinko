@@ -41,7 +41,7 @@ pub(crate) struct Resolver<'ctx, 'enclosing> {
 }
 
 /// Created thanks to [`Resolver`]
-pub(crate) struct LatentResolver<'ctx, 'enclosing> {
+pub(crate) struct FieldInstantiationResolver<'ctx, 'enclosing> {
     pub(crate) ctx: &'ctx mut NameResolveCtx<'enclosing>,
     pub(crate) latent_map: HashMap<OriginIdx, Scope>,
 }
@@ -246,7 +246,7 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
 }
 
 impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameResolutionError>
-    for LatentResolver<'ctx, 'enclosing>
+    for FieldInstantiationResolver<'ctx, 'enclosing>
 {
     // FIXME: Disgusting
     fn map_assignment(
