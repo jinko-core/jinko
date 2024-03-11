@@ -186,9 +186,14 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
         generics::ConstraintBuilder::default()
             .traverse(&fir)
             .unwrap();
+
+        // TODO(Arthur): Do we do Actual before Mono or after
         let ctx = Actual::resolve_type_links(self, &fir)?;
         // FIXME: Improve the API?
         let mut ctx = widen(ctx);
+
+        // We can do Actual but we have to correctly handle the case where a type points to a generic node, and stop?
+        // or is it an issue with typer?
 
         // FIXME: If we have errors in the checker and in the typer then we
         // early return here and ignore errors from the typer - this is not what we want
