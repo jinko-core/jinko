@@ -105,6 +105,8 @@ impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
     // map_record_type and map_union_type are the two only functions which *create* actual types - all of the other
     // mappers create type references. they are declaration points.
 
+    // TODO: Should we create Generic types as well? Probably, yeah?
+
     fn map_record_type(
         &mut self,
         data: FlattenData<'ast>,

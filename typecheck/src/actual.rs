@@ -47,6 +47,7 @@ impl TypeLinkResolver<'_> {
     /// Recursively try and resolve a type link within the type context. This will update the given node's type
     /// within the type context.
     fn resolve_link(&mut self, to_resolve: OriginIdx, fir: &Fir<FlattenData>) -> OriginIdx {
+        dbg!(to_resolve);
         let ChainEnd {
             intermediate_nodes,
             final_type,
