@@ -94,6 +94,7 @@ impl<'a, 'ast, 'fir> TreeLike<'ast, 'fir, FlattenData<'ast>> for CallConstraintB
         generics: &[RefIdx],
         args: &[RefIdx],
     ) {
+        dbg!(args);
         for arg in args {
             match fir[arg].kind {
                 Kind::TypedValue { value, .. } if value == *arg => {
@@ -193,10 +194,11 @@ impl<'fir, 'ast> FnCtx<'fir, 'ast> {
 
         // for each of these constrained statements, we build a map of constraints:
         // Map<Arg, Vec<Constraint>>
-        let constraints = constrained_stmts.for_each(|stmt| {
+        let _constraints = constrained_stmts.for_each(|stmt| {
             // we want another micro visitor, basically - that starts at stmt and goes through all its children
             // then, when it sees a function call, it builds a constraint for that call if that call contains the argument
             // we are looking for
+            dbg!(&stmt);
 
             let mut visitor = CallConstraintBuilder {
                 constrained_args: &constrained_args,
@@ -230,8 +232,9 @@ impl Traversal<FlattenData<'_>, Error> for ConstraintBuilder {
         generics: &[RefIdx],
         _args: &[RefIdx],
     ) -> Fallible<Error> {
-        let fn_ctx = FnCtx::from_invocation(fir, to);
-        let constraints = fn_ctx.collect_constraints();
+        // let fn_ctx = FnCtx::from_invocation(fir, to);
+        // let constraints = fn_ctx.collect_constraints();
+        let constraints = HashMap::new();
 
         // get the definition
         // run through it
