@@ -18,5 +18,7 @@
 // Monomorphizer(MonoRequests) -> Result<Fir> // infaillible?
 
 mod constraint_builder;
+mod mono;
 
 pub use constraint_builder::ConstraintBuilder;
+pub use mono::Monomorphize;
