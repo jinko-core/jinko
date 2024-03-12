@@ -79,6 +79,10 @@ impl TypeLinkResolver<'_> {
 
                 self.find_end_inner(fir, ty_ref.expect_resolved(), intermediate_nodes)
             }
+            TypeVariable::Generic(g) => ControlFlow::Break(ChainEnd {
+                intermediate_nodes,
+                final_type: Type::generic(*g),
+            }),
             TypeVariable::Record(r) => {
                 // we don't insert here so that we can get the typeref directly later on - does that make sense?
                 // self.new.types.new_type(final_type.clone());
