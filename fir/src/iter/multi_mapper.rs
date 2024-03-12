@@ -1,6 +1,9 @@
 use crate::{Fir, Incomplete, Kind, Node, OriginIdx, RefIdx};
 
-pub trait MultiMapper<T, U: Default + From<T>, E> {
+pub trait MultiMapper<T, U: From<T>, E> {
+    /// Set the last origin in the given [`Fir`] for the mapper to use in [`next_origin`]
+    fn set_last_origin(&mut self, last: OriginIdx);
+
     /// Each implementer of [`MultiMapper`] should keep its own [`OriginIdx`] counter in order to supply the [`Fir`]
     /// with new nodes. This can be done by keeping an [`OriginIdx`] as part of the context, and repeatedly
     /// calling [`OriginIdx::next`] on it.
@@ -285,20 +288,26 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
     /// all valid mapped nodes. This allows an interpreter to keep trying
     /// passes and emit as many errors as possible
     fn multi_map(&mut self, fir: Fir<T>) -> Result<Fir<U>, Incomplete<U, E>> {
-        let (fir, errs) = fir.nodes.into_values().fold(
-            (Fir::default(), Vec::new()),
-            |(new_fir, mut errs), node| match self.map_node(node) {
-                Ok(nodes) => nodes
-                    .into_iter()
-                    .fold((new_fir, errs), |(new_fir, errs), node| {
-                        (new_fir.append(node), errs)
-                    }),
-                Err(e) => {
-                    errs.push(e);
-                    (new_fir, errs)
-                }
-            },
-        );
+        let last = fir.nodes.keys().last().unwrap_or(&OriginIdx(0));
+        self.set_last_origin(*last);
+
+        let (fir, errs) =
+            fir.nodes
+                .into_values()
+                .fold(
+                    (Fir::new(), Vec::new()),
+                    |(new_fir, mut errs), node| match self.map_node(node) {
+                        Ok(nodes) => nodes
+                            .into_iter()
+                            .fold((new_fir, errs), |(new_fir, errs), node| {
+                                (new_fir.append(node), errs)
+                            }),
+                        Err(e) => {
+                            errs.push(e);
+                            (new_fir, errs)
+                        }
+                    },
+                );
 
         if errs.is_empty() {
             Ok(fir)
