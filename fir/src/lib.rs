@@ -303,6 +303,14 @@ impl<T> Fir<T> {
     }
 }
 
+impl<T: Clone> Clone for Fir<T> {
+    fn clone(&self) -> Fir<T> {
+        Fir {
+            nodes: self.nodes.clone(),
+        }
+    }
+}
+
 // FIXME: The `pass` function should return an Incomplete Fir. How to make it so that we can chain Fir operations
 // nicely?
 pub trait Pass<T: Debug, U: Debug, E> {
