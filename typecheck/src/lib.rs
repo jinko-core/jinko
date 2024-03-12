@@ -84,6 +84,11 @@ impl Type {
         Type(origin, TypeSet(variants.collect()))
     }
 
+    pub fn generic(origin: OriginIdx) -> Type {
+        // FIXME: This needs explanations, and is it the proper thing???
+        Type::record(origin)
+    }
+
     pub fn set(&self) -> &TypeSet {
         &self.1
     }
@@ -101,7 +106,8 @@ impl Type {
 pub(crate) enum TypeVariable {
     Union(OriginIdx),
     Record(OriginIdx),
-    Reference(RefIdx), // specifically we're interested in `type_ctx.type_of(< that refidx >)`
+    Generic(OriginIdx), // generics are also declaration points
+    Reference(RefIdx),  // specifically we're interested in `type_ctx.type_of(< that refidx >)`
 }
 
 type TypeLinkMap = HashMap<OriginIdx, TypeVariable>;
@@ -188,6 +194,12 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
             .unwrap();
 
         // TODO(Arthur): Do we do Actual before Mono or after
+        // if we don't want to have actual and typer look at generics, then we need to do mono before
+        // but does it make sense to mono before knowing the actual types etc? Checker definitely shouldn't look at generis
+        // so maybe what we do is build an extra layer of typechecker indirection.
+        // at the moment we have Typer which builds a LinkedTypeMap. Then, Actual gives a TypeMap
+        // what we now want is Typer builds a GenericLinkedTypedMap. Actual gives a GenericTypeMap. Mono gives a TypeMap
+        // does that sound good?
         let ctx = Actual::resolve_type_links(self, &fir)?;
         // FIXME: Improve the API?
         let mut ctx = widen(ctx);
