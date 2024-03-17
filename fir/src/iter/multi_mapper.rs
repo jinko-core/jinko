@@ -1,14 +1,6 @@
 use crate::{Fir, Incomplete, Kind, Node, OriginIdx, RefIdx};
 
 pub trait MultiMapper<T, U: From<T>, E> {
-    /// Set the last origin in the given [`Fir`] for the mapper to use in [`next_origin`]
-    fn set_last_origin(&mut self, last: OriginIdx);
-
-    /// Each implementer of [`MultiMapper`] should keep its own [`OriginIdx`] counter in order to supply the [`Fir`]
-    /// with new nodes. This can be done by keeping an [`OriginIdx`] as part of the context, and repeatedly
-    /// calling [`OriginIdx::next`] on it.
-    fn next_origin(&mut self) -> OriginIdx;
-
     fn map_constant(
         &mut self,
         _data: T,
@@ -288,9 +280,6 @@ pub trait MultiMapper<T, U: From<T>, E> {
     /// all valid mapped nodes. This allows an interpreter to keep trying
     /// passes and emit as many errors as possible
     fn multi_map(&mut self, fir: Fir<T>) -> Result<Fir<U>, Incomplete<U, E>> {
-        let last = fir.nodes.keys().last().unwrap_or(&OriginIdx(0));
-        self.set_last_origin(*last);
-
         let (fir, errs) =
             fir.nodes
                 .into_values()
