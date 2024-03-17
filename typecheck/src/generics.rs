@@ -17,8 +17,16 @@
 // ConstraintChecker(ConstraintMap) -> Result<MonoRequests>
 // Monomorphizer(MonoRequests) -> Result<Fir> // infaillible?
 
+// let subs = Substitutions::build();
+// let monod = Monomorphize(subs).map(fir)?;
+// let replaced = Replace(monod).map(fir)?;
+
 mod constraint_builder;
 mod mono;
+mod replace;
+mod substitutions;
 
 pub use constraint_builder::ConstraintBuilder;
 pub use mono::Monomorphize;
+pub use replace::Replace;
+pub use substitutions::Substitutions;

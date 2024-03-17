@@ -49,7 +49,7 @@ impl<'a> Woobler<'a> {
     }
 }
 
-impl<'a, 'ast, 'fir> TreeLike<'ast, 'fir, FlattenData<'ast>> for Woobler<'a> {
+impl<'a, 'ast, 'fir> TreeLike<FlattenData<'ast>> for Woobler<'a> {
     fn visit_reference(&mut self, fir: &Fir<FlattenData<'ast>>, reference: &RefIdx) {
         if self.to_see.contains(&reference) {
             self.seen = true;
@@ -85,7 +85,7 @@ pub struct CallConstraintBuilder<'a> {
     constrained_args: &'a [RefIdx],
 }
 
-impl<'a, 'ast, 'fir> TreeLike<'ast, 'fir, FlattenData<'ast>> for CallConstraintBuilder<'a> {
+impl<'a, 'ast, 'fir> TreeLike<FlattenData<'ast>> for CallConstraintBuilder<'a> {
     fn visit_call(
         &mut self,
         fir: &Fir<FlattenData<'ast>>,
