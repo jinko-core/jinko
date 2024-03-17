@@ -99,23 +99,15 @@ use fir::{Kind, MultiMapper, Node, OriginIdx, RefIdx};
 use flatten::FlattenData;
 
 pub struct Monomorphize {
-    counter: OriginIdx,
+    to_mono: (),
 }
 
 #[derive(Debug)]
 pub struct Error;
 
+// FIXME: This can probably benefit from using a different `U` here - something like T -> U becomes FlattenData -> (MonodIdx, FlattenData)
+// Also the `From: T` in Mapper should probably be a `From: (&Node, T)` - so that we get all the info possible
 impl<'ast> MultiMapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Monomorphize {
-    fn set_last_origin(&mut self, last: OriginIdx) {
-        self.counter = last;
-    }
-
-    fn next_origin(&mut self) -> OriginIdx {
-        let new = self.counter.next();
-
-        core::mem::replace(&mut self.counter, new)
-    }
-
     fn map_instantiation(
         &mut self,
         _data: FlattenData<'ast>,
