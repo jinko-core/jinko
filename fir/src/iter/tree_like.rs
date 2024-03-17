@@ -1,7 +1,7 @@
 use crate::{Fir, Kind, Node, OriginIdx, RefIdx};
 
 // FIXME: Should we still be able to emit errors?
-pub trait TreeLike<'ast, 'fir, T> {
+pub trait TreeLike<T> {
     fn visit_many(&mut self, fir: &Fir<T>, many: &[RefIdx]) {
         many.iter().for_each(|r| self.visit_reference(fir, r))
     }
@@ -182,5 +182,11 @@ pub trait TreeLike<'ast, 'fir, T> {
             Kind::Statements(stmts) => self.visit_statements(fir, node, stmts),
             Kind::Return(value) => self.visit_return(fir, node, value),
         }
+    }
+
+    fn visit_all(&mut self, fir: &Fir<T>) {
+        fir.nodes
+            .last_key_value()
+            .map(|last| self.visit(fir, last.0));
     }
 }
