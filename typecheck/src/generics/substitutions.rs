@@ -62,7 +62,7 @@ pub struct Generics<T> {
 impl<T> Generics<T> {
     pub fn new(generics: impl Into<OriginVector>) -> Generics<T> {
         Generics {
-            generics,
+            generics: generics.into(),
             _marker: PhantomData,
         }
     }
@@ -121,13 +121,15 @@ impl Substitutions {
             Kind::Function { generics, .. } => generics.as_slice(),
             _ => unreachable!(),
         };
-        let new_sub = SubsTarget::new(Decls(Generics::new(from)), Args(Generics::new(generics)));
-        // let new_v = || (new_sub, self.next_origin());
+        let mono_request = (
+            SubsTarget::new(Decls(Generics::new(from)), Args(Generics::new(generics))),
+            self.next_origin(),
+        );
 
-        // self.output
-        //     .entry(*to)
-        //     .and_modify(|mut v| v.push(new_v()))
-        //     .or_insert_with(|| vec![new_v()]);
+        self.output
+            .entry(*to)
+            .or_insert_with(|| vec![])
+            .push(mono_request);
     }
 }
 
@@ -143,7 +145,25 @@ impl<'ast> TreeLike<FlattenData<'ast>> for Substitutions {
         if !generics.is_empty() {
             self.add(fir, to, generics);
 
+            // how does that work actually? arguments are just regular expressions - we don't need to monomorphize them, actually, right?
+            // we only need to change what they resolve to? how do we do that?? we don't need to create a new node for the call either, actually - we just change what it resolves to
+            // that's gonna be one extra TreeLike?
             self.visit_many(fir, args)
+        }
+    }
+
+    fn visit_instantiation(
+        &mut self,
+        fir: &Fir<FlattenData<'ast>>,
+        _node: &Node<FlattenData<'ast>>,
+        to: &RefIdx,
+        generics: &[RefIdx],
+        fields: &[RefIdx],
+    ) {
+        if !generics.is_empty() {
+            self.add(fir, to, generics);
+
+            self.visit_many(fir, fields)
         }
     }
 }
