@@ -128,9 +128,12 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
             }
         };
 
-        generics::ConstraintBuilder::default()
-            .traverse(&fir)
-            .unwrap();
+        // generics::ConstraintBuilder::default()
+        //     .traverse(&fir)
+        //     .unwrap();
+
+        let subs = generics::Substitutions::find(&fir);
+        dbg!(subs);
 
         // if we don't want to have actual and typer look at generics, then we need to do mono before
         // but does it make sense to mono before knowing the actual types etc? Checker definitely shouldn't look at generis
