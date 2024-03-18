@@ -189,9 +189,12 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
             }
         };
 
-        generics::ConstraintBuilder::default()
-            .traverse(&fir)
-            .unwrap();
+        // generics::ConstraintBuilder::default()
+        //     .traverse(&fir)
+        //     .unwrap();
+
+        let subs = generics::Substitutions::find(&fir);
+        dbg!(subs);
 
         // TODO(Arthur): Do we do Actual before Mono or after
         // if we don't want to have actual and typer look at generics, then we need to do mono before
