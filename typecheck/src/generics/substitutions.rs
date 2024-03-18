@@ -42,8 +42,10 @@ use core::mem;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
+#[derive(Debug)]
 pub struct NewOrigin(OriginIdx);
 
+#[derive(Debug)]
 pub struct OriginVector(Vec<OriginIdx>);
 
 impl From<&[RefIdx]> for OriginVector {
@@ -54,6 +56,7 @@ impl From<&[RefIdx]> for OriginVector {
     }
 }
 
+#[derive(Debug)]
 pub struct Generics<T> {
     generics: OriginVector,
     _marker: PhantomData<T>,
@@ -68,9 +71,12 @@ impl<T> Generics<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct Decls(Generics<Decls>);
+#[derive(Debug)]
 pub struct Args(Generics<Args>);
 
+#[derive(Debug)]
 pub struct SubsTarget {
     from: Decls,
     to: Args,
@@ -148,7 +154,7 @@ impl<'ast> TreeLike<FlattenData<'ast>> for Substitutions {
             // how does that work actually? arguments are just regular expressions - we don't need to monomorphize them, actually, right?
             // we only need to change what they resolve to? how do we do that?? we don't need to create a new node for the call either, actually - we just change what it resolves to
             // that's gonna be one extra TreeLike?
-            self.visit_many(fir, args)
+            // self.visit_many(fir, args)
         }
     }
 
@@ -163,7 +169,7 @@ impl<'ast> TreeLike<FlattenData<'ast>> for Substitutions {
         if !generics.is_empty() {
             self.add(fir, to, generics);
 
-            self.visit_many(fir, fields)
+            // self.visit_many(fir, fields)
         }
     }
 }
