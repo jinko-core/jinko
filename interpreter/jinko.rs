@@ -154,6 +154,11 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
         .display(&fir);
 
     let fir = x_try!(fir.type_check());
+    FirDebug::default()
+        .header("typechecked")
+        .show_data(data_fmt)
+        .display(&fir);
+
     let result = fir.interpret();
 
     let exit_code = match result {
