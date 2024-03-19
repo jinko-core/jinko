@@ -154,19 +154,18 @@ impl Mapper<FlattenData<'_>, TypeData, Error> for TypeCtx {
         })
     }
 
-    fn map_typed_value(
-        &mut self,
-        data: FlattenData,
-        origin: OriginIdx,
-        value: RefIdx,
-        ty: RefIdx,
-    ) -> Result<Node<TypeData>, Error> {
-        Ok(Node {
-            data: TypeData::from(data).uses(ty),
-            origin,
-            kind: Kind::NodeRef { value, ty },
-        })
-    }
+    // fn map_node_ref(
+    //     &mut self,
+    //     data: FlattenData,
+    //     origin: OriginIdx,
+    //     to: RefIdx,
+    // ) -> Result<Node<TypeData>, Error> {
+    // Ok(Node {
+    //     data: TypeData::from(data).uses(ty),
+    //     origin,
+    //     kind: Kind::NodeRef(to),
+    // })
+    // }
 
     fn map_generic(
         &mut self,

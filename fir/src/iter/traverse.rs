@@ -21,12 +21,11 @@ pub trait Traversal<T, E> {
         Ok(())
     }
 
-    fn traverse_typed_value(
+    fn traverse_node_reference(
         &mut self,
         _fir: &Fir<T>,
         _node: &Node<T>,
-        _value: &RefIdx,
-        _ty: &RefIdx,
+        _to: &RefIdx,
     ) -> Fallible<E> {
         Ok(())
     }
@@ -161,7 +160,7 @@ pub trait Traversal<T, E> {
         match &node.kind {
             Kind::Constant(c) => self.traverse_constant(fir, node, c),
             Kind::TypeReference(r) => self.traverse_type_reference(fir, node, r),
-            Kind::NodeRef { value, ty } => self.traverse_typed_value(fir, node, value, ty),
+            Kind::NodeRef(to) => self.traverse_node_reference(fir, node, to),
             Kind::Generic { default } => self.traverse_generic(fir, node, default),
             Kind::RecordType { generics, fields } => {
                 self.traverse_record_type(fir, node, generics, fields)

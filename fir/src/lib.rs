@@ -213,6 +213,7 @@ pub enum Kind {
         // TODO: Add a `ty` field
         // TODO: Should this be Option<RefIdx> actually? A binding can exist without a value,
         // e.g. an argument in a function *is* a binding but does not have a value until runtime?
+        // FIXME: This should definitely be a Option<RefIdx>
         to: RefIdx, // to Kind::{TypedValue, Instantiation, any expr?},
     },
     Assignment {
@@ -246,12 +247,11 @@ pub enum Kind {
     Return(Option<RefIdx>),  // to any kind
     // TODO: Rework this into a ValueReference or something?
     // TODO: Does this need a `ty` field?
-    // TODO: Can we actually remove ValueRef entirely? since we can just have a RefIdx(Binding)
-    /// Reference to another node, possibly unresolved
-    NodeRef {
-        value: RefIdx, // to Kind::{Call, Instantiation, TypedValue, Constant}
-        ty: RefIdx,    // to Kind::Type
-    },
+    // TODO: Can we actually remove ValueRef entirely? since we can just have a RefIdx(Binding) - no, we can't
+    /// Reference to another node, possibly unresolved. This is the same as a
+    /// raw [`RefIdx`], but is useful if you need an actual node to manipulate and modify.
+    /// This means that you can handle this node as you would a regular [`RefIdx`]
+    NodeRef(RefIdx),
 }
 
 impl<T> Index<&RefIdx> for Fir<T> {

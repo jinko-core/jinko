@@ -182,12 +182,9 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
             // These nodes all refer to other nodes, type references or typed values. They will need
             // to be flattened later on.
             fir::Kind::TypeReference(ty)
-            | fir::Kind::NodeRef {
-                ty: RefIdx::Unresolved,
-                value: ty,
-            }
             | fir::Kind::Binding { to: ty }
-            | fir::Kind::NodeRef { ty, .. }
+            // FIXME: Is that correct? how do we deal with marker types vs bindings?
+            | fir::Kind::NodeRef(ty)
             | fir::Kind::Instantiation { to: ty, .. }
             | fir::Kind::Conditional { true_block: ty, .. } => self.ty(node, ty),
             // we need to special case `Call`s for arithmetic operators - otherwise, they

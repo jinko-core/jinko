@@ -63,17 +63,8 @@ impl<T: Debug> Fir<T> {
                 // point to an if-else expression. Basically, to anything that's an expression actually.
                 // Should we split the fir::Kind into fir::Kind::Stmt and fir::Kind::Expr? Or does that not make sense?
                 Kind::Constant(r) => check!(r => Kind::RecordType { .. }, node),
-                Kind::NodeRef { value, ty } => {
-                    // FIXME: Is pointing to `Type` here valid?
-                    check!(ty => Kind::UnionType { .. } | Kind::RecordType { .. } | Kind::TypeReference(_), node);
-                    // `value` can link to basically anything
-                    check!(value => Kind::Call { .. }
-                        | Kind::Constant(_)
-                        | Kind::Instantiation { .. }
-                        | Kind::NodeRef { .. }
-                        | Kind::Binding { .. }
-                        | Kind::RecordType { .. } // for empty types // FIXME: Is that allowed?
-                        , node);
+                Kind::NodeRef(_to) => {
+                    // `to` can link to basically anything, so there is nothing to do
                 }
                 // FIXME: Is that okay?
                 Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } |  Kind::Generic { .. } | Kind::TypeReference(_), node),
