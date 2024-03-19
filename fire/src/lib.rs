@@ -115,11 +115,6 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         &self.fir.nodes[&r.expect_resolved()]
     }
 
-    // TODO: Rename: `access_origin`?
-    fn access_resolved(&self, resolved: &OriginIdx) -> &'fir Node<FlattenData<'ast>> {
-        &self.fir.nodes[&resolved]
-    }
-
     #[must_use]
     fn fire_block(
         &mut self,
