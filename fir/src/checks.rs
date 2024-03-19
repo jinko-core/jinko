@@ -63,14 +63,14 @@ impl<T: Debug> Fir<T> {
                 // point to an if-else expression. Basically, to anything that's an expression actually.
                 // Should we split the fir::Kind into fir::Kind::Stmt and fir::Kind::Expr? Or does that not make sense?
                 Kind::Constant(r) => check!(r => Kind::RecordType { .. }, node),
-                Kind::TypedValue { value, ty } => {
+                Kind::NodeRef { value, ty } => {
                     // FIXME: Is pointing to `Type` here valid?
                     check!(ty => Kind::UnionType { .. } | Kind::RecordType { .. } | Kind::TypeReference(_), node);
                     // `value` can link to basically anything
                     check!(value => Kind::Call { .. }
                         | Kind::Constant(_)
                         | Kind::Instantiation { .. }
-                        | Kind::TypedValue { .. }
+                        | Kind::NodeRef { .. }
                         | Kind::Binding { .. }
                         | Kind::RecordType { .. } // for empty types // FIXME: Is that allowed?
                         , node);
@@ -98,7 +98,7 @@ impl<T: Debug> Fir<T> {
                 } => {
                     check!(to => Kind::Function { .. }, node);
                     check!(@generics => Kind::TypeReference { .. }, node);
-                    check!(@args => Kind::TypedValue { .. } | Kind::Constant(_) | Kind::Call { .. }, node);
+                    check!(@args => Kind::NodeRef { .. } | Kind::Constant(_) | Kind::Call { .. }, node);
                 }
                 Kind::RecordType {
                     generics,
@@ -118,7 +118,7 @@ impl<T: Debug> Fir<T> {
                     // FIXME: Check `to` as well
                 }
                 Kind::Assignment { to, from: _ } => {
-                    check!(to => Kind::TypedValue { .. } | Kind::Binding { .. }, node);
+                    check!(to => Kind::NodeRef { .. } | Kind::Binding { .. }, node);
                     // FIXME: Check `from` as well
                 }
                 Kind::Instantiation {

@@ -372,7 +372,7 @@ impl<'ast> Ctx<'ast> {
             scope: ctx.scope,
         };
 
-        let value = Kind::TypedValue {
+        let value = Kind::NodeRef {
             value: RefIdx::Unresolved,
             ty,
         };
@@ -810,7 +810,7 @@ impl<'ast> Ctx<'ast> {
             ast,
         };
 
-        let kind = Kind::TypedValue {
+        let kind = Kind::NodeRef {
             value: RefIdx::Unresolved,
             ty: RefIdx::Unresolved,
         };
@@ -1019,7 +1019,7 @@ mod tests {
         let x = &fir.nodes.get(&OriginIdx(3)).unwrap().kind;
         let y = &fir.nodes.get(&OriginIdx(4)).unwrap().kind;
 
-        assert!(matches!(x, Kind::TypedValue { .. }));
+        assert!(matches!(x, Kind::NodeRef { .. }));
         assert!(matches!(y, Kind::Binding { .. }));
     }
 }
