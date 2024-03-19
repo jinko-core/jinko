@@ -372,15 +372,7 @@ impl<'ast> Ctx<'ast> {
             scope: ctx.scope,
         };
 
-        // let value = Kind::NodeRef {
-        //     value: RefIdx::Unresolved,
-        //     ty,
-        // };
-        // let (ctx, to) = ctx.append(data.clone(), value);
-
-        let kind = Kind::Binding {
-            to: RefIdx::Unresolved,
-        };
+        let kind = Kind::Binding { to: None, ty };
 
         ctx.append(data, kind)
     }
@@ -779,7 +771,10 @@ impl<'ast> Ctx<'ast> {
             ast,
         };
 
-        let kind = Kind::Binding { to: to_bind };
+        let kind = Kind::Binding {
+            to: Some(to_bind),
+            ty: RefIdx::Unresolved,
+        };
 
         ctx.append(data, kind)
     }

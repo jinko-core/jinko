@@ -214,7 +214,8 @@ pub enum Kind {
         // TODO: Should this be Option<RefIdx> actually? A binding can exist without a value,
         // e.g. an argument in a function *is* a binding but does not have a value until runtime?
         // FIXME: This should definitely be a Option<RefIdx>
-        to: RefIdx, // to Kind::{TypedValue, Instantiation, any expr?},
+        to: Option<RefIdx>, // to Kind::{TypedValue, Instantiation, any expr?},
+        ty: RefIdx,
     },
     Assignment {
         to: RefIdx,   // to Kind::TypedValue

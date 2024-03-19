@@ -222,16 +222,18 @@ impl Mapper<FlattenData<'_>, TypeData, Error> for TypeCtx {
         &mut self,
         data: FlattenData,
         origin: OriginIdx,
-        to: RefIdx,
+        to: Option<RefIdx>,
+        ty: RefIdx,
     ) -> Result<Node<TypeData>, Error> {
         // FIXME: What do we do here?
         // A binding declare something that can be looked up, right?
         // so which type do we put here? just.. itself? It's a binding
         // to a typed value, correct?
         Ok(Node {
-            data: TypeData::from(data).uses(to),
+            // FIXME: This is wrong
+            data: TypeData::from(data),
             origin,
-            kind: Kind::Binding { to },
+            kind: Kind::Binding { to, ty },
         })
     }
 

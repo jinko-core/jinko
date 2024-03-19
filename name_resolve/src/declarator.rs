@@ -86,6 +86,7 @@ impl<'ast, 'ctx, 'enclosing> Traversal<FlattenData<'ast>, NameResolutionError>
         &mut self,
         _: &Fir<FlattenData>,
         node: &Node<FlattenData>,
+        _: &Option<RefIdx>,
         _: &RefIdx,
     ) -> Fallible<NameResolutionError> {
         self.define(DefinitionKind::Binding, node)

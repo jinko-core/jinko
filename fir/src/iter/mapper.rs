@@ -92,11 +92,17 @@ pub trait Mapper<T, U: From<T>, E> {
         })
     }
 
-    fn map_binding(&mut self, data: T, origin: OriginIdx, to: RefIdx) -> Result<Node<U>, E> {
+    fn map_binding(
+        &mut self,
+        data: T,
+        origin: OriginIdx,
+        to: Option<RefIdx>,
+        ty: RefIdx,
+    ) -> Result<Node<U>, E> {
         Ok(Node {
             data: U::from(data),
             origin,
-            kind: Kind::Binding { to },
+            kind: Kind::Binding { to, ty },
         })
     }
 
@@ -239,7 +245,7 @@ pub trait Mapper<T, U: From<T>, E> {
                 return_type,
                 block,
             } => self.map_function(node.data, node.origin, generics, args, return_type, block),
-            Kind::Binding { to } => self.map_binding(node.data, node.origin, to),
+            Kind::Binding { to, ty } => self.map_binding(node.data, node.origin, to, ty),
             Kind::Instantiation {
                 to,
                 generics,

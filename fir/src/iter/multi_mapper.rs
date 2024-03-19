@@ -102,11 +102,17 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
         }])
     }
 
-    fn map_binding(&mut self, _data: T, origin: OriginIdx, to: RefIdx) -> Result<Vec<Node<U>>, E> {
+    fn map_binding(
+        &mut self,
+        _data: T,
+        origin: OriginIdx,
+        to: Option<RefIdx>,
+        ty: RefIdx,
+    ) -> Result<Vec<Node<U>>, E> {
         Ok(vec![Node {
             data: U::from(_data),
             origin,
-            kind: Kind::Binding { to },
+            kind: Kind::Binding { to, ty },
         }])
     }
 
@@ -249,7 +255,7 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
                 return_type,
                 block,
             } => self.map_function(node.data, node.origin, generics, args, return_type, block),
-            Kind::Binding { to } => self.map_binding(node.data, node.origin, to),
+            Kind::Binding { to, ty } => self.map_binding(node.data, node.origin, to, ty),
             Kind::Instantiation {
                 to,
                 generics,
