@@ -411,10 +411,7 @@ mod tests {
         let a_reference = &fir.nodes[&OriginIdx(3)];
 
         assert!(matches!(a_reference.kind, Kind::NodeRef { .. }));
-        let Kind::NodeRef {
-            value: a_reference, ..
-        } = a_reference.kind
-        else {
+        let Kind::NodeRef(a_reference) = a_reference.kind else {
             unreachable!()
         };
 
@@ -463,18 +460,19 @@ mod tests {
             .nodes
             .values()
             .find(|node| matches!(node.kind, Kind::RecordType { .. }));
-        let (value, ty) = fir
+        let value = fir
             .nodes
             .values()
             .find(|node| matches!(node.kind, Kind::NodeRef { .. }))
             .map(|node| match node.kind {
-                Kind::NodeRef { value, ty } => (value, ty),
+                Kind::NodeRef(to) => to,
                 _ => unreachable!(),
             })
             .unwrap();
 
         assert_eq!(value, RefIdx::Resolved(def.unwrap().origin));
-        assert_eq!(ty, RefIdx::Resolved(def.unwrap().origin));
+        // FIXME: Is it okay if we don't typecheck here?
+        // assert_eq!(ty, RefIdx::Resolved(def.unwrap().origin));
     }
 
     #[test]
@@ -563,9 +561,10 @@ mod tests {
         assert!(matches!(marker_2.kind, Kind::RecordType { .. }));
 
         match x_value.kind {
-            Kind::NodeRef { value, ty } => {
-                assert_eq!(value, ty);
-                assert_eq!(ty, RefIdx::Resolved(marker_2.origin));
+            Kind::NodeRef(value) => {
+                // FIXME: Is it okay to not tyck here?
+                // assert_eq!(value, ty);
+                // assert_eq!(ty, RefIdx::Resolved(marker_2.origin));
                 assert_eq!(value, RefIdx::Resolved(marker_2.origin));
             }
             _ => unreachable!(),
