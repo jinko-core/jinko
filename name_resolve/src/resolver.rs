@@ -94,63 +94,51 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
         }
     }
 
-    // fn map_typed_value(
-    //     &mut self,
-    //     data: FlattenData<'ast>,
-    //     origin: OriginIdx,
-    //     _value: RefIdx,
-    //     ty: RefIdx,
-    // ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
-    //     let var_def = self.get_definition(
-    //         ResolveKind::Var,
-    //         data.ast.symbol(),
-    //         data.ast.location(),
-    //         origin,
-    //     );
-    //     let ty_def = self.get_definition(
-    //         ResolveKind::Type,
-    //         data.ast.symbol(),
-    //         data.ast.location(),
-    //         origin,
-    //     );
-
-    //     // If we're dealing with a type definition, we can "early typecheck"
-    //     // to the empty type's definition
-    //     let ty = match &ty_def {
-    //         Ok(def) => RefIdx::Resolved(*def),
-    //         Err(_) => ty,
-    //     };
-
-    //     let definition = match (var_def, ty_def) {
-    //         (Ok(var_def), Ok(ty_def)) => Err(NameResolutionError::ambiguous_binding(
-    //             var_def,
-    //             ty_def,
-    //             data.ast.location(),
-    //         )),
-    //         (Err(_), Err(_)) => Err(NameResolutionError::unresolved_binding(
-    //             data.ast.symbol(),
-    //             data.ast.location(),
-    //         )),
-    //         (Ok(def), _) | (_, Ok(def)) => Ok(def),
-    //     }?;
-
-    //     Ok(Node {
-    //         data,
-    //         origin,
-    //         kind: Kind::NodeRef {
-    //             value: RefIdx::Resolved(definition),
-    //             ty,
-    //         },
-    //     })
-    // }
-
     fn map_node_ref(
         &mut self,
         data: FlattenData<'ast>,
         origin: OriginIdx,
-        to: RefIdx,
+        _: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, NameResolutionError> {
-        todo!()
+        let var_def = self.get_definition(
+            ResolveKind::Var,
+            data.ast.symbol(),
+            data.ast.location(),
+            origin,
+        );
+        let ty_def = self.get_definition(
+            ResolveKind::Type,
+            data.ast.symbol(),
+            data.ast.location(),
+            origin,
+        );
+
+        // If we're dealing with a type definition, we can "early typecheck"
+        // to the empty type's definition
+        // FIXME: Leave that to the actual typechecker
+        // let ty = match &ty_def {
+        //     Ok(def) => RefIdx::Resolved(*def),
+        //     Err(_) => ty,
+        // };
+
+        let definition = match (var_def, ty_def) {
+            (Ok(var_def), Ok(ty_def)) => Err(NameResolutionError::ambiguous_binding(
+                var_def,
+                ty_def,
+                data.ast.location(),
+            )),
+            (Err(_), Err(_)) => Err(NameResolutionError::unresolved_binding(
+                data.ast.symbol(),
+                data.ast.location(),
+            )),
+            (Ok(def), _) | (_, Ok(def)) => Ok(def),
+        }?;
+
+        Ok(Node {
+            data,
+            origin,
+            kind: Kind::NodeRef(RefIdx::Resolved(definition)),
+        })
     }
 
     fn map_type_reference(
