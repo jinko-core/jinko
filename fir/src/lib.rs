@@ -179,10 +179,6 @@ pub enum Kind {
     // TODO: Do we want newtype patterns so that references can only point to certain types? i.e TypeRef(RefIdx)
     Constant(RefIdx), // to Kind::TypeReference, // FIXME: Is TypeReference the play? Yes, but really that way?
     TypeReference(RefIdx), // to Kind::{Type, Generic}
-    TypedValue {
-        value: RefIdx, // to Kind::{Call, Instantiation, TypedValue, Constant}
-        ty: RefIdx,    // to Kind::Type
-    },
     Generic {
         default: Option<RefIdx>, // to Kind::Type
     },
@@ -203,6 +199,20 @@ pub enum Kind {
     /// A binding is immutable, however there can be multiple bindings. Assigning to a mutable
     /// variable can be thought of a second binding.
     Binding {
+        // TODO: Document that the Binding kind is a declaration point
+        //
+        // where b = 15;
+        //       ^
+        //
+        // /* or */
+        //
+        // foo(a: int)
+        //     ^^^^^^
+        //
+        // is that true?
+        // TODO: Add a `ty` field
+        // TODO: Should this be Option<RefIdx> actually? A binding can exist without a value,
+        // e.g. an argument in a function *is* a binding but does not have a value until runtime?
         to: RefIdx, // to Kind::{TypedValue, Instantiation, any expr?},
     },
     Assignment {
@@ -234,6 +244,14 @@ pub enum Kind {
     },
     Statements(Vec<RefIdx>), // to any kind
     Return(Option<RefIdx>),  // to any kind
+    // TODO: Rework this into a ValueReference or something?
+    // TODO: Does this need a `ty` field?
+    // TODO: Can we actually remove ValueRef entirely? since we can just have a RefIdx(Binding)
+    /// Reference to another node, possibly unresolved
+    NodeRef {
+        value: RefIdx, // to Kind::{Call, Instantiation, TypedValue, Constant}
+        ty: RefIdx,    // to Kind::Type
+    },
 }
 
 impl<T> Index<&RefIdx> for Fir<T> {

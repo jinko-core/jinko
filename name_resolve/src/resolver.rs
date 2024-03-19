@@ -137,7 +137,7 @@ impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameRe
         Ok(Node {
             data,
             origin,
-            kind: Kind::TypedValue {
+            kind: Kind::NodeRef {
                 value: RefIdx::Resolved(definition),
                 ty,
             },

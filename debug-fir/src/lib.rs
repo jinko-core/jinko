@@ -88,7 +88,7 @@ impl<T, F: Fn(&T) -> String> FirDebug<T, F> {
         let str = match kind {
             Kind::Constant(_) => "Constant".blue(),
             Kind::TypeReference(_) => "TypeReference".blue(),
-            Kind::TypedValue { .. } => "TypedValue".blue(),
+            Kind::NodeRef { .. } => "TypedValue".blue(),
             Kind::Generic { .. } => "Generic".blue(),
             Kind::RecordType { .. } => "RecordType".blue(),
             Kind::UnionType { .. } => "UnionType".blue(),
@@ -107,7 +107,7 @@ impl<T, F: Fn(&T) -> String> FirDebug<T, F> {
         let content = match kind {
             Kind::Constant(r) => format!("0: {}", fmt_r(r)),
             Kind::TypeReference(r) => format!("0: {}", fmt_r(r)),
-            Kind::TypedValue { value, ty } => {
+            Kind::NodeRef { value, ty } => {
                 format!("value: {}\n\t\tty: {}", fmt_r(value), fmt_r(ty))
             }
             Kind::Generic { default } => format!("default: {}", fmt_opt(default)),

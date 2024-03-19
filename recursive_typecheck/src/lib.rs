@@ -164,7 +164,7 @@ impl Mapper<FlattenData<'_>, TypeData, Error> for TypeCtx {
         Ok(Node {
             data: TypeData::from(data).uses(ty),
             origin,
-            kind: Kind::TypedValue { value, ty },
+            kind: Kind::NodeRef { value, ty },
         })
     }
 

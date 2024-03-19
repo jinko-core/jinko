@@ -410,8 +410,8 @@ mod tests {
         let a = &fir.nodes[&OriginIdx(2)];
         let a_reference = &fir.nodes[&OriginIdx(3)];
 
-        assert!(matches!(a_reference.kind, Kind::TypedValue { .. }));
-        let Kind::TypedValue {
+        assert!(matches!(a_reference.kind, Kind::NodeRef { .. }));
+        let Kind::NodeRef {
             value: a_reference, ..
         } = a_reference.kind
         else {
@@ -466,9 +466,9 @@ mod tests {
         let (value, ty) = fir
             .nodes
             .values()
-            .find(|node| matches!(node.kind, Kind::TypedValue { .. }))
+            .find(|node| matches!(node.kind, Kind::NodeRef { .. }))
             .map(|node| match node.kind {
-                Kind::TypedValue { value, ty } => (value, ty),
+                Kind::NodeRef { value, ty } => (value, ty),
                 _ => unreachable!(),
             })
             .unwrap();
@@ -558,12 +558,12 @@ mod tests {
         let marker_2 = dbg!(&fir.nodes[&OriginIdx(2)]);
         let x_value = dbg!(&fir.nodes[&OriginIdx(3)]);
 
-        assert!(matches!(x_value.kind, Kind::TypedValue { .. }));
+        assert!(matches!(x_value.kind, Kind::NodeRef { .. }));
         assert!(matches!(marker_1.kind, Kind::RecordType { .. }));
         assert!(matches!(marker_2.kind, Kind::RecordType { .. }));
 
         match x_value.kind {
-            Kind::TypedValue { value, ty } => {
+            Kind::NodeRef { value, ty } => {
                 assert_eq!(value, ty);
                 assert_eq!(ty, RefIdx::Resolved(marker_2.origin));
                 assert_eq!(value, RefIdx::Resolved(marker_2.origin));
