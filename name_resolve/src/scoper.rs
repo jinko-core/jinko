@@ -114,10 +114,7 @@ impl<'ast> Traversal<FlattenData<'ast>, ScoperError> for Scoper {
                 instance: sub_node, ..
             }
             | Kind::Binding { to: sub_node } => self.maybe_visit_child(fir, sub_node),
-            Kind::NodeRef { value, ty } => {
-                self.maybe_visit_child(fir, value)?;
-                self.maybe_visit_child(fir, ty)
-            }
+            Kind::NodeRef(to) => self.maybe_visit_child(fir, to),
             Kind::RecordType { fields: subs, .. } | Kind::UnionType { variants: subs, .. } => {
                 let old = self.enter_scope(node.origin);
 

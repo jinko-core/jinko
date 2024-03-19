@@ -225,52 +225,6 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
     }
 
     #[must_use]
-    fn fire_typed_value(
-        &mut self,
-        node: &Node<FlattenData<'_>>,
-        value: &RefIdx,
-        ty: &RefIdx,
-    ) -> ControlFlow<EarlyExit> {
-        // what do we do here when we have a `value` but no `ty`?
-        match ty {
-            // this is a transfer
-            RefIdx::Unresolved => {
-                self.gc.transfer(value, node.origin);
-                KeepGoing
-            }
-            // this is an allocate?
-            RefIdx::Resolved(ty) => {
-                let tyref = self.access_resolved(ty);
-                let fields = match &tyref.kind {
-                    Kind::RecordType { fields, .. } => fields,
-                    // FIXME: here we need to decide part of our copy/move semantics
-                    Kind::TypeReference(_) => return KeepGoing,
-                    other => {
-                        dbg!(other);
-                        unreachable!()
-                    }
-                };
-
-                // TODO: can we just check if value == ty?
-                let instance = if fields.is_empty() {
-                    Instance::empty()
-                } else {
-                    // TODO: At the moment, this fails because `type Foo = Bar` is desugared
-                    // as one record type `type Foo(@type-alias-field: Bar)` which is not correct
-                    // to handle this we can have a better `fields` structure maybe?
-                    unreachable!()
-                };
-
-                // FIXME: Handle result here
-                // FIXME: Should this be a transfer?
-                self.gc.allocate(node.origin, instance);
-
-                KeepGoing
-            }
-        }
-    }
-
-    #[must_use]
     fn fire_return(
         &mut self,
         node: &Node<FlattenData<'_>>,
@@ -333,9 +287,9 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
                 args,
                 .. /* FIXME: Generics should be empty at this point */
             } => self.fire_call( node, to, args),
-            Kind::Binding { to } => self.fire_binding( node, to),
-            Kind::NodeRef { value, ty } => self.fire_typed_value( node, value, ty),
-            Kind::Return(expr) => self.fire_return( node, expr),
+            Kind::Binding { to } => self.fire_binding(node, to),
+            Kind::NodeRef(to) => self.fire_node_ref(to),
+            Kind::Return(expr) => self.fire_return(node, expr),
             // Kind::TypeReference(r) => self.traverse_type_reference( node, r),
             // Kind::Generic { default } => self.traverse_generic( node, default),
             // Kind::Type { generics, fields } => self.traverse_type( node, generics, fields),

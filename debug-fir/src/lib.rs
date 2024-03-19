@@ -107,9 +107,7 @@ impl<T, F: Fn(&T) -> String> FirDebug<T, F> {
         let content = match kind {
             Kind::Constant(r) => format!("0: {}", fmt_r(r)),
             Kind::TypeReference(r) => format!("0: {}", fmt_r(r)),
-            Kind::NodeRef { value, ty } => {
-                format!("value: {}\n\t\tty: {}", fmt_r(value), fmt_r(ty))
-            }
+            Kind::NodeRef(to) => format!("0: {}", fmt_r(to)),
             Kind::Generic { default } => format!("default: {}", fmt_opt(default)),
             Kind::RecordType { generics, fields } => format!(
                 "generics: {}\n\t\tfields: {}",

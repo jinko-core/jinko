@@ -32,17 +32,11 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
         }])
     }
 
-    fn map_typed_value(
-        &mut self,
-        _data: T,
-        origin: OriginIdx,
-        value: RefIdx,
-        ty: RefIdx,
-    ) -> Result<Vec<Node<U>>, E> {
+    fn map_node_ref(&mut self, _data: T, origin: OriginIdx, to: RefIdx) -> Result<Vec<Node<U>>, E> {
         Ok(vec![Node {
             data: U::from(_data),
             origin,
-            kind: Kind::NodeRef { value, ty },
+            kind: Kind::NodeRef(to),
         }])
     }
 
@@ -241,7 +235,7 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
         match node.kind {
             Kind::Constant(c) => self.map_constant(node.data, node.origin, c),
             Kind::TypeReference(r) => self.map_type_reference(node.data, node.origin, r),
-            Kind::NodeRef { value, ty } => self.map_typed_value(node.data, node.origin, value, ty),
+            Kind::NodeRef(to) => self.map_node_ref(node.data, node.origin, to),
             Kind::Generic { default } => self.map_generic(node.data, node.origin, default),
             Kind::RecordType { generics, fields } => {
                 self.map_record_type(node.data, node.origin, generics, fields)
