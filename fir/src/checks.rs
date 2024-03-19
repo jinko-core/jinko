@@ -107,7 +107,7 @@ impl<T: Debug> Fir<T> {
                 }
                 Kind::Binding { to: _, ty } => {
                     // `to` can point to anything, correct?
-                    check!(ty => Kind::TypeReference(_) | Kind::UnionType { .. }, node)
+                    check!(ty => Some(Kind::TypeReference(_) | Kind::UnionType { .. }), node)
                 }
                 Kind::Assignment { to, from: _ } => {
                     check!(to => Kind::NodeRef { .. } | Kind::Binding { .. }, node);

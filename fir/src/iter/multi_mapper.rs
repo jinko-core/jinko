@@ -107,7 +107,7 @@ pub trait MultiMapper<T, U: Default + From<T>, E> {
         _data: T,
         origin: OriginIdx,
         to: Option<RefIdx>,
-        ty: RefIdx,
+        ty: Option<RefIdx>,
     ) -> Result<Vec<Node<U>>, E> {
         Ok(vec![Node {
             data: U::from(_data),
