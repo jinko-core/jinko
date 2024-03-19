@@ -42,7 +42,7 @@ use core::mem;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct NewOrigin(OriginIdx);
 
 #[derive(Debug)]
@@ -88,8 +88,14 @@ impl SubsTarget {
     }
 }
 
-pub type Output = HashMap<RefIdx, Vec<(SubsTarget, NewOrigin)>>;
+#[derive(Default, Debug)]
+pub struct Output {
+    // TODO: Should we store OriginIdx instead of NewOrigins in both maps?
+    pub(crate) to_mono: HashMap<OriginIdx, Vec<(SubsTarget, NewOrigin)>>,
+    pub(crate) substitutions: HashMap<OriginIdx, NewOrigin>,
+}
 
+// TODO: We also need to keep a stack of Context (SubsitutionCtx?) in order to put in monomorphize requests for the statements of a function, and add these to the substitution list
 pub struct Substitutions {
     output: Output,
     next_idx: OriginIdx,
@@ -105,7 +111,7 @@ impl Substitutions {
             .unwrap_or(OriginIdx(1));
 
         let mut ctx = Substitutions {
-            output: Output::new(),
+            output: Output::default(),
             next_idx,
         };
 
@@ -121,21 +127,36 @@ impl Substitutions {
         NewOrigin(next)
     }
 
-    pub fn add(&mut self, fir: &Fir<FlattenData<'_>>, to: &RefIdx, generics: &[RefIdx]) {
+    #[must_use]
+    // TODO: Rename
+    fn add_mono_request(
+        &mut self,
+        fir: &Fir<FlattenData<'_>>,
+        to: &RefIdx,
+        generics: &[RefIdx],
+    ) -> NewOrigin {
         let from = &fir[to];
         let from = match &from.kind {
             Kind::Function { generics, .. } => generics.as_slice(),
             _ => unreachable!(),
         };
+        let next_origin = self.next_origin();
         let mono_request = (
             SubsTarget::new(Decls(Generics::new(from)), Args(Generics::new(generics))),
-            self.next_origin(),
+            next_origin,
         );
 
         self.output
-            .entry(*to)
+            .to_mono
+            .entry(to.expect_resolved())
             .or_insert_with(|| vec![])
             .push(mono_request);
+
+        next_origin
+    }
+
+    fn substitute(&mut self, from: OriginIdx, to: NewOrigin) {
+        assert!(self.output.substitutions.insert(from, to).is_none());
     }
 }
 
@@ -143,33 +164,39 @@ impl<'ast> TreeLike<FlattenData<'ast>> for Substitutions {
     fn visit_call(
         &mut self,
         fir: &Fir<FlattenData<'ast>>,
-        _node: &Node<FlattenData<'ast>>,
+        node: &Node<FlattenData<'ast>>,
         to: &RefIdx,
         generics: &[RefIdx],
-        args: &[RefIdx],
+        _args: &[RefIdx],
     ) {
         if !generics.is_empty() {
-            self.add(fir, to, generics);
+            let new_fn = self.add_mono_request(fir, to, generics);
 
             // how does that work actually? arguments are just regular expressions - we don't need to monomorphize them, actually, right?
             // we only need to change what they resolve to? how do we do that?? we don't need to create a new node for the call either, actually - we just change what it resolves to
             // that's gonna be one extra TreeLike?
             // self.visit_many(fir, args)
+
+            // or we can actually store an extra map in the Substitutions - after all, this is also a substitution! - from the current OriginIdx to the one we just created
+
+            self.substitute(node.origin, new_fn);
         }
     }
 
     fn visit_instantiation(
         &mut self,
         fir: &Fir<FlattenData<'ast>>,
-        _node: &Node<FlattenData<'ast>>,
+        node: &Node<FlattenData<'ast>>,
         to: &RefIdx,
         generics: &[RefIdx],
-        fields: &[RefIdx],
+        _fields: &[RefIdx],
     ) {
         if !generics.is_empty() {
-            self.add(fir, to, generics);
+            let new_type = self.add_mono_request(fir, to, generics);
 
             // self.visit_many(fir, fields)
+
+            self.substitute(node.origin, new_type);
         }
     }
 }
