@@ -215,11 +215,13 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
     fn fire_binding(
         &mut self,
         node: &Node<FlattenData<'_>>,
-        to: &RefIdx,
+        to: &Option<RefIdx>,
     ) -> ControlFlow<EarlyExit> {
-        self.fire_node_ref(to)?;
+        if let Some(to) = to {
+            self.fire_node_ref(to)?;
 
-        self.gc.transfer(to, node.origin);
+            self.gc.transfer(to, node.origin);
+        }
 
         KeepGoing
     }
@@ -287,7 +289,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
                 args,
                 .. /* FIXME: Generics should be empty at this point */
             } => self.fire_call( node, to, args),
-            Kind::Binding { to } => self.fire_binding(node, to),
+            Kind::Binding { to, .. } => self.fire_binding(node, to),
             Kind::NodeRef(to) => self.fire_node_ref(to),
             Kind::Return(expr) => self.fire_return(node, expr),
             // Kind::TypeReference(r) => self.traverse_type_reference( node, r),

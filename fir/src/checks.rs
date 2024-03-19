@@ -67,10 +67,10 @@ impl<T: Debug> Fir<T> {
                     // `to` can link to basically anything, so there is nothing to do
                 }
                 // FIXME: Is that okay?
-                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } |  Kind::Generic { .. } | Kind::TypeReference(_), node),
+                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } | Kind::Generic { .. } | Kind::TypeReference(_), node),
                 Kind::Generic {
                     default: Some(default),
-                } => check!(default => Kind::TypeReference { .. }, node),
+                } => check!(default => Kind::TypeReference(_), node),
                 Kind::Function {
                     generics,
                     args,
@@ -79,7 +79,7 @@ impl<T: Debug> Fir<T> {
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
                     check!(@args => Kind::Binding { .. }, node);
-                    check!(return_type => Some(Kind::TypeReference { .. } | Kind::UnionType { .. }), node);
+                    check!(return_type => Some(Kind::TypeReference(_) | Kind::UnionType { .. }), node);
                     check!(block => Some(Kind::Statements(_)), node);
                 }
                 Kind::Call {
@@ -88,7 +88,7 @@ impl<T: Debug> Fir<T> {
                     args,
                 } => {
                     check!(to => Kind::Function { .. }, node);
-                    check!(@generics => Kind::TypeReference { .. }, node);
+                    check!(@generics => Kind::TypeReference(_), node);
                     check!(@args => Kind::NodeRef { .. } | Kind::Constant(_) | Kind::Call { .. }, node);
                 }
                 Kind::RecordType {
@@ -103,10 +103,11 @@ impl<T: Debug> Fir<T> {
                     variants,
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
-                    check!(@variants => Kind::TypeReference { .. }, node);
+                    check!(@variants => Kind::TypeReference(_), node);
                 }
-                Kind::Binding { to: _ } => {
-                    // FIXME: Check `to` as well
+                Kind::Binding { to: _, ty } => {
+                    // `to` can point to anything, correct?
+                    check!(ty => Kind::TypeReference(_) | Kind::UnionType { .. }, node)
                 }
                 Kind::Assignment { to, from: _ } => {
                     check!(to => Kind::NodeRef { .. } | Kind::Binding { .. }, node);
@@ -118,7 +119,7 @@ impl<T: Debug> Fir<T> {
                     fields,
                 } => {
                     check!(to => Kind::RecordType { .. }, node);
-                    check!(@generics => Kind::TypeReference { .. }, node);
+                    check!(@generics => Kind::TypeReference(_), node);
                     check!(@fields => Kind::Assignment { .. }, node);
                 }
                 Kind::TypeOffset { instance: _, .. } => {

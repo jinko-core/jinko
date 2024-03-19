@@ -71,7 +71,13 @@ pub trait Traversal<T, E> {
         Ok(())
     }
 
-    fn traverse_binding(&mut self, _fir: &Fir<T>, _node: &Node<T>, _to: &RefIdx) -> Fallible<E> {
+    fn traverse_binding(
+        &mut self,
+        _fir: &Fir<T>,
+        _node: &Node<T>,
+        _to: &Option<RefIdx>,
+        ty: &RefIdx,
+    ) -> Fallible<E> {
         Ok(())
     }
 
@@ -175,7 +181,7 @@ pub trait Traversal<T, E> {
                 block,
             } => self.traverse_function(fir, node, generics, args, return_type, block),
             Kind::Assignment { to, from } => self.traverse_assignment(fir, node, to, from),
-            Kind::Binding { to } => self.traverse_binding(fir, node, to),
+            Kind::Binding { to, ty } => self.traverse_binding(fir, node, to, ty),
             Kind::Instantiation {
                 to,
                 generics,

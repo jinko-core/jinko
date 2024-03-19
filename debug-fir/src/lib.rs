@@ -131,7 +131,7 @@ impl<T, F: Fn(&T) -> String> FirDebug<T, F> {
                 fmt_opt(return_type),
                 fmt_opt(block)
             ),
-            Kind::Binding { to } => format!("to: {}", fmt_r(to)),
+            Kind::Binding { to, ty } => format!("to: {}\n\t\tty: {}", fmt_opt(to), fmt_r(ty)),
             Kind::Assignment { to, from } => {
                 format!("to: {}\n\t\tfrom: {}", fmt_r(to), fmt_r(from))
             }

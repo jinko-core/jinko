@@ -182,7 +182,9 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
             // These nodes all refer to other nodes, type references or typed values. They will need
             // to be flattened later on.
             fir::Kind::TypeReference(ty)
-            | fir::Kind::Binding { to: ty }
+            // if we have something to bind to, our binding is of this type - otherwise, trust the type
+            | fir::Kind::Binding { to: Some(ty), .. }
+            | fir::Kind::Binding { ty, .. }
             // FIXME: Is that correct? how do we deal with marker types vs bindings?
             | fir::Kind::NodeRef(ty)
             | fir::Kind::Instantiation { to: ty, .. }

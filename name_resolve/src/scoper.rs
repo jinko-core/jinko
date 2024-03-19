@@ -45,6 +45,7 @@ impl Scoper {
     }
 }
 
+// FIXME: This can be replaced by a TreeLike
 impl<'ast> Traversal<FlattenData<'ast>, ScoperError> for Scoper {
     fn traverse_assignment(
         &mut self,
@@ -109,11 +110,14 @@ impl<'ast> Traversal<FlattenData<'ast>, ScoperError> for Scoper {
         self.scope(node);
 
         match &node.kind {
+            Kind::Binding { to, ty } => {
+                to.map_or(Ok(()), |node| self.maybe_visit_child(fir, &node))?;
+                self.maybe_visit_child(fir, ty)
+            }
             Kind::TypeReference(sub_node)
             | Kind::TypeOffset {
                 instance: sub_node, ..
-            }
-            | Kind::Binding { to: sub_node } => self.maybe_visit_child(fir, sub_node),
+            } => self.maybe_visit_child(fir, sub_node),
             Kind::NodeRef(to) => self.maybe_visit_child(fir, to),
             Kind::RecordType { fields: subs, .. } | Kind::UnionType { variants: subs, .. } => {
                 let old = self.enter_scope(node.origin);
