@@ -76,7 +76,7 @@ pub trait Traversal<T, E> {
         _fir: &Fir<T>,
         _node: &Node<T>,
         _to: &Option<RefIdx>,
-        ty: &Option<RefIdx>,
+        _ty: &Option<RefIdx>,
     ) -> Fallible<E> {
         Ok(())
     }
