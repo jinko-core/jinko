@@ -97,7 +97,7 @@ impl<'a, 'ast, 'fir> TreeLike<FlattenData<'ast>> for CallConstraintBuilder<'a> {
         dbg!(args);
         for arg in args {
             match fir[arg].kind {
-                Kind::TypedValue { value, .. } if value == *arg => {
+                Kind::NodeRef(value) if value == *arg => {
                     dbg!(node);
                 }
                 _ => unreachable!(),
@@ -160,17 +160,13 @@ impl<'fir, 'ast> FnCtx<'fir, 'ast> {
             .filter(|arg| {
                 // first, we get the actual typed value we are dealing with - args are flattened as bindings, but
                 // we're looking for the underlying value who's being bound.
-                let binding = match fir[*arg].kind {
-                    Kind::Binding { to } => to,
+                let binding_ty = match fir[*arg].kind {
+                    Kind::Binding { ty, .. } => ty,
                     _ => unreachable!(),
                 };
 
-                let arg_ty = match fir[&binding].kind {
-                    Kind::TypedValue { ty, .. } => ty,
-                    _ => unreachable!(),
-                };
-
-                let arg_ty = match fir[&arg_ty].kind {
+                // we can unwrap here since arguments always have a type
+                let arg_ty = match fir[&binding_ty.unwrap()].kind {
                     Kind::TypeReference(to) => to,
                     _ => unreachable!(),
                 };

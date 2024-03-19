@@ -70,8 +70,15 @@ pub trait TreeLike<T> {
         self.visit_optional(fir, block);
     }
 
-    fn visit_binding(&mut self, fir: &Fir<T>, _node: &Node<T>, to: &RefIdx) {
-        self.visit_reference(fir, to)
+    fn visit_binding(
+        &mut self,
+        fir: &Fir<T>,
+        _node: &Node<T>,
+        to: &Option<RefIdx>,
+        ty: &Option<RefIdx>,
+    ) {
+        self.visit_optional(fir, to);
+        self.visit_optional(fir, ty);
     }
 
     fn visit_assignment(&mut self, fir: &Fir<T>, _node: &Node<T>, to: &RefIdx, from: &RefIdx) {
@@ -142,13 +149,17 @@ pub trait TreeLike<T> {
         self.visit_optional(fir, value)
     }
 
+    fn visit_node_reference(&mut self, fir: &Fir<T>, _node: &Node<T>, to: &RefIdx) {
+        self.visit_reference(fir, to)
+    }
+
     fn visit(&mut self, fir: &Fir<T>, start: &OriginIdx) {
         let node = &fir[start];
 
         match &node.kind {
             Kind::Constant(c) => self.visit_constant(fir, node, c),
             Kind::TypeReference(to) => self.visit_type_reference(fir, node, to),
-            Kind::TypedValue { value, ty } => self.visit_typed_value(fir, node, value, ty),
+            Kind::NodeRef(to) => self.visit_node_reference(fir, node, to),
             Kind::Generic { default } => self.visit_generic(fir, node, default),
             Kind::RecordType { generics, fields } => {
                 self.visit_record_type(fir, node, generics, fields)
@@ -162,7 +173,7 @@ pub trait TreeLike<T> {
                 return_type,
                 block,
             } => self.visit_function(fir, node, generics, args, return_type, block),
-            Kind::Binding { to } => self.visit_binding(fir, node, to),
+            Kind::Binding { to, ty } => self.visit_binding(fir, node, to, ty),
             Kind::Assignment { to, from } => self.visit_assignment(fir, node, to, from),
             Kind::Instantiation {
                 to,
