@@ -88,7 +88,7 @@ impl<T, F: Fn(&T) -> String> FirDebug<T, F> {
         let str = match kind {
             Kind::Constant(_) => "Constant".blue(),
             Kind::TypeReference(_) => "TypeReference".blue(),
-            Kind::NodeRef { .. } => "TypedValue".blue(),
+            Kind::NodeRef { .. } => "NodeRef".blue(),
             Kind::Generic { .. } => "Generic".blue(),
             Kind::RecordType { .. } => "RecordType".blue(),
             Kind::UnionType { .. } => "UnionType".blue(),
