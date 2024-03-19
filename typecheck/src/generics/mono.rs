@@ -95,11 +95,13 @@
 // how does that affect our generator? something like multimapper where we take in Foo[T], a Map { Foo[T]: Foo[int], Foo[string] } and return vec![foo[int], foo[string]]?
 // do we return the generic version? no, right?
 
-use fir::{Kind, MultiMapper, Node, OriginIdx, RefIdx};
+use fir::{Fir, Incomplete, Kind, MultiMapper, Node, OriginIdx, RefIdx};
 use flatten::FlattenData;
 
+use super::substitutions;
+
 pub struct Monomorphize {
-    to_mono: (),
+    input: substitutions::Output,
 }
 
 #[derive(Debug)]
@@ -108,36 +110,15 @@ pub struct Error;
 // FIXME: This can probably benefit from using a different `U` here - something like T -> U becomes FlattenData -> (MonodIdx, FlattenData)
 // Also the `From: T` in Mapper should probably be a `From: (&Node, T)` - so that we get all the info possible
 impl<'ast> MultiMapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Monomorphize {
-    fn map_instantiation(
-        &mut self,
-        _data: FlattenData<'ast>,
-        origin: OriginIdx,
-        to: RefIdx,
-        generics: Vec<RefIdx>,
-        fields: Vec<RefIdx>,
-    ) -> Result<Vec<Node<FlattenData<'ast>>>, Error> {
-        Ok(vec![
-            Node {
-                data: _data.clone(),
-                origin,
-                kind: Kind::Instantiation {
-                    to,
-                    generics,
-                    fields: fields.clone(),
-                },
-            },
-            // mono'd version
-            Node {
-                data: _data,
-                origin,
-                kind: Kind::Instantiation {
-                    to,
-                    generics: vec![],
-                    // Cloning here allows us to easily replace fields with their mono'd version
-                    // does it??
-                    fields,
-                },
-            },
-        ])
-    }
+    // fn map_record_type(
+    //     &mut self,
+    //     _data: FlattenData<'ast>,
+    //     origin: OriginIdx,
+    //     generics: Vec<RefIdx>,
+    //     fields: Vec<RefIdx>,
+    // ) -> Result<Vec<Node<FlattenData<'ast>>>, Error> {
+    //     self.input.to_mono.get(&origin).map(|request| {
+    //       request
+    //     })
+    // }
 }
