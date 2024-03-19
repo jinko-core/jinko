@@ -290,7 +290,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
                 .. /* FIXME: Generics should be empty at this point */
             } => self.fire_call( node, to, args),
             Kind::Binding { to, .. } => self.fire_binding(node, to),
-            Kind::NodeRef(to) => self.fire_node_ref(to),
+            Kind::NodeRef(to) => { self.fire_node_ref(to)?; self.gc.transfer(to, node.origin); KeepGoing },
             Kind::Return(expr) => self.fire_return(node, expr),
             // Kind::TypeReference(r) => self.traverse_type_reference( node, r),
             // Kind::Generic { default } => self.traverse_generic( node, default),
