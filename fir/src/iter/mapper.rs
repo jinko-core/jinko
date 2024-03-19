@@ -97,7 +97,7 @@ pub trait Mapper<T, U: From<T>, E> {
         data: T,
         origin: OriginIdx,
         to: Option<RefIdx>,
-        ty: RefIdx,
+        ty: Option<RefIdx>,
     ) -> Result<Node<U>, E> {
         Ok(Node {
             data: U::from(data),

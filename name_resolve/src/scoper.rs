@@ -111,8 +111,8 @@ impl<'ast> Traversal<FlattenData<'ast>, ScoperError> for Scoper {
 
         match &node.kind {
             Kind::Binding { to, ty } => {
-                to.map_or(Ok(()), |node| self.maybe_visit_child(fir, &node))?;
-                self.maybe_visit_child(fir, ty)
+                to.map_or(Ok(()), |to| self.maybe_visit_child(fir, &to))?;
+                ty.map_or(Ok(()), |ty| self.maybe_visit_child(fir, &ty))
             }
             Kind::TypeReference(sub_node)
             | Kind::TypeOffset {

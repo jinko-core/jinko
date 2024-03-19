@@ -223,7 +223,7 @@ impl Mapper<FlattenData<'_>, TypeData, Error> for TypeCtx {
         data: FlattenData,
         origin: OriginIdx,
         to: Option<RefIdx>,
-        ty: RefIdx,
+        ty: Option<RefIdx>,
     ) -> Result<Node<TypeData>, Error> {
         // FIXME: What do we do here?
         // A binding declare something that can be looked up, right?

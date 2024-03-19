@@ -183,8 +183,8 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
             // to be flattened later on.
             fir::Kind::TypeReference(ty)
             // if we have something to bind to, and there is no given type, then our binding is of this type - otherwise, trust the type
-            | fir::Kind::Binding { to: Some(ty), ty: RefIdx::Unresolved }
-            | fir::Kind::Binding { ty, .. }
+            | fir::Kind::Binding { to: Some(ty), .. }
+            | fir::Kind::Binding { ty: Some(ty), .. }
             // FIXME: Is that correct? how do we deal with marker types vs bindings?
             | fir::Kind::NodeRef(ty)
             | fir::Kind::Instantiation { to: ty, .. }
@@ -205,6 +205,7 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
             fir::Kind::Generic { .. } | fir::Kind::TypeOffset { .. } | fir::Kind::Loop { .. } => {
                 Ok(node)
             }
+            fir::Kind::Binding { to: None, ty: None } => unreachable!(),
         }
     }
 }

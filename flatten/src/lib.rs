@@ -372,7 +372,10 @@ impl<'ast> Ctx<'ast> {
             scope: ctx.scope,
         };
 
-        let kind = Kind::Binding { to: None, ty };
+        let kind = Kind::Binding {
+            to: None,
+            ty: Some(ty),
+        };
 
         ctx.append(data, kind)
     }
@@ -768,12 +771,14 @@ impl<'ast> Ctx<'ast> {
 
         let data = FlattenData {
             scope: ctx.scope,
-            ast,
+            ast: dbg!(ast),
         };
+
+        // FIXME: If there is a given type, we need to handle it here
 
         let kind = Kind::Binding {
             to: Some(to_bind),
-            ty: RefIdx::Unresolved,
+            ty: None,
         };
 
         ctx.append(data, kind)

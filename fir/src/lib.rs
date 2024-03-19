@@ -215,7 +215,7 @@ pub enum Kind {
         // e.g. an argument in a function *is* a binding but does not have a value until runtime?
         // FIXME: This should definitely be a Option<RefIdx>
         to: Option<RefIdx>, // to Kind::{TypedValue, Instantiation, any expr?},
-        ty: RefIdx,
+        ty: Option<RefIdx>,
     },
     Assignment {
         to: RefIdx,   // to Kind::TypedValue
