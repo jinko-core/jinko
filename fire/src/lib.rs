@@ -191,7 +191,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
             }
             Some(block) => {
                 // here, we handle the firing of the block particularly as we want to catch early returns
-                let result = match self.fire_node_ref(block) {
+                let result = match self.fire_reference(block) {
                     ControlFlow::Break(EarlyExit::Return(returned_value)) => {
                         RefIdx::Resolved(returned_value)
                     }
@@ -213,7 +213,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         to: &Option<RefIdx>,
     ) -> ControlFlow<EarlyExit> {
         if let Some(to) = to {
-            self.fire_node_ref(to)?;
+            self.fire_reference(to)?;
 
             self.gc.transfer(to, node.origin);
         }
@@ -228,7 +228,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         expr: &Option<RefIdx>,
     ) -> ControlFlow<EarlyExit> {
         if let Some(returned) = expr {
-            self.fire_node_ref(returned)?;
+            self.fire_reference(returned)?;
 
             self.gc.transfer(returned, node.origin);
         } // FIXME: Allocate None otherwise?
@@ -237,7 +237,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
     }
 
     #[must_use]
-    fn fire_node_ref(&mut self, node_ref: &RefIdx) -> ControlFlow<EarlyExit> {
+    fn fire_reference(&mut self, node_ref: &RefIdx) -> ControlFlow<EarlyExit> {
         self.fire_node(self.access(node_ref))
     }
 
@@ -252,7 +252,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
         let t = Instance::from(true);
         let f = Instance::from(false);
 
-        self.fire_node_ref(condition)?;
+        self.fire_reference(condition)?;
 
         let condition_result = self.gc.lookup(&condition.expect_resolved());
 
@@ -266,7 +266,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
 
         // TODO: Is that correct?
         if let Some(block) = to_run {
-            self.fire_node_ref(block)?;
+            self.fire_reference(block)?;
 
             self.gc.transfer(block, node.origin);
         }
@@ -285,7 +285,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
                 .. /* FIXME: Generics should be empty at this point */
             } => self.fire_call( node, to, args),
             Kind::Binding { to, .. } => self.fire_binding(node, to),
-            Kind::NodeRef(to) => { self.fire_node_ref(to)?; self.gc.transfer(to, node.origin); KeepGoing },
+            Kind::NodeRef(to) => { self.fire_reference(to)?; self.gc.transfer(to, node.origin); KeepGoing },
             Kind::Return(expr) => self.fire_return(node, expr),
             // Kind::TypeReference(r) => self.traverse_type_reference( node, r),
             // Kind::Generic { default } => self.traverse_generic( node, default),
