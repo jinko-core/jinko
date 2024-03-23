@@ -196,26 +196,20 @@ pub enum Kind {
         return_type: Option<RefIdx>, // to Kind::Type,
         block: Option<RefIdx>,       // to Kind::Statements
     },
-    /// A binding is immutable, however there can be multiple bindings. Assigning to a mutable
-    /// variable can be thought of a second binding.
+    /// A binding is an immutable declaration point, with or without a value and with or without a specified type.
+    /// In the following code example, both the variable declaration and function argument are bindings.
+    /// ```ignore
+    /// where b = 15;
+    ///       ^
+    ///
+    /// /* or */
+    ///
+    /// foo(a: int)
+    ///     ^^^^^^
+    /// ```
     Binding {
-        // TODO: Document that the Binding kind is a declaration point
-        //
-        // where b = 15;
-        //       ^
-        //
-        // /* or */
-        //
-        // foo(a: int)
-        //     ^^^^^^
-        //
-        // is that true?
-        // TODO: Add a `ty` field
-        // TODO: Should this be Option<RefIdx> actually? A binding can exist without a value,
-        // e.g. an argument in a function *is* a binding but does not have a value until runtime?
-        // FIXME: This should definitely be a Option<RefIdx>
         to: Option<RefIdx>, // to Kind::{TypedValue, Instantiation, any expr?},
-        ty: Option<RefIdx>,
+        ty: Option<RefIdx>, // to Kind::{TypeReference, UnionType}
     },
     Assignment {
         to: RefIdx,   // to Kind::TypedValue
@@ -246,9 +240,6 @@ pub enum Kind {
     },
     Statements(Vec<RefIdx>), // to any kind
     Return(Option<RefIdx>),  // to any kind
-    // TODO: Rework this into a ValueReference or something?
-    // TODO: Does this need a `ty` field?
-    // TODO: Can we actually remove ValueRef entirely? since we can just have a RefIdx(Binding) - no, we can't
     /// Reference to another node, possibly unresolved. This is the same as a
     /// raw [`RefIdx`], but is useful if you need an actual node to manipulate and modify.
     /// This means that you can handle this node as you would a regular [`RefIdx`]
