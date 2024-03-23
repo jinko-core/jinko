@@ -771,7 +771,7 @@ impl<'ast> Ctx<'ast> {
 
         let data = FlattenData {
             scope: ctx.scope,
-            ast: dbg!(ast),
+            ast,
         };
 
         // FIXME: If there is a given type, we need to handle it here
