@@ -51,7 +51,7 @@ fn pipeline(ast: &ast::Ast) -> ControlFlow<Error, ()> {
 pub fn repl() -> Result<(), Error> {
     let mut rl = rustyline::DefaultEditor::new().unwrap();
     // FIXME: How to handle this?
-    let builtin_types = "type unit; type bool; type int; type float; type char; type string;";
+    let builtin_types = "type unit; type false; type true; type bool = false | true; type int; type float; type char; type string;";
     let ast = xparser::parse(builtin_types, Source::Input(builtin_types)).unwrap();
 
     // FIXME: No unwrap

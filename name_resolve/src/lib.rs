@@ -523,9 +523,9 @@ mod tests {
     #[test]
     fn builtin_type() {
         let ast = ast! {
-            type bool;
-            type true;
             type false;
+            type true;
+            type bool = false | true;
 
             func foo() -> bool { true }
         };
