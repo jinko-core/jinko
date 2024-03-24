@@ -75,6 +75,16 @@ fn validate_type(
     }
 }
 
+fn validate_bool_type(
+    fir: &Fir<FlattenData<'_>>,
+    sym: &Symbol,
+    loc: &SpanTuple,
+    generics: &[RefIdx],
+    variants: &[RefIdx],
+) -> Fallible<Error> {
+    Ok(())
+}
+
 fn duplicate(fir: &Fir<FlattenData<'_>>, old: &OriginIdx, new: &OriginIdx) -> Error {
     let old = &fir.nodes[old].data.ast;
 
@@ -110,7 +120,6 @@ impl Traversal<FlattenData<'_>, Error> for PrimitiveTypeCtx {
 
         let field_to_set = match name.access() {
             "unit" => Some(&mut self.unit_type),
-            "bool" => Some(&mut self.bool_type),
             "char" => Some(&mut self.char_type),
             "int" => Some(&mut self.int_type),
             "float" => Some(&mut self.float_type),
@@ -125,6 +134,31 @@ impl Traversal<FlattenData<'_>, Error> for PrimitiveTypeCtx {
                 Err(duplicate(fir, &existing, &node.origin))
             } else {
                 *field = Some(node.origin);
+
+                Ok(())
+            }
+        } else {
+            Ok(())
+        }
+    }
+
+    fn traverse_union_type(
+        &mut self,
+        fir: &Fir<FlattenData<'_>>,
+        node: &Node<FlattenData<'_>>,
+        generics: &[RefIdx],
+        variants: &[RefIdx],
+    ) -> Fallible<Error> {
+        let ast = &node.data.ast;
+        let name = ast.symbol().unwrap();
+
+        if name.access() == "bool" {
+            validate_bool_type(fir, name, ast.location(), generics, variants)?;
+
+            if let Some(existing) = self.bool_type {
+                Err(duplicate(fir, &existing, &node.origin))
+            } else {
+                self.bool_type = Some(node.origin);
 
                 Ok(())
             }
@@ -180,9 +214,9 @@ mod tests {
         let ast = ast! {
             type unit;
 
-            type true;
             type false;
-            type bool;
+            type true;
+            type bool = false | true;
 
             type char;
             type int;
@@ -199,9 +233,9 @@ mod tests {
     #[test]
     fn missing_ty() {
         let ast = ast! {
-            type true;
             type false;
-            type bool;
+            type true;
+            type bool = false | true;
 
             type string;
         };
@@ -214,9 +248,9 @@ mod tests {
     #[test]
     fn invalid_declaration() {
         let ast = ast! {
-            type true;
             type false;
-            type bool;
+            type true;
+            type bool = false | true;
 
             type char;
             type int;

@@ -143,7 +143,9 @@ mod tests {
             xparser::ast!(
                 type unit;
                 type char;
-                type bool;
+                type false;
+                type true;
+                type bool = false | true;
                 type int;
                 type float;
                 type string;
