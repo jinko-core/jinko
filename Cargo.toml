@@ -15,6 +15,7 @@ members = [
   "location",
   "symbol",
   "ast",
+  "interpolate",
   "fir",
   "flatten",
   "name_resolve",
@@ -33,6 +34,7 @@ members = [
 [dependencies]
 ast = { path = "ast" }
 ast-sanitizer = { path = "ast-sanitizer" }
+interpolate = { path = "interpolate" }
 fir = { path = "fir" }
 debug-fir = { path = "debug-fir" }
 flatten = { path = "flatten" }
