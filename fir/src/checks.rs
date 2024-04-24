@@ -67,7 +67,7 @@ impl<T: Debug> Fir<T> {
                     // `to` can link to basically anything, so there is nothing to do
                 }
                 // FIXME: Is that okay?
-                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } | Kind::Generic { .. } | Kind::TypeReference(_), node),
+                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } | Kind::Generic { .. } | Kind::TypeReference(_) | Kind::Constant(_), node),
                 Kind::Generic {
                     default: Some(default),
                 } => check!(default => Kind::TypeReference(_), node),

@@ -516,6 +516,7 @@ dependencies = [
 name = "name_resolve"
 version = "0.1.0"
 dependencies = [
+ "ast",
  "colored",
  "debug-fir",
  "distance",
