@@ -674,4 +674,17 @@ mod tests {
 
         assert!(fir.is_err())
     }
+
+    #[test]
+    fn nameres_literal_types() {
+        let ast = ast! {
+            type Bar;
+            type Foo(inner: Bar | "bar");
+            func f(arg: Bar | "bar" | "Bar") {}
+        };
+
+        let fir = ast.flatten().name_resolve();
+
+        assert!(fir.is_ok())
+    }
 }
