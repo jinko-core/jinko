@@ -329,7 +329,16 @@ impl<'ast> Ctx<'ast> {
         match &ty.kind {
             // FIXME: Do we need to create a type reference here as well? `handle_multi_ty` returns the actual union type
             TypeKind::Multi(variants) => ctx.handle_multi_type(ty, generics, variants),
+            TypeKind::Literal(ast) => {
+                let (ctx, idx) = ctx.visit(ast);
 
+                let data = FlattenData {
+                    ast: AstInfo::Node(ast),
+                    scope: ctx.scope,
+                };
+
+                ctx.append(data, Kind::TypeReference(idx))
+            }
             TypeKind::Simple(_) => {
                 let data = FlattenData {
                     ast: AstInfo::Type(ty),

@@ -31,6 +31,7 @@ use location::Location;
 use location::SpanTuple;
 use nom::sequence::tuple;
 use nom::Err::Error as NomError;
+use nom::Parser;
 use nom::Slice;
 use nom_locate::position;
 use symbol::Symbol;
@@ -471,25 +472,53 @@ fn type_id(input: ParseInput) -> ParseResult<ParseInput, Type> {
                 },
             ))
         } else {
-            let (input, (id, (start_loc, end_loc))) = spaced_identifier(input)?;
-            let kind = TypeKind::Simple(Symbol::from(id));
-            let (input, generics) = maybe_generic_application(input)?;
+            fn literal(input: ParseInput) -> ParseResult<ParseInput, Type> {
+                let (input, (location, kind)) = string_constant
+                    .or(float_constant)
+                    .or(int_constant)
+                    .map(|literal| {
+                        (
+                            literal.location.clone(),
+                            TypeKind::Literal(Box::new(literal)),
+                        )
+                    })
+                    .parse(input)?;
 
-            // FIXME: Refactor
-            let end_loc = if !generics.is_empty() {
-                position(input)?.1.into()
-            } else {
-                end_loc
-            };
+                Ok((
+                    input,
+                    Type {
+                        kind,
+                        generics: vec![],
+                        location,
+                    },
+                ))
+            }
 
-            Ok((
-                input,
-                Type {
-                    kind,
-                    generics,
-                    location: pos_to_loc(input, start_loc, end_loc),
-                },
-            ))
+            fn type_symbol(input: ParseInput) -> ParseResult<ParseInput, Type> {
+                let (input, (kind, (start_loc, end_loc))) = spaced_identifier
+                    .map(|(id, loc)| (TypeKind::Simple(Symbol::from(id)), loc))
+                    .parse(input)?;
+
+                let (input, generics) = maybe_generic_application(input)?;
+
+                // FIXME: Refactor
+                let end_loc = if !generics.is_empty() {
+                    position(input)?.1.into()
+                } else {
+                    end_loc
+                };
+
+                Ok((
+                    input,
+                    Type {
+                        kind,
+                        generics,
+                        location: pos_to_loc(input, start_loc, end_loc),
+                    },
+                ))
+            }
+
+            type_symbol.or(literal).parse(input)
         }
     }
 
@@ -2294,5 +2323,26 @@ mod tests {
             type_id(input).unwrap().1.kind,
             TypeKind::FunctionLike(..)
         ));
+    }
+
+    #[test]
+    fn parse_module_type() {
+        let input = span!("type foo = source[\"foo\"]");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn parse_literal_type_in_function_arg() {
+        let input = span!("func only_accepts_foo_15(a: \"foo\", b: 15) {}");
+
+        assert!(expr(input).is_ok());
+    }
+
+    #[test]
+    fn parse_literal_type_in_generic_application() {
+        let input = span!("func foo(a: Foo[\"foo\"], b: Bar[15, 15.2]) {}");
+
+        assert!(expr(input).is_ok());
     }
 }
