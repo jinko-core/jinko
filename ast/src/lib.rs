@@ -10,6 +10,7 @@ pub enum TypeKind {
     // probably simpler, right?
     // but then how do we handle a simple type like "int" without generics or anything -> symbol(int) and empty vec for generics so we're good
     Simple(Symbol), // FIXME: Can this be a symbol? Should it be something else? I think Symbol is fine, because the struct enclosing TypeKind has generics and location
+    Literal(Box<Ast>),
     Multi(Vec<Type>),
     FunctionLike(Vec<Type>, Option<Box<Type>>),
 }
