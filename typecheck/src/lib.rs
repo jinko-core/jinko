@@ -131,6 +131,10 @@ impl<'ast> TypeCheck<Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
             generics: vec![],
             variants: mk_constant_types(const_collector.strings),
         };
+        self[primitives.bool_type].kind = Kind::UnionType {
+            generics: vec![],
+            variants: mk_constant_types(const_collector.bools),
+        };
 
         TypeCtx {
             primitives,
