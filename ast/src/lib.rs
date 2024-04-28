@@ -1,5 +1,7 @@
 //! Abstract Syntax Tree representation of jinko's source code
 
+use std::fmt;
+
 use error::{ErrKind, Error};
 use location::SpanTuple;
 use symbol::Symbol;
@@ -135,6 +137,18 @@ pub enum Value {
     Char(char),
     Bool(bool),
     Str(String),
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Integer(v) => write!(f, "{v}"),
+            Value::Float(v) => write!(f, "{v}"),
+            Value::Bool(v) => write!(f, "{v}"),
+            Value::Char(v) => write!(f, "'{v}'"),
+            Value::Str(v) => write!(f, "\"{v}\""),
+        }
+    }
 }
 
 // FIXME: How to keep location in there? How to do it ergonomically?

@@ -52,7 +52,7 @@ impl<'ctx> TypeLinkResolver<'ctx> {
             final_type,
         } = self.find_end(fir, to_resolve);
 
-        let node = final_type.0;
+        let node = final_type.origin();
         let tyref = self.new.types.new_type(final_type);
 
         intermediate_nodes
