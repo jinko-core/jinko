@@ -1,5 +1,5 @@
 [package]
-name = "name_resolve"
+name = "dedup"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,13 +8,5 @@ edition = "2021"
 [dependencies]
 ast = { path = "../ast" }
 fir = { path = "../fir" }
-debug-fir = { path = "../debug-fir" }
-symbol = { path = "../symbol" }
 flatten = { path = "../flatten" }
 error = { path = "../error" }
-location = { path = "../location" }
-distance = "0.4"
-colored = "2.1.0"
-
-[dev-dependencies]
-xparser = { path = "../xparser" }

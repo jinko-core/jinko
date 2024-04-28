@@ -287,7 +287,7 @@ impl Error {
     }
 }
 
-use std::convert::From;
+use std::convert::{From, Infallible};
 use std::io;
 
 /// I/O errors keep their messages
@@ -330,9 +330,17 @@ impl std::convert::From<std::env::VarError> for Error {
     }
 }
 
-impl From<Vec<Error>> for Error {
-    fn from(errs: Vec<Error>) -> Self {
-        Error::new(ErrKind::Multiple(errs))
+impl<T: Into<Error>> From<Vec<T>> for Error {
+    fn from(errs: Vec<T>) -> Self {
+        Error::new(ErrKind::Multiple(
+            errs.into_iter().map(Into::into).collect(),
+        ))
+    }
+}
+
+impl From<Infallible> for Error {
+    fn from(_: Infallible) -> Self {
+        unreachable!()
     }
 }
 

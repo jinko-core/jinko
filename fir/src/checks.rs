@@ -62,12 +62,12 @@ impl<T: Debug> Fir<T> {
                 // FIXME: This is missing a bunch of valid "checks". For example, checking that a call's argument can
                 // point to an if-else expression. Basically, to anything that's an expression actually.
                 // Should we split the fir::Kind into fir::Kind::Stmt and fir::Kind::Expr? Or does that not make sense?
-                Kind::Constant(r) => check!(r => Kind::RecordType { .. }, node),
+                Kind::Constant(r) => check!(r => Kind::RecordType { .. } | Kind::Constant(_), node),
                 Kind::NodeRef(_to) => {
                     // `to` can link to basically anything, so there is nothing to do
                 }
                 // FIXME: Is that okay?
-                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } | Kind::Generic { .. } | Kind::TypeReference(_), node),
+                Kind::TypeReference(to) => check!(to => Kind::RecordType { .. } | Kind::UnionType { .. } | Kind::Generic { .. } | Kind::TypeReference(_) | Kind::Constant(_), node),
                 Kind::Generic {
                     default: Some(default),
                 } => check!(default => Kind::TypeReference(_), node),
@@ -103,7 +103,7 @@ impl<T: Debug> Fir<T> {
                     variants,
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
-                    check!(@variants => Kind::TypeReference(_), node);
+                    check!(@variants => Kind::TypeReference(_) | Kind::Constant(_), node);
                 }
                 Kind::Binding { to: _, ty } => {
                     // `to` can point to anything, correct?

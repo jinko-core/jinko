@@ -48,7 +48,7 @@ impl TypeMap {
 
     /// Insert a new type into the typemap
     pub fn new_type(&mut self, ty: Type) -> TypeRef {
-        let ty_ref = TypeRef(ty.0);
+        let ty_ref = TypeRef(ty.origin());
         // FIXME: Is it actually okay to ignore if the type existed or not?
         self.types.insert(ty_ref, ty);
 

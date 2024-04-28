@@ -1,5 +1,6 @@
+use ast::{Ast, Node as AstNode};
 use fir::{Fallible, Fir, Node, OriginIdx, RefIdx, Traversal};
-use flatten::FlattenData;
+use flatten::{AstInfo, FlattenData};
 
 use crate::{NameResolutionError, NameResolveCtx, UniqueError};
 
@@ -73,12 +74,19 @@ impl<'ast, 'ctx, 'enclosing> Traversal<FlattenData<'ast>, NameResolutionError>
         node: &Node<FlattenData<'ast>>,
         reference: &RefIdx,
     ) -> Fallible<NameResolutionError> {
-        // if we already see resolved type references, then it means we are dealing
-        // with a type alias
-        if let RefIdx::Resolved(_) = reference {
-            self.define(DefinitionKind::Type, node)
-        } else {
-            Ok(())
+        match node.data.ast {
+            // if we're dealing with a type constant, then we have nothing to do during
+            // name resolution (at least in the declaration pass)
+            AstInfo::Node(Ast {
+                node: AstNode::Constant(_),
+                ..
+            }) => Ok(()),
+            _ => match reference {
+                // if we already see resolved type references, then it means we are dealing
+                // with a type alias
+                RefIdx::Resolved(_) => self.define(DefinitionKind::Type, node),
+                _ => Ok(()),
+            },
         }
     }
 

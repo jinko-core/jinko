@@ -17,6 +17,7 @@ members = [
   "ast",
   "fir",
   "flatten",
+  "dedup",
   "name_resolve",
   "include_code",
   "loop_desugar",
@@ -35,6 +36,7 @@ ast = { path = "ast" }
 ast-sanitizer = { path = "ast-sanitizer" }
 fir = { path = "fir" }
 debug-fir = { path = "debug-fir" }
+dedup = { path = "dedup" }
 flatten = { path = "flatten" }
 name_resolve = { path = "name_resolve" }
 symbol = { path = "symbol" }
