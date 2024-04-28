@@ -177,6 +177,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dedup"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "error",
+ "fir",
+ "flatten",
+]
+
+[[package]]
 name = "dirs"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -366,6 +376,7 @@ dependencies = [
  "builtins",
  "colored",
  "debug-fir",
+ "dedup",
  "downcast-rs",
  "error",
  "fir",

@@ -7,6 +7,7 @@ mod repl;
 use colored::Colorize;
 
 use builtins::AppendAstBuiltins;
+use dedup::DeduplicateConstants;
 use fire::instance::Instance;
 use fire::Interpret;
 use flatten::{FlattenAst, FlattenData};
@@ -150,6 +151,12 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
     let fir = x_try!(fir.name_resolve());
     FirDebug::default()
         .header("name_resolved")
+        .show_data(data_fmt)
+        .display(&fir);
+
+    let fir = x_try!(fir.deduplicate_constants());
+    FirDebug::default()
+        .header("deduped_constants")
         .show_data(data_fmt)
         .display(&fir);
 

@@ -1,7 +1,6 @@
 // TODO: Write module documentation
 // TODO: Does `Typer` take care of monomorphization as well?
 
-use ast::{Node as AstNode, Value};
 use error::Error;
 use fir::{Kind, Mapper, Node, OriginIdx, RefIdx};
 use flatten::FlattenData;
