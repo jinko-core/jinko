@@ -103,7 +103,7 @@ impl<T: Debug> Fir<T> {
                     variants,
                 } => {
                     check!(@generics => Kind::Generic { .. }, node);
-                    check!(@variants => Kind::TypeReference(_), node);
+                    check!(@variants => Kind::TypeReference(_) | Kind::Constant(_), node);
                 }
                 Kind::Binding { to: _, ty } => {
                     // `to` can point to anything, correct?

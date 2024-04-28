@@ -97,6 +97,7 @@
 
 use std::fmt::{self, Debug};
 use std::hash::Hash;
+use std::ops::IndexMut;
 use std::{collections::BTreeMap, ops::Index};
 
 mod checks;
@@ -127,6 +128,18 @@ impl RefIdx {
             RefIdx::Resolved(idx) => *idx,
             RefIdx::Unresolved => unreachable!("unexpected `RefIdx::Unresolved` in `Fir`"),
         }
+    }
+}
+
+impl From<&OriginIdx> for OriginIdx {
+    fn from(value: &OriginIdx) -> Self {
+        *value
+    }
+}
+
+impl From<&RefIdx> for OriginIdx {
+    fn from(value: &RefIdx) -> Self {
+        value.expect_resolved()
     }
 }
 
@@ -246,19 +259,17 @@ pub enum Kind {
     NodeRef(RefIdx),
 }
 
-impl<T> Index<&RefIdx> for Fir<T> {
+impl<T, K: Into<OriginIdx>> Index<K> for Fir<T> {
     type Output = Node<T>;
 
-    fn index(&self, index: &RefIdx) -> &Node<T> {
-        &self.nodes[&index.expect_resolved()]
+    fn index(&self, index: K) -> &Node<T> {
+        &self.nodes[&index.into()]
     }
 }
 
-impl<T> Index<&OriginIdx> for Fir<T> {
-    type Output = Node<T>;
-
-    fn index(&self, index: &OriginIdx) -> &Node<T> {
-        &self.nodes[index]
+impl<T, K: Into<OriginIdx>> IndexMut<K> for Fir<T> {
+    fn index_mut(&mut self, index: K) -> &mut Node<T> {
+        self.nodes.get_mut(&index.into()).unwrap()
     }
 }
 
