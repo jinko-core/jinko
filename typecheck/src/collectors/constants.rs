@@ -11,6 +11,8 @@ pub struct ConstantCollector {
     pub(crate) integers: HashSet<RefIdx>,
     pub(crate) characters: HashSet<RefIdx>,
     pub(crate) strings: HashSet<RefIdx>,
+    // Hopefully there's only two of those
+    pub(crate) bools: HashSet<RefIdx>,
 }
 
 impl ConstantCollector {
@@ -29,6 +31,10 @@ impl ConstantCollector {
     fn add_string(&mut self, idx: OriginIdx) {
         self.strings.insert(RefIdx::Resolved(idx));
     }
+
+    fn add_bool(&mut self, idx: OriginIdx) {
+        self.bools.insert(RefIdx::Resolved(idx));
+    }
 }
 
 impl Traversal<FlattenData<'_>, Infallible> for ConstantCollector {
@@ -46,6 +52,7 @@ impl Traversal<FlattenData<'_>, Infallible> for ConstantCollector {
                 ast::Value::Integer(_) => self.add_integer(node.origin),
                 ast::Value::Char(_) => self.add_character(node.origin),
                 ast::Value::Str(_) => self.add_string(node.origin),
+                ast::Value::Bool(_) => self.add_bool(node.origin),
                 // do nothing - the other constants are not part of primitive union types
                 _ => {}
             },
