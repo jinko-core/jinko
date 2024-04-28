@@ -5,6 +5,7 @@
 use colored::Colorize;
 use error::{ErrKind, Error};
 use fir::{Fallible, Fir, Node, RefIdx, Traversal};
+use flatten::AstInfo;
 use flatten::FlattenData;
 use location::SpanTuple;
 
@@ -83,7 +84,7 @@ impl<'ctx> Checker<'ctx> {
             BuiltinType::Bool => Type::record(self.0.primitives.bool_type),
         };
 
-        if valid_union_type.is_superset_of(&expected_ty) {
+        if expected_ty.can_widen_to(&valid_union_type) {
             Ok(vec![expected_ty; arity])
         } else {
             Err(unexpected_arithmetic_type(
@@ -121,13 +122,21 @@ impl<'fir, 'ast> Fmt<'fir, 'ast> {
             unreachable!()
         }
 
+        let ty_fmt = |node: &Node<FlattenData<'_>>| match &node.data.ast {
+            AstInfo::Node(ast::Ast {
+                node: ast::Node::Constant(value),
+                ..
+            }) => value.to_string(),
+            info => info.symbol().unwrap().access().to_string(),
+        };
+
         ty.set()
             .0 // FIXME: ugly
             .iter()
-            .map(|idx| self.0.nodes[&idx.expect_resolved()].data.ast.symbol())
-            .fold(None, |acc, sym| match acc {
-                None => Some(format!("`{}`", sym.unwrap().access().purple())),
-                Some(acc) => Some(format!("{} | `{}`", acc, sym.unwrap().access().purple(),)),
+            .map(|idx| &self.0.nodes[&idx.expect_resolved()])
+            .fold(None, |acc, node| match acc {
+                None => Some(format!("`{}`", ty_fmt(node).purple())),
+                Some(acc) => Some(format!("{} | `{}`", acc, ty_fmt(node).purple(),)),
             })
             .unwrap()
     }
@@ -143,6 +152,9 @@ fn type_mismatch(
     got: Got<&Type>,
 ) -> Error {
     let fmt = Fmt(fir);
+
+    dbg!(&expected.0);
+    dbg!(&got.0);
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
@@ -200,14 +212,14 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             return Ok(());
         }
 
-        let ret_ty = return_ty
-            .as_ref()
-            .map(|b| self.get_type(b))
-            .unwrap_or(self.unit());
-        let block_ty = block
-            .as_ref()
-            .map(|b| self.get_type(b))
-            .unwrap_or(self.unit());
+        let type_or_unit = |ty: &Option<RefIdx>| {
+            ty.as_ref()
+                .map(|ty| self.get_type(ty))
+                .unwrap_or(self.unit())
+        };
+
+        let ret_ty = type_or_unit(return_ty);
+        let block_ty = type_or_unit(block);
 
         if !block_ty.can_widen_to(ret_ty) {
             let err = type_mismatch(

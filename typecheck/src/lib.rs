@@ -1,20 +1,23 @@
 mod actual;
 mod checker;
-mod primitives;
+mod collectors;
 mod typemap;
 mod typer;
 
 use std::collections::{HashMap, HashSet};
 
 use error::{ErrKind, Error};
-use fir::{Fir, Incomplete, Mapper, OriginIdx, Pass, RefIdx, Traversal};
+use fir::{Fir, Incomplete, Kind, Mapper, OriginIdx, Pass, RefIdx, Traversal};
 use flatten::FlattenData;
 
 use actual::Actual;
 use checker::Checker;
 use typer::Typer;
 
-use primitives::PrimitiveTypes;
+use collectors::{
+    constants::ConstantCollector,
+    primitives::{self, PrimitiveTypes},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // FIXME: Should that be a hashset RefIdx or OriginIdx?
@@ -32,12 +35,25 @@ impl TypeSet {
 
 /// This is the base structure that our typechecker - a type "interpreter" - will play with.
 /// In `jinko`, the type of a variable is a set of elements of kind `type`. So this structure can
-/// be thought of as a simple set of actual, monomorphized types.
-// TODO: for now, let's not think about optimizations - let's box and clone and blurt bytes everywhere
+/// be thought of as a simple set of actual, monomorphized types. There is one complication in that
+/// the language recognizes a couple of magic types: `int`, `string` and `char` should be treated as
+/// sets of all possible literals of that type. So we can imagine that `char` should actually be defined
+/// as such:
+///
+/// ```rust,ignore
+/// type char = '0' | '1' | '2' ... 'a' | 'b' | 'c' ... | <last_unicode_char_ever>;
+/// ```
+///
+/// This is of course not a realistic definition to put in our standard library (and it gets worse for `string`)
+/// so these types have to be handled separately.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Type(OriginIdx, TypeSet);
 
 impl Type {
+    pub fn origin(&self) -> OriginIdx {
+        self.0
+    }
+
     pub fn builtin(set: HashSet<RefIdx>) -> Type {
         Type(OriginIdx(u64::MAX), TypeSet(set))
     }
@@ -59,11 +75,11 @@ impl Type {
     }
 
     pub fn is_superset_of(&self, other: &Type) -> bool {
-        return self.set().contains(other.set());
+        self.set().contains(other.set())
     }
 
     pub fn can_widen_to(&self, superset: &Type) -> bool {
-        return superset.set().contains(self.set());
+        superset.set().contains(self.set())
     }
 }
 
@@ -89,8 +105,32 @@ pub trait TypeCheck<T>: Sized {
 }
 
 impl<'ast> TypeCheck<Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
-    fn type_check(self) -> Result<Fir<FlattenData<'ast>>, Error> {
+    fn type_check(mut self) -> Result<Fir<FlattenData<'ast>>, Error> {
         let primitives = primitives::find(&self)?;
+
+        let mut const_collector = ConstantCollector::new();
+        const_collector.traverse(&self)?;
+
+        // We can now build our primitive union types. Because the first TypeCtx deals
+        // with [`TypeVariable`]s, it's not possible to directly create a TypeSet - so
+        // we can do that later on during typechecking, right before the actual
+        // typechecking. An alternative is to modify the [`Fir`] directly by creating
+        // new nodes for these primitive unions, which is probably a little cleaner and
+        // less spaghetti.
+        let mk_constant_types = |set: HashSet<RefIdx>| set.into_iter().collect();
+
+        self[primitives.int_type].kind = Kind::UnionType {
+            generics: vec![],
+            variants: mk_constant_types(const_collector.integers),
+        };
+        self[primitives.char_type].kind = Kind::UnionType {
+            generics: vec![],
+            variants: mk_constant_types(const_collector.characters),
+        };
+        self[primitives.string_type].kind = Kind::UnionType {
+            generics: vec![],
+            variants: mk_constant_types(const_collector.strings),
+        };
 
         TypeCtx {
             primitives,

@@ -65,17 +65,17 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         origin: OriginIdx,
         _constant: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
-        let ast = data.ast.node();
+        // let ast = data.ast.node();
 
-        let ty = match &ast.node {
-            // This does not take into account that primitives are multi types and will need to be fixed
-            AstNode::Constant(Value::Bool(_)) => self.0.primitives.bool_type,
-            AstNode::Constant(Value::Char(_)) => self.0.primitives.char_type,
-            AstNode::Constant(Value::Integer(_)) => self.0.primitives.int_type,
-            AstNode::Constant(Value::Float(_)) => self.0.primitives.float_type,
-            AstNode::Constant(Value::Str(_)) => self.0.primitives.string_type,
-            _ => unreachable!(),
-        };
+        // let ty = match &ast.node {
+        // This does not take into account that primitives are multi types and will need to be fixed
+        // AstNode::Constant(Value::Bool(_)) => self.0.primitives.bool_type,
+        // AstNode::Constant(Value::Char(_)) => self.0.primitives.char_type,
+        // AstNode::Constant(Value::Integer(_)) => self.0.primitives.int_type,
+        // AstNode::Constant(Value::Float(_)) => self.0.primitives.float_type,
+        // AstNode::Constant(Value::Str(_)) => self.0.primitives.string_type,
+        // _ => unreachable!(),
+        // };
 
         // For constants, how will we look up the basic primitive type nodes before assigning them
         // here? Just a traversal and we do that based on name? Or will they need to be builtin at this point?
@@ -86,13 +86,14 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         // the proper primitive multitype. We need to implement this.
 
         // FIXME: How do we get a TypeReference here? Or should we actually do that operation in the checker?
-        let new_node = Node {
+
+        self.assign_type(origin, TypeVariable::Record(origin));
+
+        Ok(Node {
             data,
             origin,
-            kind: Kind::Constant(RefIdx::Resolved(ty)),
-        };
-
-        self.ty(new_node, RefIdx::Resolved(ty))
+            kind: Kind::Constant(RefIdx::Resolved(origin)),
+        })
     }
 
     fn map_call(
