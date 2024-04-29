@@ -3,6 +3,7 @@ mod checker;
 mod collectors;
 mod typemap;
 mod typer;
+mod widen;
 
 use std::collections::{HashMap, HashSet};
 
@@ -13,6 +14,7 @@ use flatten::FlattenData;
 use actual::Actual;
 use checker::Checker;
 use typer::Typer;
+use widen::widen;
 
 use collectors::{
     constants::ConstantCollector,
@@ -164,6 +166,8 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
         };
 
         let mut actual_ctx = Actual::resolve_type_links(self, &fir)?;
+
+        let actual_ctx = widen(&fir, actual_ctx);
 
         Checker(&mut actual_ctx).traverse(&fir)?;
 
