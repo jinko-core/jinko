@@ -22,7 +22,7 @@ struct PrimitiveTypeCtx {
 /// This is the finalized version of [`PrimitiveTypeCtx`] - a version which only has
 /// valid [`OriginIdx`], or otherwise it will not be returned, and an [`Error`] will
 /// be present instead
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct PrimitiveTypes {
     pub(crate) unit_type: OriginIdx,
     pub(crate) bool_type: OriginIdx,

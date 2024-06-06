@@ -1,49 +1,53 @@
-use std::any::Any;
-use std::collections::HashSet;
+use crate::typemap::TypeMap;
+use crate::{Type, TypeCtx, TypeSet};
 
-use crate::TypeCtx;
-use crate::{typemap::TypeMap, TypeSet};
-
-use fir::{Fir, RefIdx};
+use fir::Fir;
 use flatten::FlattenData;
 
 fn widen_inner(
     fir: &Fir<FlattenData<'_>>,
-    type_ctx: TypeCtx<TypeMap>,
+    type_ctx: &TypeCtx<TypeMap>,
     to_flatten: TypeSet,
 ) -> TypeSet {
+    match to_flatten.0.len() {
+        0 => TypeSet::empty(),
+        1 => to_flatten,
+        _ => {
+            to_flatten
+                .0
+                .iter()
+                .fold(TypeSet::empty(), |typeset, entry| {
+                    let to_flatten = type_ctx.types.type_of(entry.expect_resolved());
 
+                    let set = match to_flatten {
+                        Some(ty) => ty.set().clone(), // FIXME: No clone?
+                        None => unreachable!(),
+                    };
 
-    to_flatten.0.iter().fold(HashSet::new(), |typeset, entry| {
-        let to_flatten = type_ctx.types.type_of(entry.expect_resolved());
+                    let new_set = widen_inner(fir, type_ctx, set);
 
-        let set = match to_flatten {
-            Some(ty) => ty.set(),
-            None => unreachable!(),
-        };
-    })
-
-    todo!()
+                    typeset.merge(new_set)
+                })
+        }
+    }
 }
 
-pub fn widen(fir: &Fir<FlattenData<'_>>, type_ctx: TypeCtx<TypeMap>) -> TypeCtx<TypeMap> {
-    type_ctx
+pub fn widen(fir: &Fir<FlattenData<'_>>, mut type_ctx: TypeCtx<TypeMap>) -> TypeCtx<TypeMap> {
+    let primitives = core::mem::take(&mut type_ctx.primitives);
+    let types = type_ctx
         .types
         .types
         .iter()
-        .map(|(k, v)| {
-            let widened = v
-                .set()
-                .0
-                .iter()
-                .fold(HashSet::<RefIdx>::new(), |acc, ty| {
-                    // FIXME: This needs to be a recursive function
+        .fold(TypeMap::new(), |mut tymap, (_, ty)| {
+            let origin = ty.origin();
+            let set = widen_inner(fir, &type_ctx, ty.set().clone());
 
-                    type_ctx.types.type_of(k)
-                })
-                .collect();
+            let ty = Type(origin, set);
 
-            todo!()
-        })
-        .collect()
+            tymap.new_type(ty);
+
+            tymap
+        });
+
+    TypeCtx { primitives, types }
 }

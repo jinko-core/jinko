@@ -33,6 +33,17 @@ impl TypeSet {
         // FIXME: This is quite ugly
         !other.0.iter().any(|elt| !self.0.contains(elt))
     }
+
+    pub fn empty() -> TypeSet {
+        TypeSet(HashSet::new())
+    }
+
+    pub fn merge(self, other: TypeSet) -> TypeSet {
+        TypeSet(other.0.into_iter().fold(self.0, |mut set, entry| {
+            set.insert(entry);
+            set
+        }))
+    }
 }
 
 /// This is the base structure that our typechecker - a type "interpreter" - will play with.
@@ -165,11 +176,11 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
             }
         };
 
-        let mut actual_ctx = Actual::resolve_type_links(self, &fir)?;
+        let ctx = Actual::resolve_type_links(self, &fir)?;
+        // FIXME: Improve the API?
+        let mut ctx = widen(&fir, ctx);
 
-        let actual_ctx = widen(&fir, actual_ctx);
-
-        Checker(&mut actual_ctx).traverse(&fir)?;
+        Checker(&mut ctx).traverse(&fir)?;
 
         match type_errs {
             Some(e) => Err(e),
