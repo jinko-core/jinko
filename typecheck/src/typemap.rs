@@ -23,8 +23,8 @@ pub struct TypeRef(pub(crate) OriginIdx); // FIXME: Remove vis?
 
 #[derive(Debug)]
 pub struct TypeMap {
-    nodes: HashMap<OriginIdx, TypeRef>,
-    // FIXME: Remove?
+    // FIXME: Remove pub-ability?
+    pub(crate) nodes: HashMap<OriginIdx, TypeRef>,
     pub(crate) types: HashMap<TypeRef, Type>,
 }
 
