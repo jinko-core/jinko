@@ -174,7 +174,6 @@ pub enum Node {
         else_block: Option<Box<Ast>>,
     },
     VarDeclaration {
-        mutable: bool,
         to_declare: Symbol,
         value: Box<Ast>,
     },
@@ -394,7 +393,6 @@ pub trait Visitor {
     fn visit_var_declaration(
         &mut self,
         location: SpanTuple,
-        mutable: bool,
         to_declare: Symbol,
         value: Box<Ast>,
     ) -> Result<Ast, Error> {
@@ -402,11 +400,7 @@ pub trait Visitor {
 
         Ok(Ast {
             location,
-            node: Node::VarDeclaration {
-                mutable,
-                to_declare,
-                value,
-            },
+            node: Node::VarDeclaration { to_declare, value },
         })
     }
 
@@ -488,11 +482,9 @@ pub trait Visitor {
                 if_block,
                 else_block,
             } => self.visit_if_else(ast.location, if_condition, if_block, else_block),
-            Node::VarDeclaration {
-                mutable,
-                to_declare,
-                value,
-            } => self.visit_var_declaration(ast.location, mutable, to_declare, value),
+            Node::VarDeclaration { to_declare, value } => {
+                self.visit_var_declaration(ast.location, to_declare, value)
+            }
             Node::VarAssign { to_assign, value } => {
                 self.visit_var_assign(ast.location, to_assign, value)
             }
