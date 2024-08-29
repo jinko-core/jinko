@@ -148,10 +148,6 @@ pub fn in_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
     specific_token(input, "in")
 }
 
-pub fn mut_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
-    specific_token(input, "mut")
-}
-
 pub fn if_tok(input: ParseInput) -> ParseResult<ParseInput, ParseInput> {
     specific_token(input, "if")
 }

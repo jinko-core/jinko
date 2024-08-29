@@ -768,7 +768,6 @@ impl<'ast> Ctx<'ast> {
     fn visit_var_declaration(
         self,
         ast: AstInfo<'ast>,
-        _mutable: bool,
         _to_declare: &Symbol,
         value: &'ast Ast,
     ) -> (Ctx<'ast>, RefIdx) {
@@ -900,11 +899,9 @@ impl<'ast> Ctx<'ast> {
                 if_block,
                 else_block,
             } => self.visit_if_else(node, if_condition, if_block, else_block),
-            AstNode::VarDeclaration {
-                mutable,
-                to_declare,
-                value,
-            } => self.visit_var_declaration(node, *mutable, to_declare, value),
+            AstNode::VarDeclaration { to_declare, value } => {
+                self.visit_var_declaration(node, to_declare, value)
+            }
             AstNode::VarAssign { to_assign, value } => {
                 self.visit_var_assign(node, to_assign, value)
             }
@@ -1013,7 +1010,7 @@ mod tests {
     fn where_expr() {
         let ast = ast! {
             where x = 15;
-            where mut y = x;
+            where y = x;
         };
 
         let fir = ast.flatten();
