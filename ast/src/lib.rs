@@ -192,7 +192,7 @@ pub enum Node {
         to_declare: Symbol,
         value: Box<Ast>,
     },
-    VarAssign {
+    Assignment {
         to_assign: Symbol,
         value: Box<Ast>,
     },
@@ -429,7 +429,7 @@ pub trait Visitor {
 
         Ok(Ast {
             location,
-            node: Node::VarAssign { to_assign, value },
+            node: Node::Assignment { to_assign, value },
         })
     }
 
@@ -500,7 +500,7 @@ pub trait Visitor {
             Node::VarDeclaration { to_declare, value } => {
                 self.visit_var_declaration(ast.location, to_declare, value)
             }
-            Node::VarAssign { to_assign, value } => {
+            Node::Assignment { to_assign, value } => {
                 self.visit_var_assign(ast.location, to_assign, value)
             }
             Node::VarOrEmptyType(name) => self.visit_var_or_empty_type(ast.location, name),
