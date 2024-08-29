@@ -25,10 +25,7 @@ impl<'ctx> Checker<'ctx> {
     fn get_type(&self, of: &RefIdx) -> &Type {
         // if at this point, the reference is unresolved, or if we haven't seen that node yet, it's
         // an interpreter error
-        self.0
-            .types
-            .type_of(of.expect_resolved())
-            .unwrap_or(self.unit())
+        self.0.types.type_of(of.expect_resolved()).unwrap()
     }
 
     fn unit(&self) -> &Type {
@@ -152,9 +149,6 @@ fn type_mismatch(
     got: Got<&Type>,
 ) -> Error {
     let fmt = Fmt(fir);
-
-    dbg!(&expected.0);
-    dbg!(&got.0);
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
