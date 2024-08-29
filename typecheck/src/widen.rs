@@ -32,8 +32,7 @@ fn widen_inner(
     }
 }
 
-pub fn widen(fir: &Fir<FlattenData<'_>>, mut type_ctx: TypeCtx<TypeMap>) -> TypeCtx<TypeMap> {
-    let primitives = core::mem::take(&mut type_ctx.primitives);
+pub fn widen(fir: &Fir<FlattenData<'_>>, type_ctx: TypeCtx<TypeMap>) -> TypeCtx<TypeMap> {
     let types = type_ctx
         .types
         .types
@@ -49,5 +48,8 @@ pub fn widen(fir: &Fir<FlattenData<'_>>, mut type_ctx: TypeCtx<TypeMap>) -> Type
             tymap
         });
 
-    TypeCtx { primitives, types }
+    TypeCtx {
+        primitives: type_ctx.primitives,
+        types,
+    }
 }
