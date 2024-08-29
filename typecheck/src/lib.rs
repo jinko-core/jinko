@@ -223,11 +223,12 @@ mod tests {
         let ast = ast! {
             type Marker0;
 
-            where mut a = Marker0;
-            a = Marker0;
+            func f(a: Marker0) {}
 
-            where mut b = Marker0;
-            b = a;
+            f(Marker0);
+
+            where b = Marker0;
+            f(b);
         };
         let fir = fir!(ast).type_check();
 
@@ -240,8 +241,10 @@ mod tests {
             type Marker0;
             type Marker1;
 
-            where mut a = Marker0;
-            a = Marker1;
+            func f(a: Marker0) {}
+
+            f(Marker0);
+            f(Marker1);
         };
         let fir = fir!(ast).type_check();
 
