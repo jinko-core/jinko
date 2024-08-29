@@ -876,21 +876,8 @@ fn func_type_or_var(
         generic_func_or_type_inst_args(next(input), id, start_loc)
     } else if let Ok((input, _)) = tokens::left_parenthesis(input) {
         func_or_type_inst_args(next(input), id, vec![], start_loc)
-    } else if let Ok((input, _)) = tokens::equal(input) {
-        let (input, value) = expr(input)?;
-        let (input, end_loc) = position(input)?;
-        let var_assign = Node::VarAssign {
-            to_assign: Symbol::from(id),
-            value: Box::new(value),
-        };
-        Ok((
-            input,
-            Ast {
-                location: pos_to_loc(input, start_loc, end_loc),
-                node: var_assign,
-            },
-        ))
     } else {
+        // TODO: Is this correct? we need to do some error handling here and warn if there are unexpected tokens probably?
         let (input, end_loc) = position(input)?;
         let var_or_et = Node::VarOrEmptyType(Symbol::from(id));
         Ok((
@@ -926,7 +913,7 @@ fn func_or_type_inst_args(
             0,
             Ast {
                 location: pos_to_loc(input, first_attr_start_loc, first_attr_end_loc),
-                node: Node::VarAssign {
+                node: Node::Assignment {
                     to_assign: Symbol::from(first_attr),
                     value: Box::new(first_attr_val),
                 },
@@ -1040,7 +1027,7 @@ fn type_inst_arg(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     let input = next(input);
 
     let location = pos_to_loc(input, start_loc, end_loc);
-    let node = Node::VarAssign {
+    let node = Node::Assignment {
         to_assign: Symbol::from(id),
         value: Box::new(value),
     };
@@ -2267,15 +2254,8 @@ mod tests {
     }
 
     #[test]
-    fn mutable_declaration() {
-        let input = span!("where mut x = 14");
-
-        assert!(expr(input).is_ok());
-    }
-
-    #[test]
-    fn mutable_declaration_complex() {
-        let input = span!("where mut x = if value { 14 } else { 15 }");
+    fn immutable_declaration_complex() {
+        let input = span!("where x = if value { 14 } else { 15 }");
 
         assert!(expr(input).is_ok());
     }
