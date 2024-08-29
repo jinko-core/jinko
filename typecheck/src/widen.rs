@@ -33,7 +33,7 @@ fn widen_inner(
 }
 
 pub fn widen(fir: &Fir<FlattenData<'_>>, type_ctx: TypeCtx<TypeMap>) -> TypeCtx<TypeMap> {
-    let types = type_ctx
+    let mut types = type_ctx
         .types
         .types
         .iter()
@@ -47,6 +47,10 @@ pub fn widen(fir: &Fir<FlattenData<'_>>, type_ctx: TypeCtx<TypeMap>) -> TypeCtx<
 
             tymap
         });
+
+    // Don't forget to keep track of all the nodes that make use of the types
+    // we just widened
+    types.nodes = type_ctx.types.nodes;
 
     TypeCtx {
         primitives: type_ctx.primitives,
