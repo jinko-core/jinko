@@ -86,7 +86,6 @@ fn var_declare<S: Into<Symbol>>(loc: &SpanTuple, to_declare: S, value: Box<Ast>)
     Ast {
         location: loc.clone(),
         node: Node::VarDeclaration {
-            mutable: false,
             to_declare: to_declare.into(),
             value,
         },

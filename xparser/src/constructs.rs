@@ -229,7 +229,6 @@ fn method_or_field(
 ///
 ///      | 'type' type_id '(' named_args
 ///      | 'incl' spaced_identifier [ 'as' next IDENTIFIER ]
-///      | 'mut' spaced_identifier '=' expr (* mutable variable assigment *)
 ///      | '@' spaced_identifier '(' args
 ///
 ///      | 'extern' 'func' function_declaration ';'
@@ -617,11 +616,9 @@ fn unit_type_decl(input: ParseInput, start_loc: Location) -> ParseResult<ParseIn
     ))
 }
 
-/// mut? [`spaced_identifier`] '=' expr
+/// [`spaced_identifier`] '=' expr
 fn unit_var_decl(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     let input = next(input);
-    let (input, mutable) = opt(tokens::mut_tok)(input)?;
-    let mutable = mutable.is_some();
 
     let (input, (symbol, (start_loc, _))) = spaced_identifier(input)?;
     let (input, _) = tokens::equal(input)?;
@@ -629,7 +626,6 @@ fn unit_var_decl(input: ParseInput) -> ParseResult<ParseInput, Ast> {
     let (input, end_loc) = position(input)?;
 
     let assignment = Node::VarDeclaration {
-        mutable,
         to_declare: Symbol::from(symbol),
         value: Box::new(value),
     };
