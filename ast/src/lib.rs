@@ -175,11 +175,10 @@ pub enum Node {
         else_block: Option<Box<Ast>>,
     },
     VarDeclaration {
-        mutable: bool,
         to_declare: Symbol,
         value: Box<Ast>,
     },
-    VarAssign {
+    Assignment {
         to_assign: Symbol,
         value: Box<Ast>,
     },
@@ -395,7 +394,6 @@ pub trait Visitor {
     fn visit_var_declaration(
         &mut self,
         location: SpanTuple,
-        mutable: bool,
         to_declare: Symbol,
         value: Box<Ast>,
     ) -> Result<Ast, Error> {
@@ -403,11 +401,7 @@ pub trait Visitor {
 
         Ok(Ast {
             location,
-            node: Node::VarDeclaration {
-                mutable,
-                to_declare,
-                value,
-            },
+            node: Node::VarDeclaration { to_declare, value },
         })
     }
 
@@ -421,7 +415,7 @@ pub trait Visitor {
 
         Ok(Ast {
             location,
-            node: Node::VarAssign { to_assign, value },
+            node: Node::Assignment { to_assign, value },
         })
     }
 
@@ -489,12 +483,10 @@ pub trait Visitor {
                 if_block,
                 else_block,
             } => self.visit_if_else(ast.location, if_condition, if_block, else_block),
-            Node::VarDeclaration {
-                mutable,
-                to_declare,
-                value,
-            } => self.visit_var_declaration(ast.location, mutable, to_declare, value),
-            Node::VarAssign { to_assign, value } => {
+            Node::VarDeclaration { to_declare, value } => {
+                self.visit_var_declaration(ast.location, to_declare, value)
+            }
+            Node::Assignment { to_assign, value } => {
                 self.visit_var_assign(ast.location, to_assign, value)
             }
             Node::VarOrEmptyType(name) => self.visit_var_or_empty_type(ast.location, name),

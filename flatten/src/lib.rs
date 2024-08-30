@@ -225,7 +225,7 @@ impl<'ast> AstInfo<'ast> {
                     ..
                 }
                 | AstNode::VarOrEmptyType(sym)
-                | AstNode::VarAssign { to_assign: sym, .. }
+                | AstNode::Assignment { to_assign: sym, .. }
                 | AstNode::VarDeclaration {
                     to_declare: sym, ..
                 } => Some(sym),
@@ -768,7 +768,6 @@ impl<'ast> Ctx<'ast> {
     fn visit_var_declaration(
         self,
         ast: AstInfo<'ast>,
-        _mutable: bool,
         _to_declare: &Symbol,
         value: &'ast Ast,
     ) -> (Ctx<'ast>, RefIdx) {
@@ -827,7 +826,7 @@ impl<'ast> Ctx<'ast> {
     }
 
     fn handle_field_instantiation(self, instantiation: &'ast Ast) -> (Ctx<'ast>, RefIdx) {
-        let AstNode::VarAssign { value, .. } = &instantiation.node else {
+        let AstNode::Assignment { value, .. } = &instantiation.node else {
             // FIXME: Ugly?
             unreachable!(
                 "invalid AST: non var-assign in field instantiation, in type instantiation"
@@ -900,12 +899,10 @@ impl<'ast> Ctx<'ast> {
                 if_block,
                 else_block,
             } => self.visit_if_else(node, if_condition, if_block, else_block),
-            AstNode::VarDeclaration {
-                mutable,
-                to_declare,
-                value,
-            } => self.visit_var_declaration(node, *mutable, to_declare, value),
-            AstNode::VarAssign { to_assign, value } => {
+            AstNode::VarDeclaration { to_declare, value } => {
+                self.visit_var_declaration(node, to_declare, value)
+            }
+            AstNode::Assignment { to_assign, value } => {
                 self.visit_var_assign(node, to_assign, value)
             }
             AstNode::VarOrEmptyType(_) => self.visit_var_or_empty_type(node),
@@ -1013,7 +1010,7 @@ mod tests {
     fn where_expr() {
         let ast = ast! {
             where x = 15;
-            where mut y = x;
+            where y = x;
         };
 
         let fir = ast.flatten();
