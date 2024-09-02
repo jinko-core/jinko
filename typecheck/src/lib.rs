@@ -136,6 +136,10 @@ impl<'ast> TypeCheck<Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
             generics: vec![],
             variants: mk_constant_types(const_collector.integers),
         };
+        self[primitives.float_type].kind = Kind::UnionType {
+            generics: vec![],
+            variants: mk_constant_types(const_collector.floats),
+        };
         self[primitives.char_type].kind = Kind::UnionType {
             generics: vec![],
             variants: mk_constant_types(const_collector.characters),
@@ -570,5 +574,45 @@ mod tests {
         let fir = fir!(ast).type_check();
 
         assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn nullable_union_type_valid_use() {
+        let ast = ast! {
+            type Nothing;
+            type NullableInt = int | Nothing;
+
+            func g(n: NullableInt) {}
+
+            where x = 16;
+
+            g(15);
+            g(x);
+            g(Nothing);
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn nullable_union_type_invalid_use() {
+        let ast = ast! {
+            type Nothing;
+            type NullableInt = 15 | Nothing;
+
+            func g(n: NullableInt) {}
+
+            where x = 16;
+
+            g(15);
+            g(x);
+            g(Nothing);
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_err());
     }
 }

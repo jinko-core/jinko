@@ -11,6 +11,7 @@ pub struct ConstantCollector {
     pub(crate) integers: HashSet<RefIdx>,
     pub(crate) characters: HashSet<RefIdx>,
     pub(crate) strings: HashSet<RefIdx>,
+    pub(crate) floats: HashSet<RefIdx>,
     // Hopefully there's only two of those
     pub(crate) bools: HashSet<RefIdx>,
 }
@@ -35,6 +36,10 @@ impl ConstantCollector {
     fn add_bool(&mut self, idx: OriginIdx) {
         self.bools.insert(RefIdx::Resolved(idx));
     }
+
+    fn add_float(&mut self, idx: OriginIdx) {
+        self.floats.insert(RefIdx::Resolved(idx));
+    }
 }
 
 impl Traversal<FlattenData<'_>, Infallible> for ConstantCollector {
@@ -53,8 +58,7 @@ impl Traversal<FlattenData<'_>, Infallible> for ConstantCollector {
                 ast::Value::Char(_) => self.add_character(node.origin),
                 ast::Value::Str(_) => self.add_string(node.origin),
                 ast::Value::Bool(_) => self.add_bool(node.origin),
-                // do nothing - the other constants are not part of primitive union types
-                _ => {}
+                ast::Value::Float(_) => self.add_float(node.origin),
             },
             _ => unreachable!("Fir constant with non-node AST info. this is an interpreter error"),
         };
