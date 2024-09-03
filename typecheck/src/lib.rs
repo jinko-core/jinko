@@ -406,7 +406,7 @@ mod tests {
         let ast = ast! {
             func foo(one: string, two: int, three: char) -> int { two }
 
-            "hoo".foo(15, 14)
+            "hoo".foo('a', 14)
         };
 
         let fir = fir!(ast).type_check();
