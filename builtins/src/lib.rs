@@ -213,7 +213,22 @@ impl AppendAstBuiltins for Ast {
         };
 
         // the types used by the builtin arithmetic and comparison functions
-        let builtin_types = [BuiltinType::Number, BuiltinType::Comparable].map(builder::ty);
+        let builtin_types = [
+            (
+                BuiltinType::Number,
+                vec![builder::type_symbol("int"), builder::type_symbol("float")],
+            ),
+            (
+                BuiltinType::Comparable,
+                vec![
+                    builder::type_symbol("int"),
+                    builder::type_symbol("float"),
+                    builder::type_symbol("char"),
+                    builder::type_symbol("bool"),
+                ],
+            ),
+        ]
+        .map(|(builtin, variants)| builder::union_type(builtin, variants));
 
         // this creates a list of functions named "+", "-", "*", etc which we
         // can then add to the nodes of our AST.
@@ -221,10 +236,10 @@ impl AppendAstBuiltins for Ast {
             builder::function(
                 op.as_str(),
                 vec![
-                    builder::argument("lhs", builder::ty_arg(BuiltinType::Number)),
-                    builder::argument("rhs", builder::ty_arg(BuiltinType::Number)),
+                    builder::argument("lhs", builder::builtin_type_symbol(BuiltinType::Number)),
+                    builder::argument("rhs", builder::builtin_type_symbol(BuiltinType::Number)),
                 ],
-                Some(builder::ty_arg(BuiltinType::Number)),
+                Some(builder::builtin_type_symbol(BuiltinType::Number)),
             )
         });
 
@@ -232,10 +247,10 @@ impl AppendAstBuiltins for Ast {
             builder::function(
                 op.as_str(),
                 vec![
-                    builder::argument("lhs", builder::ty_arg(BuiltinType::Comparable)),
-                    builder::argument("rhs", builder::ty_arg(BuiltinType::Comparable)),
+                    builder::argument("lhs", builder::builtin_type_symbol(BuiltinType::Comparable)),
+                    builder::argument("rhs", builder::builtin_type_symbol(BuiltinType::Comparable)),
                 ],
-                Some(builder::ty_arg(BuiltinType::Bool)),
+                Some(builder::builtin_type_symbol(BuiltinType::Bool)),
             )
         });
 
@@ -243,8 +258,11 @@ impl AppendAstBuiltins for Ast {
         let unary_builtins = Unary::iter().map(|op| {
             builder::function(
                 op.as_str(),
-                vec![builder::argument("value", builder::ty_arg(op.ty()))],
-                Some(builder::ty_arg(op.ty())),
+                vec![builder::argument(
+                    "value",
+                    builder::builtin_type_symbol(op.ty()),
+                )],
+                Some(builder::builtin_type_symbol(op.ty())),
             )
         });
 

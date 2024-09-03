@@ -14,21 +14,37 @@ pub fn argument(name: &str, ty: Type) -> TypedValue {
     }
 }
 
-pub fn ty_arg(ty: BuiltinType) -> Type {
+pub fn type_symbol(symbol: &str) -> Type {
     Type {
+        kind: TypeKind::Simple(Symbol::from(symbol)),
         location: SpanTuple::builtin(),
         generics: vec![],
-        kind: TypeKind::Simple(Symbol::from(ty.name())),
     }
 }
 
-pub fn ty(ty: BuiltinType) -> Ast {
+pub fn builtin_type_symbol(ty: BuiltinType) -> Type {
+    Type {
+        kind: TypeKind::Simple(Symbol::from(ty.name())),
+        location: SpanTuple::builtin(),
+        generics: vec![],
+    }
+}
+
+fn union_content(types: Vec<Type>) -> TypeContent {
+    TypeContent::Alias(Type {
+        kind: TypeKind::Multi(types),
+        location: SpanTuple::builtin(),
+        generics: vec![],
+    })
+}
+
+pub fn union_type(ty: BuiltinType, variants: Vec<Type>) -> Ast {
     Ast {
         location: SpanTuple::builtin(),
         node: Node::Type {
             name: Symbol::from(ty.name()),
+            fields: union_content(variants),
             generics: vec![],
-            fields: TypeContent::None,
             with: None,
         },
     }
