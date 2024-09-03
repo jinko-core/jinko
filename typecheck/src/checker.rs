@@ -14,12 +14,12 @@ use std::iter::Iterator;
 use builtins::Comparison::*;
 use builtins::Unary::*;
 
-use crate::typemap::TypeMap;
+use crate::widen::FlatTypeMap;
 use crate::{Type, TypeCtx};
 
 // TODO: We need a way to fetch common type nodes used during typechecking, such as `bool` for example,
 // as it's used for conditions for multiple nodes
-pub(crate) struct Checker<'ctx>(pub(crate) &'ctx mut TypeCtx<TypeMap>);
+pub(crate) struct Checker<'ctx>(pub(crate) &'ctx mut TypeCtx<FlatTypeMap>);
 
 impl<'ctx> Checker<'ctx> {
     fn get_type(&self, of: &RefIdx) -> &Type {
@@ -32,6 +32,7 @@ impl<'ctx> Checker<'ctx> {
         // FIXME: Super ugly - rework
         self.0
             .types
+            .type_map
             .types
             .get(&crate::typemap::TypeRef(self.0.primitives.unit_type))
             .unwrap()
@@ -219,8 +220,8 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             let err = type_mismatch(
                 node.data.ast.location(),
                 fir,
-                Expected(ret_ty),
-                Got(block_ty),
+                Expected(self.0.types.original_type_of(ret_ty)),
+                Got(self.0.types.original_type_of(block_ty)),
             );
 
             let err = match (return_ty, block) {
@@ -293,8 +294,8 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
                     errs.push(type_mismatch(
                         node.data.ast.location(),
                         fir,
-                        Expected(expected),
-                        Got(got),
+                        Expected(self.0.types.original_type_of(expected)),
+                        Got(self.0.types.original_type_of(got)),
                     ))
                 }
 
@@ -324,8 +325,8 @@ impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
             Err(type_mismatch(
                 node.data.ast.location(),
                 fir,
-                Expected(to),
-                Got(from),
+                Expected(self.0.types.original_type_of(to)),
+                Got(self.0.types.original_type_of(from)),
             ))
         } else {
             Ok(())

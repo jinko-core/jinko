@@ -6,6 +6,7 @@ mod typer;
 mod widen;
 
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 
 use error::{ErrKind, Error};
 use fir::{Fir, Incomplete, Kind, Mapper, OriginIdx, Pass, RefIdx, Traversal};
@@ -93,6 +94,12 @@ impl Type {
 
     pub fn can_widen_to(&self, superset: &Type) -> bool {
         superset.set().contains(self.set())
+    }
+}
+
+impl Hash for Type {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.origin().hash(state)
     }
 }
 
