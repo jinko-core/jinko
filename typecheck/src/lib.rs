@@ -665,4 +665,62 @@ mod tests {
 
         assert!(fir.is_ok());
     }
+
+    #[test]
+    fn union_with_constant_valid() {
+        let ast = ast! {
+            type Nothing;
+            type NullableInt = int | Nothing;
+
+            func g(n: NullableInt) {}
+
+            where x = 16;
+
+            g(15);
+            g(x);
+            g(Nothing);
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn union_with_constant_invalid() {
+        let ast = ast! {
+            type Nothing;
+            type NullableInt = 15 | Nothing;
+
+            func g(n: NullableInt) {}
+
+            where x = 16;
+
+            g(15);
+            g(x);
+            g(Nothing);
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_err());
+    }
+
+    #[test]
+    fn union_primitive_from_ext_fn() {
+        let ast = ast! {
+            ext func magic() -> int;
+
+            type Nothing;
+            type NullableInt = int | Nothing;
+
+            func g(n: NullableInt) {}
+
+            g(magic());
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
 }
