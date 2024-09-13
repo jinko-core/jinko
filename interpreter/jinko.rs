@@ -4,6 +4,7 @@ mod args;
 #[cfg(feature = "repl")]
 mod repl;
 
+use ast::Ast;
 use colored::Colorize;
 
 use builtins::AppendAstBuiltins;
@@ -137,7 +138,15 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
             data.ast
                 .symbol()
                 .as_ref()
-                .map_or(String::new(), |s| format!("`{}`", Symbol::access(s))),
+                .map(|s| format!("`{}`", Symbol::access(s)))
+                .or(match data.ast {
+                    flatten::AstInfo::Node(Ast {
+                        node: ast::Node::Constant(value),
+                        ..
+                    }) => Some(value.to_string()),
+                    _ => None,
+                })
+                .unwrap_or_default(),
             data.scope
         )
     };
