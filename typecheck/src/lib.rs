@@ -182,7 +182,7 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
 
         let ctx = Actual::resolve_type_links(self, &fir)?;
         // FIXME: Improve the API?
-        let mut ctx = widen(&fir, ctx);
+        let mut ctx = widen(ctx);
 
         Checker(&mut ctx).traverse(&fir)?;
 

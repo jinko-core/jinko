@@ -1,14 +1,7 @@
 use crate::typemap::TypeMap;
 use crate::{Type, TypeCtx, TypeSet};
 
-use fir::Fir;
-use flatten::FlattenData;
-
-fn widen_inner(
-    fir: &Fir<FlattenData<'_>>,
-    type_ctx: &TypeCtx<TypeMap>,
-    to_flatten: TypeSet,
-) -> TypeSet {
+fn widen_inner(type_ctx: &TypeCtx<TypeMap>, to_flatten: TypeSet) -> TypeSet {
     match to_flatten.0.len() {
         0 => TypeSet::empty(),
         1 => to_flatten,
@@ -24,7 +17,7 @@ fn widen_inner(
                         None => unreachable!(),
                     };
 
-                    let new_set = widen_inner(fir, type_ctx, set);
+                    let new_set = widen_inner(type_ctx, set);
 
                     typeset.merge(new_set)
                 })
@@ -32,14 +25,14 @@ fn widen_inner(
     }
 }
 
-pub fn widen(fir: &Fir<FlattenData<'_>>, type_ctx: TypeCtx<TypeMap>) -> TypeCtx<TypeMap> {
+pub fn widen(type_ctx: TypeCtx<TypeMap>) -> TypeCtx<TypeMap> {
     let mut types = type_ctx
         .types
         .types
         .iter()
         .fold(TypeMap::new(), |mut tymap, (_, ty)| {
             let origin = ty.origin();
-            let set = widen_inner(fir, &type_ctx, ty.set().clone());
+            let set = widen_inner(&type_ctx, ty.set().clone());
 
             let ty = Type(origin, set);
 

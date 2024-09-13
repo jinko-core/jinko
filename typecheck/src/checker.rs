@@ -57,10 +57,36 @@ impl<'ctx> Checker<'ctx> {
             RefIdx::Resolved(self.0.primitives.char_type),
             RefIdx::Resolved(self.0.primitives.float_type),
         ];
+        let boolean = [RefIdx::Resolved(self.0.primitives.bool_type)];
+
+        let expected_union = match op.ty() {
+            BuiltinType::Number => numbers.as_slice(),
+            BuiltinType::Comparable => comparable.as_slice(),
+            BuiltinType::Bool => boolean.as_slice(),
+        };
+
+        // We compute the primitive type which we should be using for that arithmetic operation.
+        // For example, `+` is defined for `int | float` - but we want to be producing `int`s or `float`s
+        // separately, and to separate them based on the type of the first argument.
+        // The logic is as follows: If the first argument's type is a subset of `int`, then we will be
+        // narrowing our operation's type to `int` - same for `float`, or any other type used in
+        // these builtin operators.
+        let lhs_type = self.get_type(&args[0]);
+        let narrowed_primitive_type = expected_union
+            .iter()
+            .map(|ty| self.get_type(ty))
+            .find(|set| set.is_superset_of(lhs_type));
 
         let arity = match op {
             Operator::Arithmetic(_) | Operator::Comparison(_) => 2,
             Operator::Unary(_) => 1,
+        };
+
+        let expected_ty = match op.ty() {
+            BuiltinType::Number | BuiltinType::Comparable => {
+                self.get_type(&args[0]).clone() // FIXME: Remove clone
+            }
+            BuiltinType::Bool => Type::record(self.0.primitives.bool_type),
         };
 
         let valid_union_type = match op {
@@ -74,24 +100,16 @@ impl<'ctx> Checker<'ctx> {
             Operator::Unary(Not) => Type::builtin(comparable[..1].iter().copied().collect()),
         };
 
-        let expected_ty = match op.ty() {
-            BuiltinType::Number | BuiltinType::Comparable => {
-                self.get_type(&args[0]).clone() // FIXME: Remove clone
-            }
-            BuiltinType::Bool => Type::record(self.0.primitives.bool_type),
-        };
-
-        if expected_ty.can_widen_to(&valid_union_type) {
-            Ok(vec![expected_ty; arity])
-        } else {
+        narrowed_primitive_type.map_or(
             Err(unexpected_arithmetic_type(
                 loc,
                 fir,
                 &expected_ty,
                 &valid_union_type,
                 op,
-            ))
-        }
+            )),
+            |found_primitive| Ok(vec![found_primitive.clone(); arity]),
+        )
     }
 }
 
@@ -183,7 +201,7 @@ fn unexpected_arithmetic_type(
 
     Error::new(ErrKind::TypeChecker)
         .with_msg(format!(
-            "unexpected type for arithmetic operation `{}`: `{}` (expected `{}`)",
+            "unexpected type for arithmetic operation `{}`: {} (expected {})",
             op.as_str().yellow(),
             fmt.ty(ty),
             fmt.ty(valid_type_set),
