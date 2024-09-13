@@ -10,7 +10,7 @@ where
     header: Option<&'static str>,
     show_data: bool,
     data_fmt: Option<F>,
-    _phantom: Option<PhantomData<T>>,
+    _phantom: PhantomData<T>,
 }
 
 impl<T, F: Fn(&T) -> String> Default for FirDebug<T, F> {
@@ -19,7 +19,7 @@ impl<T, F: Fn(&T) -> String> Default for FirDebug<T, F> {
             header: None,
             show_data: false,
             data_fmt: None,
-            _phantom: None,
+            _phantom: PhantomData,
         }
     }
 }
