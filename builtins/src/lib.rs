@@ -6,6 +6,7 @@ use std::slice;
 mod builder;
 
 pub const TYPE_COMPARABLE: &str = "builtin.comparable";
+pub const TYPE_EQUALABLE: &str = "builtin.comparable";
 pub const TYPE_NUMBER: &str = "builtin.number";
 
 macro_rules! name {
@@ -22,6 +23,7 @@ pub mod name {
 
     name![EQ -> "=="];
     name![NE -> "!="];
+
     name![LT -> "<"];
     name![LTE -> "<="];
     name![GT -> ">"];
@@ -37,7 +39,8 @@ pub mod name {
 #[derive(Clone, Copy)]
 pub enum BuiltinType {
     Number,     // `int | float`
-    Comparable, // `int | float | char | bool`
+    Comparable, // `int | char`
+    Equalable,  // `int | char | bool | string`
     Bool,       // `bool`
 }
 
@@ -46,6 +49,7 @@ impl BuiltinType {
         match self {
             BuiltinType::Number => crate::TYPE_NUMBER,
             BuiltinType::Comparable => crate::TYPE_COMPARABLE,
+            BuiltinType::Equalable => crate::TYPE_EQUALABLE,
             BuiltinType::Bool => "bool",
         }
     }
@@ -163,6 +167,8 @@ impl Operator {
     pub fn ty(&self) -> BuiltinType {
         match self {
             Operator::Arithmetic(_) => BuiltinType::Number,
+            Operator::Comparison(Comparison::Equals)
+            | Operator::Comparison(Comparison::Differs) => BuiltinType::Equalable,
             Operator::Comparison(_) => BuiltinType::Comparable,
             Operator::Unary(Unary::Not) => BuiltinType::Bool,
             Operator::Unary(Unary::Minus) => BuiltinType::Number,

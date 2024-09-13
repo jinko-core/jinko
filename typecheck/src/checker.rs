@@ -51,17 +51,21 @@ impl<'ctx> Checker<'ctx> {
             RefIdx::Resolved(self.0.primitives.float_type),
         ];
         let comparable = [
-            RefIdx::Resolved(self.0.primitives.bool_type),
-            RefIdx::Resolved(self.0.primitives.string_type),
             RefIdx::Resolved(self.0.primitives.int_type),
             RefIdx::Resolved(self.0.primitives.char_type),
-            RefIdx::Resolved(self.0.primitives.float_type),
+        ];
+        let equalable = [
+            RefIdx::Resolved(self.0.primitives.int_type),
+            RefIdx::Resolved(self.0.primitives.char_type),
+            RefIdx::Resolved(self.0.primitives.bool_type),
+            RefIdx::Resolved(self.0.primitives.string_type),
         ];
         let boolean = [RefIdx::Resolved(self.0.primitives.bool_type)];
 
         let expected_union = match op.ty() {
             BuiltinType::Number => numbers.as_slice(),
             BuiltinType::Comparable => comparable.as_slice(),
+            BuiltinType::Equalable => equalable.as_slice(),
             BuiltinType::Bool => boolean.as_slice(),
         };
 
@@ -72,9 +76,9 @@ impl<'ctx> Checker<'ctx> {
         // narrowing our operation's type to `int` - same for `float`, or any other type used in
         // these builtin operators.
         let lhs_type = self.get_type(&args[0]);
-        let narrowed_primitive_type = expected_union
+        let narrowed_primitive_type = dbg!(expected_union)
             .iter()
-            .map(|ty| self.get_type(ty))
+            .map(|ty| dbg!(self.get_type(ty)))
             .find(|set| set.is_superset_of(lhs_type));
 
         let arity = match op {
@@ -82,29 +86,23 @@ impl<'ctx> Checker<'ctx> {
             Operator::Unary(_) => 1,
         };
 
-        let expected_ty = match op.ty() {
-            BuiltinType::Number | BuiltinType::Comparable => {
-                self.get_type(&args[0]).clone() // FIXME: Remove clone
-            }
-            BuiltinType::Bool => Type::record(self.0.primitives.bool_type),
-        };
-
+        // FIXME: Clean that up
+        // FIXME: We should probably move it to `unexpected_arith_type` since it's only used there
         let valid_union_type = match op {
             Operator::Arithmetic(_) => Type::builtin(numbers.into_iter().collect()),
             Operator::Comparison(Equals) | Operator::Comparison(Differs) => {
-                Type::builtin(comparable.into_iter().collect())
+                Type::builtin(equalable.into_iter().collect())
             }
             Operator::Unary(Minus) => Type::builtin(numbers.into_iter().collect()),
-            // FIXME: These two are ugly as sin - remove the .map call
-            Operator::Comparison(_) => Type::builtin(comparable[2..].iter().copied().collect()),
-            Operator::Unary(Not) => Type::builtin(comparable[..1].iter().copied().collect()),
+            Operator::Comparison(_) => Type::builtin(comparable.into_iter().collect()),
+            Operator::Unary(Not) => Type::builtin(comparable.into_iter().collect()),
         };
 
         narrowed_primitive_type.map_or(
             Err(unexpected_arithmetic_type(
                 loc,
                 fir,
-                &expected_ty,
+                lhs_type,
                 &valid_union_type,
                 op,
             )),
