@@ -615,4 +615,54 @@ mod tests {
 
         assert!(fir.is_err());
     }
+
+    #[test]
+    fn binary_op_valid() {
+        let ast = ast! {
+            15 + 14
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn binary_op_valid_f() {
+        let ast = ast! {
+            15.2 + 14.4
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn binary_op_cmp_valid() {
+        let ast = ast! {
+            where a0 = 15 < 14;
+            where a1 = 15 <= 14;
+            where a2 = 15 == 14;
+            where a3 = 15 >= 14;
+            where a4 = 15 > 14;
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
+
+    #[test]
+    fn unary_op_valid() {
+        let ast = ast! {
+            where a = -12;
+            // FIXME: This can't be parsed yet for some reason
+            // where b = !true;
+        };
+
+        let fir = fir!(ast).type_check();
+
+        assert!(fir.is_ok());
+    }
 }
