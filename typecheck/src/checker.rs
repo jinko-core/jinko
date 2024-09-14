@@ -11,7 +11,6 @@ use location::SpanTuple;
 
 use std::iter::Iterator;
 
-use builtins::Comparison::*;
 use builtins::Unary::*;
 
 use crate::typemap::TypeMap;
@@ -46,6 +45,9 @@ impl<'ctx> Checker<'ctx> {
     ) -> Result<Vec<Type>, Error> {
         use builtins::*;
 
+        // TODO: Can we do something else here?
+        // the `union_type` function used to create builtins now actually creates proper unions, so we could maybe reuse that?
+        // so check out builtins::builder::union_type
         let numbers = [
             RefIdx::Resolved(self.0.primitives.int_type),
             RefIdx::Resolved(self.0.primitives.float_type),
@@ -82,7 +84,7 @@ impl<'ctx> Checker<'ctx> {
             .find(|set| set.is_superset_of(lhs_type));
 
         let arity = match op {
-            Operator::Arithmetic(_) | Operator::Comparison(_) => 2,
+            Operator::Arithmetic(_) | Operator::Comparison(_) | Operator::Equality(_) => 2,
             Operator::Unary(_) => 1,
         };
 
@@ -90,9 +92,7 @@ impl<'ctx> Checker<'ctx> {
         // FIXME: We should probably move it to `unexpected_arith_type` since it's only used there
         let valid_union_type = match op {
             Operator::Arithmetic(_) => Type::builtin(numbers.into_iter().collect()),
-            Operator::Comparison(Equals) | Operator::Comparison(Differs) => {
-                Type::builtin(equalable.into_iter().collect())
-            }
+            Operator::Equality(_) => Type::builtin(equalable.into_iter().collect()),
             Operator::Unary(Minus) => Type::builtin(numbers.into_iter().collect()),
             Operator::Comparison(_) => Type::builtin(comparable.into_iter().collect()),
             Operator::Unary(Not) => Type::builtin(comparable.into_iter().collect()),

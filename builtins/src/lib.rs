@@ -6,7 +6,7 @@ use std::slice;
 mod builder;
 
 pub const TYPE_COMPARABLE: &str = "builtin.comparable";
-pub const TYPE_EQUALABLE: &str = "builtin.comparable";
+pub const TYPE_EQUALABLE: &str = "builtin.equalable";
 pub const TYPE_NUMBER: &str = "builtin.number";
 
 macro_rules! name {
@@ -55,6 +55,14 @@ impl BuiltinType {
     }
 }
 
+trait BuiltinOperator: Sized {
+    fn as_str(&self) -> &'static str;
+
+    fn ty(&self) -> BuiltinType;
+
+    fn iter() -> slice::Iter<'static, Self>;
+}
+
 pub enum Arithmetic {
     Add,
     Sub,
@@ -62,8 +70,28 @@ pub enum Arithmetic {
     Div,
 }
 
-impl Arithmetic {
-    pub fn as_str(&self) -> &'static str {
+pub enum Mode {
+    OrEqual,
+    Strict,
+}
+
+pub enum Equality {
+    Equals,
+    Differs,
+}
+
+pub enum Comparison {
+    LessThan(Mode),
+    GreaterThan(Mode),
+}
+
+pub enum Unary {
+    Not,
+    Minus,
+}
+
+impl BuiltinOperator for Arithmetic {
+    fn as_str(&self) -> &'static str {
         match self {
             Arithmetic::Add => name::ADD,
             Arithmetic::Sub => name::SUB,
@@ -72,7 +100,11 @@ impl Arithmetic {
         }
     }
 
-    pub fn iter() -> slice::Iter<'static, Arithmetic> {
+    fn ty(&self) -> BuiltinType {
+        BuiltinType::Number
+    }
+
+    fn iter() -> slice::Iter<'static, Arithmetic> {
         static VALUES: &[Arithmetic] = &[
             Arithmetic::Add,
             Arithmetic::Sub,
@@ -84,23 +116,9 @@ impl Arithmetic {
     }
 }
 
-pub enum Mode {
-    OrEqual,
-    Strict,
-}
-
-pub enum Comparison {
-    Equals,
-    Differs,
-    LessThan(Mode),
-    GreaterThan(Mode),
-}
-
-impl Comparison {
-    pub fn as_str(&self) -> &'static str {
+impl BuiltinOperator for Comparison {
+    fn as_str(&self) -> &'static str {
         match self {
-            Comparison::Equals => name::EQ,
-            Comparison::Differs => name::NE,
             Comparison::LessThan(Mode::Strict) => name::LT,
             Comparison::LessThan(Mode::OrEqual) => name::LTE,
             Comparison::GreaterThan(Mode::Strict) => name::GT,
@@ -108,10 +126,12 @@ impl Comparison {
         }
     }
 
-    pub fn iter() -> slice::Iter<'static, Comparison> {
+    fn ty(&self) -> BuiltinType {
+        BuiltinType::Comparable
+    }
+
+    fn iter() -> slice::Iter<'static, Comparison> {
         static VALUES: &[Comparison] = &[
-            Comparison::Equals,
-            Comparison::Differs,
             Comparison::LessThan(Mode::Strict),
             Comparison::LessThan(Mode::OrEqual),
             Comparison::GreaterThan(Mode::Strict),
@@ -122,27 +142,41 @@ impl Comparison {
     }
 }
 
-pub enum Unary {
-    Not,
-    Minus,
+impl BuiltinOperator for Equality {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Equality::Equals => name::EQ,
+            Equality::Differs => name::NE,
+        }
+    }
+
+    fn ty(&self) -> BuiltinType {
+        BuiltinType::Equalable
+    }
+
+    fn iter() -> slice::Iter<'static, Equality> {
+        static VALUES: &[Equality] = &[Equality::Equals, Equality::Differs];
+
+        VALUES.iter()
+    }
 }
 
-impl Unary {
-    pub fn as_str(&self) -> &'static str {
+impl BuiltinOperator for Unary {
+    fn as_str(&self) -> &'static str {
         match self {
             Unary::Not => name::NOT,
             Unary::Minus => name::MIN,
         }
     }
 
-    pub fn ty(&self) -> BuiltinType {
+    fn ty(&self) -> BuiltinType {
         match self {
             Unary::Not => BuiltinType::Bool,
             Unary::Minus => BuiltinType::Number,
         }
     }
 
-    pub fn iter() -> slice::Iter<'static, Unary> {
+    fn iter() -> slice::Iter<'static, Unary> {
         static VALUES: &[Unary] = &[Unary::Not, Unary::Minus];
 
         VALUES.iter()
@@ -151,6 +185,7 @@ impl Unary {
 
 pub enum Operator {
     Arithmetic(Arithmetic),
+    Equality(Equality),
     Comparison(Comparison),
     Unary(Unary),
 }
@@ -160,24 +195,24 @@ impl Operator {
         match self {
             Operator::Arithmetic(inner) => inner.as_str(),
             Operator::Comparison(inner) => inner.as_str(),
+            Operator::Equality(inner) => inner.as_str(),
             Operator::Unary(inner) => inner.as_str(),
         }
     }
 
     pub fn ty(&self) -> BuiltinType {
         match self {
-            Operator::Arithmetic(_) => BuiltinType::Number,
-            Operator::Comparison(Comparison::Equals)
-            | Operator::Comparison(Comparison::Differs) => BuiltinType::Equalable,
-            Operator::Comparison(_) => BuiltinType::Comparable,
-            Operator::Unary(Unary::Not) => BuiltinType::Bool,
-            Operator::Unary(Unary::Minus) => BuiltinType::Number,
+            Operator::Arithmetic(inner) => inner.ty(),
+            Operator::Equality(inner) => inner.ty(),
+            Operator::Comparison(inner) => inner.ty(),
+            Operator::Unary(inner) => inner.ty(),
         }
     }
 
     pub fn try_from_str(s: &str) -> Option<Operator> {
         use Arithmetic::*;
         use Comparison::*;
+        use Equality::*;
         use Unary::*;
 
         use Operator as Op;
@@ -188,8 +223,8 @@ impl Operator {
             name::MUL => Some(Op::Arithmetic(Mul)),
             name::DIV => Some(Op::Arithmetic(Div)),
 
-            name::EQ => Some(Op::Comparison(Equals)),
-            name::NE => Some(Op::Comparison(Differs)),
+            name::EQ => Some(Op::Equality(Equals)),
+            name::NE => Some(Op::Equality(Differs)),
             name::LT => Some(Op::Comparison(LessThan(Mode::Strict))),
             name::LTE => Some(Op::Comparison(LessThan(Mode::OrEqual))),
             name::GT => Some(Op::Comparison(GreaterThan(Mode::Strict))),
@@ -226,11 +261,15 @@ impl AppendAstBuiltins for Ast {
             ),
             (
                 BuiltinType::Comparable,
+                vec![builder::type_symbol("int"), builder::type_symbol("char")],
+            ),
+            (
+                BuiltinType::Equalable,
                 vec![
                     builder::type_symbol("int"),
-                    builder::type_symbol("float"),
                     builder::type_symbol("char"),
                     builder::type_symbol("bool"),
+                    builder::type_symbol("string"),
                 ],
             ),
         ]
@@ -246,6 +285,17 @@ impl AppendAstBuiltins for Ast {
                     builder::argument("rhs", builder::builtin_type_symbol(BuiltinType::Number)),
                 ],
                 Some(builder::builtin_type_symbol(BuiltinType::Number)),
+            )
+        });
+
+        let eq_builtins = Equality::iter().map(|op| {
+            builder::function(
+                op.as_str(),
+                vec![
+                    builder::argument("lhs", builder::builtin_type_symbol(BuiltinType::Comparable)),
+                    builder::argument("rhs", builder::builtin_type_symbol(BuiltinType::Comparable)),
+                ],
+                Some(builder::builtin_type_symbol(BuiltinType::Bool)),
             )
         });
 
@@ -276,6 +326,7 @@ impl AppendAstBuiltins for Ast {
         // potential last expression of the `stmts` to not be the last expression anymore
         new_stmts.extend(builtin_types);
         new_stmts.extend(arithmetic_builtins);
+        new_stmts.extend(eq_builtins);
         new_stmts.extend(cmp_builtins);
         new_stmts.extend(unary_builtins);
 
