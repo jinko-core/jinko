@@ -335,7 +335,7 @@ pub trait Pass<T: Debug, U: Debug, E> {
         // FIXME: Add a #[cfg(not(release))] here
         // otherwise just return `fir`
         fir.inspect(|fir| {
-            Self::post_condition(&fir);
+            Self::post_condition(fir);
             fir.check();
         })
     }
