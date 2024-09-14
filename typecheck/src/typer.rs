@@ -51,7 +51,7 @@ impl<'ctx> Typer<'ctx> {
 
         match op {
             Operator::Arithmetic(_) | Operator::Unary(Unary::Minus) => args[0],
-            Operator::Comparison(_) | Operator::Unary(Unary::Not) => {
+            Operator::Comparison(_) | Operator::Unary(Unary::Not) | Operator::Equality(_) => {
                 RefIdx::Resolved(self.0.primitives.bool_type)
             }
         }

@@ -9,6 +9,7 @@ use builtins::Operator;
 
 use builtins::Arithmetic::*;
 use builtins::Comparison::*;
+use builtins::Equality::*;
 use builtins::Mode::*;
 use builtins::Unary::*;
 
@@ -54,8 +55,8 @@ pub fn perform_call(
 fn bool_ops(lhs: &bool, rhs: &bool, op: builtins::Operator) -> Instance {
     match op {
         Operator::Unary(Not) => Instance::from(!lhs),
-        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
-        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        Operator::Equality(Equals) => Instance::from(lhs == rhs),
+        Operator::Equality(Differs) => Instance::from(lhs != rhs),
         _ => unreachable!(
             "invalid operation on booleans: `{}`. this is an intepreter error",
             op.as_str()
@@ -72,8 +73,8 @@ fn int_ops(lhs: &i64, rhs: &i64, op: builtins::Operator) -> Instance {
         Operator::Arithmetic(Div) => Instance::from(lhs / rhs),
         Operator::Unary(Minus) => Instance::from(-lhs),
         // operations returning booleans
-        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
-        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        Operator::Equality(Equals) => Instance::from(lhs == rhs),
+        Operator::Equality(Differs) => Instance::from(lhs != rhs),
         Operator::Comparison(LessThan(Strict)) => Instance::from(lhs < rhs),
         Operator::Comparison(LessThan(OrEqual)) => Instance::from(lhs <= rhs),
         Operator::Comparison(GreaterThan(Strict)) => Instance::from(lhs > rhs),
@@ -87,8 +88,8 @@ fn int_ops(lhs: &i64, rhs: &i64, op: builtins::Operator) -> Instance {
 
 fn char_ops(lhs: &char, rhs: &char, op: builtins::Operator) -> Instance {
     match op {
-        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
-        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        Operator::Equality(Equals) => Instance::from(lhs == rhs),
+        Operator::Equality(Differs) => Instance::from(lhs != rhs),
         Operator::Comparison(LessThan(Strict)) => Instance::from(lhs < rhs),
         Operator::Comparison(LessThan(OrEqual)) => Instance::from(lhs <= rhs),
         Operator::Comparison(GreaterThan(Strict)) => Instance::from(lhs > rhs),
@@ -109,8 +110,8 @@ fn float_ops(lhs: &f64, rhs: &f64, op: builtins::Operator) -> Instance {
         Operator::Arithmetic(Div) => Instance::from(lhs / rhs),
         Operator::Unary(Minus) => Instance::from(-lhs),
         // operationrs returning booleans
-        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
-        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        Operator::Equality(Equals) => Instance::from(lhs == rhs),
+        Operator::Equality(Differs) => Instance::from(lhs != rhs),
         Operator::Comparison(LessThan(Strict)) => Instance::from(lhs < rhs),
         Operator::Comparison(LessThan(OrEqual)) => Instance::from(lhs <= rhs),
         Operator::Comparison(GreaterThan(Strict)) => Instance::from(lhs > rhs),
@@ -124,8 +125,8 @@ fn float_ops(lhs: &f64, rhs: &f64, op: builtins::Operator) -> Instance {
 
 fn string_ops(lhs: &str, rhs: &str, op: builtins::Operator) -> Instance {
     match op {
-        Operator::Comparison(Equals) => Instance::from(lhs == rhs),
-        Operator::Comparison(Differs) => Instance::from(lhs != rhs),
+        Operator::Equality(Equals) => Instance::from(lhs == rhs),
+        Operator::Equality(Differs) => Instance::from(lhs != rhs),
         _ => unreachable!(
             "invalid operation on strings: `{}`. this is an intepreter error",
             op.as_str()
