@@ -65,28 +65,6 @@ impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'
         origin: OriginIdx,
         _constant: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
-        // let ast = data.ast.node();
-
-        // let ty = match &ast.node {
-        // This does not take into account that primitives are multi types and will need to be fixed
-        // AstNode::Constant(Value::Bool(_)) => self.0.primitives.bool_type,
-        // AstNode::Constant(Value::Char(_)) => self.0.primitives.char_type,
-        // AstNode::Constant(Value::Integer(_)) => self.0.primitives.int_type,
-        // AstNode::Constant(Value::Float(_)) => self.0.primitives.float_type,
-        // AstNode::Constant(Value::Str(_)) => self.0.primitives.string_type,
-        // _ => unreachable!(),
-        // };
-
-        // For constants, how will we look up the basic primitive type nodes before assigning them
-        // here? Just a traversal and we do that based on name? Or will they need to be builtin at this point?
-        // Some types, like string, int, char, are builtin multi types and will *need* to be builtin.
-        // `bool` on the other hand, can be a multi type implemented within the standard library.
-
-        // FIXME: Technically, in jinko, all constants are simply... types of themselves. Which then resolves to
-        // the proper primitive multitype. We need to implement this.
-
-        // FIXME: How do we get a TypeReference here? Or should we actually do that operation in the checker?
-
         self.assign_type(origin, TypeVariable::Record(origin));
 
         Ok(Node {
