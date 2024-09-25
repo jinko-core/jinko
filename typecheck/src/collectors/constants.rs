@@ -1,4 +1,6 @@
-//! Collect all primitive union type constants in the program in order to build our primitive union types properly. There are three primitive union types: `char`, `int` and `string`, so this module collects all character, integer and string constants.
+//! Collect all primitive union type constants in the program in order to build our primitive
+// union types properly. There are three primitive union types: `char`, `int` and `string`, so
+// this module collects all character, integer and string constants.
 
 use std::collections::HashSet;
 use std::convert::Infallible;
