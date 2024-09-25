@@ -78,9 +78,9 @@ impl<'ctx> Checker<'ctx> {
         // narrowing our operation's type to `int` - same for `float`, or any other type used in
         // these builtin operators.
         let lhs_type = self.get_type(&args[0]);
-        let narrowed_primitive_type = dbg!(expected_union)
+        let narrowed_primitive_type = expected_union
             .iter()
-            .map(|ty| dbg!(self.get_type(ty)))
+            .map(|ty| self.get_type(ty))
             .find(|set| set.is_superset_of(lhs_type));
 
         let arity = match op {

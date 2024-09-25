@@ -3,6 +3,7 @@
 //! enable literal types and simplify union types.
 
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 use error::Error;
 use fir::{Fir, Kind, Mapper, Node, OriginIdx, RefIdx};
@@ -21,12 +22,27 @@ impl<'ast> DeduplicateConstants for Fir<FlattenData<'ast>> {
     }
 }
 
+#[derive(PartialEq, Debug, Clone)]
+struct FloatLiteral(f64);
+
+impl Eq for FloatLiteral {}
+
+impl Hash for FloatLiteral {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.to_bits().hash(state)
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 enum HashableValue<'ast> {
     Bool(bool),
     Char(char),
     Integer(i64),
     String(&'ast str),
+    // NOTE: For some reason, it seems like using a `String` instead of `FloatLiteral` is
+    // faster here, which makes me very sad. We can probably make this faster by putting constant
+    // deduplication within the `Flatten` pass, but that's also very sad.
+    Float(FloatLiteral),
 }
 
 impl<'ast> From<&'ast ast::Value> for HashableValue<'ast> {
@@ -38,9 +54,7 @@ impl<'ast> From<&'ast ast::Value> for HashableValue<'ast> {
             Char(c) => HashableValue::Char(*c),
             Integer(i) => HashableValue::Integer(*i),
             Str(s) => HashableValue::String(s),
-            Float(_) => {
-                unreachable!("cannot hash floating point constants. this is an interpreter error")
-            }
+            Float(f) => HashableValue::Float(FloatLiteral(*f)),
         }
     }
 }
@@ -55,16 +69,6 @@ impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for ConstantDedup
         constant: RefIdx,
     ) -> Result<Node<FlattenData<'ast>>, Error> {
         match data.ast {
-            // if we're dealing with a floating point constant, then we can't deduplicate - equality rules
-            // are not great around floats and we can't use them as literal types anyway (and for that reason)
-            AstInfo::Node(ast::Ast {
-                node: ast::Node::Constant(ast::Value::Float(_)),
-                ..
-            }) => Ok(Node {
-                origin,
-                data,
-                kind: Kind::Constant(constant),
-            }),
             AstInfo::Node(ast::Ast {
                 node: ast::Node::Constant(value),
                 ..
