@@ -13,6 +13,7 @@ use fire::instance::Instance;
 use fire::Interpret;
 use flatten::{FlattenAst, FlattenData};
 use include_code::IncludeCode;
+use interpolate::Interpolator;
 use loop_desugar::DesugarLoops;
 use name_resolve::NameResolve;
 
@@ -125,6 +126,7 @@ fn experimental_pipeline(input: &str, file: &Path) -> InteractResult {
 
     let ast = x_try!(ast.desugar_loops());
     let ast = x_try!(ast_sanitizer::only_while_loops(ast));
+    let ast = x_try!(ast.interpolate());
 
     let ast = x_try!(ast.resolve_includes());
     let ast = x_try!(ast_sanitizer::no_incl(ast));
