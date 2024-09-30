@@ -4,6 +4,14 @@
 //! type instantiations will not have any constraints, as they do not perform any
 //! function calls in their declarations. As a consequence, only function calls
 //! will be considered for all examples in this module.
+// FIXME: Actually, type instantiations can have constraints, because type definitions
+// can contain default fields which can be instantiated from a generic type's field, w/
+// structural typing
+// e.g.
+//
+// ```rust
+// type HasDefault[T](foo: T.make_foo())
+// ```
 
 use std::collections::HashMap;
 
