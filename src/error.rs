@@ -91,7 +91,8 @@ impl ErrKind {
 pub struct Error {
     kind: ErrKind,
     msg: Option<String>,
-    loc: Option<SpanTuple>,
+    // Boxing to reduce the error's size to make clippy happy. This will eventually be removed anyway.
+    loc: Option<Box<SpanTuple>>,
     hints: Vec<Error>,
 }
 
@@ -224,7 +225,10 @@ impl Error {
 
     // FIXME: Should this really take an Option<Location>?
     pub fn with_loc(self, loc: Option<SpanTuple>) -> Error {
-        Error { loc, ..self }
+        Error {
+            loc: loc.map(Box::new),
+            ..self
+        }
     }
 
     // Add a hint to emit alongside the error
