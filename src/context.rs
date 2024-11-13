@@ -132,12 +132,9 @@ impl Context {
         self.error_handler
             .set_path(self.path.clone().unwrap_or_default());
 
-        match &self.path {
-            Some(p) => {
-                self.included.insert(p.clone());
-            }
-            None => {}
-        };
+        if let Some(p) = &self.path {
+            self.included.insert(p.clone());
+        }
     }
 
     /// Add an error to the context
