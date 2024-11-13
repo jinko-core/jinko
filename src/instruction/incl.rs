@@ -118,7 +118,7 @@ impl Incl {
         self.check_base(base)
     }
 
-    pub fn get_final_path(&self, base: &Path) -> Result<PathBuf, (Error, Error)> {
+    pub fn get_final_path(&self, base: &Path) -> Result<PathBuf, Box<(Error, Error)>> {
         // Check the local path first
         let local_err = match self.load_local_library(base) {
             Ok(path) => return Ok(path),
@@ -130,7 +130,7 @@ impl Incl {
             Err(e) => e,
         };
 
-        Err((local_err, home_err))
+        Err(Box::new((local_err, home_err)))
     }
 }
 
@@ -188,9 +188,9 @@ impl TypeCheck for Incl {
 
         let final_path = match self.get_final_path(&base) {
             Ok(path) => path,
-            Err((e1, e2)) => {
-                ctx.error(e1);
-                ctx.error(e2);
+            Err(errs) => {
+                ctx.error(errs.0);
+                ctx.error(errs.1);
                 return Err(Error::new(ErrKind::TypeChecker));
             }
         };

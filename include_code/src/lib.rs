@@ -74,7 +74,7 @@ pub fn get_final_path(
     base: &Path,
     location: &SpanTuple,
     path: &Path,
-) -> Result<PathBuf, (Error, Error)> {
+) -> Result<PathBuf, Box<(Error, Error)>> {
     // Check the local path first
     let local_err = match load_local_library(base, location, path) {
         Ok(path) => return Ok(path),
@@ -86,7 +86,7 @@ pub fn get_final_path(
         Err(e) => e,
     };
 
-    Err((local_err, home_err))
+    Err(Box::new((local_err, home_err)))
 }
 
 fn get_base(location: &SpanTuple) -> PathBuf {
@@ -123,9 +123,9 @@ impl Visitor for IncludeCtx {
 
         let final_path = match get_final_path(&base, &location, &to_include) {
             Ok(path) => path,
-            Err((e1, e2)) => {
-                e1.emit();
-                e2.emit();
+            Err(errs) => {
+                errs.0.emit();
+                errs.1.emit();
                 return Err(Error::new(ErrKind::Include));
             }
         };
