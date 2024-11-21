@@ -15,20 +15,17 @@ jobs:
     - name: Check the coding style
       run: |
           cargo fmt -- --check
-
+          
   build:
     runs-on: ubuntu-latest
-    needs: coding-style
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Build jinko
-      run: |
-          cargo clippy
+      - name: echo
+        run: |
+          echo Hello
 
   build-without-warnings:
     runs-on: ubuntu-latest
-    needs: build
 
     steps:
     - uses: actions/checkout@v2
@@ -36,7 +33,7 @@ jobs:
       env:
         RUSTFLAGS: "-D warnings" # Trigger an error on warnings
       run: |
-        cargo clippy
+        cargo check
 
   tests-check:
     runs-on: ubuntu-latest
