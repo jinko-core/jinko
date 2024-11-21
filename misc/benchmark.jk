@@ -1,0 +1,44 @@
+incl gitko
+
+func print_usage() -> NoReturn {
+    println_err("Usage: ./benchmark.jk <commit1> <commit2>");
+    println_err("This program compares the performance of the jinko interpreter between");
+    println_err("two commits, and outputs a performance difference exprimed as a percentage");
+    println_err("A positive percentage indicates that <commit2> is faster than <commit1>");
+    exit(1)
+}
+
+cli_args = args()
+
+f_commit = cli_args.at(0)
+s_commit = cli_args.at(1)
+
+if cli_args.amount() != 2 {
+    println_err("benchmark.jk: invalid argument amount");
+    print_usage();
+}
+
+if f_commit.equals(s_commit) {
+    println_err("benchmark.jk: the two given commits should be different");
+    print_usage();
+}
+
+jk_repo = Git(path: ".");
+
+// FIXME: Add the following
+// original_commit = jk_repo.current_commit();
+
+func checkout_and_test(hash: string) {
+    if jk_repo.checkout(commit(hash)) {
+        cmd("sh").with_arg("-c").with_arg("tests/func_tests.sh").execute();
+    } else {
+        // FIXME: Use string formatting here...
+        println_err("benchmark.jk: invalid commit: ".concat(hash));
+        print_usage();
+    }
+}
+
+checkout_and_test(f_commit);
+checkout_and_test(s_commit);
+
+// FIXME: Switch back to the original commit

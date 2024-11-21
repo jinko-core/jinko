@@ -1,0 +1,3 @@
+[submodule "misc/gitko"]
+	path = misc/gitko
+	url = https://github.com/cohenarthur/gitko
