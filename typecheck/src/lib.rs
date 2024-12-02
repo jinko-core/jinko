@@ -1,6 +1,7 @@
 mod actual;
 mod checker;
 mod collectors;
+mod generics;
 mod typemap;
 mod typer;
 mod widen;
@@ -83,6 +84,11 @@ impl Type {
         Type(origin, TypeSet(variants.collect()))
     }
 
+    pub fn generic(origin: OriginIdx) -> Type {
+        // FIXME: This needs explanations, and is it the proper thing???
+        Type::record(origin)
+    }
+
     pub fn set(&self) -> &TypeSet {
         &self.1
     }
@@ -100,7 +106,8 @@ impl Type {
 pub(crate) enum TypeVariable {
     Union(OriginIdx),
     Record(OriginIdx),
-    Reference(RefIdx), // specifically we're interested in `type_ctx.type_of(< that refidx >)`
+    Generic(OriginIdx), // generics are also declaration points
+    Reference(RefIdx),  // specifically we're interested in `type_ctx.type_of(< that refidx >)`
 }
 
 type TypeLinkMap = HashMap<OriginIdx, TypeVariable>;
@@ -164,7 +171,9 @@ impl<'ast> TypeCheck<Fir<FlattenData<'ast>>> for Fir<FlattenData<'ast>> {
 impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLinkMap> {
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
-    fn post_condition(_fir: &Fir<FlattenData>) {}
+    fn post_condition(_fir: &Fir<FlattenData>) {
+        // TODO: Assert that there are no unresolved generics
+    }
 
     fn transform(&mut self, fir: Fir<FlattenData<'ast>>) -> Result<Fir<FlattenData<'ast>>, Error> {
         // Typing pass
@@ -180,10 +189,29 @@ impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for TypeCtx<TypeLin
             }
         };
 
+        // generics::ConstraintBuilder::default()
+        //     .traverse(&fir)
+        //     .unwrap();
+
+        let subs = generics::Substitutions::find(&fir);
+        dbg!(subs);
+
+        // TODO(Arthur): Do we do Actual before Mono or after
+        // if we don't want to have actual and typer look at generics, then we need to do mono before
+        // but does it make sense to mono before knowing the actual types etc? Checker definitely shouldn't look at generis
+        // so maybe what we do is build an extra layer of typechecker indirection.
+        // at the moment we have Typer which builds a LinkedTypeMap. Then, Actual gives a TypeMap
+        // what we now want is Typer builds a GenericLinkedTypedMap. Actual gives a GenericTypeMap. Mono gives a TypeMap
+        // does that sound good?
         let ctx = Actual::resolve_type_links(self, &fir)?;
         // FIXME: Improve the API?
         let mut ctx = widen(ctx);
 
+        // We can do Actual but we have to correctly handle the case where a type points to a generic node, and stop?
+        // or is it an issue with typer?
+
+        // FIXME: If we have errors in the checker and in the typer then we
+        // early return here and ignore errors from the typer - this is not what we want
         Checker(&mut ctx).traverse(&fir)?;
 
         match type_errs {

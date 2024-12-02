@@ -112,7 +112,7 @@ impl<'ast, 'fir> Fire<'ast, 'fir> {
     // TODO: Rename? `node`? `node_from_ref`? `rnode`? `ref`? `view`?
     // should this return an `AccessedNode` or w/ever which we can then `.fire()`?
     fn access(&self, r: &RefIdx) -> &'fir Node<FlattenData<'ast>> {
-        &self.fir.nodes[&r.expect_resolved()]
+        &self.fir[r]
     }
 
     #[must_use]
