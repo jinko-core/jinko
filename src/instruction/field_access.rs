@@ -134,13 +134,11 @@ mod tests {
     use crate::{jinko, jinko_fail, span};
 
     fn setup() -> Context {
-        let ctx = jinko! {
+        jinko! {
             type Point(x: int, y:int);
             func basic() -> Point { Point ( x : 15, y : 14 )}
             b = basic();
-        };
-
-        ctx
+        }
     }
 
     #[test]

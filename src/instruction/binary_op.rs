@@ -268,7 +268,7 @@ mod tests {
     fn comparison_precedence() {
         assert_bool(
             "1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2 < 45",
-            1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2 < 45,
+            1 + 4 * 2 - 1 + 2 * (14 + (2 - 17)) - 12 + 3 / 2 < 45,
         );
     }
 
@@ -375,17 +375,17 @@ mod tests {
 
     #[test]
     fn binop_execute_valid_mul() {
-        binop_assert!(1 * 2);
+        binop_assert!(2);
     }
 
     #[test]
     fn binop_execute_valid_normal_priority() {
-        binop_assert!(1 * 2 + 3);
+        binop_assert!(2 + 3);
     }
 
     #[test]
     fn binop_execute_valid_back_priority() {
-        binop_assert!(3 + 1 * 2);
+        binop_assert!(3 + 2);
     }
 
     #[test]
@@ -410,6 +410,6 @@ mod tests {
 
     #[test]
     fn binop_execute_valid_extremely_complex_expr() {
-        binop_assert!(1 + 4 * 2 - 1 + 2 * (14 + (2 - 17) * 1) - 12 + 3 / 2);
+        binop_assert!(1 + 4 * 2 - 1 + 2 * (14 + (2 - 17)) - 12 + 3 / 2);
     }
 }

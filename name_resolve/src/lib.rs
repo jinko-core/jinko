@@ -109,7 +109,7 @@ impl<'scope, 'enclosing> LookupIterator<'scope, 'enclosing> for FlatScope<'enclo
     }
 }
 
-impl<'scope, 'enclosing> Iterator for FlatIterator<'scope, 'enclosing> {
+impl<'scope> Iterator for FlatIterator<'scope, '_> {
     type Item = &'scope Bindings;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -125,7 +125,7 @@ impl<'scope, 'enclosing> Iterator for FlatIterator<'scope, 'enclosing> {
     }
 }
 
-impl<'enclosing> FlatScope<'enclosing> {
+impl FlatScope<'_> {
     fn lookup(&self, name: &Symbol, starting_scope: Scope) -> Option<&OriginIdx> {
         self.lookup_iterator(starting_scope)
             .find_map(|bindings| bindings.get(name))
@@ -163,7 +163,7 @@ struct NameResolveCtx<'enclosing> {
 }
 
 impl<'enclosing> NameResolveCtx<'enclosing> {
-    fn new(enclosing_scope: EnclosingScope<'enclosing>) -> NameResolveCtx {
+    fn new(enclosing_scope: EnclosingScope<'enclosing>) -> NameResolveCtx<'enclosing> {
         let empty_scope_map: HashMap<Scope, Bindings> = enclosing_scope
             .0
             .values()
@@ -314,7 +314,7 @@ impl NameResolutionError {
     }
 }
 
-impl<'enclosing> NameResolveCtx<'enclosing> {
+impl NameResolveCtx<'_> {
     fn scope(fir: &Fir<FlattenData>) -> HashMap<OriginIdx, Scope> {
         let root = fir.nodes.last_key_value().unwrap();
 
@@ -346,9 +346,7 @@ impl<'enclosing> NameResolveCtx<'enclosing> {
     }
 }
 
-impl<'ast, 'enclosing> Pass<FlattenData<'ast>, FlattenData<'ast>, Error>
-    for NameResolveCtx<'enclosing>
-{
+impl<'ast> Pass<FlattenData<'ast>, FlattenData<'ast>, Error> for NameResolveCtx<'_> {
     fn pre_condition(_fir: &Fir<FlattenData>) {}
 
     fn post_condition(_fir: &Fir<FlattenData>) {}

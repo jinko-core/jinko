@@ -248,7 +248,7 @@ mod tests {
         let call = call.downcast_ref::<FunctionCall>().unwrap();
 
         assert_eq!(
-            execute(&dec, &call, &mut i),
+            execute(dec, call, &mut i),
             Ok(Some(JkInt::from(15).to_instance()))
         );
     }
@@ -264,12 +264,12 @@ mod tests {
         let call = constructs::expr(span!("print_something()")).unwrap().1;
         let call = call.downcast_ref::<FunctionCall>().unwrap();
 
-        assert_eq!(execute(&dec, &call, &mut i), Ok(None));
+        assert_eq!(execute(dec, call, &mut i), Ok(None));
     }
 
     #[test]
     fn load_libs_stress() {
-        let ld_library_path = std::env::var("LD_LIBRARY_PATH").unwrap_or(String::new());
+        let ld_library_path = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
         let pwd = std::env::var("PWD").unwrap();
         std::env::set_var(
             "LD_LIBRARY_PATH",

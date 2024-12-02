@@ -193,7 +193,7 @@ pub enum AstInfo<'ast> {
     Helper(Symbol, SpanTuple),
 }
 
-impl<'ast> AstInfo<'ast> {
+impl AstInfo<'_> {
     pub fn location(&self) -> &SpanTuple {
         match self {
             AstInfo::Node(Ast { location, .. })

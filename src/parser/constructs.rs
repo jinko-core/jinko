@@ -759,9 +759,9 @@ fn generic_func_or_type_inst_args(
     func_or_type_inst_args(next(input), id, generics, start_loc)
 }
 
-///
-/// ARGS
-///
+//
+// ARGS
+//
 
 /// args = expr ( ',' expr )* ')'
 ///      | ')'

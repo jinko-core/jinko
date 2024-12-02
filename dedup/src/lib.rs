@@ -13,7 +13,7 @@ pub trait DeduplicateConstants: Sized {
     fn deduplicate_constants(self) -> Result<Self, Error>;
 }
 
-impl<'ast> DeduplicateConstants for Fir<FlattenData<'ast>> {
+impl DeduplicateConstants for Fir<FlattenData<'_>> {
     fn deduplicate_constants(self) -> Result<Self, Error> {
         let mut ctx = ConstantDeduplicator(HashMap::new());
 

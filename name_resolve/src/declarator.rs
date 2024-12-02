@@ -12,7 +12,7 @@ enum DefinitionKind {
 
 pub(crate) struct Declarator<'ctx, 'enclosing>(pub(crate) &'ctx mut NameResolveCtx<'enclosing>);
 
-impl<'ctx, 'enclosing> Declarator<'ctx, 'enclosing> {
+impl Declarator<'_, '_> {
     fn define(
         &mut self,
         kind: DefinitionKind,
@@ -41,9 +41,7 @@ impl<'ctx, 'enclosing> Declarator<'ctx, 'enclosing> {
     }
 }
 
-impl<'ast, 'ctx, 'enclosing> Traversal<FlattenData<'ast>, NameResolutionError>
-    for Declarator<'ctx, 'enclosing>
-{
+impl<'ast> Traversal<FlattenData<'ast>, NameResolutionError> for Declarator<'_, '_> {
     // TODO: Can we factor these three functions?
 
     fn traverse_function(

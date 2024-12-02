@@ -87,7 +87,7 @@ impl<V, F, T> ScopeMap<V, F, T> {
         &'map self,
         key: &Q,
         map_extractor: impl Fn(&Scope<V, F, T>) -> &HashMap<K, U>,
-    ) -> Option<&U>
+    ) -> Option<&'map U>
     where
         K: Borrow<Q> + Hash + Eq + 'map,
         Q: Hash + Eq + ?Sized,

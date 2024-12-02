@@ -26,7 +26,7 @@ impl Display for ResolveKind {
 
 pub(crate) struct Resolver<'ctx, 'enclosing>(pub(crate) &'ctx mut NameResolveCtx<'enclosing>);
 
-impl<'ctx, 'enclosing> Resolver<'ctx, 'enclosing> {
+impl Resolver<'_, '_> {
     fn get_definition(
         &self,
         kind: ResolveKind,
@@ -54,9 +54,7 @@ impl<'ctx, 'enclosing> Resolver<'ctx, 'enclosing> {
     }
 }
 
-impl<'ast, 'ctx, 'enclosing> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameResolutionError>
-    for Resolver<'ctx, 'enclosing>
-{
+impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, NameResolutionError> for Resolver<'_, '_> {
     fn map_call(
         &mut self,
         data: FlattenData<'ast>,

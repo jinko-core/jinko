@@ -43,7 +43,7 @@ struct ChainEnd {
     final_type: Type,
 }
 
-impl<'ctx> TypeLinkResolver<'ctx> {
+impl TypeLinkResolver<'_> {
     /// Recursively try and resolve a type link within the type context. This will update the given node's type
     /// within the type context.
     fn resolve_link(&mut self, to_resolve: OriginIdx, fir: &Fir<FlattenData>) -> OriginIdx {
@@ -121,7 +121,7 @@ impl<'ctx> TypeLinkResolver<'ctx> {
     }
 }
 
-impl<'ctx> Traversal<FlattenData<'_>, Error> for TypeLinkResolver<'ctx> {
+impl Traversal<FlattenData<'_>, Error> for TypeLinkResolver<'_> {
     fn traverse_node(
         &mut self,
         fir: &Fir<FlattenData>,
