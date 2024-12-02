@@ -20,7 +20,7 @@ use crate::{Type, TypeCtx};
 // as it's used for conditions for multiple nodes
 pub(crate) struct Checker<'ctx>(pub(crate) &'ctx mut TypeCtx<TypeMap>);
 
-impl<'ctx> Checker<'ctx> {
+impl Checker<'_> {
     fn get_type(&self, of: &RefIdx) -> &Type {
         // if at this point, the reference is unresolved, or if we haven't seen that node yet, it's
         // an interpreter error
@@ -113,7 +113,7 @@ impl<'ctx> Checker<'ctx> {
 
 struct Fmt<'fir, 'ast>(&'fir Fir<FlattenData<'ast>>);
 
-impl<'fir, 'ast> Fmt<'fir, 'ast> {
+impl Fmt<'_, '_> {
     pub fn number(value: usize) -> String {
         match value {
             0 => format!("{}", "no".purple()),
@@ -207,7 +207,7 @@ fn unexpected_arithmetic_type(
         .with_loc(loc.clone())
 }
 
-impl<'ctx> Traversal<FlattenData<'_>, Error> for Checker<'ctx> {
+impl Traversal<FlattenData<'_>, Error> for Checker<'_> {
     fn traverse_function(
         &mut self,
         fir: &Fir<FlattenData>,

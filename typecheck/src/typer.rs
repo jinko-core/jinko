@@ -11,7 +11,7 @@ use crate::{TypeCtx, TypeLinkMap, TypeVariable};
 /// in the documentation for [`Typer::ty`].
 pub(crate) struct Typer<'ctx>(pub(crate) &'ctx mut TypeCtx<TypeLinkMap>);
 
-impl<'ctx> Typer<'ctx> {
+impl Typer<'_> {
     fn assign_type(&mut self, node: OriginIdx, ty: TypeVariable) {
         // Having non-unique ids in the Fir is an interpreter error
         // Or should we return an error here?
@@ -58,7 +58,7 @@ impl<'ctx> Typer<'ctx> {
     }
 }
 
-impl<'ast, 'ctx> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'ctx> {
+impl<'ast> Mapper<FlattenData<'ast>, FlattenData<'ast>, Error> for Typer<'_> {
     fn map_constant(
         &mut self,
         data: FlattenData<'ast>,

@@ -18,7 +18,7 @@ pub enum Error<'i> {
     Mult(Vec<Error<'i>>),
 }
 
-impl<'i> Error<'i> {
+impl Error<'_> {
     pub fn emit(&self) {
         match self {
             Error::Msg(m) => eprintln!("parsing error: {m}"),
@@ -86,7 +86,7 @@ impl<'i> From<nom::Err<Error<'i>>> for Error<'i> {
 }
 
 impl<'i> nom::error::ParseError<ParseInput<'i>> for Error<'i> {
-    fn from_error_kind(span: ParseInput<'i>, k: nom::error::ErrorKind) -> Error {
+    fn from_error_kind(span: ParseInput<'i>, k: nom::error::ErrorKind) -> Error<'i> {
         // FIXME: Add better location here in order to print whole line and
         // display specific hint about parse error
         // Error::new(ErrKind::Parsing).with_loc(Some(SpanTuple::with_source_ref(
